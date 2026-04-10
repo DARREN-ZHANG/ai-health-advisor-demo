@@ -180,19 +180,19 @@ Frontend 不应直接感知：
 
 ## 5. 模块级依赖矩阵
 
-| 模块 | 直接依赖 | 可并行开始条件 | 阻塞它的前置项 | 它产出的下游依赖 |
-|---|---|---|---|---|
-| Others / config | 无 | 立即开始 | 无 | 所有 workspace 包 |
-| Others / shared | config | 立即开始 | 无 | Agent / Backend / Frontend / charts / ui / sandbox |
-| Others / sandbox | shared | shared 初版完成后 | 若 sandbox schema 未冻结则阻塞 | Agent / Backend / Frontend mock |
-| Others / data assets | shared + sandbox | shared/sandbox schema 初版后 | 若 schema 未冻结则阻塞 | Agent / Backend / Frontend |
-| Others / ui | shared + config | shared 初版后 | 若 design token / enums 未冻结则阻塞 | Frontend |
-| Others / charts | shared + config | chart token 初版后 | 若 chart token 未冻结则阻塞 | Frontend |
-| Agent | shared + sandbox + data/prompts + data/fallback | shared/sandbox 初版后 | 若 Agent request/response 协议未冻结则阻塞 | Backend AI 接口 |
-| Backend | shared + sandbox + agent-core + config | shared/sandbox 初版后 | 若 route DTO / runtime store 未冻结则阻塞 | Frontend 集成 |
-| Frontend | shared + ui + charts + backend DTO | shared/ui/charts/back-end read APIs 初版后 | 若页面 contract 未冻结则阻塞 | Demo 可见体验 |
-| God-Mode vertical slice | shared + sandbox + backend + frontend | profile/override DTO 定后 | 若 override API contract 未冻结则阻塞 | 演示主流程 |
-| Demo hardening | 全部 | 基础功能可跑通后 | 若 E2E / observability / fallback 未就绪则阻塞 | 最终可演示交付 |
+| 模块                    | 直接依赖                                        | 可并行开始条件                             | 阻塞它的前置项                                 | 它产出的下游依赖                                   |
+| ----------------------- | ----------------------------------------------- | ------------------------------------------ | ---------------------------------------------- | -------------------------------------------------- |
+| Others / config         | 无                                              | 立即开始                                   | 无                                             | 所有 workspace 包                                  |
+| Others / shared         | config                                          | 立即开始                                   | 无                                             | Agent / Backend / Frontend / charts / ui / sandbox |
+| Others / sandbox        | shared                                          | shared 初版完成后                          | 若 sandbox schema 未冻结则阻塞                 | Agent / Backend / Frontend mock                    |
+| Others / data assets    | shared + sandbox                                | shared/sandbox schema 初版后               | 若 schema 未冻结则阻塞                         | Agent / Backend / Frontend                         |
+| Others / ui             | shared + config                                 | shared 初版后                              | 若 design token / enums 未冻结则阻塞           | Frontend                                           |
+| Others / charts         | shared + config                                 | chart token 初版后                         | 若 chart token 未冻结则阻塞                    | Frontend                                           |
+| Agent                   | shared + sandbox + data/prompts + data/fallback | shared/sandbox 初版后                      | 若 Agent request/response 协议未冻结则阻塞     | Backend AI 接口                                    |
+| Backend                 | shared + sandbox + agent-core + config          | shared/sandbox 初版后                      | 若 route DTO / runtime store 未冻结则阻塞      | Frontend 集成                                      |
+| Frontend                | shared + ui + charts + backend DTO              | shared/ui/charts/back-end read APIs 初版后 | 若页面 contract 未冻结则阻塞                   | Demo 可见体验                                      |
+| God-Mode vertical slice | shared + sandbox + backend + frontend           | profile/override DTO 定后                  | 若 override API contract 未冻结则阻塞          | 演示主流程                                         |
+| Demo hardening          | 全部                                            | 基础功能可跑通后                           | 若 E2E / observability / fallback 未就绪则阻塞 | 最终可演示交付                                     |
 
 ---
 

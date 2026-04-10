@@ -1,4 +1,5 @@
 # AI Health Advisor Web Demo
+
 # Backend 子模块详细技术实现方案
 
 ## 1. 文档定位
@@ -504,22 +505,13 @@ interface AgentResponseEnvelope {
     sessionId: string;
     profileId: string;
     pageContext: 'homepage' | 'data_center' | 'ai_advisor';
-    taskType:
-      | 'homepage_brief'
-      | 'view_summary'
-      | 'advisor_chat'
-      | 'micro_insight';
+    taskType: 'homepage_brief' | 'view_summary' | 'advisor_chat' | 'micro_insight';
     promptVersion: string;
     provider?: string;
     model?: string;
     latencyMs: number;
     fallbackTriggered: boolean;
-    finishReason?:
-      | 'stop'
-      | 'timeout'
-      | 'provider_error'
-      | 'invalid_output'
-      | 'low_data';
+    finishReason?: 'stop' | 'timeout' | 'provider_error' | 'invalid_output' | 'low_data';
   };
 }
 ```
@@ -678,12 +670,7 @@ interface StressTimelineResponse extends TimelineResponse {
     avgStressLoadScore: number | null;
     peakStressLoadScore: number | null;
     highStressDays: number;
-    strongestContributor:
-      | 'hrv'
-      | 'resting_hr'
-      | 'sleep_duration'
-      | 'deep_sleep'
-      | null;
+    strongestContributor: 'hrv' | 'resting_hr' | 'sleep_duration' | 'deep_sleep' | null;
   };
   points: Array<{
     date: string;
@@ -1022,9 +1009,25 @@ Demo Script 数据格式建议：
   "description": "投资人演示主流程",
   "steps": [
     { "type": "profile_switch", "profileId": "profile-athlete" },
-    { "type": "event_inject", "profileId": "profile-athlete", "date": "2026-03-15", "events": ["高强度有氧"], "priority": "high", "surface": "banner" },
-    { "type": "metric_override", "profileId": "profile-athlete", "date": "2026-03-15", "patch": { "vitals": { "hrv": { "avgMs": 25 } } } },
-    { "type": "scenario_apply", "profileId": "profile-athlete", "scenarioId": "simulate_high_stress" },
+    {
+      "type": "event_inject",
+      "profileId": "profile-athlete",
+      "date": "2026-03-15",
+      "events": ["高强度有氧"],
+      "priority": "high",
+      "surface": "banner"
+    },
+    {
+      "type": "metric_override",
+      "profileId": "profile-athlete",
+      "date": "2026-03-15",
+      "patch": { "vitals": { "hrv": { "avgMs": 25 } } }
+    },
+    {
+      "type": "scenario_apply",
+      "profileId": "profile-athlete",
+      "scenarioId": "simulate_high_stress"
+    },
     { "type": "reset", "mode": "session-all" }
   ]
 }

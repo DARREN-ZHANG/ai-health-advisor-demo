@@ -6,11 +6,7 @@ export const metadata: Metadata = {
   description: '智能健康顾问',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
       <body>{children}</body>

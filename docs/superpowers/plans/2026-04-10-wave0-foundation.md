@@ -12,42 +12,43 @@
 
 ## File Structure Map
 
-| File | Responsibility |
-|------|---------------|
-| `package.json` | 根级依赖与脚本 |
-| `pnpm-workspace.yaml` | workspace 声明 |
-| `turbo.json` | Turborepo task pipeline |
-| `tsconfig.base.json` | TypeScript strict 基座 |
-| `.nvmrc` | Node 版本 |
-| `.gitignore` | 忽略规则 |
-| `.editorconfig` | 编辑器统一 |
-| `.npmrc` | pnpm 行为配置 |
-| `eslint.config.mjs` | ESLint 扁平配置 |
-| `prettier.config.mjs` | Prettier 配置 |
-| `packages/config/package.json` | config 包骨架 |
-| `apps/agent-api/package.json` | 后端依赖 |
-| `apps/agent-api/tsconfig.json` | 后端 TS 配置 |
-| `apps/agent-api/src/index.ts` | 后端入口 |
-| `apps/agent-api/src/app.ts` | Fastify 实例组装 |
-| `apps/agent-api/src/routes/health.ts` | Health 路由 |
-| `apps/agent-api/src/routes/__tests__/health.test.ts` | Health 路由测试 |
-| `apps/agent-api/.env.example` | 后端环境变量模板 |
-| `apps/web/package.json` | 前端依赖 |
-| `apps/web/tsconfig.json` | 前端 TS 配置 |
-| `apps/web/next.config.ts` | Next.js 配置 |
-| `apps/web/postcss.config.mjs` | PostCSS + Tailwind |
-| `apps/web/src/app/globals.css` | Tailwind CSS 入口 |
-| `apps/web/src/app/layout.tsx` | 根 layout |
-| `apps/web/src/app/page.tsx` | 首页占位 |
-| `apps/web/.env.example` | 前端环境变量模板 |
-| `apps/web/playwright.config.ts` | Playwright 配置 |
-| `apps/web/e2e/smoke.spec.ts` | E2E smoke 测试 |
+| File                                                 | Responsibility          |
+| ---------------------------------------------------- | ----------------------- |
+| `package.json`                                       | 根级依赖与脚本          |
+| `pnpm-workspace.yaml`                                | workspace 声明          |
+| `turbo.json`                                         | Turborepo task pipeline |
+| `tsconfig.base.json`                                 | TypeScript strict 基座  |
+| `.nvmrc`                                             | Node 版本               |
+| `.gitignore`                                         | 忽略规则                |
+| `.editorconfig`                                      | 编辑器统一              |
+| `.npmrc`                                             | pnpm 行为配置           |
+| `eslint.config.mjs`                                  | ESLint 扁平配置         |
+| `prettier.config.mjs`                                | Prettier 配置           |
+| `packages/config/package.json`                       | config 包骨架           |
+| `apps/agent-api/package.json`                        | 后端依赖                |
+| `apps/agent-api/tsconfig.json`                       | 后端 TS 配置            |
+| `apps/agent-api/src/index.ts`                        | 后端入口                |
+| `apps/agent-api/src/app.ts`                          | Fastify 实例组装        |
+| `apps/agent-api/src/routes/health.ts`                | Health 路由             |
+| `apps/agent-api/src/routes/__tests__/health.test.ts` | Health 路由测试         |
+| `apps/agent-api/.env.example`                        | 后端环境变量模板        |
+| `apps/web/package.json`                              | 前端依赖                |
+| `apps/web/tsconfig.json`                             | 前端 TS 配置            |
+| `apps/web/next.config.ts`                            | Next.js 配置            |
+| `apps/web/postcss.config.mjs`                        | PostCSS + Tailwind      |
+| `apps/web/src/app/globals.css`                       | Tailwind CSS 入口       |
+| `apps/web/src/app/layout.tsx`                        | 根 layout               |
+| `apps/web/src/app/page.tsx`                          | 首页占位                |
+| `apps/web/.env.example`                              | 前端环境变量模板        |
+| `apps/web/playwright.config.ts`                      | Playwright 配置         |
+| `apps/web/e2e/smoke.spec.ts`                         | E2E smoke 测试          |
 
 ---
 
 ### Task 1: Root Monorepo Foundation
 
 **Files:**
+
 - Create: `package.json`
 - Create: `pnpm-workspace.yaml`
 - Create: `.nvmrc`
@@ -148,6 +149,7 @@ git commit -m "chore: initialize monorepo root foundation"
 ### Task 2: Turborepo + TypeScript Configs
 
 **Files:**
+
 - Create: `turbo.json`
 - Create: `tsconfig.base.json`
 - Create: `packages/config/package.json`
@@ -229,6 +231,7 @@ git commit -m "chore: add turborepo pipeline and typescript base config"
 ### Task 3: Code Quality Configs (ESLint + Prettier)
 
 **Files:**
+
 - Create: `eslint.config.mjs`
 - Create: `prettier.config.mjs`
 
@@ -283,6 +286,7 @@ git commit -m "chore: add eslint and prettier configs"
 ### Task 4: Backend Skeleton (agent-api)
 
 **Files:**
+
 - Create: `apps/agent-api/package.json`
 - Create: `apps/agent-api/tsconfig.json`
 - Create: `apps/agent-api/src/index.ts`
@@ -447,6 +451,7 @@ git commit -m "feat(agent-api): initialize Fastify backend skeleton with health 
 ### Task 5: Frontend Skeleton (web)
 
 **Files:**
+
 - Create: `apps/web/package.json`
 - Create: `apps/web/tsconfig.json`
 - Create: `apps/web/next.config.ts`
@@ -550,7 +555,7 @@ export default {
 `apps/web/src/app/globals.css`:
 
 ```css
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: #0a0a0f;
@@ -576,11 +581,7 @@ export const metadata: Metadata = {
   description: '智能健康顾问',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
       <body>{children}</body>
@@ -618,6 +619,7 @@ git commit -m "feat(web): initialize Next.js frontend skeleton with Tailwind CSS
 ### Task 6: Environment Variables
 
 **Files:**
+
 - Create: `apps/agent-api/.env.example`
 - Create: `apps/web/.env.example`
 
@@ -720,6 +722,7 @@ git commit -m "chore: lock dependencies after initial install"
 ### Task 8: Playwright Setup + Smoke Test
 
 **Files:**
+
 - Create: `apps/web/playwright.config.ts`
 - Create: `apps/web/e2e/smoke.spec.ts`
 
@@ -815,6 +818,7 @@ pnpm dev
 ```
 
 Expected:
+
 - agent-api logs 启动信息，监听 port 3001
 - web 可访问 http://localhost:3000
 
