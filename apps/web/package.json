@@ -13,6 +13,8 @@
     "clean": "rimraf .next dist node_modules"
   },
   "dependencies": {
+    "@health-advisor/charts": "workspace:*",
+    "@health-advisor/ui": "workspace:*",
     "next": "^15.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
