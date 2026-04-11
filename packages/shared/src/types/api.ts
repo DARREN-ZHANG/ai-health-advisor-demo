@@ -30,6 +30,10 @@ export function createSuccessResponse<T>(data: T, meta: ApiMeta): ApiResponse<T>
   return { success: true, data, error: null, meta };
 }
 
-export function createErrorResponse<T = never>(code: ErrorCode, message: string, meta: ApiMeta): ApiResponse<T> {
+export function createErrorResponse<T = never>(
+  code: ErrorCode,
+  message: string,
+  meta: ApiMeta,
+): ApiResponse<T> {
   return { success: false, data: null, error: { code, message }, meta };
 }

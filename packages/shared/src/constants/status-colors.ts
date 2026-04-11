@@ -7,7 +7,10 @@ export const STATUS_COLORS: Record<StatusLevel, string> = {
   neutral: '#6b7280',
 } as const;
 
-export function getStatusColor(value: number, thresholds: { good: number; warning: number }): StatusLevel {
+export function getStatusColor(
+  value: number,
+  thresholds: { good: number; warning: number },
+): StatusLevel {
   if (value >= thresholds.good) return 'good';
   if (value >= thresholds.warning) return 'warning';
   return 'alert';
