@@ -1,0 +1,12 @@
+{
+  "extends": "@health-advisor/config/tsconfig.react.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": ["src"]
+}
