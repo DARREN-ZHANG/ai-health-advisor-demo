@@ -2,9 +2,6 @@
   "view-summary": {
     "summary": "近 7 天数据显示各项指标整体正常。心率变异性在健康范围内，睡眠时长相对充足。",
     "chartTokens": ["RESTING_HR_7DAYS", "ACTIVITY_7DAYS", "SPO2_7DAYS"],
-    "microTips": [
-      "静息心率保持在正常范围",
-      "适当增加有氧运动有助于提升心肺功能"
-    ]
+    "microTips": ["静息心率保持在正常范围", "适当增加有氧运动有助于提升心肺功能"]
   }
 }
