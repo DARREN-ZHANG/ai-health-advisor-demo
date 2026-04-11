@@ -220,6 +220,15 @@ describe('PageContextSchema', () => {
     };
     expect(() => PageContextSchema.parse(ctx)).toThrow();
   });
+
+  it('rejects custom timeframe without customDateRange', () => {
+    const ctx = { profileId: 'profile-a', page: 'data-center', timeframe: 'custom' };
+    const result = PageContextSchema.safeParse(ctx);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toContain('customDateRange is required');
+    }
+  });
 });
 
 describe('AgentResponseEnvelopeSchema', () => {

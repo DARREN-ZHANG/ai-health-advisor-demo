@@ -13,13 +13,23 @@ const DateRangeSchema = z.object({
   end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 
-export const PageContextSchema = z.object({
-  profileId: z.string().min(1),
-  page: z.string().min(1),
-  dataTab: DataTabSchema.optional(),
-  timeframe: TimeframeSchema,
-  customDateRange: DateRangeSchema.optional(),
-});
+export const PageContextSchema = z
+  .object({
+    profileId: z.string().min(1),
+    page: z.string().min(1),
+    dataTab: DataTabSchema.optional(),
+    timeframe: TimeframeSchema,
+    customDateRange: DateRangeSchema.optional(),
+  })
+  .refine(
+    (ctx) => {
+      if (ctx.timeframe === 'custom') {
+        return ctx.customDateRange !== undefined;
+      }
+      return true;
+    },
+    { message: 'customDateRange is required when timeframe is "custom"', path: ['customDateRange'] },
+  );
 
 export const AgentResponseEnvelopeSchema = z.object({
   summary: z.string().min(1),

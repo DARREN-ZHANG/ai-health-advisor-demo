@@ -159,4 +159,21 @@ describe('createPageContext', () => {
     });
     expect(ctx).not.toHaveProperty('dataTab');
   });
+
+  it('creates context with custom timeframe and customDateRange', () => {
+    const ctx = createPageContext('profile-a', 'data-center', 'custom', undefined, {
+      start: '2026-03-01',
+      end: '2026-03-15',
+    });
+    expect(ctx).toEqual({
+      profileId: 'profile-a',
+      page: 'data-center',
+      timeframe: 'custom',
+      customDateRange: { start: '2026-03-01', end: '2026-03-15' },
+    });
+  });
+
+  it('throws when custom timeframe is used without customDateRange', () => {
+    expect(() => createPageContext('profile-a', 'data-center', 'custom')).toThrow();
+  });
 });
