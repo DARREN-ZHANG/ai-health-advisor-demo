@@ -128,7 +128,6 @@
 - Format: Prettier
 - Unit Test: Vitest
 - E2E: Playwright
-- Error Tracking: Sentry（仅后端）
 
 ---
 
@@ -564,7 +563,6 @@ ai-health-advisor/
 - `LLM_API_KEY`
 - `AI_TIMEOUT_MS`
 - `ENABLE_GOD_MODE`
-- `SENTRY_DSN`
 - `LOG_LEVEL`
 
 Agent API 可选变量（完整列表以 Backend 子模块方案为准）：
@@ -642,9 +640,9 @@ pnpm --filter agent-api dev
 - fallback 是否触发
 - error reason
 
-### 16.2 错误追踪
+### 16.2 错误记录
 
-- 使用 Sentry 记录后端异常
+- 使用结构化日志记录后端异常
 
 ### 16.3 基础指标
 

@@ -1193,9 +1193,8 @@ Agent 层必须输出最小可观测事件，供 API 层统一记录。
 44. 实现 `HealthAdvisorAgentService.executeAgent()`
 45. 接入 sandbox merged snapshot
 46. 接入 request logging
-47. 接入 Sentry error capture
-48. 接入 memory write-back
-49. 接入 profile switch invalidation hook
+47. 接入 memory write-back
+48. 接入 profile switch invalidation hook
 
 ## 24.9 测试层
 
