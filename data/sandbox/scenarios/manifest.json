@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "scenarios": [
+    {
+      "scenarioId": "switch-to-stress",
+      "label": "切换到高压力用户",
+      "description": "从健康用户切换到高压力用户",
+      "type": "profile_switch",
+      "payload": { "profileId": "profile-c" }
+    },
+    {
+      "scenarioId": "inject-late-night",
+      "label": "注入深夜活动事件",
+      "description": "模拟深夜加班事件",
+      "type": "event_inject",
+      "payload": {
+        "eventType": "late_night_work",
+        "data": { "endTime": "03:00" }
+      }
+    },
+    {
+      "scenarioId": "override-hrv-drop",
+      "label": "HRV 急剧下降",
+      "description": "覆盖最近 3 天的 HRV 数据为低值",
+      "type": "metric_override",
+      "payload": {
+        "metric": "hrv",
+        "value": 15,
+        "dateRange": { "start": "2026-04-08", "end": "2026-04-10" }
+      }
+    },
+    {
+      "scenarioId": "reset-all",
+      "label": "重置所有修改",
+      "description": "清除所有 override 和注入事件",
+      "type": "reset",
+      "payload": { "scope": "all" }
+    }
+  ]
+}
