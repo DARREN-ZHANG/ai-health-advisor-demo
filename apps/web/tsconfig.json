@@ -1,22 +1,8 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "@health-advisor/config/tsconfig.react.json",
   "compilerOptions": {
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "target": "es2022",
-    "lib": ["dom", "dom.iterable", "es2022"],
-    "jsx": "preserve",
-    "noEmit": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./src/*"]
-    },
-    "allowJs": true,
-    "incremental": true
+    "plugins": [{ "name": "next" }],
+    "paths": { "@/*": ["./src/*"] }
   },
   "include": ["next-env.d.ts", "src", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
