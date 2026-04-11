@@ -37,7 +37,7 @@
 
 ## 4. Backlog 总量
 
-当前 backlog 共 **188** 条任务。
+当前 backlog 共 **186** 条任务。
 
 ## Wave 0 — 仓库与工程基座
 
@@ -170,7 +170,6 @@
 | BE-004 | P0       | Backend | 实现统一错误处理插件                    | BE-001, SHR-006        | Backend | schema 错误、业务错误、未知错误按统一 envelope 返回。                                                     |
 | BE-005 | P0       | Backend | 实现 CORS 与基础安全头配置              | BE-001                 | Backend | web 本地联调正常；不影响 demo 运行。                                                                      |
 | BE-006 | P0       | Backend | 实现 metrics 插件                       | BE-001, BE-002         | Backend | API latency/AI timeout/fallback/provider error 可记录。                                                   |
-| BE-007 | P1       | Backend | 实现 Sentry 插件接线                    | BE-001                 | Backend | 后端异常可上报；本地可关闭。                                                                              |
 | BE-008 | P0       | Backend | 实现 runtime registry                   | BE-001                 | Backend | 应用启动时组装 sandbox/agent/services/runtime stores。                                                    |
 | BE-009 | P0       | Backend | 实现 session store                      | BE-008                 | Backend | 支持 demo 期内按 sessionId 保存短期会话记忆；profile switch 时清空旧 profile 的 session / analytical memory。 |
 | BE-010 | P0       | Backend | 实现 override store                     | BE-008, SHR-005        | Backend | 支持 profile switch、event inject、metric override、reset 的内存态存储。                                  |
@@ -361,7 +360,6 @@
 | HD-003 | P1       | Hardening | 实现 provider 切换与模型切换 smoke 验证 | BE-001, AGT-002                | Backend          | 至少验证一个默认 provider 与一个备选 provider 配置可用。                                             |
 | HD-004 | P0       | Hardening | 补齐后端 request logging 字段           | BE-002, BE-003                 | Backend          | 日志包含 requestId/route/profileId/sessionId/provider/model/latency/fallbackTriggered/finishReason。 |
 | HD-005 | P0       | Hardening | 补齐 backend metrics counters           | BE-006, BE-018, BE-019, BE-020 | Backend          | API latency、AI timeout、fallback、provider error 可统计。                                           |
-| HD-006 | P1       | Hardening | 验证 Sentry 上报路径                    | BE-007                         | Backend          | 错误可上报且不会泄露敏感配置。                                                                       |
 | HD-007 | P0       | Hardening | 实现 sandbox 启动时资产校验             | DAT-008, BE-008                | Backend          | 服务启动时校验 sandbox/fallback/prompts/scenarios 完整性。                                           |
 
 ### Wave 7.2 — Delivery/CI
