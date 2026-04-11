@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeTimeline } from '../../helpers/timeline';
+import { normalizeTimeline, rollingMedian } from '../../helpers/timeline';
 import type { DailyRecord } from '@health-advisor/shared';
 
 const records: DailyRecord[] = [
@@ -93,5 +93,58 @@ describe('normalizeTimeline', () => {
     for (const point of result) {
       expect(Object.keys(point.values)).toHaveLength(0);
     }
+  });
+});
+
+describe('rollingMedian', () => {
+  it('对连续数值计算滚动中位数', () => {
+    const result = rollingMedian([1, 3, 2, 5, 4, 6, 7], 3);
+    // 窗口大小 3，half=1
+    // i=0: [1,3,2] -> sort [1,2,3] -> 2
+    // i=1: [1,3,2] -> sort [1,2,3] -> 2
+    // i=2: [3,2,5] -> sort [2,3,5] -> 3
+    // i=3: [2,5,4] -> sort [2,4,5] -> 4
+    // i=4: [5,4,6] -> sort [4,5,6] -> 5
+    // i=5: [4,6,7] -> sort [4,6,7] -> 6
+    // i=6: [6,7] -> sort [6,7] -> (6+7)/2 = 6.5
+    expect(result).toEqual([2, 2, 3, 4, 5, 6, 6.5]);
+  });
+
+  it('跳过 null 值进行计算', () => {
+    const result = rollingMedian([null, 3, null, 5, 4], 3);
+    // i=0: [3] -> 3 (窗口内只有 1 个有效值)
+    // i=1: [3] -> 3
+    // i=2: [3,5] -> (3+5)/2 = 4
+    // i=3: [5,4] -> (4+5)/2 = 4.5
+    // i=4: [5,4] -> (4+5)/2 = 4.5
+    expect(result).toEqual([3, 3, 4, 4.5, 4.5]);
+  });
+
+  it('全部为 null 时返回 null', () => {
+    const result = rollingMedian([null, null, null], 3);
+    expect(result).toEqual([null, null, null]);
+  });
+
+  it('空数组返回空数组', () => {
+    const result = rollingMedian([], 3);
+    expect(result).toEqual([]);
+  });
+
+  it('默认窗口大小为 7', () => {
+    const values: number[] = [10, 20, 30, 40, 50, 60, 70];
+    const result = rollingMedian(values);
+    // 默认窗口 7，中心元素 i=3 拥有完整窗口，中位数为 40
+    expect(result).toHaveLength(7);
+    expect(result[3]).toBe(40);
+  });
+
+  it('窗口大小为 1 时返回原始值', () => {
+    const result = rollingMedian([5, null, 10], 1);
+    expect(result).toEqual([5, null, 10]);
+  });
+
+  it('窗口大小为 0 时返回全 null', () => {
+    const result = rollingMedian([1, 2, 3], 0);
+    expect(result).toEqual([null, null, null]);
   });
 });

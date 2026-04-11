@@ -1,7 +1,32 @@
 {
-  "view-summary": {
-    "summary": "近 7 天数据显示各项指标整体正常。心率变异性在健康范围内，睡眠时长相对充足。",
-    "chartTokens": ["RESTING_HR_7DAYS", "ACTIVITY_7DAYS", "SPO2_7DAYS"],
-    "microTips": ["静息心率保持在正常范围", "适当增加有氧运动有助于提升心肺功能"]
+  "hrv": {
+    "summary": "近 7 天 HRV 数据整体在正常范围内，未发现明显异常波动。",
+    "chartTokens": ["HRV_7DAYS"],
+    "microTips": ["心率变异性稳定，说明自主神经调节良好"]
+  },
+  "sleep": {
+    "summary": "近 7 天睡眠数据整体正常。深睡和 REM 阶段比例合理。",
+    "chartTokens": ["SLEEP_7DAYS", "SLEEP_STAGE_LAST_NIGHT"],
+    "microTips": ["建议保持规律作息", "睡前避免摄入咖啡因"]
+  },
+  "resting-hr": {
+    "summary": "近 7 天静息心率保持在正常范围，未见明显异常。",
+    "chartTokens": ["RESTING_HR_7DAYS"],
+    "microTips": ["静息心率稳定是心血管健康的好指标"]
+  },
+  "activity": {
+    "summary": "近 7 天活动数据显示运动量适中，建议保持或适当增加。",
+    "chartTokens": ["ACTIVITY_7DAYS"],
+    "microTips": ["适当增加有氧运动有助于提升心肺功能"]
+  },
+  "spo2": {
+    "summary": "近 7 天血氧饱和度保持在正常水平。",
+    "chartTokens": ["SPO2_7DAYS"],
+    "microTips": ["血氧正常说明呼吸功能良好"]
+  },
+  "stress": {
+    "summary": "近 7 天压力负荷数据整体正常，建议关注高峰时段的放松。",
+    "chartTokens": ["STRESS_LOAD_7DAYS"],
+    "microTips": ["定期休息和深呼吸有助于管理压力水平"]
   }
 }

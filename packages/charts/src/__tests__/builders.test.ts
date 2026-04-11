@@ -6,6 +6,8 @@ import {
   buildActivity7Days,
   buildSpo27Days,
   buildStressLoad7Days,
+  buildSleepStageLastNight,
+  buildHrvSleep14DaysCompare,
 } from '../builders/chart-builders';
 import type { StandardTimeSeries } from '../utils/normalize';
 
@@ -26,6 +28,10 @@ const mockData: StandardTimeSeries = {
     'activity.steps': [8000, 6500, 10000, 7500, 9000, 8200, 7800],
     spo2: [97, 98, 96, 97, 98, 97, 99],
     'stress.load': [45, 60, 30, 55, 70, 40, 50],
+    'sleep.stages.deep': [80, 70, 90, 85, 65, 75, 80],
+    'sleep.stages.light': [200, 180, 210, 220, 170, 195, 190],
+    'sleep.stages.rem': [90, 80, 95, 100, 75, 85, 88],
+    'sleep.stages.awake': [10, 20, 5, 15, 25, 12, 8],
   },
 };
 
@@ -79,5 +85,56 @@ describe('chart builders', () => {
     const series = option.series as Array<{ data: (number | null)[] }>;
     expect(series[0]!.data[0]).toBe(7.0); // 420 分钟 = 7 小时
     expect(series[0]!.data[2]).toBe(7.5); // 450 分钟 = 7.5 小时
+  });
+});
+
+describe('buildSleepStageLastNight', () => {
+  it('返回 4 个堆叠柱状图 series', () => {
+    const option = buildSleepStageLastNight(mockData);
+    const series = option.series as Array<{ name: string; type: string }>;
+    expect(series).toHaveLength(4);
+    expect(series.map((s) => s.name)).toEqual(['深睡', '浅睡', 'REM', '清醒']);
+  });
+
+  it('所有 series 使用 bar 类型', () => {
+    const option = buildSleepStageLastNight(mockData);
+    const series = option.series as Array<{ type: string }>;
+    for (const s of series) {
+      expect(s.type).toBe('bar');
+    }
+  });
+
+  it('包含标题', () => {
+    const option = buildSleepStageLastNight(mockData);
+    expect(option).toHaveProperty('title');
+  });
+});
+
+describe('buildHrvSleep14DaysCompare', () => {
+  it('返回 2 条折线 series', () => {
+    const option = buildHrvSleep14DaysCompare(mockData);
+    const series = option.series as Array<{ name: string }>;
+    expect(series).toHaveLength(2);
+    expect(series[0]!.name).toBe('HRV');
+    expect(series[1]!.name).toBe('睡眠');
+  });
+
+  it('使用双 Y 轴', () => {
+    const option = buildHrvSleep14DaysCompare(mockData);
+    expect(Array.isArray(option.yAxis)).toBe(true);
+    const yAxis = option.yAxis as Array<Record<string, unknown>>;
+    expect(yAxis).toHaveLength(2);
+  });
+
+  it('睡眠数据转换为小时', () => {
+    const option = buildHrvSleep14DaysCompare(mockData);
+    const series = option.series as Array<{ data: (number | null)[] }>;
+    // 睡眠 series 是第二个，420 分钟 = 7 小时
+    expect(series[1]!.data[0]).toBe(7.0);
+  });
+
+  it('包含图例', () => {
+    const option = buildHrvSleep14DaysCompare(mockData);
+    expect(option).toHaveProperty('legend');
   });
 });

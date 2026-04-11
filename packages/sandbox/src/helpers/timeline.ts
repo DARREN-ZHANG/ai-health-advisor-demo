@@ -27,6 +27,39 @@ export function normalizeTimeline(records: DailyRecord[], metrics: string[]): Ti
 }
 
 /**
+ * 计算滚动中位数
+ * 用于 stress load 等指标的平滑处理
+ *
+ * @param values - 数值数组（null 视为缺失值）
+ * @param windowSize - 滑动窗口大小（必须为正奇数）
+ * @returns 滚动中位数数组（两端不足窗口部分用已有数据计算）
+ */
+export function rollingMedian(
+  values: (number | null)[],
+  windowSize: number = 7,
+): (number | null)[] {
+  if (windowSize < 1) return values.map(() => null);
+  if (values.length === 0) return [];
+
+  const half = Math.floor(windowSize / 2);
+
+  return values.map((_, i) => {
+    const start = Math.max(0, i - half);
+    const end = Math.min(values.length, i + half + 1);
+    const window = values.slice(start, end).filter((v): v is number => v !== null);
+
+    if (window.length === 0) return null;
+
+    const sorted = [...window].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+
+    return sorted.length % 2 === 0
+      ? (sorted[mid - 1]! + sorted[mid]!) / 2
+      : sorted[mid]!;
+  });
+}
+
+/**
  * 从 DailyRecord 中提取指定路径的数值
  * 支持点号路径（如 'sleep.score'）
  */

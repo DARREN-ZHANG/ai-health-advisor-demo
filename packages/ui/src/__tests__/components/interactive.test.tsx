@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Button, IconButton, Tabs } from '../../components/interactive';
+import { Button, IconButton, Tabs, Drawer, Sheet, Modal } from '../../components/interactive';
 
 describe('Button', () => {
   it('渲染按钮文本', () => {
@@ -85,5 +85,145 @@ describe('Tabs', () => {
   it('激活项应用激活样式', () => {
     render(<Tabs items={items} activeId="tab1" onSelect={() => {}} />);
     expect(screen.getByText('标签一').className).toContain('bg-slate-700');
+  });
+});
+
+describe('Drawer', () => {
+  it('打开时渲染内容', () => {
+    render(
+      <Drawer open={true} onClose={() => {}}>
+        抽屉内容
+      </Drawer>,
+    );
+    expect(screen.getByText('抽屉内容')).toBeInTheDocument();
+  });
+
+  it('关闭时不渲染', () => {
+    render(
+      <Drawer open={false} onClose={() => {}}>
+        抽屉内容
+      </Drawer>,
+    );
+    expect(screen.queryByText('抽屉内容')).not.toBeInTheDocument();
+  });
+
+  it('点击遮罩触发 onClose', () => {
+    const onClose = vi.fn();
+    render(
+      <Drawer open={true} onClose={onClose}>
+        内容
+      </Drawer>,
+    );
+    fireEvent.click(screen.getByRole('dialog').firstElementChild!);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('渲染标题和关闭按钮', () => {
+    render(
+      <Drawer open={true} onClose={() => {}} title="测试抽屉">
+        内容
+      </Drawer>,
+    );
+    expect(screen.getByText('测试抽屉')).toBeInTheDocument();
+    expect(screen.getByLabelText('关闭')).toBeInTheDocument();
+  });
+
+  it('设置 aria-modal', () => {
+    render(
+      <Drawer open={true} onClose={() => {}}>
+        内容
+      </Drawer>,
+    );
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
+  });
+});
+
+describe('Sheet', () => {
+  it('打开时渲染内容', () => {
+    render(
+      <Sheet open={true} onClose={() => {}}>
+        面板内容
+      </Sheet>,
+    );
+    expect(screen.getByText('面板内容')).toBeInTheDocument();
+  });
+
+  it('关闭时不渲染', () => {
+    render(
+      <Sheet open={false} onClose={() => {}}>
+        面板内容
+      </Sheet>,
+    );
+    expect(screen.queryByText('面板内容')).not.toBeInTheDocument();
+  });
+
+  it('点击遮罩触发 onClose', () => {
+    const onClose = vi.fn();
+    render(
+      <Sheet open={true} onClose={onClose}>
+        内容
+      </Sheet>,
+    );
+    fireEvent.click(screen.getByRole('dialog').firstElementChild!);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('渲染标题', () => {
+    render(
+      <Sheet open={true} onClose={() => {}} title="底部面板">
+        内容
+      </Sheet>,
+    );
+    expect(screen.getByText('底部面板')).toBeInTheDocument();
+  });
+});
+
+describe('Modal', () => {
+  it('打开时渲染内容', () => {
+    render(
+      <Modal open={true} onClose={() => {}}>
+        弹窗内容
+      </Modal>,
+    );
+    expect(screen.getByText('弹窗内容')).toBeInTheDocument();
+  });
+
+  it('关闭时不渲染', () => {
+    render(
+      <Modal open={false} onClose={() => {}}>
+        弹窗内容
+      </Modal>,
+    );
+    expect(screen.queryByText('弹窗内容')).not.toBeInTheDocument();
+  });
+
+  it('点击遮罩触发 onClose', () => {
+    const onClose = vi.fn();
+    render(
+      <Modal open={true} onClose={onClose}>
+        内容
+      </Modal>,
+    );
+    fireEvent.click(screen.getByRole('dialog').firstElementChild!);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('渲染标题和关闭按钮', () => {
+    render(
+      <Modal open={true} onClose={() => {}} title="确认操作">
+        内容
+      </Modal>,
+    );
+    expect(screen.getByText('确认操作')).toBeInTheDocument();
+    expect(screen.getByLabelText('关闭')).toBeInTheDocument();
+  });
+
+  it('设置 aria-modal', () => {
+    render(
+      <Modal open={true} onClose={() => {}}>
+        内容
+      </Modal>,
+    );
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
   });
 });

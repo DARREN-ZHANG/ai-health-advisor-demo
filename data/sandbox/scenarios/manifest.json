@@ -9,6 +9,13 @@
       "payload": { "profileId": "profile-c" }
     },
     {
+      "scenarioId": "switch-to-healthy",
+      "label": "切换到健康用户",
+      "description": "从任意用户切换到健康基准用户",
+      "type": "profile_switch",
+      "payload": { "profileId": "profile-a" }
+    },
+    {
       "scenarioId": "inject-late-night",
       "label": "注入深夜活动事件",
       "description": "模拟深夜加班事件",
@@ -16,6 +23,16 @@
       "payload": {
         "eventType": "late_night_work",
         "data": { "endTime": "03:00" }
+      }
+    },
+    {
+      "scenarioId": "inject-illness",
+      "label": "注入生病事件",
+      "description": "模拟感冒发烧场景",
+      "type": "event_inject",
+      "payload": {
+        "eventType": "illness",
+        "data": { "symptoms": ["fever", "fatigue"], "temperature": 38.5 }
       }
     },
     {
@@ -30,11 +47,88 @@
       }
     },
     {
+      "scenarioId": "override-sleep-deprived",
+      "label": "模拟睡眠剥夺",
+      "description": "覆盖最近 3 天的睡眠数据为低值",
+      "type": "metric_override",
+      "payload": {
+        "metric": "sleep.totalMinutes",
+        "value": 180,
+        "dateRange": { "start": "2026-04-08", "end": "2026-04-10" }
+      }
+    },
+    {
       "scenarioId": "reset-all",
       "label": "重置所有修改",
       "description": "清除所有 override 和注入事件",
       "type": "reset",
       "payload": { "scope": "all" }
+    },
+    {
+      "scenarioId": "demo-stress-journey",
+      "label": "演示压力管理旅程",
+      "description": "完整演示流程：切换到压力用户 → 注入事件 → 观察变化 → 恢复",
+      "type": "demo_script",
+      "steps": [
+        {
+          "label": "切换到高压力用户",
+          "action": "profile_switch",
+          "payload": { "profileId": "profile-c" }
+        },
+        {
+          "label": "注入深夜加班事件",
+          "action": "event_inject",
+          "payload": {
+            "eventType": "late_night_work",
+            "data": { "endTime": "03:00" }
+          }
+        },
+        {
+          "label": "覆盖 HRV 数据显示下降",
+          "action": "metric_override",
+          "payload": {
+            "metric": "hrv",
+            "value": 15,
+            "dateRange": { "start": "2026-04-08", "end": "2026-04-10" }
+          }
+        }
+      ]
+    },
+    {
+      "scenarioId": "demo-recovery-journey",
+      "label": "演示恢复改善旅程",
+      "description": "完整演示流程：从压力用户覆盖数据改善 → 切换健康用户对比 → 重置",
+      "type": "demo_script",
+      "steps": [
+        {
+          "label": "切换到高压力用户",
+          "action": "profile_switch",
+          "payload": { "profileId": "profile-c" }
+        },
+        {
+          "label": "覆盖睡眠数据模拟改善",
+          "action": "metric_override",
+          "payload": {
+            "metric": "sleep.totalMinutes",
+            "value": 480,
+            "dateRange": { "start": "2026-04-05", "end": "2026-04-10" }
+          }
+        },
+        {
+          "label": "覆盖压力数据模拟降低",
+          "action": "metric_override",
+          "payload": {
+            "metric": "stress.load",
+            "value": 25,
+            "dateRange": { "start": "2026-04-08", "end": "2026-04-10" }
+          }
+        },
+        {
+          "label": "重置所有修改",
+          "action": "reset",
+          "payload": { "scope": "all" }
+        }
+      ]
     }
   ]
 }

@@ -8,21 +8,24 @@ import {
   buildActivity7Days,
   buildSpo27Days,
   buildStressLoad7Days,
+  buildSleepStageLastNight,
+  buildHrvSleep14DaysCompare,
 } from '../builders/chart-builders';
 
 export type ChartBuilder = (data: StandardTimeSeries) => EChartsOption;
 
 /**
  * ChartTokenId -> Builder 映射注册表
- * 复杂图表（SLEEP_STAGE_LAST_NIGHT、HRV_SLEEP_14DAYS_COMPARE）暂不注册
  */
-const registry: Partial<Record<ChartTokenId, ChartBuilder>> = {
+const registry: Record<ChartTokenId, ChartBuilder> = {
   [ChartTokenId.HRV_7DAYS]: buildHrv7Days,
   [ChartTokenId.SLEEP_7DAYS]: buildSleep7Days,
   [ChartTokenId.RESTING_HR_7DAYS]: buildRestingHr7Days,
   [ChartTokenId.ACTIVITY_7DAYS]: buildActivity7Days,
   [ChartTokenId.SPO2_7DAYS]: buildSpo27Days,
   [ChartTokenId.STRESS_LOAD_7DAYS]: buildStressLoad7Days,
+  [ChartTokenId.SLEEP_STAGE_LAST_NIGHT]: buildSleepStageLastNight,
+  [ChartTokenId.HRV_SLEEP_14DAYS_COMPARE]: buildHrvSleep14DaysCompare,
 };
 
 /**
