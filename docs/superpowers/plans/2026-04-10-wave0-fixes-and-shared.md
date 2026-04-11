@@ -15,6 +15,7 @@
 ### Task 1: 完善 packages/config — 导出共享配置 (OTH-004)
 
 **Files:**
+
 - Create: `packages/config/tsconfig.react.json`
 - Create: `packages/config/tsconfig.node.json`
 - Create: `packages/config/eslint.config.base.mjs`
@@ -226,6 +227,7 @@ git commit -m "feat: complete packages/config with shared ESLint/Prettier/Vitest
 ### Task 2: 添加 CI skeleton (OTH-014)
 
 **Files:**
+
 - Create: `.github/workflows/ci.yml`
 
 - [ ] **Step 1: 创建 CI workflow**
@@ -283,6 +285,7 @@ git commit -m "ci: add GitHub Actions CI pipeline (typecheck/lint/test/build)"
 ### Task 3: 创建 packages/shared 骨架 (SHR-001)
 
 **Files:**
+
 - Create: `packages/shared/package.json`
 - Create: `packages/shared/tsconfig.json`
 - Create: `packages/shared/vitest.config.ts`
@@ -341,10 +344,7 @@ git commit -m "ci: add GitHub Actions CI pipeline (typecheck/lint/test/build)"
 import { defineConfig, mergeConfig } from 'vitest/config';
 import baseConfig from '@health-advisor/config/vitest';
 
-export default mergeConfig(
-  baseConfig,
-  defineConfig({}),
-);
+export default mergeConfig(baseConfig, defineConfig({}));
 ```
 
 - [ ] **Step 4: 创建 src/index.ts (空 barrel)**
@@ -385,6 +385,7 @@ git commit -m "feat: create packages/shared skeleton (SHR-001)"
 ### Task 4: 定义 sandbox 类型 (SHR-002)
 
 **Files:**
+
 - Create: `packages/shared/src/types/sandbox.ts`
 - Modify: `packages/shared/src/index.ts`
 
@@ -491,6 +492,7 @@ git commit -m "feat: define sandbox TypeScript types (SHR-002)"
 ### Task 5: 定义 agent 类型 (SHR-003)
 
 **Files:**
+
 - Create: `packages/shared/src/types/agent.ts`
 - Modify: `packages/shared/src/index.ts`
 
@@ -503,13 +505,7 @@ export enum AgentTaskType {
   ADVISOR_CHAT = 'advisor_chat',
 }
 
-export type DataTab =
-  | 'hrv'
-  | 'sleep'
-  | 'resting-hr'
-  | 'activity'
-  | 'spo2'
-  | 'stress';
+export type DataTab = 'hrv' | 'sleep' | 'resting-hr' | 'activity' | 'spo2' | 'stress';
 
 export type Timeframe = 'day' | 'week' | 'month' | 'year';
 
@@ -540,16 +536,9 @@ export interface AgentResponseEnvelope {
 追加到 `packages/shared/src/index.ts`：
 
 ```ts
-export {
-  AgentTaskType,
-} from './types/agent';
+export { AgentTaskType } from './types/agent';
 
-export type {
-  DataTab,
-  Timeframe,
-  PageContext,
-  AgentResponseEnvelope,
-} from './types/agent';
+export type { DataTab, Timeframe, PageContext, AgentResponseEnvelope } from './types/agent';
 ```
 
 - [ ] **Step 3: 验证**
@@ -586,6 +575,7 @@ git commit -m "feat: define agent request/response types (SHR-003)"
 ### Task 6: 定义 chart token 类型 (SHR-004)
 
 **Files:**
+
 - Create: `packages/shared/src/types/chart-token.ts`
 - Modify: `packages/shared/src/types/agent.ts`
 - Modify: `packages/shared/src/index.ts`
@@ -649,6 +639,7 @@ git commit -m "feat: define chart token enum (SHR-004)"
 ### Task 7: 定义 god-mode DTOs (SHR-005)
 
 **Files:**
+
 - Create: `packages/shared/src/types/god-mode.ts`
 - Modify: `packages/shared/src/index.ts`
 
@@ -720,6 +711,7 @@ git commit -m "feat: define god-mode DTOs (SHR-005)"
 ### Task 8: 定义 API envelope 和 error codes (SHR-006)
 
 **Files:**
+
 - Create: `packages/shared/src/types/api.ts`
 - Modify: `packages/shared/src/index.ts`
 
@@ -794,6 +786,7 @@ git commit -m "feat: define API envelope and error codes (SHR-006)"
 ### Task 9: 定义 stress view model (SHR-010)
 
 **Files:**
+
 - Create: `packages/shared/src/types/stress.ts`
 - Modify: `packages/shared/src/index.ts`
 
@@ -855,6 +848,7 @@ git commit -m "feat: define stress view model and types (SHR-010)"
 ### Task 10: 创建 Zod schemas (SHR-007)
 
 **Files:**
+
 - Create: `packages/shared/src/schemas/sandbox.ts`
 - Create: `packages/shared/src/schemas/agent.ts`
 - Create: `packages/shared/src/schemas/chart-token.ts`
@@ -938,14 +932,7 @@ export const AgentTaskTypeSchema = z.nativeEnum({
   ADVISOR_CHAT: 'advisor_chat',
 } as const);
 
-export const DataTabSchema = z.enum([
-  'hrv',
-  'sleep',
-  'resting-hr',
-  'activity',
-  'spo2',
-  'stress',
-]);
+export const DataTabSchema = z.enum(['hrv', 'sleep', 'resting-hr', 'activity', 'spo2', 'stress']);
 
 export const TimeframeSchema = z.enum(['day', 'week', 'month', 'year']);
 
@@ -1140,6 +1127,7 @@ git commit -m "feat: add Zod schemas for all shared types (SHR-007)"
 ### Task 11: 创建常量和工具函数 (SHR-008)
 
 **Files:**
+
 - Create: `packages/shared/src/constants/status-colors.ts`
 - Create: `packages/shared/src/constants/chart-tokens.ts`
 - Create: `packages/shared/src/constants/timeframes.ts`
@@ -1163,7 +1151,10 @@ export const STATUS_COLORS: Record<StatusLevel, string> = {
   neutral: '#6b7280',
 } as const;
 
-export function getStatusColor(value: number, thresholds: { good: number; warning: number }): StatusLevel {
+export function getStatusColor(
+  value: number,
+  thresholds: { good: number; warning: number },
+): StatusLevel {
   if (value >= thresholds.good) return 'good';
   if (value >= thresholds.warning) return 'warning';
   return 'alert';
@@ -1183,14 +1174,54 @@ export interface ChartTokenMeta {
 }
 
 export const CHART_TOKEN_META: Record<ChartTokenId, ChartTokenMeta> = {
-  [ChartTokenId.HRV_7DAYS]: { id: ChartTokenId.HRV_7DAYS, label: 'HRV 趋势', unit: 'ms', color: '#8b5cf6' },
-  [ChartTokenId.SLEEP_7DAYS]: { id: ChartTokenId.SLEEP_7DAYS, label: '睡眠趋势', unit: 'h', color: '#3b82f6' },
-  [ChartTokenId.RESTING_HR_7DAYS]: { id: ChartTokenId.RESTING_HR_7DAYS, label: '静息心率', unit: 'bpm', color: '#ef4444' },
-  [ChartTokenId.ACTIVITY_7DAYS]: { id: ChartTokenId.ACTIVITY_7DAYS, label: '活动趋势', unit: '步', color: '#22c55e' },
-  [ChartTokenId.SPO2_7DAYS]: { id: ChartTokenId.SPO2_7DAYS, label: '血氧趋势', unit: '%', color: '#06b6d4' },
-  [ChartTokenId.SLEEP_STAGE_LAST_NIGHT]: { id: ChartTokenId.SLEEP_STAGE_LAST_NIGHT, label: '昨晚睡眠阶段', unit: '', color: '#6366f1' },
-  [ChartTokenId.STRESS_LOAD_7DAYS]: { id: ChartTokenId.STRESS_LOAD_7DAYS, label: '压力负荷', unit: '分', color: '#f97316' },
-  [ChartTokenId.HRV_SLEEP_14DAYS_COMPARE]: { id: ChartTokenId.HRV_SLEEP_14DAYS_COMPARE, label: 'HRV-睡眠对比', unit: '', color: '#a855f7' },
+  [ChartTokenId.HRV_7DAYS]: {
+    id: ChartTokenId.HRV_7DAYS,
+    label: 'HRV 趋势',
+    unit: 'ms',
+    color: '#8b5cf6',
+  },
+  [ChartTokenId.SLEEP_7DAYS]: {
+    id: ChartTokenId.SLEEP_7DAYS,
+    label: '睡眠趋势',
+    unit: 'h',
+    color: '#3b82f6',
+  },
+  [ChartTokenId.RESTING_HR_7DAYS]: {
+    id: ChartTokenId.RESTING_HR_7DAYS,
+    label: '静息心率',
+    unit: 'bpm',
+    color: '#ef4444',
+  },
+  [ChartTokenId.ACTIVITY_7DAYS]: {
+    id: ChartTokenId.ACTIVITY_7DAYS,
+    label: '活动趋势',
+    unit: '步',
+    color: '#22c55e',
+  },
+  [ChartTokenId.SPO2_7DAYS]: {
+    id: ChartTokenId.SPO2_7DAYS,
+    label: '血氧趋势',
+    unit: '%',
+    color: '#06b6d4',
+  },
+  [ChartTokenId.SLEEP_STAGE_LAST_NIGHT]: {
+    id: ChartTokenId.SLEEP_STAGE_LAST_NIGHT,
+    label: '昨晚睡眠阶段',
+    unit: '',
+    color: '#6366f1',
+  },
+  [ChartTokenId.STRESS_LOAD_7DAYS]: {
+    id: ChartTokenId.STRESS_LOAD_7DAYS,
+    label: '压力负荷',
+    unit: '分',
+    color: '#f97316',
+  },
+  [ChartTokenId.HRV_SLEEP_14DAYS_COMPARE]: {
+    id: ChartTokenId.HRV_SLEEP_14DAYS_COMPARE,
+    label: 'HRV-睡眠对比',
+    unit: '',
+    color: '#a855f7',
+  },
 };
 
 export function getChartTokenMeta(id: ChartTokenId): ChartTokenMeta {
@@ -1351,6 +1382,7 @@ git commit -m "feat: add shared constants and utility functions (SHR-008)"
 ### Task 12: 编写 shared 包单元测试 (SHR-009)
 
 **Files:**
+
 - Create: `packages/shared/src/__tests__/schemas.test.ts`
 - Create: `packages/shared/src/__tests__/utils.test.ts`
 
@@ -1398,7 +1430,13 @@ describe('DailyRecordSchema', () => {
     const record = {
       date: '2026-04-03',
       hr: [62, 58, 65],
-      sleep: { totalMinutes: 420, startTime: '23:00', endTime: '06:00', stages: { deep: 90, light: 180, rem: 120, awake: 30 }, score: 85 },
+      sleep: {
+        totalMinutes: 420,
+        startTime: '23:00',
+        endTime: '06:00',
+        stages: { deep: 90, light: 180, rem: 120, awake: 30 },
+        score: 85,
+      },
       activity: { steps: 8500, calories: 2200, activeMinutes: 45, distanceKm: 6.2 },
       spo2: 98,
       stress: { load: 35 },

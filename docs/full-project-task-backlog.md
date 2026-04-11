@@ -133,26 +133,26 @@
 
 | ID      | Priority | Module | Task                                | Depends On                | Owner | Deliverable / DoD                                                                                                                           |
 | ------- | -------- | ------ | ----------------------------------- | ------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| AGT-009 | P0       | Agent  | 实现 insight rule engine 基础框架   | AGT-007, SAN-004         | Agent | 规则执行器可输出结构化 insights/signals。                                                                                                   |
-| AGT-010 | P0       | Agent  | 实现首页晨报相关规则                | AGT-009                  | Agent | 可抽取状态色、近期异常点、建议候选。                                                                                                        |
-| AGT-011 | P0       | Agent  | 实现视图总结相关规则                | AGT-009, SHR-010         | Agent | 可按 tab/timeframe 抽取趋势、异常、对比信息，并支持 stress load 的解释性信号。                                                              |
-| AGT-012 | P0       | Agent  | 实现 prompt 资产加载器              | AGT-001, DAT-006         | Agent | 可加载 system/task prompt 模板并缓存。                                                                                                      |
-| AGT-013 | P0       | Agent  | 实现 system prompt builder          | AGT-012, AGT-007         | Agent | 固定 persona/constraints 能被可靠注入。                                                                                                     |
+| AGT-009 | P0       | Agent  | 实现 insight rule engine 基础框架   | AGT-007, SAN-004          | Agent | 规则执行器可输出结构化 insights/signals。                                                                                                   |
+| AGT-010 | P0       | Agent  | 实现首页晨报相关规则                | AGT-009                   | Agent | 可抽取状态色、近期异常点、建议候选。                                                                                                        |
+| AGT-011 | P0       | Agent  | 实现视图总结相关规则                | AGT-009, SHR-010          | Agent | 可按 tab/timeframe 抽取趋势、异常、对比信息，并支持 stress load 的解释性信号。                                                              |
+| AGT-012 | P0       | Agent  | 实现 prompt 资产加载器              | AGT-001, DAT-006          | Agent | 可加载 system/task prompt 模板并缓存。                                                                                                      |
+| AGT-013 | P0       | Agent  | 实现 system prompt builder          | AGT-012, AGT-007          | Agent | 固定 persona/constraints 能被可靠注入。                                                                                                     |
 | AGT-014 | P0       | Agent  | 实现 task prompt builder            | AGT-012, AGT-004, AGT-008 | Agent | 按 taskType 注入不同任务说明、上下文与 task constraints。                                                                                   |
 | AGT-015 | P0       | Agent  | 定义结构化输出 schema 并接入 parser | AGT-003, SHR-003, SHR-007 | Agent | 模型输出会被 parse 成唯一 AgentResponseEnvelope，字段名固定为 `chartTokens: ChartTokenId[]` / `microTips: string[]` / `meta.finishReason`。 |
-| AGT-016 | P0       | Agent  | 实现 chart token 白名单校验器       | AGT-015, SHR-004         | Agent | 仅允许 shared `ChartTokenId[]`；非法 token 或对象 token 被过滤或触发 fallback。                                                             |
-| AGT-017 | P0       | Agent  | 实现 safety cleaner                 | AGT-015                  | Agent | 越权诊断、缺失数据幻觉、非法字段会被清洗或降级。                                                                                            |
+| AGT-016 | P0       | Agent  | 实现 chart token 白名单校验器       | AGT-015, SHR-004          | Agent | 仅允许 shared `ChartTokenId[]`；非法 token 或对象 token 被过滤或触发 fallback。                                                             |
+| AGT-017 | P0       | Agent  | 实现 safety cleaner                 | AGT-015                   | Agent | 越权诊断、缺失数据幻觉、非法字段会被清洗或降级。                                                                                            |
 
 ### Wave 2.3 — Fallback/Facade/Test
 
 **本段目标**：最后组装运行时总入口，并把 fallback、timeout、测试一次收口。
 
-| ID      | Priority | Module | Task                        | Depends On                                                                                                                   | Owner | Deliverable / DoD                                            |
-| ------- | -------- | ------ | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------ |
-| AGT-018 | P0       | Agent  | 实现 fallback engine        | AGT-004, DAT-005                                                                                                             | Agent | 超时、provider error、invalid output、low-data 场景能给出稳定响应。 |
-| AGT-019 | P0       | Agent  | 实现 timeout controller     | AGT-003, AGT-018                                                                                                             | Agent | AI 执行可在 6 秒阈值内被中断并转 fallback。                  |
-| AGT-020 | P0       | Agent  | 组装 Agent Runtime facade   | AGT-003, AGT-004, AGT-005, AGT-006, AGT-008, AGT-010, AGT-011, AGT-013, AGT-014, AGT-015, AGT-016, AGT-017, AGT-018, AGT-019 | Agent | backend 可通过单一 executeAgent(request, runtimeDeps) 调用。 |
-| AGT-021 | P0       | Agent  | 为 agent-core 补齐单元测试  | AGT-008, AGT-009, AGT-010, AGT-011, AGT-015, AGT-018, AGT-019, AGT-020                                                       | Agent | context/rules/parser/fallback/timeout 覆盖到位。             |
+| ID      | Priority | Module | Task                       | Depends On                                                                                                                   | Owner | Deliverable / DoD                                                   |
+| ------- | -------- | ------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------------- |
+| AGT-018 | P0       | Agent  | 实现 fallback engine       | AGT-004, DAT-005                                                                                                             | Agent | 超时、provider error、invalid output、low-data 场景能给出稳定响应。 |
+| AGT-019 | P0       | Agent  | 实现 timeout controller    | AGT-003, AGT-018                                                                                                             | Agent | AI 执行可在 6 秒阈值内被中断并转 fallback。                         |
+| AGT-020 | P0       | Agent  | 组装 Agent Runtime facade  | AGT-003, AGT-004, AGT-005, AGT-006, AGT-008, AGT-010, AGT-011, AGT-013, AGT-014, AGT-015, AGT-016, AGT-017, AGT-018, AGT-019 | Agent | backend 可通过单一 executeAgent(request, runtimeDeps) 调用。        |
+| AGT-021 | P0       | Agent  | 为 agent-core 补齐单元测试 | AGT-008, AGT-009, AGT-010, AGT-011, AGT-015, AGT-018, AGT-019, AGT-020                                                       | Agent | context/rules/parser/fallback/timeout 覆盖到位。                    |
 
 ## Wave 3 — Backend 应用壳层与只读/AI/God-Mode API
 
@@ -162,49 +162,49 @@
 
 **本段目标**：先把 Fastify 外壳、日志、运行时容器与基础只读能力立住。
 
-| ID     | Priority | Module  | Task                                    | Depends On              | Owner   | Deliverable / DoD                                                                                         |
-| ------ | -------- | ------- | --------------------------------------- | ----------------------- | ------- | --------------------------------------------------------------------------------------------------------- |
-| BE-001 | P0       | Backend | 实现 agent-api 环境变量 schema 与加载器 | OTH-007, OTH-009       | Backend | PORT/NODE_ENV/LLM_*/AI_TIMEOUT_MS/ENABLE_GOD_MODE 校验通过。                                              |
-| BE-002 | P0       | Backend | 实现 logger 基础封装                    | OTH-007                | Backend | 结构化日志可输出 requestId、route、latency、error。                                                       |
-| BE-003 | P0       | Backend | 实现 request-context 插件               | BE-001, BE-002         | Backend | 每个请求自动注入 requestId/sessionId/profileId 上下文。                                                   |
-| BE-004 | P0       | Backend | 实现统一错误处理插件                    | BE-001, SHR-006        | Backend | schema 错误、业务错误、未知错误按统一 envelope 返回。                                                     |
-| BE-005 | P0       | Backend | 实现 CORS 与基础安全头配置              | BE-001                 | Backend | web 本地联调正常；不影响 demo 运行。                                                                      |
-| BE-006 | P0       | Backend | 实现 metrics 插件                       | BE-001, BE-002         | Backend | API latency/AI timeout/fallback/provider error 可记录。                                                   |
-| BE-008 | P0       | Backend | 实现 runtime registry                   | BE-001                 | Backend | 应用启动时组装 sandbox/agent/services/runtime stores。                                                    |
-| BE-009 | P0       | Backend | 实现 session store                      | BE-008                 | Backend | 支持 demo 期内按 sessionId 保存短期会话记忆；profile switch 时清空旧 profile 的 session / analytical memory。 |
-| BE-010 | P0       | Backend | 实现 override store                     | BE-008, SHR-005        | Backend | 支持 profile switch、event inject、metric override、reset 的内存态存储。                                  |
-| BE-011 | P0       | Backend | 实现 scenario registry                  | BE-008, DAT-007        | Backend | 可按 scenarioId 读取 God-Mode 场景脚本。                                                                  |
-| BE-012 | P0       | Backend | 实现 /health 路由                       | BE-001, BE-004         | Backend | 可返回应用、env、provider readiness 基础信息。                                                            |
-| BE-013 | P0       | Backend | 实现 profiles 模块与基础只读路由        | BE-008, SAN-003        | Backend | 可列出 profile 清单，并提供 `GET /profiles/:profileId` 的基础信息读取能力。                               |
+| ID     | Priority | Module  | Task                                    | Depends On       | Owner   | Deliverable / DoD                                                                                             |
+| ------ | -------- | ------- | --------------------------------------- | ---------------- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| BE-001 | P0       | Backend | 实现 agent-api 环境变量 schema 与加载器 | OTH-007, OTH-009 | Backend | PORT/NODE*ENV/LLM*\*/AI_TIMEOUT_MS/ENABLE_GOD_MODE 校验通过。                                                 |
+| BE-002 | P0       | Backend | 实现 logger 基础封装                    | OTH-007          | Backend | 结构化日志可输出 requestId、route、latency、error。                                                           |
+| BE-003 | P0       | Backend | 实现 request-context 插件               | BE-001, BE-002   | Backend | 每个请求自动注入 requestId/sessionId/profileId 上下文。                                                       |
+| BE-004 | P0       | Backend | 实现统一错误处理插件                    | BE-001, SHR-006  | Backend | schema 错误、业务错误、未知错误按统一 envelope 返回。                                                         |
+| BE-005 | P0       | Backend | 实现 CORS 与基础安全头配置              | BE-001           | Backend | web 本地联调正常；不影响 demo 运行。                                                                          |
+| BE-006 | P0       | Backend | 实现 metrics 插件                       | BE-001, BE-002   | Backend | API latency/AI timeout/fallback/provider error 可记录。                                                       |
+| BE-008 | P0       | Backend | 实现 runtime registry                   | BE-001           | Backend | 应用启动时组装 sandbox/agent/services/runtime stores。                                                        |
+| BE-009 | P0       | Backend | 实现 session store                      | BE-008           | Backend | 支持 demo 期内按 sessionId 保存短期会话记忆；profile switch 时清空旧 profile 的 session / analytical memory。 |
+| BE-010 | P0       | Backend | 实现 override store                     | BE-008, SHR-005  | Backend | 支持 profile switch、event inject、metric override、reset 的内存态存储。                                      |
+| BE-011 | P0       | Backend | 实现 scenario registry                  | BE-008, DAT-007  | Backend | 可按 scenarioId 读取 God-Mode 场景脚本。                                                                      |
+| BE-012 | P0       | Backend | 实现 /health 路由                       | BE-001, BE-004   | Backend | 可返回应用、env、provider readiness 基础信息。                                                                |
+| BE-013 | P0       | Backend | 实现 profiles 模块与基础只读路由        | BE-008, SAN-003  | Backend | 可列出 profile 清单，并提供 `GET /profiles/:profileId` 的基础信息读取能力。                                   |
 
 ### Wave 3.2 — Read-only + AI API
 
 **本段目标**：在 runtime 稳定后完成正式只读接口和 AI 接口，供前端联调使用。
 
-| ID     | Priority | Module  | Task                                    | Depends On                                  | Owner   | Deliverable / DoD                                                                                                                 |
-| ------ | -------- | ------- | --------------------------------------- | ------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| BE-014 | P0       | Backend | 实现 profile timeline 只读路由          | BE-008, SAN-003, SAN-004, SAN-005           | Backend | 提供 `GET /profiles/:profileId/timeline`；Homepage 与 Data Center 均通过正式只读接口组合数据，不新增独立 homepage 聚合 endpoint。 |
-| BE-015 | P0       | Backend | 实现 data-center 只读数据路由           | BE-008, SAN-003, SAN-004, SAN-005, SAN-008, SHR-010 | Backend | 可按 tab/timeframe/dateRange 返回图表数据与元信息；`stress` tab 必须返回 `StressTimelineResponse`。                               |
-| BE-016 | P0       | Backend | 实现 chart-data 专用路由或服务          | BE-015, SHR-004                             | Backend | 统一输出 shared `ChartTokenId` 对应的图表系列数据。                                                                               |
-| BE-017 | P0       | Backend | 实现 AI orchestration service           | BE-008, AGT-020                             | Backend | backend 内部可统一调用 Agent Runtime 并处理 timeout/fallback/meta.finishReason。                                                  |
-| BE-018 | P0       | Backend | 实现 /ai/morning-brief 路由             | BE-017, BE-013, BE-014                      | Backend | 首页晨报接口按 profile/pageContext 返回结构化响应。                                                                               |
-| BE-019 | P0       | Backend | 实现 /ai/view-summary 路由              | BE-017, BE-015                              | Backend | Data Center 当前视图总结接口可按 tab/timeframe 工作。                                                                             |
-| BE-020 | P0       | Backend | 实现 /ai/chat 路由                      | BE-017                                      | Backend | AI Advisor 聊天接口支持 userMessage、smartPromptId、visibleChartIds；ChatRequest 字段与 shared 协议一致。                         |
-| BE-021 | P1       | Backend | 实现 /ai/chat/stream SSE 路由           | BE-017                                      | Backend | 如启用流式，前端可按 SSE 接收消息块；未启用不影响主流程。                                                                         |
+| ID     | Priority | Module  | Task                           | Depends On                                          | Owner   | Deliverable / DoD                                                                                                                 |
+| ------ | -------- | ------- | ------------------------------ | --------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| BE-014 | P0       | Backend | 实现 profile timeline 只读路由 | BE-008, SAN-003, SAN-004, SAN-005                   | Backend | 提供 `GET /profiles/:profileId/timeline`；Homepage 与 Data Center 均通过正式只读接口组合数据，不新增独立 homepage 聚合 endpoint。 |
+| BE-015 | P0       | Backend | 实现 data-center 只读数据路由  | BE-008, SAN-003, SAN-004, SAN-005, SAN-008, SHR-010 | Backend | 可按 tab/timeframe/dateRange 返回图表数据与元信息；`stress` tab 必须返回 `StressTimelineResponse`。                               |
+| BE-016 | P0       | Backend | 实现 chart-data 专用路由或服务 | BE-015, SHR-004                                     | Backend | 统一输出 shared `ChartTokenId` 对应的图表系列数据。                                                                               |
+| BE-017 | P0       | Backend | 实现 AI orchestration service  | BE-008, AGT-020                                     | Backend | backend 内部可统一调用 Agent Runtime 并处理 timeout/fallback/meta.finishReason。                                                  |
+| BE-018 | P0       | Backend | 实现 /ai/morning-brief 路由    | BE-017, BE-013, BE-014                              | Backend | 首页晨报接口按 profile/pageContext 返回结构化响应。                                                                               |
+| BE-019 | P0       | Backend | 实现 /ai/view-summary 路由     | BE-017, BE-015                                      | Backend | Data Center 当前视图总结接口可按 tab/timeframe 工作。                                                                             |
+| BE-020 | P0       | Backend | 实现 /ai/chat 路由             | BE-017                                              | Backend | AI Advisor 聊天接口支持 userMessage、smartPromptId、visibleChartIds；ChatRequest 字段与 shared 协议一致。                         |
+| BE-021 | P1       | Backend | 实现 /ai/chat/stream SSE 路由  | BE-017                                              | Backend | 如启用流式，前端可按 SSE 接收消息块；未启用不影响主流程。                                                                         |
 
 ### Wave 3.3 — God-Mode API/Test
 
-**本段目标**：把 God-Mode 能力和接口一致性、集成测试一起收尾，避免只完成半套管理面。 
+**本段目标**：把 God-Mode 能力和接口一致性、集成测试一起收尾，避免只完成半套管理面。
 
-| ID      | Priority | Module  | Task                                              | Depends On                                                                                      | Owner      | Deliverable / DoD                                                                                                          |
-| ------- | -------- | ------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------- |
+| ID      | Priority | Module  | Task                                              | Depends On                                                                                      | Owner      | Deliverable / DoD                                                                                                             |
+| ------- | -------- | ------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | BE-022  | P0       | Backend | 实现 God-Mode API：switch profile                 | BE-010, BE-009, SHR-005                                                                         | Backend    | 调用后更新当前 profile runtime state；保留 `sessionId`，但必须清空旧 profile 的 session / analytical memory；不强制页面跳转。 |
-| BE-023  | P0       | Backend | 实现 God-Mode API：inject event                   | BE-010, SHR-005                                                                                 | Backend    | 调用后可写入 event override 并返回 active-sensing 所需数据。                                                               |
-| BE-024  | P0       | Backend | 实现 God-Mode API：override metric                | BE-010, SHR-005                                                                                 | Backend    | 调用后目标日期/指标被局部覆盖。                                                                                            |
-| BE-025  | P0       | Backend | 实现 God-Mode API：reset / restore scenario       | BE-010, BE-011, SHR-005                                                                         | Backend    | 可清空 overrides 或按 scenario 重放。                                                                                      |
+| BE-023  | P0       | Backend | 实现 God-Mode API：inject event                   | BE-010, SHR-005                                                                                 | Backend    | 调用后可写入 event override 并返回 active-sensing 所需数据。                                                                  |
+| BE-024  | P0       | Backend | 实现 God-Mode API：override metric                | BE-010, SHR-005                                                                                 | Backend    | 调用后目标日期/指标被局部覆盖。                                                                                               |
+| BE-025  | P0       | Backend | 实现 God-Mode API：reset / restore scenario       | BE-010, BE-011, SHR-005                                                                         | Backend    | 可清空 overrides 或按 scenario 重放。                                                                                         |
 | BE-025A | P0       | Backend | 实现 God-Mode API：state / demo-script run        | BE-010, BE-011, SHR-005                                                                         | Backend    | `GET /god-mode/state` 与 `POST /god-mode/demo-script/run` 可用；demo-script 必须通过正式 API 执行并返回 executed steps 摘要。 |
-| BE-026  | P0       | Backend | 统一只读接口与 AI/God-Mode 接口 response envelope | BE-004, BE-013, BE-014, BE-015, BE-018, BE-019, BE-020, BE-022, BE-023, BE-024, BE-025, BE-025A | Backend    | 所有接口返回结构统一；前端无需各写一套适配。                                                                               |
-| BE-027  | P0       | Backend | 为 backend 模块编写集成测试                       | BE-012, BE-013, BE-014, BE-015, BE-018, BE-019, BE-020, BE-022, BE-023, BE-024, BE-025, BE-025A | Backend/QA | health/profile/data/ai/god-mode 路由可在测试环境跑通。                                                                     |
+| BE-026  | P0       | Backend | 统一只读接口与 AI/God-Mode 接口 response envelope | BE-004, BE-013, BE-014, BE-015, BE-018, BE-019, BE-020, BE-022, BE-023, BE-024, BE-025, BE-025A | Backend    | 所有接口返回结构统一；前端无需各写一套适配。                                                                                  |
+| BE-027  | P0       | Backend | 为 backend 模块编写集成测试                       | BE-012, BE-013, BE-014, BE-015, BE-018, BE-019, BE-020, BE-022, BE-023, BE-024, BE-025, BE-025A | Backend/QA | health/profile/data/ai/god-mode 路由可在测试环境跑通。                                                                        |
 
 ## Wave 4 — Frontend 应用壳层与页面骨架
 
@@ -247,7 +247,7 @@
 
 ### Wave 4.3 — Advisor + God-Mode + QA
 
-**本段目标**：最后收拢聊天外壳、God-Mode 面板与基础前端验证，避免同时铺太多页面。 
+**本段目标**：最后收拢聊天外壳、God-Mode 面板与基础前端验证，避免同时铺太多页面。
 
 | ID     | Priority | Module   | Task                                     | Depends On                     | Owner       | Deliverable / DoD                                                                          |
 | ------ | -------- | -------- | ---------------------------------------- | ------------------------------ | ----------- | ------------------------------------------------------------------------------------------ |
@@ -281,23 +281,23 @@
 
 ### Wave 5.2 — Advisor Chat
 
-**本段目标**：在首页路径稳定后单独收敛聊天闭环，避免三条 AI 旅程同时联调。 
+**本段目标**：在首页路径稳定后单独收敛聊天闭环，避免三条 AI 旅程同时联调。
 
-| ID     | Priority | Module   | Task                                            | Depends On              | Owner                  | Deliverable / DoD                                                                   |
-| ------ | -------- | -------- | ----------------------------------------------- | ----------------------- | ---------------------- | ----------------------------------------------------------------------------------- |
-| AI-008 | P0       | AI Slice | 联通 Advisor Chat 发送消息全链路                | BE-020, FE-023, FE-024  | Frontend/Backend/Agent | 用户可发送消息并收到结构化回答。                                                    |
-| AI-009 | P0       | AI Slice | 实现 Advisor Chat 请求上下文转发                | AI-008, FE-010, FE-008  | Frontend               | pageContext/tab/timeframe/visibleChartIds 会随请求送往后端。                        |
-| AI-010 | P0       | AI Slice | 实现 Advisor Chat loading / assistant typing UI | AI-008, UI-006          | Frontend               | 发送消息后有等待状态且不会阻塞输入。                                                |
-| AI-011 | P0       | AI Slice | 实现 Advisor Chat fallback 渲染路径             | AI-008, AGT-018         | Frontend/Backend       | provider error/timeout/invalid output 时可统一显示 fallback 回答。                  |
-| AI-012 | P0       | AI Slice | 打通消息内 chart token 渲染                     | AI-008, FE-025, AGT-016 | Frontend/Agent         | 带 `chartTokens: ChartTokenId[]` 的消息能嵌入微图表。                               |
-| AI-013 | P0       | AI Slice | 统一渲染状态色、source 与 meta                  | AI-001, AI-006, AI-008  | Frontend               | Morning Brief/View Summary/Chat 均能消费统一 meta 字段。                            |
-| AI-014 | P0       | AI Slice | 打通 Smart Prompt 执行链路                      | BE-020, FE-026          | Frontend/Backend       | 点击快捷指令可直接生成聊天请求。                                                    |
-| AI-015 | P0       | AI Slice | 打通 session memory 在 chat 中的连续性          | BE-009, AGT-005, AI-008 | Backend/Agent          | 同 `sessionId` 且同 `profileId` 的多轮对话上下文连续；profile switch 后旧记忆失效。 |
-| AI-016 | P1       | AI Slice | 接入 analytical memory 读写                     | AGT-006, BE-017, AI-006, AI-008 | Backend/Agent    | 最近一次总结/规则输出可被后续请求复用。                                             |
+| ID     | Priority | Module   | Task                                            | Depends On                      | Owner                  | Deliverable / DoD                                                                   |
+| ------ | -------- | -------- | ----------------------------------------------- | ------------------------------- | ---------------------- | ----------------------------------------------------------------------------------- |
+| AI-008 | P0       | AI Slice | 联通 Advisor Chat 发送消息全链路                | BE-020, FE-023, FE-024          | Frontend/Backend/Agent | 用户可发送消息并收到结构化回答。                                                    |
+| AI-009 | P0       | AI Slice | 实现 Advisor Chat 请求上下文转发                | AI-008, FE-010, FE-008          | Frontend               | pageContext/tab/timeframe/visibleChartIds 会随请求送往后端。                        |
+| AI-010 | P0       | AI Slice | 实现 Advisor Chat loading / assistant typing UI | AI-008, UI-006                  | Frontend               | 发送消息后有等待状态且不会阻塞输入。                                                |
+| AI-011 | P0       | AI Slice | 实现 Advisor Chat fallback 渲染路径             | AI-008, AGT-018                 | Frontend/Backend       | provider error/timeout/invalid output 时可统一显示 fallback 回答。                  |
+| AI-012 | P0       | AI Slice | 打通消息内 chart token 渲染                     | AI-008, FE-025, AGT-016         | Frontend/Agent         | 带 `chartTokens: ChartTokenId[]` 的消息能嵌入微图表。                               |
+| AI-013 | P0       | AI Slice | 统一渲染状态色、source 与 meta                  | AI-001, AI-006, AI-008          | Frontend               | Morning Brief/View Summary/Chat 均能消费统一 meta 字段。                            |
+| AI-014 | P0       | AI Slice | 打通 Smart Prompt 执行链路                      | BE-020, FE-026                  | Frontend/Backend       | 点击快捷指令可直接生成聊天请求。                                                    |
+| AI-015 | P0       | AI Slice | 打通 session memory 在 chat 中的连续性          | BE-009, AGT-005, AI-008         | Backend/Agent          | 同 `sessionId` 且同 `profileId` 的多轮对话上下文连续；profile switch 后旧记忆失效。 |
+| AI-016 | P1       | AI Slice | 接入 analytical memory 读写                     | AGT-006, BE-017, AI-006, AI-008 | Backend/Agent          | 最近一次总结/规则输出可被后续请求复用。                                             |
 
 ### Wave 5.3 — Guardrails + Refresh + E2E
 
-**本段目标**：最后补齐数据守护、profile 切换重取与端到端验证，作为 AI 联调收口。 
+**本段目标**：最后补齐数据守护、profile 切换重取与端到端验证，作为 AI 联调收口。
 
 | ID     | Priority | Module   | Task                                     | Depends On                                                               | Owner                  | Deliverable / DoD                                                                                   |
 | ------ | -------- | -------- | ---------------------------------------- | ------------------------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------- |
@@ -324,26 +324,26 @@
 
 ### Wave 6.2 — Override/Scenario/Demo Script
 
-**本段目标**：第二段聚焦演示操作面本身，把 override、scenario、demo-script 独立收口。 
+**本段目标**：第二段聚焦演示操作面本身，把 override、scenario、demo-script 独立收口。
 
-| ID     | Priority | Module   | Task                              | Depends On              | Owner            | Deliverable / DoD                                                                |
-| ------ | -------- | -------- | --------------------------------- | ----------------------- | ---------------- | -------------------------------------------------------------------------------- |
-| GM-006 | P0       | God-Mode | 联通 metric override API 与前端动作 | BE-024, FE-027        | Frontend/Backend | 修改指标后后端 override 生效并返回受影响范围。                                   |
-| GM-007 | P0       | God-Mode | 实现 metric override 后的局部重绘策略 | GM-006, FE-015, FE-020 | Frontend         | 首页卡片/图表局部更新，避免整页闪烁重载。                                        |
-| GM-008 | P0       | God-Mode | 联通 reset API                    | BE-025, FE-027          | Frontend/Backend | 重置后 runtime overrides 被清空，页面恢复基础 sandbox。                          |
-| GM-009 | P0       | God-Mode | 联通 restore scenario API         | BE-025, DAT-007, FE-027 | Frontend/Backend | 选择 scenario 后可一键恢复预设演示态。                                           |
-| GM-010 | P0       | God-Mode | 实现演示脚本 trigger 入口         | BE-025A, GM-009         | Frontend/Backend | 面板支持通过正式 demo-script API 一步触发多个动作，不在前端本地拼接状态。        |
+| ID     | Priority | Module   | Task                                  | Depends On              | Owner            | Deliverable / DoD                                                         |
+| ------ | -------- | -------- | ------------------------------------- | ----------------------- | ---------------- | ------------------------------------------------------------------------- |
+| GM-006 | P0       | God-Mode | 联通 metric override API 与前端动作   | BE-024, FE-027          | Frontend/Backend | 修改指标后后端 override 生效并返回受影响范围。                            |
+| GM-007 | P0       | God-Mode | 实现 metric override 后的局部重绘策略 | GM-006, FE-015, FE-020  | Frontend         | 首页卡片/图表局部更新，避免整页闪烁重载。                                 |
+| GM-008 | P0       | God-Mode | 联通 reset API                        | BE-025, FE-027          | Frontend/Backend | 重置后 runtime overrides 被清空，页面恢复基础 sandbox。                   |
+| GM-009 | P0       | God-Mode | 联通 restore scenario API             | BE-025, DAT-007, FE-027 | Frontend/Backend | 选择 scenario 后可一键恢复预设演示态。                                    |
+| GM-010 | P0       | God-Mode | 实现演示脚本 trigger 入口             | BE-025A, GM-009         | Frontend/Backend | 面板支持通过正式 demo-script API 一步触发多个动作，不在前端本地拼接状态。 |
 
 ### Wave 6.3 — Gating + Concurrency + E2E
 
-**本段目标**：最后处理启停控制、并发交互、动画体验与端到端验证。 
+**本段目标**：最后处理启停控制、并发交互、动画体验与端到端验证。
 
-| ID     | Priority | Module   | Task                               | Depends On                     | Owner            | Deliverable / DoD                                                  |
-| ------ | -------- | -------- | ---------------------------------- | ------------------------------ | ---------------- | ------------------------------------------------------------------ |
-| GM-011 | P0       | God-Mode | 实现 God-Mode 开关受 env 控制      | FE-001, BE-001, FE-027         | Frontend/Backend | 生产演示可开启，其他环境可关闭。                                   |
-| GM-012 | P0       | God-Mode | 处理 God-Mode 与 AI Advisor 并发交互 | GM-001, GM-003, GM-006, FE-011 | Frontend         | 在 Chat 打开时触发 God-Mode，不破坏消息面板状态。                  |
-| GM-013 | P0       | God-Mode | 实现 God-Mode 交互动画平滑策略     | GM-001, GM-004, GM-007         | Frontend         | 切 profile、横幅弹出、局部更新视觉上顺滑。                         |
-| GM-014 | P0       | God-Mode | 编写 God-Mode E2E                  | GM-001, GM-004, GM-007, GM-008, GM-009 | QA      | profile switch/event inject/metric override/reset/scenario 都可端到端验证。 |
+| ID     | Priority | Module   | Task                                 | Depends On                             | Owner            | Deliverable / DoD                                                           |
+| ------ | -------- | -------- | ------------------------------------ | -------------------------------------- | ---------------- | --------------------------------------------------------------------------- |
+| GM-011 | P0       | God-Mode | 实现 God-Mode 开关受 env 控制        | FE-001, BE-001, FE-027                 | Frontend/Backend | 生产演示可开启，其他环境可关闭。                                            |
+| GM-012 | P0       | God-Mode | 处理 God-Mode 与 AI Advisor 并发交互 | GM-001, GM-003, GM-006, FE-011         | Frontend         | 在 Chat 打开时触发 God-Mode，不破坏消息面板状态。                           |
+| GM-013 | P0       | God-Mode | 实现 God-Mode 交互动画平滑策略       | GM-001, GM-004, GM-007                 | Frontend         | 切 profile、横幅弹出、局部更新视觉上顺滑。                                  |
+| GM-014 | P0       | God-Mode | 编写 God-Mode E2E                    | GM-001, GM-004, GM-007, GM-008, GM-009 | QA               | profile switch/event inject/metric override/reset/scenario 都可端到端验证。 |
 
 ## Wave 7 — Hardening、观测、Demo 运行保障
 
@@ -351,7 +351,7 @@
 
 ### Wave 7.1 — Runtime Hardening/Observability
 
-**本段目标**：优先补齐运行时稳定性与可观测性，避免进入彩排后才发现根因不可见。 
+**本段目标**：优先补齐运行时稳定性与可观测性，避免进入彩排后才发现根因不可见。
 
 | ID     | Priority | Module    | Task                                    | Depends On                     | Owner            | Deliverable / DoD                                                                                    |
 | ------ | -------- | --------- | --------------------------------------- | ------------------------------ | ---------------- | ---------------------------------------------------------------------------------------------------- |
@@ -364,19 +364,19 @@
 
 ### Wave 7.2 — Delivery/CI
 
-**本段目标**：第二段聚焦本地联调、部署与质量门禁，把交付链路固定下来。 
+**本段目标**：第二段聚焦本地联调、部署与质量门禁，把交付链路固定下来。
 
-| ID     | Priority | Module    | Task                            | Depends On                         | Owner       | Deliverable / DoD                                            |
-| ------ | -------- | --------- | ------------------------------- | ---------------------------------- | ----------- | ------------------------------------------------------------ |
-| HD-008 | P1       | Hardening | 实现开发期 reset/seed 脚本      | DAT-002, DAT-003, DAT-004, DAT-007 | Platform    | 可快速恢复 demo 数据与 runtime state。                       |
-| HD-009 | P0       | Hardening | 实现 Docker Compose 本地联调方案 | OTH-007, OTH-008, OTH-009          | Platform    | web + agent-api 可通过 docker compose 跑通。                 |
-| HD-010 | P1       | Hardening | 编写轻量部署清单或容器脚本      | HD-009                             | Platform    | 支持单机容器部署或轻量云部署的最小脚本。                     |
-| HD-011 | P0       | Hardening | 固化根级质量门禁 pipeline       | OTH-014, FE-029, AGT-021, BE-027   | Platform    | merge 前必须通过 typecheck/lint/test/build。                 |
-| HD-012 | P1       | Hardening | 配置基础 coverage 门槛          | OTH-012, FE-029, AGT-021, BE-027   | Platform/QA | 关键包覆盖率门槛固定并纳入 CI。                              |
+| ID     | Priority | Module    | Task                             | Depends On                         | Owner       | Deliverable / DoD                            |
+| ------ | -------- | --------- | -------------------------------- | ---------------------------------- | ----------- | -------------------------------------------- |
+| HD-008 | P1       | Hardening | 实现开发期 reset/seed 脚本       | DAT-002, DAT-003, DAT-004, DAT-007 | Platform    | 可快速恢复 demo 数据与 runtime state。       |
+| HD-009 | P0       | Hardening | 实现 Docker Compose 本地联调方案 | OTH-007, OTH-008, OTH-009          | Platform    | web + agent-api 可通过 docker compose 跑通。 |
+| HD-010 | P1       | Hardening | 编写轻量部署清单或容器脚本       | HD-009                             | Platform    | 支持单机容器部署或轻量云部署的最小脚本。     |
+| HD-011 | P0       | Hardening | 固化根级质量门禁 pipeline        | OTH-014, FE-029, AGT-021, BE-027   | Platform    | merge 前必须通过 typecheck/lint/test/build。 |
+| HD-012 | P1       | Hardening | 配置基础 coverage 门槛           | OTH-012, FE-029, AGT-021, BE-027   | Platform/QA | 关键包覆盖率门槛固定并纳入 CI。              |
 
 ### Wave 7.3 — Frontend Resilience/Demo Ops
 
-**本段目标**：最后收拢前端兜底体验、runbook、彩排和最终验收，便于按演示视角收尾。 
+**本段目标**：最后收拢前端兜底体验、runbook、彩排和最终验收，便于按演示视角收尾。
 
 | ID     | Priority | Module    | Task                                        | Depends On             | Owner       | Deliverable / DoD                                                    |
 | ------ | -------- | --------- | ------------------------------------------- | ---------------------- | ----------- | -------------------------------------------------------------------- |

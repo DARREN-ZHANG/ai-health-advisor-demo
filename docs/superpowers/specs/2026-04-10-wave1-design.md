@@ -15,13 +15,13 @@
 
 当前 `packages/config/` 仅有空壳 `package.json`。需补齐以下配置文件：
 
-| 配置类型   | 文件                            | 内容                                   |
-| ---------- | ------------------------------- | -------------------------------------- |
-| TypeScript | `tsconfig.react.json`           | 继承 tsconfig.base.json，加 JSX 支持   |
-| TypeScript | `tsconfig.node.json`            | 继承 tsconfig.base.json，加 Node 类型  |
-| ESLint     | `eslint.config.base.mjs`        | 扁平配置基线，export 配置数组           |
-| Prettier   | `prettier.config.base.mjs`      | 基础格式规则，export 配置对象           |
-| Vitest     | `vitest.config.base.ts`         | 基础测试配置，含 coverage 设置          |
+| 配置类型   | 文件                       | 内容                                  |
+| ---------- | -------------------------- | ------------------------------------- |
+| TypeScript | `tsconfig.react.json`      | 继承 tsconfig.base.json，加 JSX 支持  |
+| TypeScript | `tsconfig.node.json`       | 继承 tsconfig.base.json，加 Node 类型 |
+| ESLint     | `eslint.config.base.mjs`   | 扁平配置基线，export 配置数组         |
+| Prettier   | `prettier.config.base.mjs` | 基础格式规则，export 配置对象         |
+| Vitest     | `vitest.config.base.ts`    | 基础测试配置，含 coverage 设置        |
 
 根级和 app 级配置改为引用 `@health-advisor/config` 导出的配置。
 
@@ -177,11 +177,26 @@ enum ChartTokenId {
 #### god-mode.ts
 
 ```ts
-interface ProfileSwitchPayload { profileId: string; }
-interface EventInjectPayload { eventType: string; data: Record<string, unknown>; timestamp?: string; }
-interface MetricOverridePayload { metric: string; value: unknown; dateRange?: { start: string; end: string }; }
-interface ResetPayload { scope: 'profile' | 'events' | 'overrides' | 'all'; }
-interface ScenarioPayload { scenarioId: string; params?: Record<string, unknown>; }
+interface ProfileSwitchPayload {
+  profileId: string;
+}
+interface EventInjectPayload {
+  eventType: string;
+  data: Record<string, unknown>;
+  timestamp?: string;
+}
+interface MetricOverridePayload {
+  metric: string;
+  value: unknown;
+  dateRange?: { start: string; end: string };
+}
+interface ResetPayload {
+  scope: 'profile' | 'events' | 'overrides' | 'all';
+}
+interface ScenarioPayload {
+  scenarioId: string;
+  params?: Record<string, unknown>;
+}
 ```
 
 #### api.ts
@@ -272,31 +287,38 @@ packages/sandbox/
 ### 4.2 核心逻辑
 
 **loader.ts**：
+
 - 接收 dataDir 路径，读取所有 profile JSON
 - 使用 Zod schema 验证数据完整性
 - 返回 `Map<profileId, SandboxProfile & { records: DailyRecord[] }>`
 
 **selectors/profile.ts**：
+
 - `getProfile(profileId)` → profile 或明确错误
 - `listProfiles()` → 所有 profile 摘要
 
 **selectors/date-range.ts**：
+
 - `selectByRange(records, timeframe)` → 过滤后的 records
 - 支持 day/week/month/year/custom 窗口
 
 **merge/override.ts**：
+
 - `applyOverrides(baseRecords, overrides)` → 新数组（不修改原数据）
 - override 值覆盖对应日期的对应指标
 
 **merge/event.ts**：
+
 - `mergeEvents(baseEvents, injected)` → 合并后的 events
 - 规则：按时间排序，同时间戳 injected 优先
 
 **helpers/missing-value.ts**：
+
 - `isMissing(value)` → 明确判断缺失值
 - `fillMissing(points, strategy)` → 支持 null/forward-fill/interpolate
 
 **helpers/timeline.ts**：
+
 - `normalizeTimeline(records, metrics)` → 标准时间序列
 - 输出 `{ date, values: Record<metric, number | null> }[]`
 - 支持滚动中位数、缺失值填充
@@ -412,6 +434,7 @@ function ChartRoot({ option, width, height, className }: ChartRootProps) {
 ```
 
 关键特性：
+
 - 自动 dispose 防止内存泄漏
 - option diff 更新（notMerge: false）
 - 响应式尺寸
@@ -425,6 +448,7 @@ type ChartBuilder = (data: StandardTimeSeries) => EChartsOption;
 ```
 
 Builder 职责：
+
 - 将标准时间序列转换为 ECharts option
 - 统一暗黑主题样式（颜色、字体、背景）
 - 统一 tooltip/legend/grid 配置
@@ -499,14 +523,14 @@ data/
 
 ### 7.3 三个 Profile 特征
 
-| 特征       | Profile A     | Profile B     | Profile C     |
-| ---------- | ------------- | ------------- | ------------- |
-| 整体状态   | 健康、规律    | 一般、波动    | 较差、压力高  |
-| 睡眠       | 7h、评分 85+  | 5-6h、评分 60 | 4-5h、评分 40 |
-| HRV        | 55-65、稳定   | 35-50、波动   | 25-35、下降   |
-| 运动       | 每日 8000+步  | 不规律        | 久坐          |
-| Stress     | 低、稳定      | 中等波动      | 高、持续上升  |
-| 数据量     | 14 天完整     | 14 天有缺失   | 14 天部分缺失 |
+| 特征     | Profile A    | Profile B     | Profile C     |
+| -------- | ------------ | ------------- | ------------- |
+| 整体状态 | 健康、规律   | 一般、波动    | 较差、压力高  |
+| 睡眠     | 7h、评分 85+ | 5-6h、评分 60 | 4-5h、评分 40 |
+| HRV      | 55-65、稳定  | 35-50、波动   | 25-35、下降   |
+| 运动     | 每日 8000+步 | 不规律        | 久坐          |
+| Stress   | 低、稳定     | 中等波动      | 高、持续上升  |
+| 数据量   | 14 天完整    | 14 天有缺失   | 14 天部分缺失 |
 
 ### 7.4 Fallback 格式
 
@@ -525,6 +549,7 @@ data/
 ### 7.5 验证脚本
 
 `data/validate.ts`：
+
 - 验证所有 profile JSON 符合 Zod schema
 - 检查日期连续性（无缺口）
 - 检查引用完整性（scenario 引用的 profile 存在）
@@ -547,13 +572,13 @@ apps/agent-api ← packages/shared, packages/sandbox
 
 ## 9. 测试策略
 
-| 包         | 测试类型 | 重点                                     |
-| ---------- | -------- | ---------------------------------------- |
-| shared     | 单元测试 | Zod schema parse/serialize，工具函数     |
-| sandbox    | 单元测试 | loader/select/merge/missing-value/timeline |
-| ui         | 单元测试 | 组件渲染快照，props 变化                  |
-| charts     | 单元测试 | option builder 输出，token registry 映射  |
-| data       | 脚本验证 | schema 符合性，日期连续性                 |
+| 包      | 测试类型 | 重点                                       |
+| ------- | -------- | ------------------------------------------ |
+| shared  | 单元测试 | Zod schema parse/serialize，工具函数       |
+| sandbox | 单元测试 | loader/select/merge/missing-value/timeline |
+| ui      | 单元测试 | 组件渲染快照，props 变化                   |
+| charts  | 单元测试 | option builder 输出，token registry 映射   |
+| data    | 脚本验证 | schema 符合性，日期连续性                  |
 
 ## 10. Wave 1 DoD
 

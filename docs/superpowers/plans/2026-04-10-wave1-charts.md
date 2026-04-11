@@ -15,6 +15,7 @@
 ### Task 1: 创建 charts 包骨架 (CHT-001)
 
 **Files:**
+
 - Create: `packages/charts/package.json`
 - Create: `packages/charts/tsconfig.json`
 - Create: `packages/charts/vitest.config.ts`
@@ -119,6 +120,7 @@ git commit -m "feat: create packages/charts skeleton (CHT-001)"
 ### Task 2: 创建 ECharts React 封装 (CHT-002)
 
 **Files:**
+
 - Create: `packages/charts/src/core/chart-root.tsx`
 - Create: `packages/charts/src/core/types.ts`
 - Create: `packages/charts/src/core/index.ts`
@@ -192,13 +194,7 @@ export const ChartRoot = forwardRef<HTMLDivElement, ChartRootProps>(
       chartRef.current?.setOption(option, { notMerge: false });
     }, [option]);
 
-    return (
-      <div
-        ref={containerRef}
-        className={className}
-        style={{ width, height }}
-      />
-    );
+    return <div ref={containerRef} className={className} style={{ width, height }} />;
   },
 );
 
@@ -235,6 +231,7 @@ git commit -m "feat: create ECharts React wrapper ChartRoot (CHT-002)"
 ### Task 3: 创建时间序列标准化工具 (CHT-003)
 
 **Files:**
+
 - Create: `packages/charts/src/utils/normalize.ts`
 - Create: `packages/charts/src/utils/index.ts`
 - Create: `packages/charts/src/__tests__/utils/normalize.test.ts`
@@ -310,6 +307,7 @@ git commit -m "feat: implement time series standardization (CHT-003)"
 ### Task 4: 创建 option builders (CHT-004)
 
 **Files:**
+
 - Create: `packages/charts/src/builders/sleep.ts`
 - Create: `packages/charts/src/builders/hrv.ts`
 - Create: `packages/charts/src/builders/resting-hr.ts`
@@ -370,8 +368,21 @@ export function buildHrv7Days(data: StandardTimeSeries): EChartsOption {
   return {
     ...DARK_THEME_BASE,
     xAxis: { type: 'category', data: data.dates, axisLabel: { color: '#64748b' } },
-    yAxis: { type: 'value', name: meta.unit, axisLabel: { color: '#64748b' }, splitLine: { lineStyle: { color: '#1e293b' } } },
-    series: [lineSeries(meta.label, data.series['hr']?.map((v) => v ? Math.round(v.reduce((a: number, b: number) => a + b, 0) / v.length) : null) ?? [], meta.color)],
+    yAxis: {
+      type: 'value',
+      name: meta.unit,
+      axisLabel: { color: '#64748b' },
+      splitLine: { lineStyle: { color: '#1e293b' } },
+    },
+    series: [
+      lineSeries(
+        meta.label,
+        data.series['hr']?.map((v) =>
+          v ? Math.round(v.reduce((a: number, b: number) => a + b, 0) / v.length) : null,
+        ) ?? [],
+        meta.color,
+      ),
+    ],
   };
 }
 ```
@@ -393,7 +404,12 @@ export function buildSleep7Days(data: StandardTimeSeries): EChartsOption {
   return {
     ...DARK_THEME_BASE,
     xAxis: { type: 'category', data: data.dates, axisLabel: { color: '#64748b' } },
-    yAxis: { type: 'value', name: meta.unit, axisLabel: { color: '#64748b' }, splitLine: { lineStyle: { color: '#1e293b' } } },
+    yAxis: {
+      type: 'value',
+      name: meta.unit,
+      axisLabel: { color: '#64748b' },
+      splitLine: { lineStyle: { color: '#1e293b' } },
+    },
     series: [lineSeries(meta.label, sleepHours, meta.color)],
   };
 }
@@ -414,7 +430,12 @@ export function buildRestingHr7Days(data: StandardTimeSeries): EChartsOption {
   return {
     ...DARK_THEME_BASE,
     xAxis: { type: 'category', data: data.dates, axisLabel: { color: '#64748b' } },
-    yAxis: { type: 'value', name: meta.unit, axisLabel: { color: '#64748b' }, splitLine: { lineStyle: { color: '#1e293b' } } },
+    yAxis: {
+      type: 'value',
+      name: meta.unit,
+      axisLabel: { color: '#64748b' },
+      splitLine: { lineStyle: { color: '#1e293b' } },
+    },
     series: [lineSeries(meta.label, data.series['hr.resting'] ?? [], meta.color)],
   };
 }
@@ -433,7 +454,12 @@ export function buildActivity7Days(data: StandardTimeSeries): EChartsOption {
   return {
     ...DARK_THEME_BASE,
     xAxis: { type: 'category', data: data.dates, axisLabel: { color: '#64748b' } },
-    yAxis: { type: 'value', name: meta.unit, axisLabel: { color: '#64748b' }, splitLine: { lineStyle: { color: '#1e293b' } } },
+    yAxis: {
+      type: 'value',
+      name: meta.unit,
+      axisLabel: { color: '#64748b' },
+      splitLine: { lineStyle: { color: '#1e293b' } },
+    },
     series: [lineSeries(meta.label, data.series['activity.steps'] ?? [], meta.color)],
   };
 }
@@ -452,7 +478,14 @@ export function buildSpo27Days(data: StandardTimeSeries): EChartsOption {
   return {
     ...DARK_THEME_BASE,
     xAxis: { type: 'category', data: data.dates, axisLabel: { color: '#64748b' } },
-    yAxis: { type: 'value', name: meta.unit, min: 85, max: 100, axisLabel: { color: '#64748b' }, splitLine: { lineStyle: { color: '#1e293b' } } },
+    yAxis: {
+      type: 'value',
+      name: meta.unit,
+      min: 85,
+      max: 100,
+      axisLabel: { color: '#64748b' },
+      splitLine: { lineStyle: { color: '#1e293b' } },
+    },
     series: [lineSeries(meta.label, data.series['spo2'] ?? [], meta.color)],
   };
 }
@@ -471,7 +504,14 @@ export function buildStressLoad7Days(data: StandardTimeSeries): EChartsOption {
   return {
     ...DARK_THEME_BASE,
     xAxis: { type: 'category', data: data.dates, axisLabel: { color: '#64748b' } },
-    yAxis: { type: 'value', name: meta.unit, min: 0, max: 100, axisLabel: { color: '#64748b' }, splitLine: { lineStyle: { color: '#1e293b' } } },
+    yAxis: {
+      type: 'value',
+      name: meta.unit,
+      min: 0,
+      max: 100,
+      axisLabel: { color: '#64748b' },
+      splitLine: { lineStyle: { color: '#1e293b' } },
+    },
     series: [lineSeries(meta.label, data.series['stress.load'] ?? [], meta.color)],
   };
 }
@@ -540,6 +580,7 @@ git commit -m "feat: implement standard chart option builders (CHT-004)"
 ### Task 5: 创建 micro-chart 组件 (CHT-005)
 
 **Files:**
+
 - Create: `packages/charts/src/micro/micro-chart.tsx`
 - Create: `packages/charts/src/micro/index.ts`
 - Modify: `packages/charts/src/index.ts`
@@ -595,6 +636,7 @@ git commit -m "feat: implement micro-chart component (CHT-005)"
 ### Task 6: 创建 token registry (CHT-006)
 
 **Files:**
+
 - Create: `packages/charts/src/registry/token-registry.ts`
 - Create: `packages/charts/src/registry/index.ts`
 - Create: `packages/charts/src/__tests__/registry/token-registry.test.ts`
