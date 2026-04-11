@@ -1,4 +1,8 @@
-import type { TimelinePoint } from '@health-advisor/sandbox';
+/** charts 包独立的时间线数据点接口，不依赖 sandbox */
+export interface ChartDataPoint {
+  date: string;
+  values: Record<string, number | null>;
+}
 
 export interface StandardTimeSeries {
   dates: string[];
@@ -6,10 +10,10 @@ export interface StandardTimeSeries {
 }
 
 /**
- * 将 TimelinePoint 数组转换为标准时间序列格式
+ * 将 ChartDataPoint 数组转换为标准时间序列格式
  * 自动从第一个数据点提取所有指标 key
  */
-export function toTimeSeries(points: TimelinePoint[]): StandardTimeSeries {
+export function toTimeSeries(points: ChartDataPoint[]): StandardTimeSeries {
   if (points.length === 0) return { dates: [], series: {} };
 
   const dates = points.map((p) => p.date);

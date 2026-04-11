@@ -45,7 +45,7 @@ describe('selectByDateRange', () => {
 
 describe('selectByTimeframe', () => {
   it('should select 7 days of records with reference date', () => {
-    const result = selectByTimeframe(records, 'week', '2026-04-10');
+    const result = selectByTimeframe(records, 'week', { referenceDate: '2026-04-10' });
 
     expect(result).toHaveLength(7);
     expect(result[0]!.date).toBe('2026-04-04');
@@ -53,15 +53,25 @@ describe('selectByTimeframe', () => {
   });
 
   it('should select 1 day for "day" timeframe', () => {
-    const result = selectByTimeframe(records, 'day', '2026-04-05');
+    const result = selectByTimeframe(records, 'day', { referenceDate: '2026-04-05' });
 
     expect(result).toHaveLength(1);
     expect(result[0]!.date).toBe('2026-04-05');
   });
 
   it('should select all records for "year" timeframe', () => {
-    const result = selectByTimeframe(records, 'year', '2026-04-10');
+    const result = selectByTimeframe(records, 'year', { referenceDate: '2026-04-10' });
 
     expect(result).toHaveLength(records.length);
+  });
+
+  it('should select records for "custom" timeframe with customDateRange', () => {
+    const result = selectByTimeframe(records, 'custom', {
+      customDateRange: { start: '2026-04-03', end: '2026-04-07' },
+    });
+
+    expect(result).toHaveLength(5);
+    expect(result[0]!.date).toBe('2026-04-03');
+    expect(result[4]!.date).toBe('2026-04-07');
   });
 });

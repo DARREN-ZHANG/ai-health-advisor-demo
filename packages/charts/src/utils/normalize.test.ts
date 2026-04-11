@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toTimeSeries } from './normalize';
-import type { TimelinePoint } from '@health-advisor/sandbox';
+import { toTimeSeries, type ChartDataPoint } from './normalize';
 
 describe('toTimeSeries', () => {
   it('空数组返回空结果', () => {
@@ -8,8 +7,8 @@ describe('toTimeSeries', () => {
     expect(result).toEqual({ dates: [], series: {} });
   });
 
-  it('将 TimelinePoint 数组转换为标准格式', () => {
-    const points: TimelinePoint[] = [
+  it('将 ChartDataPoint 数组转换为标准格式', () => {
+    const points: ChartDataPoint[] = [
       { date: '2025-01-01', values: { hr: 72, 'hr.resting': 60 } },
       { date: '2025-01-02', values: { hr: 75, 'hr.resting': 62 } },
       { date: '2025-01-03', values: { hr: 68, 'hr.resting': 58 } },
@@ -25,7 +24,7 @@ describe('toTimeSeries', () => {
   });
 
   it('处理 null 值', () => {
-    const points: TimelinePoint[] = [
+    const points: ChartDataPoint[] = [
       { date: '2025-01-01', values: { hr: 72, spo2: null } },
       { date: '2025-01-02', values: { hr: null, spo2: 98 } },
     ];
@@ -39,7 +38,7 @@ describe('toTimeSeries', () => {
   });
 
   it('缺失的 key 用 null 填充', () => {
-    const points: TimelinePoint[] = [
+    const points: ChartDataPoint[] = [
       { date: '2025-01-01', values: { hr: 72 } },
       { date: '2025-01-02', values: {} },
     ];

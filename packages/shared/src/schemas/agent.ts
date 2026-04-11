@@ -6,13 +6,19 @@ export const AgentTaskTypeSchema = z.nativeEnum(AgentTaskType);
 
 export const DataTabSchema = z.enum(['hrv', 'sleep', 'resting-hr', 'activity', 'spo2', 'stress']);
 
-export const TimeframeSchema = z.enum(['day', 'week', 'month', 'year']);
+export const TimeframeSchema = z.enum(['day', 'week', 'month', 'year', 'custom']);
+
+const DateRangeSchema = z.object({
+  start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
 
 export const PageContextSchema = z.object({
   profileId: z.string().min(1),
   page: z.string().min(1),
   dataTab: DataTabSchema.optional(),
   timeframe: TimeframeSchema,
+  customDateRange: DateRangeSchema.optional(),
 });
 
 export const AgentResponseEnvelopeSchema = z.object({

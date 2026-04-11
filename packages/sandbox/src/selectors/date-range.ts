@@ -11,14 +11,14 @@ export function selectByDateRange(records: DailyRecord[], range: DateRange): Dai
 /**
  * 按时间窗口过滤 DailyRecord
  * @param records - 每日记录数组
- * @param timeframe - 时间窗口类型
- * @param referenceDate - 可选的参考日期（默认为今天）
+ * @param timeframe - 时间窗口类型（支持 day/week/month/year/custom）
+ * @param options - 可选参数：referenceDate 参考日期，customDateRange 自定义日期范围（timeframe 为 custom 时必填）
  */
 export function selectByTimeframe(
   records: DailyRecord[],
   timeframe: Timeframe,
-  referenceDate?: string,
+  options?: { referenceDate?: string; customDateRange?: DateRange },
 ): DailyRecord[] {
-  const range = timeframeToDateRange(timeframe, referenceDate);
+  const range = timeframeToDateRange(timeframe, options?.referenceDate, options?.customDateRange);
   return selectByDateRange(records, range);
 }

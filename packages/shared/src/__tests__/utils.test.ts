@@ -59,6 +59,20 @@ describe('timeframeToDateRange', () => {
     expect(range.end).toBe('2026-04-10');
     expect(range.start).toBe('2026-04-04');
   });
+
+  it('converts custom timeframe with customDateRange', () => {
+    const range = timeframeToDateRange('custom', undefined, {
+      start: '2026-03-01',
+      end: '2026-03-15',
+    });
+    expect(range).toEqual({ start: '2026-03-01', end: '2026-03-15' });
+  });
+
+  it('throws when custom timeframe is used without customDateRange', () => {
+    expect(() => timeframeToDateRange('custom')).toThrow(
+      'customDateRange is required when timeframe is "custom"',
+    );
+  });
 });
 
 describe('parseChartTokenId', () => {

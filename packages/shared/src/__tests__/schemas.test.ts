@@ -170,8 +170,8 @@ describe('DataTabSchema', () => {
 });
 
 describe('TimeframeSchema', () => {
-  it('accepts valid timeframes', () => {
-    ['day', 'week', 'month', 'year'].forEach((tf) => {
+  it('accepts valid timeframes including custom', () => {
+    ['day', 'week', 'month', 'year', 'custom'].forEach((tf) => {
       expect(TimeframeSchema.parse(tf)).toBe(tf);
     });
   });
@@ -199,6 +199,26 @@ describe('PageContextSchema', () => {
 
   it('rejects missing required fields', () => {
     expect(() => PageContextSchema.parse({})).toThrow();
+  });
+
+  it('accepts custom timeframe with customDateRange', () => {
+    const ctx = {
+      profileId: 'profile-a',
+      page: 'data-center',
+      timeframe: 'custom',
+      customDateRange: { start: '2026-03-01', end: '2026-03-15' },
+    };
+    expect(PageContextSchema.parse(ctx)).toEqual(ctx);
+  });
+
+  it('rejects invalid customDateRange format', () => {
+    const ctx = {
+      profileId: 'profile-a',
+      page: 'data-center',
+      timeframe: 'custom',
+      customDateRange: { start: 'not-a-date', end: '2026-03-15' },
+    };
+    expect(() => PageContextSchema.parse(ctx)).toThrow();
   });
 });
 

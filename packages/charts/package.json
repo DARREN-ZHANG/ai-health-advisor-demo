@@ -17,7 +17,6 @@
   },
   "dependencies": {
     "@health-advisor/shared": "workspace:*",
-    "@health-advisor/sandbox": "workspace:*",
     "echarts": "^5.6.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

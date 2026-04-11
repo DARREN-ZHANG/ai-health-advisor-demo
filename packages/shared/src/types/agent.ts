@@ -8,13 +8,14 @@ export enum AgentTaskType {
 
 export type DataTab = 'hrv' | 'sleep' | 'resting-hr' | 'activity' | 'spo2' | 'stress';
 
-export type Timeframe = 'day' | 'week' | 'month' | 'year';
+export type Timeframe = 'day' | 'week' | 'month' | 'year' | 'custom';
 
 export interface PageContext {
   profileId: string;
   page: string;
   dataTab?: DataTab;
   timeframe: Timeframe;
+  customDateRange?: { start: string; end: string };
 }
 
 export interface AgentResponseEnvelope {
