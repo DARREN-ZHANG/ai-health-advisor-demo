@@ -3,6 +3,7 @@ export { loadManifest, loadProfile, loadAllProfiles } from './loader';
 
 // Selectors — profile
 export { getProfile, listProfiles } from './selectors/profile';
+export type { ProfileSummary } from './selectors/profile';
 
 // Selectors — date range
 export { selectByDateRange, selectByTimeframe } from './selectors/date-range';
