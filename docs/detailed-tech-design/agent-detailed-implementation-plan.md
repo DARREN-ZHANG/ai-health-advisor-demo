@@ -155,24 +155,11 @@ AgentResponseEnvelope
 Agent 层只接受统一请求模型，由 API 层在进入 Agent 之前完成协议收口。
 
 ```ts
-export type AgentTaskType =
-  | 'homepage_brief'
-  | 'view_summary'
-  | 'advisor_chat'
-  | 'micro_insight';
+export type AgentTaskType = 'homepage_brief' | 'view_summary' | 'advisor_chat' | 'micro_insight';
 
-export type PageContext =
-  | 'homepage'
-  | 'data_center'
-  | 'ai_advisor';
+export type PageContext = 'homepage' | 'data_center' | 'ai_advisor';
 
-export type DataTab =
-  | 'overview'
-  | 'sleep'
-  | 'heart_rate'
-  | 'activity'
-  | 'stress'
-  | 'vitals';
+export type DataTab = 'overview' | 'sleep' | 'heart_rate' | 'activity' | 'stress' | 'vitals';
 
 export type Timeframe = 'day' | 'week' | 'month' | 'year' | 'custom';
 
@@ -186,7 +173,7 @@ export interface AgentRequest {
   timeframe?: Timeframe;
   dateRange?: {
     start: string; // YYYY-MM-DD
-    end: string;   // YYYY-MM-DD
+    end: string; // YYYY-MM-DD
   };
   userMessage?: string;
   smartPromptId?: string;
@@ -388,22 +375,26 @@ export interface AgentContext {
 不同任务使用不同上下文窗口：
 
 ### homepage_brief
+
 - 默认最近 **14 天**（与 PRD §4.1 "过去 14 天完整数据" 及 Backend morning-brief 流程一致）
 - 若当天或窗口内数据缺失，保留原 14 天窗口并显式记录缺失语义；不得静默平移到另一段“最近有数据”的窗口
 - 若缺失导致当前任务不可稳定生成，则由 fallback / rule 路径返回结构化结果
 - 聚焦：睡眠、HR、HRV、活动、事件
 
 ### view_summary
+
 - 由 `timeframe + dateRange` 决定
 - 必须与 Data Center 当前视图一致
 - 只突出当前 tab 相关指标，其他维度作为辅助解释
 
 ### advisor_chat
+
 - 默认最近 **14 天**
 - 若用户问题显式提及“这一个月/最近一年/昨天”，则可扩展或缩小窗口
 - 禁止无限拉长上下文，避免 prompt 膨胀
 
 ### micro_insight
+
 - 默认最近 **3–7 天**
 - 以短时状态变化为主
 
@@ -543,24 +534,29 @@ export interface RuleEngineResult {
 建议首期仅做以下规则，避免过度复杂：
 
 ### 睡眠类
+
 - 最近 3 天平均睡眠时长低于个人窗口均值显著阈值
 - 深睡分钟数连续下降
 - 睡眠起止时间明显漂移
 
 ### 心率 / HRV 类
+
 - 平均 HR 高于个人基线显著阈值
 - HRV 低于个人基线显著阈值
 - HRV 波动剧烈
 
 ### 活动类
+
 - 步数显著上升或下降
 - 卡路里消耗与活动走势一致 / 背离
 
 ### 事件类
+
 - 有事件注入的日期出现在异常窗口内
 - 事件标签与异常同时出现时，输出“可能相关”级别的 deterministic signal
 
 ### 低数据类
+
 - 当前窗口有效记录数量不足
 - 当前 tab 核心字段缺失比例过高
 
@@ -611,21 +607,25 @@ System Prompt 需显式约束：
 - `micro-insight.prompt.ts`
 
 ### homepage_brief 要求
+
 - 输出 80–120 字
 - 必须包含状态定调、数据循证、行动建议
 - 最多 3 条 micro tips
 
 ### view_summary 要求
+
 - 必须围绕当前 tab 与 timeframe
 - 要指出趋势、可能相关因素、下一步建议
 - 可输出 0–2 个图表 token
 
 ### advisor_chat 要求
+
 - 必须回答用户问题本身
 - 可跨维度引用历史数据
 - 禁止脱离数据空谈
 
 ### micro_insight 要求
+
 - 简短
 - 以单点提醒为主
 - 不扩展成长文
@@ -953,20 +953,20 @@ Agent 层必须输出最小可观测事件，供 API 层统一记录。
 
 ```ts
 {
-  requestId,
-  sessionId,
-  profileId,
-  taskType,
-  pageContext,
-  provider,
-  model,
-  promptVersion,
-  latencyMs,
-  usedFallback,
-  finishReason,
-  chartTokenCount,
-  lowData,
-  errorReason
+  (requestId,
+    sessionId,
+    profileId,
+    taskType,
+    pageContext,
+    provider,
+    model,
+    promptVersion,
+    latencyMs,
+    usedFallback,
+    finishReason,
+    chartTokenCount,
+    lowData,
+    errorReason);
 }
 ```
 
@@ -1193,9 +1193,8 @@ Agent 层必须输出最小可观测事件，供 API 层统一记录。
 44. 实现 `HealthAdvisorAgentService.executeAgent()`
 45. 接入 sandbox merged snapshot
 46. 接入 request logging
-47. 接入 Sentry error capture
-48. 接入 memory write-back
-49. 接入 profile switch invalidation hook
+47. 接入 memory write-back
+48. 接入 profile switch invalidation hook
 
 ## 24.9 测试层
 

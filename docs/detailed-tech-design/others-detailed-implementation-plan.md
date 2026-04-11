@@ -203,11 +203,7 @@ packages/shared/
 统一定义：
 
 ```ts
-type AgentTaskType =
-  | 'homepage_brief'
-  | 'view_summary'
-  | 'advisor_chat'
-  | 'micro_insight';
+type AgentTaskType = 'homepage_brief' | 'view_summary' | 'advisor_chat' | 'micro_insight';
 
 type PageContext = 'homepage' | 'data_center' | 'ai_advisor';
 
@@ -561,12 +557,7 @@ interface StressSummaryStats {
   avgStressLoadScore: number | null;
   peakStressLoadScore: number | null;
   highStressDays: number;
-  strongestContributor:
-    | 'hrv'
-    | 'resting_hr'
-    | 'sleep_duration'
-    | 'deep_sleep'
-    | null;
+  strongestContributor: 'hrv' | 'resting_hr' | 'sleep_duration' | 'deep_sleep' | null;
 }
 
 interface StressTimelineResponse extends TimelineResponse {
@@ -1481,14 +1472,14 @@ pnpm validate:data
 97. 编写 `.env.web.example`
 98. 编写 `.env.agent-api.example`
 99. 建立 `infra/scripts` 目录结构
-100. 实现 `validate-sandbox.ts`
-101. 实现 `validate-fallback.ts`
-102. 实现 `validate-chart-tokens.ts`
-103. 实现 `sync-profile-index.ts`
-104. 实现 `smoke-run.ts`
-105. 实现 `start-demo-mode.sh`
-106. 实现 `start-fallback-only.sh`
-107. 编写 infra README
+100.  实现 `validate-sandbox.ts`
+101.  实现 `validate-fallback.ts`
+102.  实现 `validate-chart-tokens.ts`
+103.  实现 `sync-profile-index.ts`
+104.  实现 `smoke-run.ts`
+105.  实现 `start-demo-mode.sh`
+106.  实现 `start-fallback-only.sh`
+107.  编写 infra README
 
 ### H. 验收与稳定性
 

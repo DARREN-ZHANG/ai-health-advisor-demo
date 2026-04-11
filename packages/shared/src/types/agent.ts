@@ -1,0 +1,29 @@
+import type { ChartTokenId } from './chart-token';
+
+export enum AgentTaskType {
+  HOMEPAGE_SUMMARY = 'homepage_summary',
+  VIEW_SUMMARY = 'view_summary',
+  ADVISOR_CHAT = 'advisor_chat',
+}
+
+export type DataTab = 'hrv' | 'sleep' | 'resting-hr' | 'activity' | 'spo2' | 'stress';
+
+export type Timeframe = 'day' | 'week' | 'month' | 'year';
+
+export interface PageContext {
+  profileId: string;
+  page: string;
+  dataTab?: DataTab;
+  timeframe: Timeframe;
+}
+
+export interface AgentResponseEnvelope {
+  summary: string;
+  chartTokens: ChartTokenId[];
+  microTips: string[];
+  meta: {
+    taskType: AgentTaskType;
+    pageContext: PageContext;
+    finishReason: 'complete' | 'fallback' | 'timeout';
+  };
+}

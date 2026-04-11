@@ -1,0 +1,160 @@
+{
+  "profile": {
+    "profileId": "profile-c",
+    "name": "王压力",
+    "age": 28,
+    "gender": "male",
+    "avatar": "avatar-c.png",
+    "baseline": {
+      "restingHr": 78,
+      "hrv": 30,
+      "spo2": 95,
+      "avgSleepMinutes": 240,
+      "avgSteps": 2800
+    }
+  },
+  "records": [
+    {
+      "date": "2026-03-28",
+      "hr": [75, 82, 79, 85, 77],
+      "sleep": {
+        "totalMinutes": 260,
+        "startTime": "01:00",
+        "endTime": "06:00",
+        "stages": { "deep": 30, "light": 120, "rem": 40, "awake": 40 },
+        "score": 32
+      },
+      "spo2": 95,
+      "stress": { "load": 65 }
+    },
+    {
+      "date": "2026-03-29",
+      "hr": [78, 84, 81, 87, 80],
+      "sleep": {
+        "totalMinutes": 240,
+        "startTime": "01:30",
+        "endTime": "06:10",
+        "stages": { "deep": 25, "light": 110, "rem": 35, "awake": 50 },
+        "score": 28
+      },
+      "activity": { "steps": 2200, "calories": 1600, "activeMinutes": 8, "distanceKm": 1.6 },
+      "stress": { "load": 70 }
+    },
+    {
+      "date": "2026-03-30",
+      "hr": [80, 86, 83, 89, 82],
+      "stress": { "load": 73 }
+    },
+    {
+      "date": "2026-03-31",
+      "hr": [79, 85, 82, 88, 81],
+      "sleep": {
+        "totalMinutes": 230,
+        "startTime": "02:00",
+        "endTime": "06:10",
+        "stages": { "deep": 20, "light": 105, "rem": 30, "awake": 55 },
+        "score": 25
+      },
+      "spo2": 94,
+      "stress": { "load": 75 }
+    },
+    {
+      "date": "2026-04-01",
+      "stress": { "load": 78 }
+    },
+    {
+      "date": "2026-04-02",
+      "hr": [82, 88, 85, 91, 84],
+      "sleep": {
+        "totalMinutes": 210,
+        "startTime": "02:30",
+        "endTime": "06:20",
+        "stages": { "deep": 18, "light": 95, "rem": 28, "awake": 49 },
+        "score": 22
+      },
+      "spo2": 94,
+      "stress": { "load": 80 }
+    },
+    {
+      "date": "2026-04-03",
+      "hr": [81, 87, 84, 90, 83],
+      "sleep": {
+        "totalMinutes": 250,
+        "startTime": "01:45",
+        "endTime": "06:15",
+        "stages": { "deep": 22, "light": 115, "rem": 32, "awake": 51 },
+        "score": 30
+      },
+      "activity": { "steps": 1800, "calories": 1550, "activeMinutes": 5, "distanceKm": 1.3 },
+      "stress": { "load": 82 }
+    },
+    {
+      "date": "2026-04-04",
+      "hr": [83, 89, 86, 92, 85],
+      "sleep": {
+        "totalMinutes": 200,
+        "startTime": "03:00",
+        "endTime": "06:40",
+        "stages": { "deep": 15, "light": 90, "rem": 25, "awake": 50 },
+        "score": 20
+      },
+      "stress": { "load": 85 }
+    },
+    {
+      "date": "2026-04-05",
+      "hr": [84, 90, 87, 93, 86],
+      "spo2": 93,
+      "stress": { "load": 87 }
+    },
+    {
+      "date": "2026-04-06",
+      "sleep": {
+        "totalMinutes": 220,
+        "startTime": "02:00",
+        "endTime": "06:20",
+        "stages": { "deep": 18, "light": 100, "rem": 28, "awake": 54 },
+        "score": 24
+      },
+      "activity": { "steps": 1500, "calories": 1500, "activeMinutes": 3, "distanceKm": 1.1 },
+      "spo2": 93,
+      "stress": { "load": 88 }
+    },
+    {
+      "date": "2026-04-07",
+      "hr": [85, 91, 88, 94, 87],
+      "stress": { "load": 89 }
+    },
+    {
+      "date": "2026-04-08",
+      "hr": [86, 92, 89, 95, 88],
+      "sleep": {
+        "totalMinutes": 190,
+        "startTime": "03:30",
+        "endTime": "06:50",
+        "stages": { "deep": 12, "light": 85, "rem": 22, "awake": 51 },
+        "score": 18
+      },
+      "spo2": 92,
+      "stress": { "load": 90 }
+    },
+    {
+      "date": "2026-04-09",
+      "hr": [87, 93, 90, 96, 89],
+      "activity": { "steps": 1200, "calories": 1480, "activeMinutes": 2, "distanceKm": 0.9 },
+      "stress": { "load": 90 }
+    },
+    {
+      "date": "2026-04-10",
+      "hr": [88, 94, 91, 97, 90],
+      "sleep": {
+        "totalMinutes": 180,
+        "startTime": "03:45",
+        "endTime": "06:55",
+        "stages": { "deep": 10, "light": 80, "rem": 20, "awake": 50 },
+        "score": 15
+      },
+      "spo2": 92,
+      "stress": { "load": 90 }
+    }
+  ]
+}
