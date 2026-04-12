@@ -83,5 +83,11 @@ function extractMetricValue(record: DailyRecord, metricPath: string): number | n
     return current;
   }
 
+  // 处理 number[] 类型字段（如 hr），取均值
+  if (Array.isArray(current) && current.length > 0 && typeof current[0] === 'number') {
+    const nums = current as number[];
+    return nums.reduce((a, b) => a + b, 0) / nums.length;
+  }
+
   return null;
 }

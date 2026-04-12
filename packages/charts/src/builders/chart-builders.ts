@@ -41,11 +41,11 @@ export function buildSleep7Days(data: StandardTimeSeries): EChartsOption {
 
 /**
  * 构建最近7天静息心率图配置
- * series key: 'hr.resting'
+ * series key: 'hr'（DailyRecord.hr 是 number[]，经 normalizeTimeline 取均值后存储为 'hr'）
  */
 export function buildRestingHr7Days(data: StandardTimeSeries): EChartsOption {
   const meta = CHART_TOKEN_META[ChartTokenId.RESTING_HR_7DAYS];
-  const seriesData = data.series['hr.resting'] ?? [];
+  const seriesData = data.series['hr'] ?? [];
 
   return {
     ...DARK_THEME_BASE,
