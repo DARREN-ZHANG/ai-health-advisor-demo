@@ -16,6 +16,10 @@ function getOrCreateSessionId(): string {
   return next;
 }
 
+export function clearSessionId() {
+  window.localStorage.removeItem(SESSION_ID_STORAGE_KEY);
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,

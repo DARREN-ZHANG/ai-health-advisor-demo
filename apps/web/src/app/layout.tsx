@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Providers } from './providers';
 import { Navbar } from '@/components/layout/Navbar';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { ToastContainer } from '@/components/layout/ToastContainer';
+import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
 import { AIAdvisorTrigger } from '@/components/advisor/AIAdvisorTrigger';
 import { AIAdvisorDrawer } from '@/components/advisor/AIAdvisorDrawer';
 import { GodModePanel } from '@/components/god-mode/GodModePanel';
@@ -26,6 +28,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <AIAdvisorTrigger />
             <AIAdvisorDrawer />
             <GodModePanel />
+            <ToastContainer />
+            <ActiveSensingBanner />
           </div>
         </Providers>
       </body>

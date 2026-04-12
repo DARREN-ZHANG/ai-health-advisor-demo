@@ -2,9 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { SandboxProfile } from '@health-advisor/shared';
 import { useAIAdvisorStore } from './ai-advisor.store';
+import { clearSessionId } from '@/lib/api-client';
 
 function resetProfileScopedUiState() {
   useAIAdvisorStore.getState().clearMessages();
+  clearSessionId();
 }
 
 interface ProfileState {
