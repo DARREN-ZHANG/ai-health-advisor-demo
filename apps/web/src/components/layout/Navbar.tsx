@@ -1,0 +1,58 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Container, Button } from '@health-advisor/ui';
+import { useGodModeStore } from '@/stores/god-mode.store';
+
+const navItems = [
+  { href: '/', label: '首页' },
+  { href: '/data-center', label: '数据中心' },
+];
+
+export function Navbar() {
+  const pathname = usePathname();
+  const { isEnabled, toggleOpen } = useGodModeStore();
+
+  return (
+    <nav className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
+      <Container className="h-14 flex items-center justify-between">
+        <div className="flex items-center gap-8">
+          <Link href="/" className="font-bold text-slate-100 tracking-tight">
+            HEALTH <span className="text-blue-500">ADVISOR</span>
+          </Link>
+          <div className="hidden md:flex items-center gap-6">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`text-sm font-medium transition-colors ${
+                  pathname === item.href
+                    ? 'text-blue-500'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isEnabled && (
+            <Button
+              variant="ghost"
+              onClick={() => toggleOpen()}
+              className="text-xs text-yellow-500/60 hover:text-yellow-500 hover:bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 h-auto"
+            >
+              GOD MODE
+            </Button>
+          )}
+          <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs">
+            JD
+          </div>
+        </div>
+      </Container>
+    </nav>
+  );
+}
