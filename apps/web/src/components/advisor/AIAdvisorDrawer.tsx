@@ -1,24 +1,36 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Drawer, Sheet, IconButton } from '@health-advisor/ui';
 import { useUIStore } from '@/stores/ui.store';
 import { useAIAdvisorStore } from '@/stores/ai-advisor.store';
+import { useProfileStore } from '@/stores/profile.store';
+import { useDataCenterStore } from '@/stores/data-center.store';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { useAdvisorChat } from '@/hooks/use-ai-query';
+import { clearSessionId } from '@/lib/api-client';
 import { MessageBubble } from './MessageBubble';
 import { SmartPrompts } from './SmartPrompts';
 import { PhysiologicalTags } from './PhysiologicalTags';
+import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 
 /** 响应式断点，与架构文档对齐：Mobile < 768, Tablet 768-1279, Desktop >= 1280 */
 const DESKTOP_QUERY = '(min-width: 1280px)';
 const TABLET_QUERY = '(min-width: 768px)';
 
 export function AIAdvisorDrawer() {
-  const { isAdvisorDrawerOpen, toggleAdvisorDrawer } = useUIStore();
-  const { messages, isLoading, composerValue, setComposerValue, addMessage } = useAIAdvisorStore();
+  const pathname = usePathname();
+  const { isAdvisorDrawerOpen, toggleAdvisorDrawer, showToast } = useUIStore();
+  const { messages, isLoading, composerValue, setComposerValue, addMessage, setLoading, clearMessages } = useAIAdvisorStore();
+  const { currentProfileId } = useProfileStore();
+  const { activeTab, timeframe } = useDataCenterStore();
+  
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const isTablet = useMediaQuery(TABLET_QUERY);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const { mutateAsync: sendChatRequest } = useAdvisorChat();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -28,14 +40,76 @@ export function AIAdvisorDrawer() {
 
   const handleClose = () => toggleAdvisorDrawer(false);
 
-  const handleSendMessage = (content: string) => {
+  const handleClearChat = () => {
+    if (window.confirm('确定要清除所有对话记录并重置 AI 会话吗？')) {
+      clearMessages();
+      clearSessionId();
+    }
+  };
+
+  const Title = (
+    <div className="flex items-center justify-between w-full pr-8">
+      <span className="font-bold flex items-center gap-2">
+        AI Health Advisor 
+        <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded uppercase">BETA</span>
+      </span>
+      {messages.length > 0 && (
+        <button 
+          onClick={handleClearChat}
+          className="text-[10px] text-slate-500 hover:text-red-400 transition-colors uppercase tracking-wider font-bold"
+        >
+          Clear Chat
+        </button>
+      )}
+    </div>
+  );
+
+  const handleSendMessage = async (content: string) => {
     const text = content || composerValue;
-    if (!text.trim()) return;
+    if (!text.trim() || isLoading || !currentProfileId) return;
+
+    // 1. 添加用户消息
     addMessage({
       role: 'user',
       content: text,
     });
     setComposerValue('');
+    setLoading(true);
+
+    // 2. 构造上下文
+    const pageContext: PageContext = {
+      profileId: currentProfileId,
+      page: pathname === '/' ? 'homepage' : pathname.replace('/', ''),
+      dataTab: activeTab as DataTab,
+      timeframe: timeframe as Timeframe,
+    };
+
+    try {
+      // 3. 发送请求
+      const response = await sendChatRequest({
+        profileId: currentProfileId,
+        pageContext,
+        userMessage: text,
+      });
+
+      // 4. 添加助手回答
+      addMessage({
+        role: 'assistant',
+        content: response.summary,
+        chartTokens: response.chartTokens,
+        microTips: response.microTips,
+        meta: response.meta,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '发送失败，请检查网络连接';
+      showToast(errorMessage, 'error');
+      addMessage({
+        role: 'system',
+        content: `发送失败: ${errorMessage}`,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const Content = (
@@ -109,7 +183,7 @@ export function AIAdvisorDrawer() {
       <Drawer
         open={isAdvisorDrawerOpen}
         onClose={handleClose}
-        title={<span className="font-bold flex items-center gap-2">AI Health Advisor <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded uppercase">BETA</span></span>}
+        title={Title}
         className="w-[400px] max-w-[90vw]"
       >
         <div className="absolute inset-0 top-[52px]">{Content}</div>
@@ -123,7 +197,7 @@ export function AIAdvisorDrawer() {
       <Sheet
         open={isAdvisorDrawerOpen}
         onClose={handleClose}
-        title={<span className="font-bold flex items-center gap-2">AI Health Advisor <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded uppercase">BETA</span></span>}
+        title={Title}
         className="h-[85vh] max-w-lg mx-auto"
       >
         <div className="absolute inset-0 top-[60px]">{Content}</div>
@@ -136,7 +210,7 @@ export function AIAdvisorDrawer() {
     <Sheet
       open={isAdvisorDrawerOpen}
       onClose={handleClose}
-      title={<span className="font-bold flex items-center gap-2">AI Health Advisor <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded uppercase">BETA</span></span>}
+      title={Title}
       className="h-[80vh]"
     >
       <div className="absolute inset-0 top-[60px]">{Content}</div>

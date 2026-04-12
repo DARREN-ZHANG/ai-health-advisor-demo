@@ -49,8 +49,14 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           </div>
         )}
 
-        <span className="text-[10px] text-slate-500 mt-1 px-1">
+        <span className="text-[10px] text-slate-500 mt-1 px-1 flex items-center gap-2">
           {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {message.meta?.finishReason === 'fallback' && (
+            <span className="text-yellow-500/60 flex items-center gap-1">
+              <span className="w-1 h-1 bg-yellow-500 rounded-full" />
+              Fallback
+            </span>
+          )}
         </span>
       </div>
     </m.div>
