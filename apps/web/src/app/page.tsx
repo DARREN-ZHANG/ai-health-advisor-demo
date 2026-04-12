@@ -1,51 +1,76 @@
 'use client';
 
-import { Container, Section } from '@health-advisor/ui';
+import { Container, Section, Button } from '@health-advisor/ui';
 import { MorningBriefCard } from '@/components/homepage/MorningBriefCard';
 import { MicroInsightPills } from '@/components/homepage/MicroInsightPills';
 import { HistoricalTrendsGrid } from '@/components/homepage/HistoricalTrendsGrid';
+import { useProfileStore } from '@/stores/profile.store';
+import { useMorningBrief } from '@/hooks/use-ai-query';
+import type { StatusColor } from '@health-advisor/ui';
 
-// Mock 数据，后续 Wave 5.1 联通全链路时将从 store/query 获取
-const mockBrief = {
-  status: 'good' as const,
-  title: '今日早报',
-  summary: '昨晚睡眠质量极佳，深睡时长达到 2 小时 30 分钟。静息心率为 58 bpm，处于理想范围。建议今日可以进行中等强度的有氧训练。',
-  microTips: ['建议 23:00 前入睡', '多喝水'],
-};
-
-const mockInsights = [
-  '过去 7 天平均步数 10,245',
-  '心率变异性 (HRV) 稳步回升',
-  '睡眠负债已清空',
-  '静息心率下降 2%',
-];
-
-const mockTrends = [
-  { id: 'hrv', label: 'HRV', value: 65, unit: 'ms', change: 12, status: 'good' as const },
-  { id: 'sleep', label: '睡眠', value: '7.5', unit: 'h', change: -5, status: 'warning' as const },
-  { id: 'activity', label: '步数', value: '12,400', unit: 'steps', change: 8, status: 'good' as const },
-  { id: 'stress', label: '压力负荷', value: 24, unit: '/100', change: -15, status: 'good' as const },
-];
+import { useUIStore } from '@/stores/ui.store';
+import { useEffect } from 'react';
 
 export default function HomePage() {
+  const { currentProfileId } = useProfileStore();
+  const { showToast } = useUIStore();
+  const { data, isLoading, error, refetch, isRefetching } = useMorningBrief(currentProfileId);
+
+  useEffect(() => {
+    if (error) {
+      showToast('获取简报失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
+    }
+  }, [error, showToast]);
+
+  // Fallback data mapping
+  const briefData = {
+    status: (data?.meta.finishReason === 'fallback' ? 'warning' : 'good') as StatusColor,
+    title: '今日简报',
+    summary: data?.summary || (error ? '无法获取简报数据，请检查网络连接。' : '正在为您准备今日健康简报...'),
+    microTips: data?.microTips || [],
+  };
+
+  const insights = data?.microTips || [];
+
+  // TODO: Wave 5.1 后续将从真实的 chart-data 接口获取趋势值
+  const mockTrends = [
+    { id: 'hrv', label: 'HRV', value: '--', unit: 'ms', change: 0, status: 'good' as const },
+    { id: 'sleep', label: '睡眠', value: '--', unit: 'h', change: 0, status: 'warning' as const },
+    { id: 'activity', label: '步数', value: '--', unit: 'steps', change: 0, status: 'good' as const },
+    { id: 'stress', label: '压力负荷', value: '--', unit: '/100', change: 0, status: 'good' as const },
+  ];
+
   return (
     <Container className="py-6 space-y-8">
       {/* 顶部标题栏 */}
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-100">AI Health Advisor</h1>
-          <p className="text-slate-400 text-sm">智能健康顾问</p>
+          <p className="text-slate-400 text-sm">
+            {data?.meta.finishReason === 'fallback' ? '⚠️ 运行在离线受限模式' : '智能健康顾问'}
+          </p>
         </div>
+        <Button 
+          variant="ghost" 
+          onClick={() => refetch()} 
+          disabled={isLoading || isRefetching}
+          className="text-xs text-slate-500 h-auto py-1 px-2"
+        >
+          {isRefetching ? '正在刷新...' : '手动刷新'}
+        </Button>
       </header>
 
       {/* 晨报部分 */}
       <Section title="今日简报" className="space-y-4">
-        <MorningBriefCard {...mockBrief} />
+        <MorningBriefCard 
+          {...briefData} 
+          isLoading={isLoading} 
+        />
       </Section>
 
       {/* 微贴士部分 */}
       <Section title="智能洞察" className="space-y-3">
-        <MicroInsightPills insights={mockInsights} />
+        <MicroInsightPills insights={insights} />
       </Section>
 
       {/* 历史趋势概览 */}
@@ -53,7 +78,6 @@ export default function HomePage() {
         <HistoricalTrendsGrid trends={mockTrends} />
       </Section>
 
-      {/* 底部占位，后续 Wave 4.3 接入 AI Advisor 浮动入口 */}
       <div className="h-20" />
     </Container>
   );

@@ -15,6 +15,8 @@ export const queryKeys = {
       [...queryKeys.dataCenter.all, 'timeline', profileId, timeframe] as const,
     stress: (profileId: string, timeframe: string) =>
       [...queryKeys.dataCenter.all, 'stress', profileId, timeframe] as const,
+    viewSummary: (profileId: string, tab: string, timeframe: string) =>
+      [...queryKeys.dataCenter.all, 'viewSummary', profileId, tab, timeframe] as const,
   },
   advisor: {
     all: ['advisor'] as const,
