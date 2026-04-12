@@ -10,6 +10,7 @@ describe('God-Mode Routes', () => {
 
   beforeAll(async () => {
     process.env.FALLBACK_ONLY_MODE = 'true';
+    process.env.ENABLE_GOD_MODE = 'true';
     process.env.NODE_ENV = 'test';
     process.env.DATA_DIR = DATA_DIR;
     app = await buildApp();
@@ -18,6 +19,7 @@ describe('God-Mode Routes', () => {
   afterAll(async () => {
     await app.close();
     delete process.env.FALLBACK_ONLY_MODE;
+    delete process.env.ENABLE_GOD_MODE;
     delete process.env.NODE_ENV;
     delete process.env.DATA_DIR;
   });
@@ -176,6 +178,76 @@ describe('God-Mode Routes', () => {
       const body = response.json();
       expect(body.success).toBe(true);
       expect(body.data.scope).toBe('all');
+    });
+
+    test('scope=profile 时清空当前 session 的旧 profile 对话记忆', async () => {
+      const sessionId = 'sess-reset-profile';
+      const headers = { 'x-session-id': sessionId };
+
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/switch-profile',
+        headers,
+        payload: { profileId: 'profile-c' },
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/ai/chat',
+        headers,
+        payload: {
+          profileId: 'profile-c',
+          pageContext: { profileId: 'profile-c', page: 'home', timeframe: 'week' },
+          userMessage: '当前怎么样',
+        },
+      });
+
+      expect(app.runtime.sessionStore.store.get(sessionId)?.profileId).toBe('profile-c');
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        headers,
+        payload: { scope: 'profile' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(app.runtime.sessionStore.store.get(sessionId)).toBeUndefined();
+    });
+
+    test('scope=all 时清空当前 session 的旧 profile 对话记忆', async () => {
+      const sessionId = 'sess-reset-all';
+      const headers = { 'x-session-id': sessionId };
+
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/switch-profile',
+        headers,
+        payload: { profileId: 'profile-c' },
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/ai/chat',
+        headers,
+        payload: {
+          profileId: 'profile-c',
+          pageContext: { profileId: 'profile-c', page: 'home', timeframe: 'week' },
+          userMessage: '还有哪些风险',
+        },
+      });
+
+      expect(app.runtime.sessionStore.store.get(sessionId)?.profileId).toBe('profile-c');
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        headers,
+        payload: { scope: 'all' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(app.runtime.sessionStore.store.get(sessionId)).toBeUndefined();
     });
 
     test('无效 scope 返回 400', async () => {
