@@ -3,6 +3,18 @@ import type { ApiResponse } from '@health-advisor/shared';
 
 /** 默认请求超时时间（毫秒），与后端 AI 超时策略对齐 */
 const DEFAULT_TIMEOUT_MS = 6_000;
+const SESSION_ID_STORAGE_KEY = 'session-id';
+
+function getOrCreateSessionId(): string {
+  const existing = window.localStorage.getItem(SESSION_ID_STORAGE_KEY);
+  if (existing) {
+    return existing;
+  }
+
+  const next = crypto.randomUUID();
+  window.localStorage.setItem(SESSION_ID_STORAGE_KEY, next);
+  return next;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -27,10 +39,7 @@ async function request<T>(
     headers.set('Content-Type', 'application/json');
   }
 
-  // 自动注入 sessionId / profileId（从 localStorage 读取，由 profile store 管理）
-  const sessionId = typeof window !== 'undefined'
-    ? localStorage.getItem('session-id') ?? ''
-    : '';
+  const sessionId = typeof window !== 'undefined' ? getOrCreateSessionId() : '';
   if (sessionId) {
     headers.set('X-Session-Id', sessionId);
   }

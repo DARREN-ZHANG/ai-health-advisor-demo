@@ -10,7 +10,7 @@ interface ViewSummaryTriggerProps {
 
 export function ViewSummaryTrigger({ onClick, isLoading = false }: ViewSummaryTriggerProps) {
   return (
-    <div className="fixed bottom-6 right-6 z-40">
+    <div className="fixed bottom-24 right-24 z-40 md:bottom-8 md:right-24">
       <m.div
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}

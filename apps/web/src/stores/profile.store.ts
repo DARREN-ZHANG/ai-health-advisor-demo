@@ -1,12 +1,18 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { SandboxProfile } from '@health-advisor/shared';
+import { useAIAdvisorStore } from './ai-advisor.store';
+
+function resetProfileScopedUiState() {
+  useAIAdvisorStore.getState().clearMessages();
+}
 
 interface ProfileState {
   currentProfileId: string;
   currentProfile: SandboxProfile | null;
   setProfileId: (id: string) => void;
   setProfile: (profile: SandboxProfile | null) => void;
+  resetProfileScopedUiState: () => void;
 }
 
 export const useProfileStore = create<ProfileState>()(
@@ -14,8 +20,20 @@ export const useProfileStore = create<ProfileState>()(
     (set) => ({
       currentProfileId: 'profile-a', // Default to profile-a
       currentProfile: null,
-      setProfileId: (id) => set({ currentProfileId: id }),
+      setProfileId: (id) =>
+        set((state) => {
+          if (state.currentProfileId === id) {
+            return state;
+          }
+
+          resetProfileScopedUiState();
+          return {
+            currentProfileId: id,
+            currentProfile: null,
+          };
+        }),
       setProfile: (profile) => set({ currentProfile: profile }),
+      resetProfileScopedUiState,
     }),
     {
       name: 'profile-storage',
