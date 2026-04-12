@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 
 interface SmartPromptsProps {
   onSelect: (prompt: string) => void;
@@ -17,7 +17,7 @@ export function SmartPrompts({ onSelect }: SmartPromptsProps) {
   return (
     <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
       {prompts.map((prompt, idx) => (
-        <motion.button
+        <m.button
           key={idx}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -25,7 +25,7 @@ export function SmartPrompts({ onSelect }: SmartPromptsProps) {
           className="whitespace-nowrap px-3 py-1.5 rounded-lg bg-slate-800/50 border border-slate-700 text-xs text-slate-300 hover:border-blue-500/50 hover:text-blue-400 transition-colors"
         >
           {prompt}
-        </motion.button>
+        </m.button>
       ))}
     </div>
   );

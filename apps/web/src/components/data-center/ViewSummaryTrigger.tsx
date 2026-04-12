@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@health-advisor/ui';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 
 interface ViewSummaryTriggerProps {
   onClick: () => void;
@@ -11,7 +11,7 @@ interface ViewSummaryTriggerProps {
 export function ViewSummaryTrigger({ onClick, isLoading = false }: ViewSummaryTriggerProps) {
   return (
     <div className="fixed bottom-6 right-6 z-40">
-      <motion.div
+      <m.div
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
@@ -33,7 +33,7 @@ export function ViewSummaryTrigger({ onClick, isLoading = false }: ViewSummaryTr
             </>
           )}
         </Button>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

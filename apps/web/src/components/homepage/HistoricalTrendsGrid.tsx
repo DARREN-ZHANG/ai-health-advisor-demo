@@ -1,8 +1,9 @@
 'use client';
 
-import { Card } from '@health-advisor/ui';
+import { Card, statusColors } from '@health-advisor/ui';
+import type { StatusColor } from '@health-advisor/ui';
 import { MicroChart } from '@health-advisor/charts';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 
 interface TrendItem {
   id: string;
@@ -10,25 +11,18 @@ interface TrendItem {
   value: string | number;
   unit: string;
   change?: number; // percentage
-  status: 'good' | 'warning' | 'alert' | 'neutral';
+  status: StatusColor;
 }
 
 interface HistoricalTrendsGridProps {
   trends: TrendItem[];
 }
 
-const statusColors = {
-  good: '#22c55e',
-  warning: '#eab308',
-  alert: '#ef4444',
-  neutral: '#94a3b8',
-};
-
 export function HistoricalTrendsGrid({ trends }: HistoricalTrendsGridProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {trends.map((trend, index) => (
-        <motion.div
+        <m.div
           key={trend.id}
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -84,7 +78,7 @@ export function HistoricalTrendsGrid({ trends }: HistoricalTrendsGridProps) {
               />
             </div>
           </Card>
-        </motion.div>
+        </m.div>
       ))}
     </div>
   );

@@ -9,10 +9,15 @@ import { MessageBubble } from './MessageBubble';
 import { SmartPrompts } from './SmartPrompts';
 import { PhysiologicalTags } from './PhysiologicalTags';
 
+/** 响应式断点，与架构文档对齐：Mobile < 768, Tablet 768-1279, Desktop >= 1280 */
+const DESKTOP_QUERY = '(min-width: 1280px)';
+const TABLET_QUERY = '(min-width: 768px)';
+
 export function AIAdvisorDrawer() {
   const { isAdvisorDrawerOpen, toggleAdvisorDrawer } = useUIStore();
   const { messages, isLoading, addMessage } = useAIAdvisorStore();
-  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
+  const isTablet = useMediaQuery(TABLET_QUERY);
   const [inputValue, setInputValue] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -40,7 +45,7 @@ export function AIAdvisorDrawer() {
       <PhysiologicalTags />
 
       {/* 消息区域 */}
-      <div 
+      <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar scroll-smooth"
       >
@@ -85,7 +90,7 @@ export function AIAdvisorDrawer() {
               }
             }}
           />
-          <IconButton 
+          <IconButton
             onClick={() => handleSendMessage('')}
             disabled={!inputValue.trim()}
             className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white rounded-xl h-11 w-11 transition-all shadow-lg shadow-blue-500/10"
@@ -99,6 +104,7 @@ export function AIAdvisorDrawer() {
     </div>
   );
 
+  // 桌面端（>= 1280px）：右侧 Drawer
   if (isDesktop) {
     return (
       <Drawer
@@ -112,6 +118,21 @@ export function AIAdvisorDrawer() {
     );
   }
 
+  // 平板端（768-1279px）：宽 Sheet
+  if (isTablet) {
+    return (
+      <Sheet
+        open={isAdvisorDrawerOpen}
+        onClose={handleClose}
+        title={<span className="font-bold flex items-center gap-2">AI Health Advisor <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded uppercase">BETA</span></span>}
+        className="h-[85vh] max-w-lg mx-auto"
+      >
+        <div className="absolute inset-0 top-[60px]">{Content}</div>
+      </Sheet>
+    );
+  }
+
+  // 移动端（< 768px）：底部 Sheet
   return (
     <Sheet
       open={isAdvisorDrawerOpen}

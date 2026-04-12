@@ -61,8 +61,7 @@ export default function DataCenterPage() {
   const { activeTab } = useDataCenterStore();
 
   const handleSummaryClick = () => {
-    console.log('触发 AI 总结，当前 Tab:', activeTab);
-    // 后续 Wave 5.1 联通全链路
+    // TODO: Wave 5.1 联通 /ai/view-summary 全链路
   };
 
   return (

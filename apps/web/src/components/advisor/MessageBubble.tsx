@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import type { Message } from '@/stores/ai-advisor.store';
 
 import { ChartTokenRenderer } from './ChartTokenRenderer';
@@ -25,7 +25,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   }
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, x: isUser ? 20 : -20, y: 10 }}
       animate={{ opacity: 1, x: 0, y: 0 }}
       className={`flex ${isUser ? 'justify-end' : 'justify-start'} my-3`}
@@ -53,6 +53,6 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>
-    </motion.div>
+    </m.div>
   );
 }

@@ -32,6 +32,7 @@ export function PhysiologicalTags() {
       <Pill className="bg-slate-800 text-slate-400 border border-slate-700 text-[10px] py-0">
         📅 {labels[timeframe]}
       </Pill>
+      {/* TODO: "实时连接" 状态后续需从后端 WebSocket / SSE 获取真实连接状态 */}
       <Pill className="bg-green-500/10 text-green-400 border border-green-500/20 text-[10px] py-0">
         ● 实时连接
       </Pill>

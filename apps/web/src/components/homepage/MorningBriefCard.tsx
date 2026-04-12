@@ -1,11 +1,11 @@
 'use client';
 
-import { Card } from '@health-advisor/ui';
-import { statusColors } from '@health-advisor/ui';
-import { motion } from 'framer-motion';
+import { Card, statusColors } from '@health-advisor/ui';
+import type { StatusColor } from '@health-advisor/ui';
+import { m } from 'framer-motion';
 
 interface MorningBriefCardProps {
-  status: 'good' | 'warning' | 'alert' | 'neutral';
+  status: StatusColor;
   title: string;
   summary: string;
   microTips?: string[];
@@ -35,7 +35,7 @@ export function MorningBriefCard({
   }
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -44,12 +44,12 @@ export function MorningBriefCard({
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-slate-100">{title}</h3>
-            <div 
-              className="w-3 h-3 rounded-full" 
-              style={{ backgroundColor: statusColor, boxShadow: `0 0 8px ${statusColor}` }} 
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: statusColor, boxShadow: `0 0 8px ${statusColor}` }}
             />
           </div>
-          
+
           <p className="text-slate-300 leading-relaxed">
             {summary}
           </p>
@@ -57,7 +57,7 @@ export function MorningBriefCard({
           {microTips.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-2">
               {microTips.map((tip, index) => (
-                <span 
+                <span
                   key={index}
                   className="px-2 py-1 text-xs rounded-full bg-slate-700 text-slate-300 border border-slate-600"
                 >
@@ -68,6 +68,6 @@ export function MorningBriefCard({
           )}
         </div>
       </Card>
-    </motion.div>
+    </m.div>
   );
 }

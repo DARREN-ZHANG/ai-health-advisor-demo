@@ -12,6 +12,7 @@ export function GodModePanel() {
 
   const handleClose = () => toggleOpen(false);
 
+  // TODO: Wave 6.2 联通后端 GET /god-mode/state 或 scenario manifests 获取真实 scenario 列表
   const scenarios = [
     { id: 'normal', label: '常规健康态', icon: '✅' },
     { id: 'stress', label: '高压打工人', icon: '😫' },
@@ -68,6 +69,7 @@ export function GodModePanel() {
         </Section>
 
         {/* 运行时操作 */}
+        {/* TODO: Wave 6.2 联通后端 God-Mode API，绑定真实 handler */}
         <Section title="Runtime Actions" className="space-y-3">
           <div className="space-y-2">
             <Button variant="secondary" className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700">

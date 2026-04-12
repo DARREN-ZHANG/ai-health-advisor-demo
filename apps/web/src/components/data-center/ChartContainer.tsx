@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, Skeleton, EmptyState } from '@health-advisor/ui';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 
 interface ChartContainerProps {
   title: string;
@@ -27,7 +27,7 @@ export function ChartContainer({
       <div className="flex-1 relative min-h-[300px]">
         <AnimatePresence mode="wait">
           {isLoading ? (
-            <motion.div
+            <m.div
               key="loading"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -36,9 +36,9 @@ export function ChartContainer({
             >
               <Skeleton className="h-8 w-1/4" />
               <Skeleton className="flex-1 w-full" />
-            </motion.div>
+            </m.div>
           ) : error ? (
-            <motion.div
+            <m.div
               key="error"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -49,9 +49,9 @@ export function ChartContainer({
                 <p className="text-red-400 font-medium">加载失败</p>
                 <p className="text-slate-500 text-sm">{error}</p>
               </div>
-            </motion.div>
+            </m.div>
           ) : isEmpty ? (
-            <motion.div
+            <m.div
               key="empty"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -59,9 +59,9 @@ export function ChartContainer({
               className="absolute inset-0"
             >
               <EmptyState message="暂无数据" className="h-full" />
-            </motion.div>
+            </m.div>
           ) : (
-            <motion.div
+            <m.div
               key="content"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -69,7 +69,7 @@ export function ChartContainer({
               className="h-full w-full"
             >
               {children}
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </div>

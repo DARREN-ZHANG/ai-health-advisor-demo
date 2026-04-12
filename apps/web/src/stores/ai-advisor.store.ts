@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import type { ChartTokenId, AgentTaskType, PageContext } from '@health-advisor/shared';
+import type { ChartTokenId, AgentResponseEnvelope } from '@health-advisor/shared';
+
+/** 消息内 meta 字段，从 AgentResponseEnvelope.meta 派生 */
+type MessageMeta = Pick<AgentResponseEnvelope['meta'], 'taskType' | 'pageContext' | 'finishReason'>;
 
 export interface Message {
   id: string;
@@ -7,11 +10,7 @@ export interface Message {
   content: string;
   chartTokens?: ChartTokenId[];
   microTips?: string[];
-  meta?: {
-    taskType: AgentTaskType;
-    pageContext: PageContext;
-    finishReason: 'complete' | 'fallback' | 'timeout';
-  };
+  meta?: MessageMeta;
   timestamp: number;
 }
 
@@ -36,7 +35,7 @@ export const useAIAdvisorStore = create<AIAdvisorState>((set) => ({
         ...state.messages,
         {
           ...msg,
-          id: Math.random().toString(36).substring(7),
+          id: crypto.randomUUID(),
           timestamp: Date.now(),
         },
       ],
