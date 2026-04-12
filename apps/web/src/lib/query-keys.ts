@@ -1,0 +1,29 @@
+export const queryKeys = {
+  profile: {
+    all: ['profile'] as const,
+    list: () => [...queryKeys.profile.all, 'list'] as const,
+    detail: (id: string) => [...queryKeys.profile.all, 'detail', id] as const,
+  },
+  homepage: {
+    all: ['homepage'] as const,
+    brief: (profileId: string) =>
+      [...queryKeys.homepage.all, 'brief', profileId] as const,
+  },
+  dataCenter: {
+    all: ['dataCenter'] as const,
+    timeline: (profileId: string, timeframe: string) =>
+      [...queryKeys.dataCenter.all, 'timeline', profileId, timeframe] as const,
+    stress: (profileId: string, timeframe: string) =>
+      [...queryKeys.dataCenter.all, 'stress', profileId, timeframe] as const,
+  },
+  advisor: {
+    all: ['advisor'] as const,
+    chat: (sessionId: string) =>
+      [...queryKeys.advisor.all, 'chat', sessionId] as const,
+  },
+  godMode: {
+    all: ['godMode'] as const,
+    state: () => [...queryKeys.godMode.all, 'state'] as const,
+    scenarios: () => [...queryKeys.godMode.all, 'scenarios'] as const,
+  },
+} as const;
