@@ -38,11 +38,13 @@ describe('profile store', () => {
       role: 'user',
       content: 'legacy-message',
     });
+    useAIAdvisorStore.getState().setComposerValue('draft-message');
 
     useProfileStore.getState().setProfileId('profile-b');
 
     expect(useProfileStore.getState().currentProfileId).toBe('profile-b');
     expect(useAIAdvisorStore.getState().messages).toHaveLength(0);
+    expect(useAIAdvisorStore.getState().composerValue).toBe('');
   });
 
   it('重复选择同一 profile 时不清空当前消息', async () => {
@@ -53,9 +55,11 @@ describe('profile store', () => {
       role: 'user',
       content: 'keep-message',
     });
+    useAIAdvisorStore.getState().setComposerValue('keep-draft');
 
     useProfileStore.getState().setProfileId('profile-a');
 
     expect(useAIAdvisorStore.getState().messages).toHaveLength(1);
+    expect(useAIAdvisorStore.getState().composerValue).toBe('keep-draft');
   });
 });

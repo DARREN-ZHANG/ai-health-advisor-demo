@@ -1,11 +1,13 @@
 'use client';
 
 import { Pill } from '@health-advisor/ui';
+import { usePathname } from 'next/navigation';
 import { useProfileStore } from '@/stores/profile.store';
 import { useDataCenterStore } from '@/stores/data-center.store';
 
 export function PhysiologicalTags() {
-  const { currentProfile } = useProfileStore();
+  const pathname = usePathname();
+  const { currentProfile, currentProfileId } = useProfileStore();
   const { activeTab, timeframe } = useDataCenterStore();
 
   const labels: Record<string, string> = {
@@ -21,17 +23,37 @@ export function PhysiologicalTags() {
     year: '今年',
   };
 
+  const displayName = currentProfile?.name ?? currentProfileId;
+  const tags = currentProfile?.tags.slice(0, 2) ?? [];
+  const isDataCenterPage = pathname === '/data-center';
+
   return (
     <div className="flex flex-wrap gap-1.5 px-4 py-2 border-b border-slate-800 bg-slate-900/30">
       <Pill className="bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] py-0">
-        👤 {currentProfile?.name || '用户'}
+        👤 {displayName}
       </Pill>
-      <Pill className="bg-slate-800 text-slate-400 border border-slate-700 text-[10px] py-0">
-        📍 {labels[activeTab]}
-      </Pill>
-      <Pill className="bg-slate-800 text-slate-400 border border-slate-700 text-[10px] py-0">
-        📅 {labels[timeframe]}
-      </Pill>
+      {tags.map((tag) => (
+        <Pill
+          key={tag}
+          className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] py-0"
+        >
+          {tag}
+        </Pill>
+      ))}
+      {isDataCenterPage ? (
+        <>
+          <Pill className="bg-slate-800 text-slate-400 border border-slate-700 text-[10px] py-0">
+            📍 {labels[activeTab]}
+          </Pill>
+          <Pill className="bg-slate-800 text-slate-400 border border-slate-700 text-[10px] py-0">
+            📅 {labels[timeframe]}
+          </Pill>
+        </>
+      ) : (
+        <Pill className="bg-slate-800 text-slate-400 border border-slate-700 text-[10px] py-0">
+          🏠 首页上下文
+        </Pill>
+      )}
       {/* TODO: "实时连接" 状态后续需从后端 WebSocket / SSE 获取真实连接状态 */}
       <Pill className="bg-green-500/10 text-green-400 border border-green-500/20 text-[10px] py-0">
         ● 实时连接

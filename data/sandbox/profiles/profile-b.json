@@ -5,6 +5,7 @@
     "age": 45,
     "gender": "female",
     "avatar": "avatar-b.png",
+    "tags": ["睡眠债累积", "恢复偏慢", "压力波动偏高"],
     "baseline": {
       "restingHr": 72,
       "hrv": 42,

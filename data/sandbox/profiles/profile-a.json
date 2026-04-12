@@ -5,6 +5,7 @@
     "age": 32,
     "gender": "male",
     "avatar": "avatar-a.png",
+    "tags": ["恢复稳定", "睡眠质量优", "有氧适应良好"],
     "baseline": {
       "restingHr": 62,
       "hrv": 60,

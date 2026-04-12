@@ -34,6 +34,7 @@ describe('SandboxProfileSchema', () => {
     age: 32,
     gender: 'male' as const,
     avatar: '👨‍💻',
+    tags: ['恢复稳定', '睡眠质量优'],
     baseline: { restingHr: 62, hrv: 58, spo2: 98, avgSleepMinutes: 420, avgSteps: 8500 },
   };
 

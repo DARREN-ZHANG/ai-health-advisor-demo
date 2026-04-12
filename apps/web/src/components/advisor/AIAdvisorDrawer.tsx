@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import { Drawer, Sheet, IconButton } from '@health-advisor/ui';
 import { useUIStore } from '@/stores/ui.store';
 import { useAIAdvisorStore } from '@/stores/ai-advisor.store';
@@ -15,10 +15,9 @@ const TABLET_QUERY = '(min-width: 768px)';
 
 export function AIAdvisorDrawer() {
   const { isAdvisorDrawerOpen, toggleAdvisorDrawer } = useUIStore();
-  const { messages, isLoading, addMessage } = useAIAdvisorStore();
+  const { messages, isLoading, composerValue, setComposerValue, addMessage } = useAIAdvisorStore();
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const isTablet = useMediaQuery(TABLET_QUERY);
-  const [inputValue, setInputValue] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,13 +29,13 @@ export function AIAdvisorDrawer() {
   const handleClose = () => toggleAdvisorDrawer(false);
 
   const handleSendMessage = (content: string) => {
-    const text = content || inputValue;
+    const text = content || composerValue;
     if (!text.trim()) return;
     addMessage({
       role: 'user',
       content: text,
     });
-    setInputValue('');
+    setComposerValue('');
   };
 
   const Content = (
@@ -77,13 +76,13 @@ export function AIAdvisorDrawer() {
         <SmartPrompts onSelect={handleSendMessage} />
 
         <div className="relative flex items-end gap-2">
-          <textarea
-            rows={1}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="问我点什么..."
-            className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all resize-none min-h-[44px] max-h-32"
-            onKeyDown={(e) => {
+            <textarea
+              rows={1}
+              value={composerValue}
+              onChange={(e) => setComposerValue(e.target.value)}
+              placeholder="问我点什么..."
+              className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all resize-none min-h-[44px] max-h-32"
+              onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSendMessage('');
@@ -92,7 +91,7 @@ export function AIAdvisorDrawer() {
           />
           <IconButton
             onClick={() => handleSendMessage('')}
-            disabled={!inputValue.trim()}
+            disabled={!composerValue.trim()}
             className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white rounded-xl h-11 w-11 transition-all shadow-lg shadow-blue-500/10"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

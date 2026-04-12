@@ -12,6 +12,7 @@ export interface SandboxProfile {
   age: number;
   gender: 'male' | 'female';
   avatar: string;
+  tags: string[];
   baseline: BaselineMetrics;
 }
 

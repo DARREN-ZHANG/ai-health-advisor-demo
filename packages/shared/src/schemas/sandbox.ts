@@ -14,6 +14,7 @@ export const SandboxProfileSchema = z.object({
   age: z.number().int().min(1).max(150),
   gender: z.enum(['male', 'female']),
   avatar: z.string().min(1),
+  tags: z.array(z.string().min(1)).min(1),
   baseline: BaselineMetricsSchema,
 });
 

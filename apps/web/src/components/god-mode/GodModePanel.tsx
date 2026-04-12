@@ -72,16 +72,31 @@ export function GodModePanel() {
         {/* TODO: Wave 6.2 联通后端 God-Mode API，绑定真实 handler */}
         <Section title="Runtime Actions" className="space-y-3">
           <div className="space-y-2">
-            <Button variant="secondary" className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700">
+            <Button
+              variant="secondary"
+              disabled
+              className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700"
+            >
               ⚡ 注入即时运动事件
             </Button>
-            <Button variant="secondary" className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700">
+            <Button
+              variant="secondary"
+              disabled
+              className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700"
+            >
               🔴 模拟睡眠缺失
             </Button>
-            <Button variant="secondary" className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700">
+            <Button
+              variant="secondary"
+              disabled
+              className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700"
+            >
               🧪 重置所有 Overrides
             </Button>
           </div>
+          <p className="text-[10px] text-slate-500 leading-relaxed">
+            Wave 6.2 才会接入正式 God-Mode API；当前阶段仅提供面板壳与状态展示，不暴露可点击的空动作。
+          </p>
         </Section>
 
         <div className="mt-auto pt-6 border-t border-slate-800">

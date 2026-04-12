@@ -5,6 +5,7 @@
     "age": 28,
     "gender": "male",
     "avatar": "avatar-c.png",
+    "tags": ["高压负荷", "重度睡眠不足", "低活动恢复差"],
     "baseline": {
       "restingHr": 78,
       "hrv": 30,

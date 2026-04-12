@@ -17,8 +17,10 @@ export interface Message {
 interface AIAdvisorState {
   isOpen: boolean;
   messages: Message[];
+  composerValue: string;
   isLoading: boolean;
   setIsOpen: (open: boolean) => void;
+  setComposerValue: (value: string) => void;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
@@ -27,8 +29,10 @@ interface AIAdvisorState {
 export const useAIAdvisorStore = create<AIAdvisorState>((set) => ({
   isOpen: false,
   messages: [],
+  composerValue: '',
   isLoading: false,
   setIsOpen: (open) => set({ isOpen: open }),
+  setComposerValue: (composerValue) => set({ composerValue }),
   addMessage: (msg) =>
     set((state) => ({
       messages: [
@@ -40,6 +44,6 @@ export const useAIAdvisorStore = create<AIAdvisorState>((set) => ({
         },
       ],
     })),
-  clearMessages: () => set({ messages: [] }),
+  clearMessages: () => set({ messages: [], composerValue: '', isLoading: false }),
   setLoading: (loading) => set({ isLoading: loading }),
 }));
