@@ -43,7 +43,11 @@ export async function buildApp() {
   await app.register(profileRoutes);
   await app.register(dataRoutes);
   await app.register(aiRoutes);
-  await app.register(godModeRoutes);
+
+  // God-Mode 路由受 ENABLE_GOD_MODE 环境变量保护
+  if (config.ENABLE_GOD_MODE) {
+    await app.register(godModeRoutes);
+  }
 
   return app;
 }

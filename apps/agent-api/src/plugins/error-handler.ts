@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyError, FastifyRequest, FastifyReply } from
 import { ZodError } from 'zod';
 import { ErrorCode, createErrorResponse } from '@health-advisor/shared';
 import { TimeoutError } from '@health-advisor/agent-core';
+import { buildMeta } from '../utils/meta.js';
 
 export const errorHandlerPlugin = fp(async function (app: FastifyInstance) {
   app.setErrorHandler(
@@ -32,12 +33,3 @@ export const errorHandlerPlugin = fp(async function (app: FastifyInstance) {
     },
   );
 });
-
-function buildMeta(request: FastifyRequest) {
-  const startTime = request.ctx?.startTime ?? performance.now();
-  return {
-    timestamp: new Date().toISOString(),
-    requestId: request.ctx?.requestId ?? request.id,
-    durationMs: Math.round(performance.now() - startTime),
-  };
-}

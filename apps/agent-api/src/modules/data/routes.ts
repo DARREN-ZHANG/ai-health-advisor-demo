@@ -1,20 +1,15 @@
 import type { FastifyInstance } from 'fastify';
 import { createSuccessResponse, createErrorResponse, ErrorCode } from '@health-advisor/shared';
-import type { ApiMeta, DataTab, Timeframe } from '@health-advisor/shared';
+import type { DataTab, Timeframe } from '@health-advisor/shared';
 import { DataTabSchema, TimeframeSchema, isValidChartTokenId, ChartTokenId } from '@health-advisor/shared';
+import { buildMeta } from '../../utils/meta.js';
 import { DataService } from './service.js';
 import { ChartService } from './chart-service.js';
 
-function buildMeta(request: { ctx?: { requestId: string; startTime: number }; id: string }): ApiMeta {
-  const startTime = request.ctx?.startTime ?? performance.now();
-  return {
-    timestamp: new Date().toISOString(),
-    requestId: request.ctx?.requestId ?? request.id,
-    durationMs: Math.round(performance.now() - startTime),
-  };
-}
-
 export async function dataRoutes(app: FastifyInstance) {
+  const dataService = new DataService(app.runtime);
+  const chartService = new ChartService(app.runtime);
+
   // BE-014: Timeline 只读路由
   app.get<{
     Params: { profileId: string };
@@ -22,9 +17,6 @@ export async function dataRoutes(app: FastifyInstance) {
   }>('/profiles/:profileId/timeline', async (request, reply) => {
     const { profileId } = request.params;
     const timeframe = (request.query.timeframe ?? 'week') as Timeframe;
-    const customDateRange = request.query.startDate && request.query.endDate
-      ? { start: request.query.startDate, end: request.query.endDate }
-      : undefined;
 
     const parsedTimeframe = TimeframeSchema.safeParse(timeframe);
     if (!parsedTimeframe.success) {
@@ -33,9 +25,15 @@ export async function dataRoutes(app: FastifyInstance) {
       );
     }
 
+    const customDateRange = resolveCustomDateRange(parsedTimeframe.data, request.query.startDate, request.query.endDate);
+    if (parsedTimeframe.data === 'custom' && !customDateRange) {
+      return reply.status(400).send(
+        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'timeframe=custom requires both startDate and endDate', buildMeta(request)),
+      );
+    }
+
     try {
-      const service = new DataService(app.runtime);
-      const data = service.getTimelineData(profileId, parsedTimeframe.data, customDateRange);
+      const data = dataService.getTimelineData(profileId, parsedTimeframe.data, customDateRange);
       return createSuccessResponse(data, buildMeta(request));
     } catch {
       return reply.status(404).send(
@@ -52,9 +50,6 @@ export async function dataRoutes(app: FastifyInstance) {
     const { profileId } = request.params;
     const tab = (request.query.tab ?? 'hrv') as DataTab;
     const timeframe = (request.query.timeframe ?? 'week') as Timeframe;
-    const customDateRange = request.query.startDate && request.query.endDate
-      ? { start: request.query.startDate, end: request.query.endDate }
-      : undefined;
 
     const parsedTab = DataTabSchema.safeParse(tab);
     if (!parsedTab.success) {
@@ -70,9 +65,15 @@ export async function dataRoutes(app: FastifyInstance) {
       );
     }
 
+    const customDateRange = resolveCustomDateRange(parsedTimeframe.data, request.query.startDate, request.query.endDate);
+    if (parsedTimeframe.data === 'custom' && !customDateRange) {
+      return reply.status(400).send(
+        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'timeframe=custom requires both startDate and endDate', buildMeta(request)),
+      );
+    }
+
     try {
-      const service = new DataService(app.runtime);
-      const data = service.getDataCenterData(profileId, parsedTab.data, parsedTimeframe.data, customDateRange);
+      const data = dataService.getDataCenterData(profileId, parsedTab.data, parsedTimeframe.data, customDateRange);
       return createSuccessResponse(data, buildMeta(request));
     } catch {
       return reply.status(404).send(
@@ -89,14 +90,18 @@ export async function dataRoutes(app: FastifyInstance) {
     const { profileId } = request.params;
     const tokensParam = request.query.tokens ?? '';
     const timeframe = (request.query.timeframe ?? 'week') as Timeframe;
-    const customDateRange = request.query.startDate && request.query.endDate
-      ? { start: request.query.startDate, end: request.query.endDate }
-      : undefined;
 
     const parsedTimeframe = TimeframeSchema.safeParse(timeframe);
     if (!parsedTimeframe.success) {
       return reply.status(400).send(
         createErrorResponse(ErrorCode.VALIDATION_ERROR, 'Invalid timeframe', buildMeta(request)),
+      );
+    }
+
+    const customDateRange = resolveCustomDateRange(parsedTimeframe.data, request.query.startDate, request.query.endDate);
+    if (parsedTimeframe.data === 'custom' && !customDateRange) {
+      return reply.status(400).send(
+        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'timeframe=custom requires both startDate and endDate', buildMeta(request)),
       );
     }
 
@@ -110,8 +115,7 @@ export async function dataRoutes(app: FastifyInstance) {
     }
 
     try {
-      const service = new ChartService(app.runtime);
-      const data = service.getChartData(profileId, validTokens, parsedTimeframe.data, customDateRange);
+      const data = chartService.getChartData(profileId, validTokens, parsedTimeframe.data, customDateRange);
       return createSuccessResponse(data, buildMeta(request));
     } catch {
       return reply.status(404).send(
@@ -119,4 +123,15 @@ export async function dataRoutes(app: FastifyInstance) {
       );
     }
   });
+}
+
+/** 解析自定义日期范围，仅当 startDate 和 endDate 同时存在时返回 */
+function resolveCustomDateRange(
+  timeframe: Timeframe,
+  startDate?: string,
+  endDate?: string,
+): { start: string; end: string } | undefined {
+  if (timeframe !== 'custom') return undefined;
+  if (startDate && endDate) return { start: startDate, end: endDate };
+  return undefined;
 }

@@ -1,17 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { createSuccessResponse, createErrorResponse, ErrorCode, AgentTaskType, PageContextSchema } from '@health-advisor/shared';
-import type { ApiMeta, PageContext, DataTab, Timeframe } from '@health-advisor/shared';
+import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 import { AgentRequestSchema } from '@health-advisor/agent-core';
+import { buildMeta } from '../../utils/meta.js';
 import { AiOrchestrator } from '../../services/ai-orchestrator.js';
-
-function buildMeta(request: { ctx?: { requestId: string; startTime: number }; id: string }): ApiMeta {
-  const startTime = request.ctx?.startTime ?? performance.now();
-  return {
-    timestamp: new Date().toISOString(),
-    requestId: request.ctx?.requestId ?? request.id,
-    durationMs: Math.round(performance.now() - startTime),
-  };
-}
 
 interface MorningBriefBody {
   profileId: string;

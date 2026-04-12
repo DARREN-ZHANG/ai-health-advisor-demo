@@ -19,7 +19,6 @@ const AppConfigSchema = z.object({
   ENABLE_GOD_MODE: envBool,
   FALLBACK_ONLY_MODE: envBool,
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
-  SENTRY_DSN: z.string().optional(),
   DATA_DIR: z.string().optional(),
 }).refine(
   (data) => data.FALLBACK_ONLY_MODE || data.LLM_API_KEY.length > 0,

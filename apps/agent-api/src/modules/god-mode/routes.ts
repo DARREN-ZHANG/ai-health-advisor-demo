@@ -9,17 +9,9 @@ import {
   ResetPayloadSchema,
   ScenarioPayloadSchema,
 } from '@health-advisor/shared';
-import type { ApiMeta, EventInjectPayload, MetricOverridePayload, ResetPayload } from '@health-advisor/shared';
+import type { EventInjectPayload, MetricOverridePayload, ResetPayload } from '@health-advisor/shared';
+import { buildMeta } from '../../utils/meta.js';
 import { GodModeService } from './service.js';
-
-function buildMeta(request: { ctx?: { requestId: string; startTime: number }; id: string }): ApiMeta {
-  const startTime = request.ctx?.startTime ?? performance.now();
-  return {
-    timestamp: new Date().toISOString(),
-    requestId: request.ctx?.requestId ?? request.id,
-    durationMs: Math.round(performance.now() - startTime),
-  };
-}
 
 interface SwitchProfileBody {
   profileId: string;
@@ -60,7 +52,7 @@ export async function godModeRoutes(app: FastifyInstance) {
     }
 
     try {
-      const result = service.switchProfile(parsed.data.profileId);
+      const result = service.switchProfile(parsed.data.profileId, request.ctx?.sessionId);
       return createSuccessResponse(result, buildMeta(request));
     } catch {
       return reply.status(404).send(
@@ -81,7 +73,7 @@ export async function godModeRoutes(app: FastifyInstance) {
     }
 
     const targetProfileId = profileId ?? app.runtime.overrideStore.getCurrentProfileId();
-    const result = service.injectEvent(targetProfileId, parsed.data as EventInjectPayload);
+    const result = service.injectEvent(targetProfileId, parsed.data as EventInjectPayload, request.ctx?.sessionId);
     return createSuccessResponse(result, buildMeta(request));
   });
 
@@ -97,7 +89,7 @@ export async function godModeRoutes(app: FastifyInstance) {
     }
 
     const targetProfileId = profileId ?? app.runtime.overrideStore.getCurrentProfileId();
-    const result = service.overrideMetric(targetProfileId, parsed.data as MetricOverridePayload);
+    const result = service.overrideMetric(targetProfileId, parsed.data as MetricOverridePayload, request.ctx?.sessionId);
     return createSuccessResponse(result, buildMeta(request));
   });
 
@@ -110,7 +102,7 @@ export async function godModeRoutes(app: FastifyInstance) {
       );
     }
 
-    const result = service.reset(parsed.data as ResetPayload);
+    const result = service.reset(parsed.data as ResetPayload, request.ctx?.sessionId);
     return createSuccessResponse(result, buildMeta(request));
   });
 
@@ -130,7 +122,7 @@ export async function godModeRoutes(app: FastifyInstance) {
     }
 
     try {
-      const result = service.runDemoScript(parsed.data.scenarioId);
+      const result = service.runDemoScript(parsed.data.scenarioId, request.ctx?.sessionId);
       return createSuccessResponse(result, buildMeta(request));
     } catch (error) {
       const statusCode = (error as any).statusCode ?? 500;
