@@ -66,6 +66,8 @@ describe('AI Routes', () => {
       const body = response.json();
       expect(body.success).toBe(true);
       expect(body.data.summary).toBe('健康状态良好');
+      expect(body.data.meta.sessionId).toBe('sess-1');
+      expect(response.headers['x-session-id']).toBe('sess-1');
     });
 
     test('无效 pageContext 返回 400', async () => {
@@ -105,6 +107,7 @@ describe('AI Routes', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.success).toBe(true);
+      expect(body.data.meta.sessionId).toBe('sess-1');
     });
   });
 
@@ -132,6 +135,26 @@ describe('AI Routes', () => {
       const body = response.json();
       expect(body.success).toBe(true);
       expect(body.data.summary).toBe('你的 HRV 趋势稳定');
+      expect(body.data.meta.sessionId).toBe('sess-1');
+    });
+
+    test('无 session header 时自动回写后端签发的 sessionId', async () => {
+      mockedExecuteAgent.mockResolvedValueOnce(chatResponse());
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/chat',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          userMessage: '最近感觉怎样',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(typeof body.data.meta.sessionId).toBe('string');
+      expect(response.headers['x-session-id']).toBe(body.data.meta.sessionId);
     });
 
     test('缺少 userMessage 返回 400', async () => {
@@ -148,3 +171,11 @@ describe('AI Routes', () => {
     });
   });
 });
+
+function chatResponse(): AgentResponseEnvelope {
+  return {
+    ...mockResponse,
+    summary: '你的 HRV 趋势稳定',
+    meta: { ...mockResponse.meta, taskType: AgentTaskType.ADVISOR_CHAT },
+  };
+}

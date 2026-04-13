@@ -74,11 +74,15 @@ describe('buildTaskPrompt', () => {
         type: AgentTaskType.ADVISOR_CHAT,
         pageContext: { profileId: 'profile-a', page: 'home', timeframe: 'week' },
         userMessage: '最近感觉怎样',
+        smartPromptId: 'sleep-analysis',
+        visibleChartIds: ['sleep'],
       },
     });
     const prompt = buildTaskPrompt(ctx, mockLoader, emptyRules);
     expect(prompt).toContain('健康顾问对话');
     expect(prompt).toContain('最近感觉怎样');
+    expect(prompt).toContain('sleep-analysis');
+    expect(prompt).toContain('visibleChartIds: sleep');
   });
 
   it('包含数据窗口信息', () => {
@@ -113,6 +117,8 @@ describe('buildTaskPrompt', () => {
 
   it('包含输出格式要求', () => {
     const prompt = buildTaskPrompt(makeContext(), mockLoader, emptyRules);
+    expect(prompt).toContain('source');
+    expect(prompt).toContain('statusColor');
     expect(prompt).toContain('summary');
     expect(prompt).toContain('chartTokens');
     expect(prompt).toContain('microTips');

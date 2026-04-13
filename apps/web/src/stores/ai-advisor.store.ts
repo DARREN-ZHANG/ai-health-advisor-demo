@@ -10,6 +10,8 @@ export interface Message {
   content: string;
   chartTokens?: ChartTokenId[];
   microTips?: string[];
+  source?: AgentResponseEnvelope['source'];
+  statusColor?: AgentResponseEnvelope['statusColor'];
   meta?: MessageMeta;
   timestamp: number;
 }

@@ -12,7 +12,7 @@ import { useDataCenterQuery } from '@/hooks/use-data-query';
 import { useDataChartOption } from '@/hooks/use-data-chart-option';
 import { useViewSummary } from '@/hooks/use-ai-query';
 import { useState } from 'react';
-import type { DataCenterResponse, DataTab, StressTimelineResponse } from '@health-advisor/shared';
+import type { AgentResponseEnvelope, DataCenterResponse, DataTab, StressTimelineResponse } from '@health-advisor/shared';
 
 const tabLabels: Record<string, string> = {
   sleep: '睡眠分析',
@@ -119,6 +119,7 @@ export default function DataCenterPage() {
             </div>
           ) : summaryData ? (
             <>
+              <ResponseMetaRow response={summaryData} />
               <p className="text-slate-300 leading-relaxed text-sm">
                 {summaryData.summary}
               </p>
@@ -177,4 +178,32 @@ function getLastUpdatedLabel(
     : (data as DataCenterResponse).timeline.at(-1)?.date;
 
   return lastDate ?? '无数据';
+}
+
+function ResponseMetaRow({ response }: { response: AgentResponseEnvelope }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <span className={`rounded px-2 py-1 text-[10px] uppercase tracking-wider ${getStatusColorClassName(response.statusColor)}`}>
+        {response.statusColor}
+      </span>
+      <span className="rounded px-2 py-1 text-[10px] uppercase tracking-wider text-slate-300 bg-slate-800">
+        {response.source}
+      </span>
+      <span className="rounded px-2 py-1 text-[10px] uppercase tracking-wider text-slate-400 bg-slate-900 border border-slate-800">
+        {response.meta.finishReason}
+      </span>
+    </div>
+  );
+}
+
+function getStatusColorClassName(statusColor: AgentResponseEnvelope['statusColor']): string {
+  if (statusColor === 'error') {
+    return 'text-red-400 bg-red-400/10';
+  }
+
+  if (statusColor === 'warning') {
+    return 'text-yellow-400 bg-yellow-400/10';
+  }
+
+  return 'text-emerald-400 bg-emerald-400/10';
 }

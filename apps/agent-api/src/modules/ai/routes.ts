@@ -45,7 +45,7 @@ export async function aiRoutes(app: FastifyInstance) {
 
     const agentRequest = {
       requestId: request.ctx.requestId,
-      sessionId: request.ctx.sessionId ?? `session-${Date.now()}`,
+      sessionId: request.ctx.sessionId,
       profileId,
       taskType: AgentTaskType.HOMEPAGE_SUMMARY,
       pageContext: parsed.data,
@@ -59,7 +59,7 @@ export async function aiRoutes(app: FastifyInstance) {
     }
 
     const result = await orchestrator.execute(parseResult.data);
-    return createSuccessResponse(result, buildMeta(request));
+    return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
   });
 
   // BE-019: /ai/view-summary
@@ -75,7 +75,7 @@ export async function aiRoutes(app: FastifyInstance) {
 
     const agentRequest = {
       requestId: request.ctx.requestId,
-      sessionId: request.ctx.sessionId ?? `session-${Date.now()}`,
+      sessionId: request.ctx.sessionId,
       profileId,
       taskType: AgentTaskType.VIEW_SUMMARY,
       pageContext: parsed.data,
@@ -91,7 +91,7 @@ export async function aiRoutes(app: FastifyInstance) {
     }
 
     const result = await orchestrator.execute(parseResult.data);
-    return createSuccessResponse(result, buildMeta(request));
+    return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
   });
 
   // BE-020: /ai/chat
@@ -113,7 +113,7 @@ export async function aiRoutes(app: FastifyInstance) {
 
     const agentRequest = {
       requestId: request.ctx.requestId,
-      sessionId: request.ctx.sessionId ?? `session-${Date.now()}`,
+      sessionId: request.ctx.sessionId,
       profileId,
       taskType: AgentTaskType.ADVISOR_CHAT,
       pageContext: parsed.data,
@@ -130,6 +130,16 @@ export async function aiRoutes(app: FastifyInstance) {
     }
 
     const result = await orchestrator.execute(parseResult.data);
-    return createSuccessResponse(result, buildMeta(request));
+    return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
   });
+}
+
+function attachSessionMeta(result: Awaited<ReturnType<AiOrchestrator['execute']>>, sessionId?: string) {
+  return {
+    ...result,
+    meta: {
+      ...result.meta,
+      ...(sessionId ? { sessionId } : {}),
+    },
+  };
 }

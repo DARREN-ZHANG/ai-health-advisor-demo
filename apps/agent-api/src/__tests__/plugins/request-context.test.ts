@@ -50,11 +50,13 @@ describe('requestContextPlugin', () => {
     expect(body.profileId).toBe('profile-a');
   });
 
-  it('无 session/profile header 时为 undefined', async () => {
+  it('无 session header 时自动签发 sessionId', async () => {
     const res = await app.inject({ method: 'GET', url: '/test' });
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(body.sessionId).toBeUndefined();
+    expect(typeof body.sessionId).toBe('string');
+    expect(body.sessionId.startsWith('session-')).toBe(true);
     expect(body.profileId).toBeUndefined();
+    expect(res.headers['x-session-id']).toBe(body.sessionId);
   });
 });

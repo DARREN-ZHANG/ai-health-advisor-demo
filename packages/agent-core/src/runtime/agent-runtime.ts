@@ -65,6 +65,7 @@ export async function executeAgent(
     const parseResult = parseAgentResponse(raw.content, {
       taskType: request.taskType,
       pageContext: request.pageContext,
+      defaultStatusColor: toEnvelopeStatusColor(rulesResult.statusColor),
     });
 
     if (!parseResult.success) {
@@ -217,4 +218,12 @@ function toLowDataFallback(
       finishReason: 'fallback',
     },
   };
+}
+
+function toEnvelopeStatusColor(
+  value: RuleEvaluationResult['statusColor'],
+): AgentResponseEnvelope['statusColor'] {
+  if (value === 'red') return 'error';
+  if (value === 'yellow') return 'warning';
+  return 'good';
 }

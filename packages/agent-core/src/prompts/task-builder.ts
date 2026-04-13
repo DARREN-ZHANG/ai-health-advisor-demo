@@ -28,7 +28,7 @@ export function buildTaskPrompt(
   sections.push('');
   sections.push('## 任务约束');
   sections.push(`- 摘要长度不超过 ${maxLen} 字`);
-  sections.push(`- 输出格式必须为 JSON，包含 summary、chartTokens、microTips 字段`);
+  sections.push(`- 输出格式必须为 JSON，包含 source、statusColor、summary、chartTokens、microTips 字段`);
 
   // 数据窗口
   sections.push('');
@@ -86,12 +86,31 @@ export function buildTaskPrompt(
     sections.push(context.task.userMessage);
   }
 
+  if (taskType === AgentTaskType.ADVISOR_CHAT && context.task.smartPromptId) {
+    sections.push('');
+    sections.push('## Smart Prompt');
+    sections.push(`- smartPromptId: ${context.task.smartPromptId}`);
+  }
+
+  if (taskType === AgentTaskType.ADVISOR_CHAT && context.task.visibleChartIds && context.task.visibleChartIds.length > 0) {
+    sections.push('');
+    sections.push('## 当前可见图表');
+    sections.push(`- visibleChartIds: ${context.task.visibleChartIds.join(', ')}`);
+  }
+
+  sections.push('');
+  sections.push('## 输出字段说明');
+  sections.push('- source: 使用 "llm" 或 "fallback"');
+  sections.push('- statusColor: 使用 "good"、"warning"、"error" 之一');
+
   // 输出格式
   sections.push('');
   sections.push('## 输出格式');
   sections.push('请严格按以下 JSON 格式输出：');
   sections.push('```json');
   sections.push('{');
+  sections.push('  "source": "llm",');
+  sections.push('  "statusColor": "good",');
   sections.push('  "summary": "摘要文本",');
   sections.push('  "chartTokens": ["CHART_TOKEN_1"],');
   sections.push('  "microTips": ["贴士1", "贴士2"]');

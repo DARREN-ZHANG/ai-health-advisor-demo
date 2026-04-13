@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { Drawer, Sheet, IconButton } from '@health-advisor/ui';
 import { useUIStore } from '@/stores/ui.store';
@@ -9,9 +9,10 @@ import { useProfileStore } from '@/stores/profile.store';
 import { useDataCenterStore } from '@/stores/data-center.store';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useAdvisorChat } from '@/hooks/use-ai-query';
-import { clearSessionId } from '@/lib/api-client';
+import { clearSessionId, AI_UI_TIMEOUT_MS } from '@/lib/api-client';
 import { MessageBubble } from './MessageBubble';
 import { SmartPrompts } from './SmartPrompts';
+import type { SmartPromptOption } from './SmartPrompts';
 import { PhysiologicalTags } from './PhysiologicalTags';
 import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 
@@ -64,8 +65,12 @@ export function AIAdvisorDrawer() {
     </div>
   );
 
-  const handleSendMessage = async (content: string) => {
-    const text = content || composerValue;
+  const [isTimeoutHint, setIsTimeoutHint] = useState(false);
+
+  const handleSendMessage = useCallback(async (content: string | SmartPromptOption) => {
+    const isPromptOption = typeof content === 'object';
+    const text = isPromptOption ? content.text : (content || composerValue);
+    const smartPromptId = isPromptOption ? content.id : undefined;
     if (!text.trim() || isLoading || !currentProfileId) return;
 
     // 1. 添加用户消息
@@ -75,6 +80,7 @@ export function AIAdvisorDrawer() {
     });
     setComposerValue('');
     setLoading(true);
+    setIsTimeoutHint(false);
 
     // 2. 构造上下文
     const pageContext: PageContext = {
@@ -84,33 +90,43 @@ export function AIAdvisorDrawer() {
       timeframe: timeframe as Timeframe,
     };
 
+    // 3. 6 秒 UI 超时：只展示等待提示，不中断请求
+    const uiTimeoutTimer = setTimeout(() => {
+      setIsTimeoutHint(true);
+    }, AI_UI_TIMEOUT_MS);
+
     try {
-      // 3. 发送请求
+      // 4. 发送请求（网络超时已改为 30 秒兜底，给后端充足时间返回 fallback）
       const response = await sendChatRequest({
         profileId: currentProfileId,
         pageContext,
         userMessage: text,
+        smartPromptId,
+        visibleChartIds: pageContext.page === 'data-center' ? [activeTab] : undefined,
       });
 
-      // 4. 添加助手回答
+      // 5. 添加助手回答（包括后端返回的 fallback 内容）
       addMessage({
         role: 'assistant',
         content: response.summary,
         chartTokens: response.chartTokens,
         microTips: response.microTips,
+        source: response.source,
+        statusColor: response.statusColor,
         meta: response.meta,
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '发送失败，请检查网络连接';
-      showToast(errorMessage, 'error');
       addMessage({
         role: 'system',
         content: `发送失败: ${errorMessage}`,
       });
     } finally {
+      clearTimeout(uiTimeoutTimer);
       setLoading(false);
+      setIsTimeoutHint(false);
     }
-  };
+  }, [composerValue, isLoading, currentProfileId, pathname, activeTab, timeframe, addMessage, setComposerValue, setLoading, sendChatRequest]);
 
   const Content = (
     <div className="flex flex-col h-full bg-slate-950">
@@ -139,6 +155,9 @@ export function AIAdvisorDrawer() {
               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              {isTimeoutHint && (
+                <span className="text-[10px] text-yellow-500/80 ml-2">响应较慢，正在等待...</span>
+              )}
             </div>
           </div>
         )}

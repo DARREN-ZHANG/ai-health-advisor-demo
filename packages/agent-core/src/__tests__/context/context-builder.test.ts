@@ -153,9 +153,13 @@ describe('buildAgentContext', () => {
     const request = makeRequest({
       taskType: AgentTaskType.ADVISOR_CHAT,
       userMessage: '最近感觉怎样',
+      smartPromptId: 'sleep-analysis',
+      visibleChartIds: ['sleep'],
     });
     const ctx = buildAgentContext(request, makeDeps(), '2026-04-10');
     expect(ctx.task.type).toBe(AgentTaskType.ADVISOR_CHAT);
     expect(ctx.task.userMessage).toBe('最近感觉怎样');
+    expect(ctx.task.smartPromptId).toBe('sleep-analysis');
+    expect(ctx.task.visibleChartIds).toEqual(['sleep']);
   });
 });

@@ -11,6 +11,8 @@ const basePageContext = {
 describe('parseAgentResponse', () => {
   it('解析标准 JSON 输出', () => {
     const raw = JSON.stringify({
+      source: 'llm',
+      statusColor: 'good',
       summary: '整体状态良好，HRV 稳定。',
       chartTokens: [ChartTokenId.HRV_7DAYS],
       microTips: ['保持规律作息', '注意放松'],
@@ -24,6 +26,8 @@ describe('parseAgentResponse', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.envelope.summary).toBe('整体状态良好，HRV 稳定。');
+      expect(result.envelope.source).toBe('llm');
+      expect(result.envelope.statusColor).toBe('good');
       expect(result.envelope.chartTokens).toEqual([ChartTokenId.HRV_7DAYS]);
       expect(result.envelope.microTips).toHaveLength(2);
       expect(result.envelope.meta.finishReason).toBe('complete');
@@ -122,6 +126,26 @@ describe('parseAgentResponse', () => {
       expect(result.envelope.meta.taskType).toBe(AgentTaskType.VIEW_SUMMARY);
       expect(result.envelope.meta.pageContext.page).toBe('data-center');
       expect(result.envelope.meta.finishReason).toBe('complete');
+    }
+  });
+
+  it('缺少 statusColor 时回退到调用方提供的默认状态', () => {
+    const raw = JSON.stringify({
+      source: 'llm',
+      summary: '测试',
+      chartTokens: [],
+      microTips: [],
+    });
+
+    const result = parseAgentResponse(raw, {
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: basePageContext,
+      defaultStatusColor: 'warning',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.envelope.statusColor).toBe('warning');
     }
   });
 });

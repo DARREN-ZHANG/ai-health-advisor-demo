@@ -152,6 +152,8 @@ describe('API Response Envelope Consistency', () => {
       });
       expect(response.statusCode).toBe(200);
       assertSuccessEnvelope(response.json(), 'morning-brief');
+      expect(response.headers['x-session-id']).toBe('sess-test');
+      expect(response.json().data.meta.sessionId).toBe('sess-test');
     });
 
     test('POST /ai/chat 返回统一 envelope', async () => {
@@ -164,6 +166,23 @@ describe('API Response Envelope Consistency', () => {
       });
       expect(response.statusCode).toBe(200);
       assertSuccessEnvelope(response.json(), 'chat');
+      expect(response.headers['x-session-id']).toBe('sess-test');
+      expect(response.json().data.meta.sessionId).toBe('sess-test');
+    });
+
+    test('AI 路由在缺少 session header 时也会回写统一 sessionId', async () => {
+      mockedExecuteAgent.mockResolvedValueOnce(mockAgentResponse);
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/chat',
+        payload: { profileId: 'profile-a', pageContext: defaultPageContext, userMessage: 'hello' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      assertSuccessEnvelope(body, 'chat auto session');
+      expect(typeof body.data.meta.sessionId).toBe('string');
+      expect(response.headers['x-session-id']).toBe(body.data.meta.sessionId);
     });
 
     test('无效 pageContext 返回 error envelope', async () => {

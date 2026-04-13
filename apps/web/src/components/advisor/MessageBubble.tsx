@@ -24,6 +24,18 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     );
   }
 
+  const sourceLabel = message.source === 'fallback'
+    ? 'Fallback'
+    : message.source === 'llm'
+      ? 'LLM'
+      : message.source;
+
+  const statusClassName = message.statusColor === 'error'
+    ? 'text-red-400 bg-red-400/10'
+    : message.statusColor === 'warning'
+      ? 'text-yellow-400 bg-yellow-400/10'
+      : 'text-emerald-400 bg-emerald-400/10';
+
   return (
     <m.div
       initial={{ opacity: 0, x: isUser ? 20 : -20, y: 10 }}
@@ -51,6 +63,16 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
         <span className="text-[10px] text-slate-500 mt-1 px-1 flex items-center gap-2">
           {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {message.statusColor && (
+            <span className={`rounded px-1.5 py-0.5 uppercase tracking-wider ${statusClassName}`}>
+              {message.statusColor}
+            </span>
+          )}
+          {message.source && (
+            <span className="rounded px-1.5 py-0.5 text-slate-400 bg-slate-800/70 uppercase tracking-wider">
+              {sourceLabel}
+            </span>
+          )}
           {message.meta?.finishReason === 'fallback' && (
             <span className="text-yellow-500/60 flex items-center gap-1">
               <span className="w-1 h-1 bg-yellow-500 rounded-full" />

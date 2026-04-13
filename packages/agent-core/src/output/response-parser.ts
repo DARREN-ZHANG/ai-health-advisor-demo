@@ -6,6 +6,7 @@ import { MAX_CHART_TOKENS, MAX_MICRO_TIPS } from '../constants/limits';
 export interface ParseMeta {
   taskType: AgentTaskType;
   pageContext: PageContext;
+  defaultStatusColor?: AgentResponseEnvelope['statusColor'];
 }
 
 export interface ParseSuccess {
@@ -88,7 +89,7 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
   const envelope: AgentResponseEnvelope = {
     summary,
     source: typeof obj.source === 'string' && obj.source.length > 0 ? obj.source : 'llm',
-    statusColor: parseStatusColor(obj.statusColor),
+    statusColor: parseStatusColor(obj.statusColor, meta.defaultStatusColor),
     chartTokens: validTokens,
     microTips: tips,
     meta: {
@@ -111,12 +112,15 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
   return { success: true, envelope: result.data };
 }
 
-function parseStatusColor(value: unknown): AgentResponseEnvelope['statusColor'] {
+function parseStatusColor(
+  value: unknown,
+  fallback: AgentResponseEnvelope['statusColor'] = 'good',
+): AgentResponseEnvelope['statusColor'] {
   if (value === 'good' || value === 'warning' || value === 'error') {
     return value;
   }
 
-  return 'good';
+  return fallback;
 }
 
 function extractJson(text: string): string | null {

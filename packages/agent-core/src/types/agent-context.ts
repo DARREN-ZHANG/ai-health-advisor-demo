@@ -23,6 +23,8 @@ export interface AgentContext {
     timeframe?: Timeframe;
     dateRange?: { start: string; end: string };
     userMessage?: string;
+    smartPromptId?: string;
+    visibleChartIds?: string[];
   };
   dataWindow: {
     start: string;

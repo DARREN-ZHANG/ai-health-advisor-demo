@@ -84,6 +84,8 @@ export function buildAgentContext(
       timeframe: effectiveTimeframe,
       dateRange: request.dateRange ?? request.pageContext.customDateRange,
       userMessage: request.userMessage,
+      smartPromptId: request.smartPromptId,
+      visibleChartIds: request.visibleChartIds,
     },
     dataWindow: {
       start: windowRange.start,
