@@ -1,14 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-
-export interface ScenarioEntry {
-  scenarioId: string;
-  label: string;
-  description: string;
-  type: string;
-  payload: Record<string, unknown>;
-  steps?: Array<{ label: string; action: string; payload: Record<string, unknown> }>;
-}
+import type { ScenarioEntry } from '@health-advisor/shared';
 
 interface ScenarioManifest {
   version: string;

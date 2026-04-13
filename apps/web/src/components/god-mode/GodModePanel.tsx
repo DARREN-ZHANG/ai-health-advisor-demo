@@ -1,6 +1,8 @@
 'use client';
 
 import { Drawer, Button, Section, Skeleton } from '@health-advisor/ui';
+import type { ScenarioEntry } from '@health-advisor/shared';
+import { getScenarioIcon } from '@/lib/god-mode';
 import { useGodModeStore } from '@/stores/god-mode.store';
 import { useProfileStore } from '@/stores/profile.store';
 import { useGodModeActions, useGodModeState } from '@/hooks/use-god-mode-actions';
@@ -13,6 +15,7 @@ export function GodModePanel() {
     injectEvent, isInjectingEvent, 
     overrideMetric, isOverridingMetric,
     reset, isResetting,
+    applyScenario, isApplyingScenario,
     runDemoScript, isRunningDemoScript
   } = useGodModeActions();
 
@@ -31,10 +34,17 @@ export function GodModePanel() {
     }
   };
 
-  const handleScenarioRun = async (id: string) => {
-    setScenarioId(id);
+  const isRunningScenario = isApplyingScenario || isRunningDemoScript;
+
+  const handleScenarioRun = async (scenario: ScenarioEntry) => {
+    setScenarioId(scenario.scenarioId);
     try {
-      await runDemoScript(id);
+      if (scenario.type === 'demo_script') {
+        await runDemoScript(scenario.scenarioId);
+        return;
+      }
+
+      await applyScenario(scenario.scenarioId);
     } catch (error) {
       console.error('Failed to run scenario:', error);
     }
@@ -97,12 +107,7 @@ export function GodModePanel() {
     }
   };
 
-  const scenarios = godModeState?.availableScenarios || [
-    { id: 'normal', label: '常规健康态', icon: '✅' },
-    { id: 'stress', label: '高压打工人', icon: '😫' },
-    { id: 'recovery', label: '运动康复期', icon: '🏃' },
-    { id: 'insomnia', label: '深夜失眠党', icon: '🦉' },
-  ];
+  const scenarios = godModeState?.availableScenarios ?? [];
 
   return (
     <Drawer
@@ -119,13 +124,13 @@ export function GodModePanel() {
             {['profile-a', 'profile-b', 'profile-c'].map((id) => (
               <button
                 key={id}
-                disabled={isSwitchingProfile || isRunningDemoScript}
+                disabled={isSwitchingProfile || isRunningScenario}
                 onClick={() => handleProfileSwitch(id)}
                 className={`px-4 py-2 rounded-lg text-sm text-left transition-all border ${
                   currentProfileId === id
                     ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20'
                     : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:bg-slate-700/50'
-                } ${isSwitchingProfile || isRunningDemoScript ? 'opacity-50 cursor-not-allowed' : ''}`}
+                } ${isSwitchingProfile || isRunningScenario ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {id === 'profile-a' ? '👨‍💻 用户 A (平衡型)' : id === 'profile-b' ? '🏃 用户 B (运动型)' : '🧘 用户 C (静息型)'}
                 {isSwitchingProfile && currentProfileId !== id && ' ...'}
@@ -140,22 +145,26 @@ export function GodModePanel() {
             <div className="grid grid-cols-2 gap-2">
               {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 rounded-xl bg-slate-800" />)}
             </div>
+          ) : scenarios.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-700 px-3 py-4 text-xs text-slate-500">
+              当前没有可用的预置场景。
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">
               {scenarios.map((s) => (
                 <button
-                  key={s.id}
-                  disabled={isRunningDemoScript}
-                  onClick={() => handleScenarioRun(s.id)}
+                  key={s.scenarioId}
+                  disabled={isRunningScenario}
+                  onClick={() => handleScenarioRun(s)}
                   className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${
-                    activeScenarioId === s.id
+                    activeScenarioId === s.scenarioId
                       ? 'bg-yellow-500/10 border-yellow-500 text-yellow-500 shadow-lg shadow-yellow-500/10'
                       : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:bg-slate-700/50'
-                  } ${isRunningDemoScript ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  } ${isRunningScenario ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  <span className="text-xl">{s.icon || '🎭'}</span>
+                  <span className="text-xl">{getScenarioIcon(s.type)}</span>
                   <span className="text-[10px] font-bold text-center leading-tight">{s.label}</span>
-                  {isRunningDemoScript && activeScenarioId === s.id && <span className="text-[8px] animate-pulse">Running...</span>}
+                  {isRunningScenario && activeScenarioId === s.scenarioId && <span className="text-[8px] animate-pulse">Running...</span>}
                 </button>
               ))}
             </div>
@@ -167,39 +176,35 @@ export function GodModePanel() {
           <div className="space-y-2">
             <Button
               variant="secondary"
-              loading={isInjectingEvent}
-              disabled={isRunningDemoScript}
+              disabled={isRunningScenario}
               onClick={handleInjectSportEvent}
               className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700 hover:bg-slate-700"
             >
-              ⚡ 注入即时运动事件
+              {isInjectingEvent ? '处理中...' : '⚡ 注入即时运动事件'}
             </Button>
             <Button
               variant="secondary"
-              loading={isOverridingMetric}
-              disabled={isRunningDemoScript}
+              disabled={isRunningScenario}
               onClick={handleSimulateLowHRV}
               className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700 hover:bg-slate-700"
             >
-              📉 模拟极低 HRV 状态
+              {isOverridingMetric ? '处理中...' : '📉 模拟极低 HRV 状态'}
             </Button>
             <Button
               variant="secondary"
-              loading={isInjectingEvent}
-              disabled={isRunningDemoScript}
+              disabled={isRunningScenario}
               onClick={handleSimulateInsomnia}
               className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700 hover:bg-slate-700"
             >
-              🔴 模拟睡眠缺失
+              {isInjectingEvent ? '处理中...' : '🔴 模拟睡眠缺失'}
             </Button>
             <Button
               variant="secondary"
-              loading={isResetting}
-              disabled={isRunningDemoScript}
+              disabled={isRunningScenario}
               onClick={handleReset}
               className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700 hover:bg-slate-700"
             >
-              🧪 重置所有 Overrides
+              {isResetting ? '处理中...' : '🧪 重置所有 Overrides'}
             </Button>
           </div>
         </Section>

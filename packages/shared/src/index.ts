@@ -30,6 +30,15 @@ export type {
   MetricOverridePayload,
   ResetPayload,
   ScenarioPayload,
+  ScenarioType,
+  ScenarioStep,
+  ScenarioEntry,
+  ActiveSensingState,
+  GodModeOverrideEntry,
+  GodModeInjectedEvent,
+  GodModeStateResponse,
+  DemoScriptStepResult,
+  DemoScriptRunResponse,
   GodModeAction,
 } from './types/god-mode';
 

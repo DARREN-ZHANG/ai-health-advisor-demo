@@ -1,33 +1,22 @@
 import type { RuntimeRegistry } from '../../runtime/registry.js';
 import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
-import type { EventInjectPayload, MetricOverridePayload, ResetPayload } from '@health-advisor/shared';
-import type { ScenarioEntry } from '../../runtime/scenario-registry.js';
-
-export interface GodModeState {
-  currentProfileId: string;
-  activeOverrides: OverrideEntry[];
-  injectedEvents: DatedEvent[];
-  availableScenarios: ScenarioEntry[];
-}
-
-export interface DemoScriptStepResult {
-  label: string;
-  action: string;
-  status: 'success' | 'error';
-  detail?: string;
-}
-
-export interface DemoScriptResult {
-  scenarioId: string;
-  label: string;
-  executedSteps: DemoScriptStepResult[];
-}
+import type {
+  ActiveSensingState,
+  DemoScriptRunResponse,
+  DemoScriptStepResult,
+  EventInjectPayload,
+  GodModeStateResponse,
+  MetricOverridePayload,
+  ResetPayload,
+  ScenarioEntry,
+  ScenarioStep,
+} from '@health-advisor/shared';
 
 export class GodModeService {
   constructor(private registry: RuntimeRegistry) {}
 
   /** BE-022: 切换 profile，清空旧 profile 的 session/analytical memory */
-  switchProfile(profileId: string, sessionId?: string): { currentProfileId: string } {
+  switchProfile(profileId: string, sessionId?: string): GodModeStateResponse {
     // 验证 profile 存在
     this.registry.getRawProfile(profileId);
 
@@ -38,11 +27,11 @@ export class GodModeService {
     this.registry.sessionStore.clearOnProfileSwitch(effectiveSessionId);
     this.registry.analyticalMemory.invalidateOnProfileSwitch(effectiveSessionId);
 
-    return { currentProfileId: profileId };
+    return this.getState();
   }
 
   /** BE-023: 注入事件 */
-  injectEvent(profileId: string, payload: EventInjectPayload, sessionId?: string): { injected: DatedEvent } {
+  injectEvent(profileId: string, payload: EventInjectPayload, sessionId?: string): GodModeStateResponse {
     const event: DatedEvent = {
       date: payload.timestamp ?? new Date().toISOString().slice(0, 10),
       type: payload.eventType,
@@ -50,11 +39,11 @@ export class GodModeService {
     };
     this.registry.overrideStore.injectEvent(profileId, event);
     this.invalidateSessionAnalytical(sessionId);
-    return { injected: event };
+    return this.getState();
   }
 
   /** BE-024: 覆盖指标 */
-  overrideMetric(profileId: string, payload: MetricOverridePayload, sessionId?: string): { overrides: OverrideEntry[] } {
+  overrideMetric(profileId: string, payload: MetricOverridePayload, sessionId?: string): GodModeStateResponse {
     const entry: OverrideEntry = {
       metric: payload.metric,
       value: payload.value,
@@ -62,32 +51,50 @@ export class GodModeService {
     };
     this.registry.overrideStore.addOverride(profileId, entry);
     this.invalidateSessionAnalytical(sessionId);
-    return { overrides: this.registry.overrideStore.getActiveOverrides(profileId) };
+    return this.getState();
   }
 
   /** BE-025: reset / restore */
-  reset(payload: ResetPayload, sessionId?: string): { scope: string } {
+  reset(payload: ResetPayload, sessionId?: string): GodModeStateResponse {
     this.registry.overrideStore.reset(payload.scope);
     if (sessionId && (payload.scope === 'profile' || payload.scope === 'all')) {
       this.registry.sessionStore.clearOnProfileSwitch(sessionId);
     }
     this.invalidateSessionAnalytical(sessionId);
-    return { scope: payload.scope };
+    return this.getState();
   }
 
   /** BE-025A: 获取当前 God-Mode 状态 */
-  getState(): GodModeState {
+  getState(): GodModeStateResponse {
     const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
     return {
       currentProfileId,
       activeOverrides: this.registry.overrideStore.getActiveOverrides(currentProfileId),
       injectedEvents: this.registry.overrideStore.getInjectedEvents(currentProfileId),
       availableScenarios: this.registry.scenarioRegistry.list(),
+      activeSensing: this.deriveActiveSensing(currentProfileId),
     };
   }
 
+  /** BE-025A: 应用单步 scenario */
+  applyScenario(scenarioId: string, sessionId?: string): GodModeStateResponse {
+    const scenario = this.registry.scenarioRegistry.getById(scenarioId);
+    if (!scenario) {
+      throw Object.assign(new Error(`Scenario '${scenarioId}' not found`), { statusCode: 404 });
+    }
+    if (scenario.type === 'demo_script') {
+      throw Object.assign(new Error(`Scenario '${scenarioId}' must be run via demo-script API`), { statusCode: 400 });
+    }
+    if (!scenario.payload) {
+      throw Object.assign(new Error(`Scenario '${scenarioId}' is missing payload`), { statusCode: 500 });
+    }
+
+    this.executeStep(scenario.type, scenario.payload, sessionId);
+    return this.getState();
+  }
+
   /** BE-025A: 执行 demo-script */
-  runDemoScript(scenarioId: string, sessionId?: string): DemoScriptResult {
+  runDemoScript(scenarioId: string, sessionId?: string): DemoScriptRunResponse {
     const scenario = this.registry.scenarioRegistry.getById(scenarioId);
     if (!scenario) {
       throw Object.assign(new Error(`Scenario '${scenarioId}' not found`), { statusCode: 404 });
@@ -112,10 +119,11 @@ export class GodModeService {
       scenarioId,
       label: scenario.label,
       executedSteps,
+      state: this.getState(),
     };
   }
 
-  private executeStep(action: string, payload: Record<string, unknown>, sessionId?: string): void {
+  private executeStep(action: ScenarioStep['action'] | ScenarioEntry['type'], payload: Record<string, unknown>, sessionId?: string): void {
     switch (action) {
       case 'profile_switch':
         this.switchProfile(payload.profileId as string, sessionId);
@@ -140,6 +148,26 @@ export class GodModeService {
       default:
         throw new Error(`Unknown action: ${action}`);
     }
+  }
+
+  private deriveActiveSensing(currentProfileId: string): ActiveSensingState | null {
+    const injectedEvents = this.registry.overrideStore.getInjectedEvents(currentProfileId);
+    if (injectedEvents.length === 0) {
+      return null;
+    }
+
+    const latestEvent = injectedEvents[injectedEvents.length - 1];
+    if (!latestEvent) {
+      return null;
+    }
+
+    return {
+      visible: true,
+      priority: 'high',
+      surface: 'banner',
+      date: latestEvent.date,
+      events: [latestEvent.type],
+    };
   }
 
   /** 数据变更后失效 session 的 analytical memory，防止 AI 请求用过期上下文 */

@@ -257,6 +257,22 @@ describe('API Response Envelope Consistency', () => {
       });
     });
 
+    test('POST /god-mode/scenario/apply 返回统一 envelope', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/scenario/apply',
+        payload: { scenarioId: 'switch-to-stress' },
+      });
+      expect(response.statusCode).toBe(200);
+      assertSuccessEnvelope(response.json(), 'scenario-apply');
+
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+    });
+
     test('POST /god-mode/reset 返回统一 envelope', async () => {
       const response = await app.inject({
         method: 'POST',

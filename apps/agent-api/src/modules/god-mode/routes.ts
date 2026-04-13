@@ -39,6 +39,10 @@ interface DemoScriptRunBody {
   scenarioId: string;
 }
 
+interface ApplyScenarioBody {
+  scenarioId: string;
+}
+
 export async function godModeRoutes(app: FastifyInstance) {
   const service = new GodModeService(app.runtime);
 
@@ -110,6 +114,27 @@ export async function godModeRoutes(app: FastifyInstance) {
   app.get('/god-mode/state', async (request) => {
     const state = service.getState();
     return createSuccessResponse(state, buildMeta(request));
+  });
+
+  // BE-025A: /god-mode/scenario/apply
+  app.post<{ Body: ApplyScenarioBody }>('/god-mode/scenario/apply', async (request, reply) => {
+    const parsed = ScenarioPayloadSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send(
+        createErrorResponse(ErrorCode.VALIDATION_ERROR, parsed.error.issues.map((i) => i.message).join('; '), buildMeta(request)),
+      );
+    }
+
+    try {
+      const state = service.applyScenario(parsed.data.scenarioId, request.ctx?.sessionId);
+      return createSuccessResponse(state, buildMeta(request));
+    } catch (error) {
+      const statusCode = (error as any).statusCode ?? 500;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return reply.status(statusCode).send(
+        createErrorResponse(ErrorCode.VALIDATION_ERROR, message, buildMeta(request)),
+      );
+    }
   });
 
   // BE-025A: /god-mode/demo-script/run

@@ -80,8 +80,16 @@ describe('God-Mode Routes', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.success).toBe(true);
-      expect(body.data.injected.type).toBe('late_night_work');
-      expect(body.data.injected.data).toEqual({ endTime: '03:00' });
+      expect(body.data.injectedEvents).toHaveLength(1);
+      expect(body.data.injectedEvents[0].type).toBe('late_night_work');
+      expect(body.data.injectedEvents[0].data).toEqual({ endTime: '03:00' });
+      expect(body.data.activeSensing).toEqual({
+        visible: true,
+        priority: 'high',
+        surface: 'banner',
+        date: body.data.injectedEvents[0].date,
+        events: ['late_night_work'],
+      });
     });
 
     test('指定 profileId 注入事件', async () => {
@@ -97,7 +105,7 @@ describe('God-Mode Routes', () => {
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      expect(body.data.injected.type).toBe('illness');
+      expect(body.data.injectedEvents[body.data.injectedEvents.length - 1].type).toBe('illness');
     });
 
     test('无效 payload 返回 400', async () => {
@@ -134,8 +142,8 @@ describe('God-Mode Routes', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.success).toBe(true);
-      expect(body.data.overrides.length).toBeGreaterThanOrEqual(1);
-      const lastOverride = body.data.overrides[body.data.overrides.length - 1];
+      expect(body.data.activeOverrides.length).toBeGreaterThanOrEqual(1);
+      const lastOverride = body.data.activeOverrides[body.data.activeOverrides.length - 1];
       expect(lastOverride.metric).toBe('hrv');
       expect(lastOverride.value).toBe(15);
     });
@@ -177,7 +185,10 @@ describe('God-Mode Routes', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.success).toBe(true);
-      expect(body.data.scope).toBe('all');
+      expect(body.data.currentProfileId).toBe('profile-a');
+      expect(body.data.activeOverrides).toEqual([]);
+      expect(body.data.injectedEvents).toEqual([]);
+      expect(body.data.activeSensing).toBeNull();
     });
 
     test('scope=profile 时清空当前 session 的旧 profile 对话记忆', async () => {
@@ -276,6 +287,58 @@ describe('God-Mode Routes', () => {
       expect(Array.isArray(body.data.injectedEvents)).toBe(true);
       expect(Array.isArray(body.data.availableScenarios)).toBe(true);
       expect(body.data.availableScenarios.length).toBeGreaterThan(0);
+      expect(body.data.availableScenarios[0]).toHaveProperty('scenarioId');
+      expect(body.data).toHaveProperty('activeSensing');
+    });
+  });
+
+  describe('POST /god-mode/scenario/apply', () => {
+    test('执行 profile_switch scenario 返回 200', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/scenario/apply',
+        payload: { scenarioId: 'switch-to-stress' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      expect(body.data.currentProfileId).toBe('profile-c');
+
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+    });
+
+    test('执行 event_inject scenario 返回 active sensing 状态', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/scenario/apply',
+        payload: { scenarioId: 'inject-late-night' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      expect(body.data.activeSensing?.events).toEqual(['late_night_work']);
+
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+    });
+
+    test('demo_script 类型必须走 demo-script API', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/scenario/apply',
+        payload: { scenarioId: 'demo-stress-journey' },
+      });
+
+      expect(response.statusCode).toBe(400);
     });
   });
 
@@ -292,10 +355,12 @@ describe('God-Mode Routes', () => {
       expect(body.success).toBe(true);
       expect(body.data.scenarioId).toBe('demo-stress-journey');
       expect(body.data.executedSteps).toHaveLength(3);
+      expect(body.data.state.currentProfileId).toBe('profile-c');
       expect(body.data.executedSteps[0].action).toBe('profile_switch');
       expect(body.data.executedSteps[0].status).toBe('success');
       expect(body.data.executedSteps[1].action).toBe('event_inject');
       expect(body.data.executedSteps[2].action).toBe('metric_override');
+      expect(body.data.state.activeSensing?.events).toEqual(['late_night_work']);
 
       // 清理
       await app.inject({

@@ -41,9 +41,7 @@ test.describe('God-Mode E2E', () => {
     await injectBtn.click();
 
     // 检查 Active Sensing 横幅是否出现
-    // 注意：这取决于后端 /god-mode/inject-event 是否返回 banner 数据
-    // 在真实测试中，我们可能需要 mock 接口响应
-    // await expect(page.getByText('AI Proactive Insight')).toBeVisible();
+    await expect(page.getByText('AI Proactive Insight')).toBeVisible();
   });
 
   test('should reset all overrides', async ({ page }) => {
