@@ -2,11 +2,10 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { SandboxProfile } from '@health-advisor/shared';
 import { useAIAdvisorStore } from './ai-advisor.store';
-import { clearSessionId } from '@/lib/api-client';
 
 function resetProfileScopedUiState() {
+  // 只清除 UI 消息，不清除 sessionId（sessionId 由后端管理，可跨 profile 续用）
   useAIAdvisorStore.getState().clearMessages();
-  clearSessionId();
 }
 
 interface ProfileState {

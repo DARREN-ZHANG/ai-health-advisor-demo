@@ -1,21 +1,23 @@
 import { env } from '@/config/env';
 import type { ApiResponse } from '@health-advisor/shared';
 
-/** 默认请求超时时间（毫秒），与后端 AI 超时策略对齐 */
-const DEFAULT_TIMEOUT_MS = 6_000;
+/** 网络请求安全兜底超时（毫秒），远大于后端 AI 超时，用于防止请求永远挂起 */
+const DEFAULT_TIMEOUT_MS = 30_000;
+/** AI 请求建议的 UI 等待阈值（毫秒），前端可据此展示 timeout 状态 */
+export const AI_UI_TIMEOUT_MS = 6_000;
 const SESSION_ID_STORAGE_KEY = 'session-id';
 
-function getOrCreateSessionId(): string {
-  const existing = window.localStorage.getItem(SESSION_ID_STORAGE_KEY);
-  if (existing) {
-    return existing;
-  }
-
-  const next = crypto.randomUUID();
-  window.localStorage.setItem(SESSION_ID_STORAGE_KEY, next);
-  return next;
+/** 获取已缓存的 sessionId（由后端签发），不存在时返回空字符串 */
+function getSessionId(): string {
+  return window.localStorage.getItem(SESSION_ID_STORAGE_KEY) || '';
 }
 
+/** 缓存后端签发的 sessionId */
+export function setSessionId(id: string) {
+  window.localStorage.setItem(SESSION_ID_STORAGE_KEY, id);
+}
+
+/** 清除 sessionId（仅在用户主动清除对话时使用） */
 export function clearSessionId() {
   window.localStorage.removeItem(SESSION_ID_STORAGE_KEY);
 }
@@ -43,7 +45,7 @@ async function request<T>(
     headers.set('Content-Type', 'application/json');
   }
 
-  const sessionId = typeof window !== 'undefined' ? getOrCreateSessionId() : '';
+  const sessionId = typeof window !== 'undefined' ? getSessionId() : '';
   if (sessionId) {
     headers.set('X-Session-Id', sessionId);
   }
@@ -77,6 +79,12 @@ async function request<T>(
     }
 
     const body = (await response.json()) as ApiResponse<T>;
+
+    // 从响应中提取后端签发的 sessionId 并缓存
+    const responseSessionId = response.headers.get('X-Session-Id');
+    if (responseSessionId) {
+      setSessionId(responseSessionId);
+    }
 
     // 检查业务层 success 标志，避免在 success: false 时返回 null as T
     if (!body.success) {

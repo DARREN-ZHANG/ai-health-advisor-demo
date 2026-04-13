@@ -18,7 +18,7 @@ function createMemoryStorage() {
   };
 }
 
-function createSuccessResponse<T>(data: T) {
+function createSuccessResponse<T>(data: T, headers: Record<string, string> = {}) {
   return new Response(
     JSON.stringify({
       success: true,
@@ -32,7 +32,7 @@ function createSuccessResponse<T>(data: T) {
     }),
     {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...headers },
     },
   );
 }
@@ -41,7 +41,6 @@ describe('apiClient session header', () => {
   beforeEach(() => {
     const storage = createMemoryStorage();
     vi.stubGlobal('window', { localStorage: storage });
-    vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('sess-test-id');
   });
 
   afterEach(() => {
@@ -49,16 +48,21 @@ describe('apiClient session header', () => {
     vi.unstubAllGlobals();
   });
 
-  it('首次请求会创建并持久化 session-id', async () => {
+  it('首次请求会缓存后端签发的 session-id', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(createSuccessResponse({ ok: true }));
+      .mockResolvedValue(
+        createSuccessResponse(
+          { ok: true },
+          { 'X-Session-Id': 'sess-issued-by-server' },
+        ),
+      );
 
     await apiClient.get<{ ok: boolean }>('/health');
 
     const headers = new Headers(fetchSpy.mock.calls[0]?.[1]?.headers);
-    expect(headers.get('X-Session-Id')).toBe('sess-test-id');
-    expect(window.localStorage.getItem('session-id')).toBe('sess-test-id');
+    expect(headers.get('X-Session-Id')).toBeNull();
+    expect(window.localStorage.getItem('session-id')).toBe('sess-issued-by-server');
   });
 
   it('后续请求会复用已有 session-id', async () => {
