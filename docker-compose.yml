@@ -1,0 +1,39 @@
+services:
+  agent-api:
+    build:
+      context: .
+      dockerfile: apps/agent-api/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - AI_TIMEOUT_MS=6000
+      - FALLBACK_ONLY_MODE=${FALLBACK_ONLY_MODE:-true}
+      - ENABLE_GOD_MODE=${ENABLE_GOD_MODE:-true}
+      - LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        - NEXT_PUBLIC_AGENT_API_BASE_URL=${NEXT_PUBLIC_AGENT_API_BASE_URL:-http://localhost:3001}
+        - NEXT_PUBLIC_ENABLE_GOD_MODE=${NEXT_PUBLIC_ENABLE_GOD_MODE:-true}
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_AGENT_API_BASE_URL=${NEXT_PUBLIC_AGENT_API_BASE_URL:-http://localhost:3001}
+      - NEXT_PUBLIC_ENABLE_GOD_MODE=${NEXT_PUBLIC_ENABLE_GOD_MODE:-true}
+    depends_on:
+      agent-api:
+        condition: service_healthy

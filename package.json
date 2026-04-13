@@ -11,7 +11,9 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:e2e": "pnpm --filter web test:e2e",
-    "clean": "turbo run clean && rimraf node_modules"
+    "clean": "turbo run clean && rimraf node_modules",
+    "validate": "npx tsx data/validate.ts",
+    "reset": "./scripts/reset.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
