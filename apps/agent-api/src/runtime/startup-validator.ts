@@ -32,8 +32,8 @@ export function validateStartupAssets(dataDir: string): ValidationResult {
   // 3. prompts 校验（非致命）
   validatePrompts(dataDir, warnings);
 
-  // 4. scenarios 校验（非致命）
-  validateScenarios(dataDir, warnings);
+  // 4. scenarios 校验（致命：createScenarioRegistry 会同步读取该文件）
+  validateScenarios(dataDir, fatal);
 
   return { fatal, warnings };
 }
@@ -114,10 +114,10 @@ function validatePrompts(dataDir: string, warnings: string[]): void {
   }
 }
 
-function validateScenarios(dataDir: string, warnings: string[]): void {
+function validateScenarios(dataDir: string, fatal: string[]): void {
   const scenarioPath = join(dataDir, 'scenarios', 'manifest.json');
   if (!existsSync(scenarioPath)) {
-    warnings.push('scenarios/manifest.json not found');
+    fatal.push('scenarios/manifest.json not found');
     return;
   }
 
@@ -127,18 +127,18 @@ function validateScenarios(dataDir: string, warnings: string[]): void {
     };
 
     if (!Array.isArray(content.scenarios) || content.scenarios.length === 0) {
-      warnings.push('scenarios/manifest.json has no scenarios');
+      fatal.push('scenarios/manifest.json has no scenarios');
     }
 
     const validTypes = ['profile_switch', 'event_inject', 'metric_override', 'reset', 'demo_script'];
     for (const s of content.scenarios) {
       if (!s.scenarioId || !s.label || !s.type) {
-        warnings.push(`scenario missing required fields: ${JSON.stringify(s)}`);
+        fatal.push(`scenario missing required fields: ${JSON.stringify(s)}`);
       } else if (!validTypes.includes(s.type)) {
-        warnings.push(`scenario "${s.scenarioId}" has invalid type "${s.type}"`);
+        fatal.push(`scenario "${s.scenarioId}" has invalid type "${s.type}"`);
       }
     }
   } catch (err) {
-    warnings.push(`scenario validation failed: ${(err as Error).message}`);
+    fatal.push(`scenario validation failed: ${(err as Error).message}`);
   }
 }

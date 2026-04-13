@@ -39,7 +39,7 @@ export class GodModeService {
     };
     this.registry.overrideStore.injectEvent(profileId, event);
     this.invalidateSessionAnalytical(sessionId);
-    return this.getState();
+    return this.getStateForProfile(profileId);
   }
 
   /** BE-024: 覆盖指标 */
@@ -51,7 +51,7 @@ export class GodModeService {
     };
     this.registry.overrideStore.addOverride(profileId, entry);
     this.invalidateSessionAnalytical(sessionId);
-    return this.getState();
+    return this.getStateForProfile(profileId);
   }
 
   /** BE-025: reset / restore */
@@ -75,12 +75,18 @@ export class GodModeService {
   /** BE-025A: 获取当前 God-Mode 状态 */
   getState(): GodModeStateResponse {
     const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
+    return this.getStateForProfile(currentProfileId);
+  }
+
+  /** 获取指定 profile 的 God-Mode 状态 */
+  private getStateForProfile(profileId: string): GodModeStateResponse {
+    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
     return {
       currentProfileId,
-      activeOverrides: this.registry.overrideStore.getActiveOverrides(currentProfileId),
-      injectedEvents: this.registry.overrideStore.getInjectedEvents(currentProfileId),
+      activeOverrides: this.registry.overrideStore.getActiveOverrides(profileId),
+      injectedEvents: this.registry.overrideStore.getInjectedEvents(profileId),
       availableScenarios: this.registry.scenarioRegistry.list(),
-      activeSensing: this.deriveActiveSensing(currentProfileId),
+      activeSensing: this.deriveActiveSensing(profileId),
     };
   }
 

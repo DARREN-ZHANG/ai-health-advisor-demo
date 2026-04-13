@@ -178,6 +178,10 @@ describe('validateStartupAssets', () => {
         'view-summary': { hrv: validFallbackEntry },
         'advisor-chat': { 'test-profile': validFallbackEntry },
       },
+      scenarios: {
+        version: '1',
+        scenarios: [{ scenarioId: 's1', label: 'Test', type: 'reset' }],
+      },
       // 不提供 prompts
     }));
 
@@ -187,7 +191,7 @@ describe('validateStartupAssets', () => {
     expect(result.warnings.some((w) => w.includes('prompts'))).toBe(true);
   });
 
-  it('scenario manifest 缺失时产生警告', () => {
+  it('scenario manifest 缺失时产生致命错误', () => {
     const dir = trackDir(createTestDir({
       manifest: validManifest,
       profiles: { 'test-profile': validProfile },
@@ -206,11 +210,10 @@ describe('validateStartupAssets', () => {
     }));
 
     const result = validateStartupAssets(dir);
-    expect(result.fatal).toEqual([]);
-    expect(result.warnings.some((w) => w.includes('scenarios'))).toBe(true);
+    expect(result.fatal.some((e) => e.includes('scenarios'))).toBe(true);
   });
 
-  it('scenario 类型无效时产生警告', () => {
+  it('scenario 类型无效时产生致命错误', () => {
     const dir = trackDir(createTestDir({
       manifest: validManifest,
       profiles: { 'test-profile': validProfile },
@@ -232,7 +235,6 @@ describe('validateStartupAssets', () => {
     }));
 
     const result = validateStartupAssets(dir);
-    expect(result.fatal).toEqual([]);
-    expect(result.warnings.some((w) => w.includes('invalid_type'))).toBe(true);
+    expect(result.fatal.some((e) => e.includes('invalid_type'))).toBe(true);
   });
 });
