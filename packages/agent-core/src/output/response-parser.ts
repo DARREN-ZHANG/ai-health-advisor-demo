@@ -87,6 +87,8 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
 
   const envelope: AgentResponseEnvelope = {
     summary,
+    source: typeof obj.source === 'string' && obj.source.length > 0 ? obj.source : 'llm',
+    statusColor: parseStatusColor(obj.statusColor),
     chartTokens: validTokens,
     microTips: tips,
     meta: {
@@ -107,6 +109,14 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
   }
 
   return { success: true, envelope: result.data };
+}
+
+function parseStatusColor(value: unknown): AgentResponseEnvelope['statusColor'] {
+  if (value === 'good' || value === 'warning' || value === 'error') {
+    return value;
+  }
+
+  return 'good';
 }
 
 function extractJson(text: string): string | null {

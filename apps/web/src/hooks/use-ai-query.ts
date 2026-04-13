@@ -56,11 +56,9 @@ export function useViewSummary(
       return apiClient.post<AgentResponseEnvelope>('/ai/view-summary', {
         profileId,
         pageContext,
-        tab: tab as DataTab,
-        timeframe: timeframe as Timeframe,
       });
     },
-    enabled: !!profileId,
+    enabled: false, // 按需触发，不在页面加载时自动请求
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });

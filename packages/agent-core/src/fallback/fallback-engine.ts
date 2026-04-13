@@ -64,6 +64,8 @@ export function createFallbackEngine(
       const entry = lookupEntry(assets, taskType, key);
       return {
         summary: entry.summary,
+        source: 'fallback',
+        statusColor: 'warning',
         chartTokens: entry.chartTokens,
         microTips: entry.microTips,
         meta: {

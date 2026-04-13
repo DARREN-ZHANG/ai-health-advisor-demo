@@ -33,11 +33,14 @@ export const PageContextSchema = z
 
 export const AgentResponseEnvelopeSchema = z.object({
   summary: z.string().min(1),
+  source: z.string().min(1),
+  statusColor: z.enum(['good', 'warning', 'error']),
   chartTokens: z.array(ChartTokenIdSchema),
   microTips: z.array(z.string()),
   meta: z.object({
     taskType: AgentTaskTypeSchema,
     pageContext: PageContextSchema,
     finishReason: z.enum(['complete', 'fallback', 'timeout']),
+    sessionId: z.string().optional(),
   }),
 });

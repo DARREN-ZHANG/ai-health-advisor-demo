@@ -24,6 +24,8 @@ const defaultPageContext: PageContext = {
 
 const mockResponse: AgentResponseEnvelope = {
   summary: '健康状态良好',
+  source: 'llm',
+  statusColor: 'good',
   chartTokens: [],
   microTips: ['保持运动'],
   meta: { taskType: AgentTaskType.HOMEPAGE_SUMMARY, pageContext: defaultPageContext, finishReason: 'complete' },

@@ -19,5 +19,5 @@ export const useActiveSensingStore = create<ActiveSensingState>((set) => ({
   activeBanner: null,
   isVisible: false,
   showBanner: (banner) => set({ activeBanner: banner, isVisible: true }),
-  hideBanner: () => set({ isVisible: false }),
+  hideBanner: () => set({ isVisible: false, activeBanner: null }),
 }));

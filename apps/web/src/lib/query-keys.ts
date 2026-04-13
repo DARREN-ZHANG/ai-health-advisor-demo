@@ -11,10 +11,12 @@ export const queryKeys = {
   },
   dataCenter: {
     all: ['dataCenter'] as const,
-    timeline: (profileId: string, timeframe: string) =>
-      [...queryKeys.dataCenter.all, 'timeline', profileId, timeframe] as const,
+    timeline: (profileId: string, tab: string, timeframe: string) =>
+      [...queryKeys.dataCenter.all, 'timeline', profileId, tab, timeframe] as const,
     stress: (profileId: string, timeframe: string) =>
       [...queryKeys.dataCenter.all, 'stress', profileId, timeframe] as const,
+    chartData: (profileId: string, tokens: string, timeframe: string) =>
+      [...queryKeys.dataCenter.all, 'chart-data', profileId, tokens, timeframe] as const,
     viewSummary: (profileId: string, tab: string, timeframe: string) =>
       [...queryKeys.dataCenter.all, 'viewSummary', profileId, tab, timeframe] as const,
   },

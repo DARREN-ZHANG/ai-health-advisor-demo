@@ -5,13 +5,14 @@ import { ChartRoot } from '@health-advisor/charts';
 import { DataCenterControls } from '@/components/data-center/DataCenterControls';
 import { ChartContainer } from '@/components/data-center/ChartContainer';
 import { ViewSummaryTrigger } from '@/components/data-center/ViewSummaryTrigger';
+import { ChartTokenRenderer } from '@/components/advisor/ChartTokenRenderer';
 import { useDataCenterStore } from '@/stores/data-center.store';
 import { useProfileStore } from '@/stores/profile.store';
-import { useDataCenterQuery, type DataCenterResponse } from '@/hooks/use-data-query';
+import { useDataCenterQuery } from '@/hooks/use-data-query';
 import { useDataChartOption } from '@/hooks/use-data-chart-option';
 import { useViewSummary } from '@/hooks/use-ai-query';
 import { useState } from 'react';
-import type { DataTab, StressTimelineResponse } from '@health-advisor/shared';
+import type { DataCenterResponse, DataTab, StressTimelineResponse } from '@health-advisor/shared';
 
 const tabLabels: Record<string, string> = {
   sleep: '睡眠分析',
@@ -31,11 +32,12 @@ export default function DataCenterPage() {
   const { data: chartData, isLoading, error } = useDataCenterQuery(currentProfileId, activeTab, timeframe);
   const chartOption = useDataChartOption(activeTab as DataTab, chartData);
 
-  // 获取 AI 总结 (按需触发通过 enabled 控制，或者直接使用 refetch)
-  const { 
-    data: summaryData, 
-    isLoading: isSummaryLoading, 
-    refetch: fetchSummary 
+  // 获取 AI 总结（按需触发，点击按钮时才请求）
+  const {
+    data: summaryData,
+    isLoading: isSummaryLoading,
+    isFetching: isSummaryFetching,
+    refetch: fetchSummary
   } = useViewSummary(currentProfileId, activeTab, timeframe);
 
   const handleSummaryClick = () => {
@@ -54,6 +56,8 @@ export default function DataCenterPage() {
       ? (chartData as StressTimelineResponse)?.points?.length || 0
       : (chartData as DataCenterResponse)?.metadata?.recordCount || 0
   );
+
+  const lastUpdatedLabel = getLastUpdatedLabel(chartData, activeTab, isLoading, !!error);
 
   return (
     <Container className="py-6 space-y-6 relative pb-24">
@@ -87,25 +91,27 @@ export default function DataCenterPage() {
         </div>
         <div className="p-4 rounded-lg border border-slate-800 bg-slate-900/50">
           <p className="text-xs text-slate-500 uppercase tracking-wider">最后更新</p>
-          <p className="text-xl font-bold text-slate-200 mt-1">今天</p>
+          <p className="text-xl font-bold text-slate-200 mt-1">{lastUpdatedLabel}</p>
         </div>
         <div className="p-4 rounded-lg border border-slate-800 bg-slate-900/50">
           <p className="text-xs text-slate-500 uppercase tracking-wider">状态</p>
-          <p className="text-xl font-bold text-green-400 mt-1">已连接</p>
+          <p className={`text-xl font-bold mt-1 ${error ? 'text-red-400' : 'text-green-400'}`}>
+            {error ? '连接异常' : '已连接'}
+          </p>
         </div>
       </div>
 
       {/* 悬浮总结按钮 */}
-      <ViewSummaryTrigger onClick={handleSummaryClick} />
+      <ViewSummaryTrigger onClick={handleSummaryClick} isLoading={isSummaryLoading || isSummaryFetching} />
 
       {/* AI 总结 Modal */}
-      <Modal 
-        open={isSummaryModalOpen} 
+      <Modal
+        open={isSummaryModalOpen}
         onClose={() => setIsSummaryModalOpen(false)}
         title="AI 视图总结"
       >
         <div className="space-y-4 py-2">
-          {isSummaryLoading ? (
+          {(isSummaryLoading || isSummaryFetching) ? (
             <div className="space-y-3 animate-pulse">
               <div className="h-4 bg-slate-800 rounded w-full" />
               <div className="h-4 bg-slate-800 rounded w-5/6" />
@@ -116,6 +122,16 @@ export default function DataCenterPage() {
               <p className="text-slate-300 leading-relaxed text-sm">
                 {summaryData.summary}
               </p>
+              {summaryData.chartTokens && summaryData.chartTokens.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-slate-800">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">相关图表</p>
+                  <div className="flex flex-col gap-2">
+                    {summaryData.chartTokens.map((token, i) => (
+                      <ChartTokenRenderer key={i} tokenId={token} />
+                    ))}
+                  </div>
+                </div>
+              )}
               {summaryData.microTips.length > 0 && (
                 <div className="space-y-2 pt-2 border-t border-slate-800">
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">建议动作</p>
@@ -133,7 +149,7 @@ export default function DataCenterPage() {
             <p className="text-slate-500 text-center py-8">无法获取总结内容</p>
           )}
           <div className="pt-4 flex justify-end">
-            <button 
+            <button
               onClick={() => setIsSummaryModalOpen(false)}
               className="text-xs text-slate-400 hover:text-slate-200"
             >
@@ -144,4 +160,21 @@ export default function DataCenterPage() {
       </Modal>
     </Container>
   );
+}
+
+function getLastUpdatedLabel(
+  data: DataCenterResponse | StressTimelineResponse | null | undefined,
+  activeTab: DataTab,
+  isLoading: boolean,
+  hasError: boolean,
+): string {
+  if (isLoading) return '--';
+  if (hasError) return '不可用';
+  if (!data) return '无数据';
+
+  const lastDate = activeTab === 'stress'
+    ? (data as StressTimelineResponse).points.at(-1)?.date
+    : (data as DataCenterResponse).timeline.at(-1)?.date;
+
+  return lastDate ?? '无数据';
 }

@@ -24,6 +24,8 @@ const defaultPageContext: PageContext = {
 
 const mockAgentResponse: AgentResponseEnvelope = {
   summary: 'test',
+  source: 'llm',
+  statusColor: 'good',
   chartTokens: [],
   microTips: [],
   meta: { taskType: AgentTaskType.HOMEPAGE_SUMMARY, pageContext: defaultPageContext, finishReason: 'complete' },

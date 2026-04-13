@@ -1,14 +1,25 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useActiveSensingStore } from '@/stores/active-sensing.store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUIStore } from '@/stores/ui.store';
+import type { ActiveSensingBanner as ActiveSensingBannerPayload } from '@/stores/active-sensing.store';
 
 export function ActiveSensingBanner() {
   const { activeBanner, isVisible, hideBanner } = useActiveSensingStore();
   const { toggleAdvisorDrawer } = useUIStore();
+  const [renderedBanner, setRenderedBanner] = useState<ActiveSensingBannerPayload | null>(null);
 
-  if (!activeBanner) return null;
+  useEffect(() => {
+    if (activeBanner) {
+      setRenderedBanner(activeBanner);
+    }
+  }, [activeBanner]);
+
+  const banner = activeBanner ?? renderedBanner;
+
+  if (!banner && !isVisible) return null;
 
   const handleAction = () => {
     toggleAdvisorDrawer(true);
@@ -16,15 +27,15 @@ export function ActiveSensingBanner() {
   };
 
   return (
-    <AnimatePresence>
-      {isVisible && (
+    <AnimatePresence onExitComplete={() => setRenderedBanner(null)}>
+      {isVisible && banner ? (
         <motion.div
-          initial={{ opacity: 0, y: 50 }}
+          initial={{ opacity: 0, y: -24 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 50 }}
-          className="fixed bottom-24 left-4 right-4 md:left-auto md:right-24 md:w-96 z-40"
+          exit={{ opacity: 0, y: -24 }}
+          className="fixed top-14 left-0 right-0 z-40 px-4 md:px-6"
         >
-          <div className="bg-blue-600 rounded-xl shadow-2xl overflow-hidden border border-blue-400/30">
+          <div className="mx-auto max-w-4xl bg-blue-600 rounded-b-2xl shadow-2xl overflow-hidden border border-blue-400/30">
             <div className="p-4 flex flex-col gap-2">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
@@ -39,9 +50,9 @@ export function ActiveSensingBanner() {
               </div>
               
               <div>
-                <h4 className="text-sm font-bold text-white">{activeBanner.title}</h4>
+                <h4 className="text-sm font-bold text-white">{banner.title}</h4>
                 <p className="text-xs text-blue-100 mt-1 leading-relaxed">
-                  {activeBanner.content}
+                  {banner.content}
                 </p>
               </div>
 
@@ -62,7 +73,7 @@ export function ActiveSensingBanner() {
             </div>
           </div>
         </motion.div>
-      )}
+      ) : null}
     </AnimatePresence>
   );
 }

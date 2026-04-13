@@ -3,20 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
-import type { DataTab, Timeframe, StressTimelineResponse, ChartTokenId } from '@health-advisor/shared';
-import type { StandardTimeSeries } from '@health-advisor/charts';
-
-// Re-using types from service.ts since we'll receive the same structure
-export interface DataCenterResponse {
-  profileId: string;
-  tab: DataTab;
-  timeframe: Timeframe;
-  timeline: { date: string; values: Record<string, number | null> }[];
-  metadata: {
-    recordCount: number;
-    metrics: string[];
-  };
-}
+import type { DataTab, Timeframe, StressTimelineResponse, ChartTokenId, DataCenterResponse } from '@health-advisor/shared';
+import type { StandardTimeSeries, ChartDataPoint } from '@health-advisor/charts';
+import { toTimeSeries } from '@health-advisor/charts';
 
 export function useDataCenterQuery(
   profileId: string | undefined,
@@ -26,7 +15,7 @@ export function useDataCenterQuery(
   const isStress = tab === 'stress';
   const queryKey = isStress
     ? queryKeys.dataCenter.stress(profileId || '', timeframe)
-    : queryKeys.dataCenter.timeline(profileId || '', timeframe);
+    : queryKeys.dataCenter.timeline(profileId || '', tab, timeframe);
 
   return useQuery({
     queryKey,
@@ -50,16 +39,74 @@ export function useChartDataQuery(
   timeframe: string = 'week'
 ) {
   return useQuery({
-    queryKey: [...queryKeys.dataCenter.all, 'chart-data', profileId, tokens.join(','), timeframe],
+    queryKey: queryKeys.dataCenter.chartData(profileId || '', tokens.join(','), timeframe),
     queryFn: async () => {
       if (!profileId || tokens.length === 0) return null;
-      
-      const response = await apiClient.get<StandardTimeSeries>(
+
+      const response = await apiClient.get<unknown>(
         `/profiles/${profileId}/chart-data?tokens=${tokens.join(',')}&timeframe=${timeframe}`
       );
-      return response;
+      return normalizeChartDataResponse(response);
     },
     enabled: !!profileId && tokens.length > 0,
     staleTime: 5 * 60 * 1000,
   });
+}
+
+function normalizeChartDataResponse(response: unknown): StandardTimeSeries | null {
+  if (!response) return null;
+
+  if (isStandardTimeSeries(response)) {
+    return response;
+  }
+
+  if (hasTimeline(response)) {
+    return toTimeSeries(response.timeline);
+  }
+
+  if (Array.isArray(response)) {
+    const timelines = response.filter(hasTimeline).map((item) => item.timeline);
+    if (timelines.length === 0) return null;
+    return toTimeSeries(mergeTimelinePoints(timelines));
+  }
+
+  return null;
+}
+
+function isStandardTimeSeries(value: unknown): value is StandardTimeSeries {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'dates' in value &&
+    Array.isArray((value as { dates?: unknown }).dates) &&
+    'series' in value &&
+    typeof (value as { series?: unknown }).series === 'object'
+  );
+}
+
+function hasTimeline(value: unknown): value is { timeline: ChartDataPoint[] } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'timeline' in value &&
+    Array.isArray((value as { timeline?: unknown }).timeline)
+  );
+}
+
+function mergeTimelinePoints(timelines: ChartDataPoint[][]): ChartDataPoint[] {
+  const merged = new Map<string, Record<string, number | null>>();
+
+  for (const timeline of timelines) {
+    for (const point of timeline) {
+      const existing = merged.get(point.date) ?? {};
+      merged.set(point.date, {
+        ...existing,
+        ...point.values,
+      });
+    }
+  }
+
+  return Array.from(merged.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, values]) => ({ date, values }));
 }

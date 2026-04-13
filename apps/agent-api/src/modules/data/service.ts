@@ -1,4 +1,4 @@
-import type { ProfileData, DailyRecord, DataTab, Timeframe, DateRange, StressTimelineResponse, StressTimelinePoint, StressSummaryStats, StressTrend } from '@health-advisor/shared';
+import type { ProfileData, DailyRecord, DataTab, Timeframe, DateRange, StressTimelineResponse, StressTimelinePoint, StressTrend, DataCenterResponse } from '@health-advisor/shared';
 import { timeframeToDateRange } from '@health-advisor/shared';
 import { normalizeTimeline, rollingMedian, type TimelinePoint } from '@health-advisor/sandbox';
 import type { RuntimeRegistry } from '../../runtime/registry.js';
@@ -18,18 +18,6 @@ export interface TimelineDataResponse {
   profileId: string;
   range: DateRange;
   records: DailyRecord[];
-}
-
-export interface DataCenterResponse {
-  profileId: string;
-  tab: DataTab;
-  timeframe: Timeframe;
-  range: DateRange;
-  timeline: TimelinePoint[];
-  metadata: {
-    recordCount: number;
-    metrics: string[];
-  };
 }
 
 export class DataService {

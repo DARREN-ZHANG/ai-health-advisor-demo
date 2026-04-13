@@ -11,6 +11,11 @@ export type {
   ProfileData,
 } from './types/sandbox';
 
+export type {
+  DataCenterTimelinePoint,
+  DataCenterResponse,
+} from './types/data-center';
+
 // Types — chart token
 export { ChartTokenId } from './types/chart-token';
 

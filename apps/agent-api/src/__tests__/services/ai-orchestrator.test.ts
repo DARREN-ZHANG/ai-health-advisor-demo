@@ -34,6 +34,8 @@ function makeMetrics() {
 
 const completeResponse: AgentResponseEnvelope = {
   summary: '健康状态良好',
+  source: 'llm',
+  statusColor: 'good',
   chartTokens: [],
   microTips: [],
   meta: { taskType: AgentTaskType.HOMEPAGE_SUMMARY, pageContext: defaultPageContext, finishReason: 'complete' },
@@ -65,6 +67,8 @@ describe('AiOrchestrator', () => {
   it('fallback 时增加 fallbackUsed 计数', async () => {
     const fallbackResponse: AgentResponseEnvelope = {
       ...completeResponse,
+      source: 'fallback',
+      statusColor: 'warning',
       meta: { ...completeResponse.meta, finishReason: 'fallback' },
     };
     mockedExecuteAgent.mockResolvedValueOnce(fallbackResponse);
@@ -83,6 +87,8 @@ describe('AiOrchestrator', () => {
   it('timeout 时增加 aiTimeout 计数', async () => {
     const timeoutResponse: AgentResponseEnvelope = {
       ...completeResponse,
+      source: 'fallback',
+      statusColor: 'warning',
       meta: { ...completeResponse.meta, finishReason: 'timeout' },
     };
     mockedExecuteAgent.mockResolvedValueOnce(timeoutResponse);

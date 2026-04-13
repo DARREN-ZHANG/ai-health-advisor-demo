@@ -356,7 +356,119 @@
 | AI-018 | FAIL | profile switch 会清除 `sessionId`，与规范相反。 |
 | AI-020 | FAIL | E2E 未覆盖核心 AI 旅程。 |
 
-## 5. 校验记录
+### M-2: `hideBanner` 只设 `isVisible: false` 但不清空 `activeBanner`
+
+**状态**：DONE（已修复）
+
+**相关任务**：AI-017, GM-004
+
+**代码位置**：`apps/web/src/stores/active-sensing.store.ts:22`
+
+**原问题**：`hideBanner: () => set({ isVisible: false })` 不清空 `activeBanner`。
+
+**影响**：`ActiveSensingBanner` 组件中 `if (!activeBanner) return null` 永远不会命中，因为 banner 只是隐藏而未被清空。组件持续保留退出动画节点，且后续重新 `showBanner` 时如果 payload 相同，React 可能不会正确触发 AnimatePresence 重入。
+
+**修复结果**：`hideBanner` 已同时清空 `activeBanner`，并在组件侧保留退出动画所需的最后一帧 banner 快照。
+
+### M-3: `ActiveSensingBanner` 位置与 PRD 描述不一致
+
+**状态**：DONE（已修复）
+
+**相关任务**：GM-004
+
+**代码位置**：`apps/web/src/components/layout/ActiveSensingBanner.tsx:25`
+
+**原问题**：横幅定位为 `fixed bottom-24`（底部弹出卡片样式）。
+
+**文档要求**：PRD §2.2 "全局最高优先级横幅。运动触发时在**页面顶部**顺滑下拉（覆盖当前视图顶部）。"
+
+**修复结果**：已改为顶部下拉横幅，挂在 navbar 下方，从顶部方向进入和退出。
+
+### M-4: Data Center 底部指标卡片硬编码文案
+
+**状态**：DONE（已修复）
+
+**代码位置**：`apps/web/src/app/data-center/page.tsx:88-96`
+
+**原问题**：
+- "最后更新" 固定显示 "今天"
+- "状态" 固定显示 "已连接"
+
+**影响**：后端不可用时仍显示 "已连接"，误导用户。
+
+**修复结果**：
+- "状态" 已按 query error 动态显示 `连接异常 / 已连接`
+- "最后更新" 已改为基于当前图表数据的最后一个日期推断，而不是固定写死 "今天"
+
+### M-5: `useDataChartOption` 自建 option builder 绕过 `@health-advisor/charts` 包
+
+**状态**：DONE（已修复）
+
+**相关任务**：AI-005
+
+**代码位置**：`apps/web/src/hooks/use-data-chart-option.ts`
+
+**原问题**：完全自建 ECharts option 构建逻辑（tooltip/grid/series/areaStyle），未使用 `@health-advisor/charts` 中的 `getChartBuilder` 等标准化工具。
+
+**文档约束**：ARCHITECTURE.md §13.1 `packages/charts：图表封装`。Backlog CHT-004 "实现标准图表 option builders"。
+
+**影响**：
+1. Data Center 图表样式与 Advisor Chat MicroChart 不一致（后者使用 `getChartBuilder`）
+2. 双重维护成本
+3. sleep 分钟转小时的硬编码逻辑应属于 charts 包
+
+**修复结果**：已改为 `DataTab -> ChartTokenId -> getChartBuilder()` 的标准链路，Data Center 与 Advisor 微图表复用同一套 charts builder。
+
+### M-6: `useChartDataQuery` queryKey 未复用 `queryKeys` 约定
+
+**状态**：DONE（已修复）
+
+**代码位置**：`apps/web/src/hooks/use-data-query.ts:53`
+
+**原问题**：`queryKey: [...queryKeys.dataCenter.all, 'chart-data', profileId, tokens.join(','), timeframe]`，手动拼接而非使用 query-keys.ts 中的 key builder。
+
+**修复结果**：`queryKeys.dataCenter.chartData(...)` 已补齐，`useChartDataQuery` 已改为统一复用该 builder。
+
+### M-7: `DataCenterResponse` 类型在前端 hooks 中重新定义
+
+**状态**：DONE（已修复）
+
+**代码位置**：`apps/web/src/hooks/use-data-query.ts:10-19`
+
+**原问题**：前端自行定义了 `DataCenterResponse` 接口，而非复用 `@health-advisor/shared` 导出的类型。
+
+**影响**：后端修改响应结构时，前端本地类型不会同步更新。
+
+**修复结果**：`DataCenterResponse` 已提升到 `@health-advisor/shared`，前后端改为共用同一类型定义。
+
+### M-8: `useViewSummary` 请求体含冗余字段
+
+**状态**：DONE（已修复）
+
+**代码位置**：`apps/web/src/hooks/use-ai-query.ts:56-61`
+
+**原问题**：`pageContext` 已含 `dataTab` 和 `timeframe`，外层又重复传了 `tab` 和 `timeframe`。
+
+**修复结果**：`useViewSummary` 已仅发送 `profileId + pageContext`，移除冗余顶层字段。
+
+---
+
+## 6. 架构合规性核查
+
+| 架构约束 | 合规 | 说明 |
+|----------|------|------|
+| 前端不直接调用 LLM | ✅ | 所有 AI 请求走 apiClient → backend |
+| 消费后端结构化响应 | ⚠️ | 晨报未消费 `statusColor`（H-2/H-3） |
+| 前端不伪造 fallback 文案 | ❌ | error 时自行生成文案（C-3） |
+| `ChartTokenId[]` 白名单渲染 | ⚠️ | 链路存在数据形状不一致（C-2） |
+| 6 秒超时 | ❌ | 前端直接 abort，未与后端 fallback 收敛（C-3） |
+| X-Session-Id 注入 | ⚠️ | 本地生成 sessionId 与文档要求不一致（H-1） |
+| Profile switch 清空上下文 | ⚠️ | 清了 sessionId，与文档"可续用"语义相反（H-1） |
+| 使用 @health-advisor/charts | ⚠️ | Data Center 自建 option builder（M-5） |
+| 响应式三端适配 | ✅ | Drawer/Sheet/Bottom Sheet 三态 |
+| Active Sensing 顶部横幅 | ⚠️ | 当前为底部卡片，与 PRD 不一致（M-3） |
+
+## 7. 校验记录
 
 - `pnpm --filter @health-advisor/web typecheck`：通过
 - `pnpm --filter @health-advisor/web test`：通过
@@ -366,7 +478,19 @@
 - 当前通过的类型检查和单测主要覆盖基础 store / api-client。
 - 它们没有触达本次 review 中暴露出的协议错位、query key 设计错误和运行时图表链路问题。
 
-## 6. 结论
+## 8. 与 Wave 3 后端 Review 问题的关联
+
+Wave 3 review 中发现的若干后端问题会直接影响 Wave 5 前端联调：
+
+| Wave 3 问题 | 对 Wave 5 的影响 |
+|-------------|-----------------|
+| C-1: Profile switch 未清空 analytical memory | 切 profile 后前端可能收到旧 profile 的 AI 分析结果 |
+| C-2: 合成 sessionId | 前端 sessionId 与后端 session store 不匹配 |
+| I-1: HRV/resting-hr 时间线全 null | Data Center 的 HRV/静息心率 tab 将显示空图表 |
+| I-4: stress contributors 固定 50/50/50 | 压力负荷图表的贡献项无意义 |
+| H-3: stress.load 推导验证 | stress tab 可能显示全零数据 |
+
+## 9. 结论
 
 **不建议将 Wave 5 标记为完成。**
 
@@ -376,3 +500,9 @@
 2. 修复 chart token `/chart-data` 正式协议与前端渲染链路
 3. 重做 timeout/fallback 收敛逻辑
 4. 按文档修正 `sessionId` 签发与 profile switch 语义
+
+此外，建议在进入 Wave 6 前同时处理以下 HIGH 级问题：
+- 补齐 shared 协议中缺失的 `source`/`statusColor` 字段（H-3）
+- 首页 Historical Trends 接入真实数据（H-2）
+- Advisor Chat 补齐 `visibleChartIds` 和 `smartPromptId` 透传（H-4）
+- View Summary 改为按需触发并完整渲染（H-5）

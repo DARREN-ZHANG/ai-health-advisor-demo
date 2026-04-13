@@ -18,13 +18,18 @@ export interface PageContext {
   customDateRange?: { start: string; end: string };
 }
 
+export type AgentStatusColor = 'good' | 'warning' | 'error';
+
 export interface AgentResponseEnvelope {
   summary: string;
+  source: string;
+  statusColor: AgentStatusColor;
   chartTokens: ChartTokenId[];
   microTips: string[];
   meta: {
     taskType: AgentTaskType;
     pageContext: PageContext;
     finishReason: 'complete' | 'fallback' | 'timeout';
+    sessionId?: string;
   };
 }
