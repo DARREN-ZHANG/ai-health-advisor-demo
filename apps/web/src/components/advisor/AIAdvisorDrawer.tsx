@@ -22,7 +22,7 @@ const TABLET_QUERY = '(min-width: 768px)';
 
 export function AIAdvisorDrawer() {
   const pathname = usePathname();
-  const { isAdvisorDrawerOpen, toggleAdvisorDrawer, showToast } = useUIStore();
+  const { isAdvisorDrawerOpen, toggleAdvisorDrawer } = useUIStore();
   const { messages, isLoading, composerValue, setComposerValue, addMessage, setLoading, clearMessages } = useAIAdvisorStore();
   const { currentProfileId } = useProfileStore();
   const { activeTab, timeframe } = useDataCenterStore();

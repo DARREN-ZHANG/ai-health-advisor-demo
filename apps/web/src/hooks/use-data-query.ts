@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
-import type { DataTab, Timeframe, StressTimelineResponse, ChartTokenId, DataCenterResponse } from '@health-advisor/shared';
+import type { StressTimelineResponse, ChartTokenId, DataCenterResponse } from '@health-advisor/shared';
 import type { StandardTimeSeries, ChartDataPoint } from '@health-advisor/charts';
 import { toTimeSeries } from '@health-advisor/charts';
 
