@@ -29,8 +29,10 @@ export default function DataCenterPage() {
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
 
   // 获取图表数据
-  const { data: chartData, isLoading, error } = useDataCenterQuery(currentProfileId, activeTab, timeframe);
+  const { data: chartData, isLoading, isFetching, error } = useDataCenterQuery(currentProfileId, activeTab, timeframe);
   const chartOption = useDataChartOption(activeTab as DataTab, chartData);
+
+  const isAnyLoading = isLoading || isFetching;
 
   // 获取 AI 总结（按需触发，点击按钮时才请求）
   const {
@@ -51,13 +53,13 @@ export default function DataCenterPage() {
       : (chartData as DataCenterResponse).timeline?.length === 0
   );
 
-  const recordCount = isLoading ? '--' : (
+  const recordCount = isAnyLoading ? '--' : (
     activeTab === 'stress'
       ? (chartData as StressTimelineResponse)?.points?.length || 0
       : (chartData as DataCenterResponse)?.metadata?.recordCount || 0
   );
 
-  const lastUpdatedLabel = getLastUpdatedLabel(chartData, activeTab, isLoading, !!error);
+  const lastUpdatedLabel = getLastUpdatedLabel(chartData, activeTab, isAnyLoading, !!error);
 
   return (
     <Container className="py-6 space-y-6 relative pb-24">
@@ -73,7 +75,7 @@ export default function DataCenterPage() {
       <Section className="space-y-4">
         <ChartContainer 
           title={tabLabels[activeTab] || '数据指标'} 
-          isLoading={isLoading}
+          isLoading={isAnyLoading}
           isEmpty={isChartEmpty}
           error={error ? '加载失败，请重试' : undefined}
         >

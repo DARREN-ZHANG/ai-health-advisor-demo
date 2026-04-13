@@ -18,11 +18,13 @@ import { useEffect, useMemo } from 'react';
 export default function HomePage() {
   const { currentProfileId } = useProfileStore();
   const { showToast } = useUIStore();
-  const { data, isLoading, error, refetch, isRefetching } = useMorningBrief(currentProfileId);
+  const { data, isLoading, error, refetch, isFetching } = useMorningBrief(currentProfileId);
   const hrvTrend = useChartDataQuery(currentProfileId, [ChartTokenId.HRV_7DAYS]);
   const sleepTrend = useChartDataQuery(currentProfileId, [ChartTokenId.SLEEP_7DAYS]);
   const activityTrend = useChartDataQuery(currentProfileId, [ChartTokenId.ACTIVITY_7DAYS]);
   const stressTrend = useChartDataQuery(currentProfileId, [ChartTokenId.STRESS_LOAD_7DAYS]);
+
+  const isAnyLoading = isLoading || isFetching;
 
   useEffect(() => {
     if (error) {
@@ -49,7 +51,7 @@ export default function HomePage() {
       tokenId: ChartTokenId.HRV_7DAYS,
       metricKey: 'hr',
       data: hrvTrend.data,
-      isLoading: hrvTrend.isLoading,
+      isLoading: hrvTrend.isLoading || hrvTrend.isFetching,
       formatValue: (value) => Math.round(value).toString(),
     }),
     buildTrendItem({
@@ -58,7 +60,7 @@ export default function HomePage() {
       tokenId: ChartTokenId.SLEEP_7DAYS,
       metricKey: 'sleep.totalMinutes',
       data: sleepTrend.data,
-      isLoading: sleepTrend.isLoading,
+      isLoading: sleepTrend.isLoading || sleepTrend.isFetching,
       formatValue: (value) => (value / 60).toFixed(1),
     }),
     buildTrendItem({
@@ -67,7 +69,7 @@ export default function HomePage() {
       tokenId: ChartTokenId.ACTIVITY_7DAYS,
       metricKey: 'activity.steps',
       data: activityTrend.data,
-      isLoading: activityTrend.isLoading,
+      isLoading: activityTrend.isLoading || activityTrend.isFetching,
       formatValue: (value) => Math.round(value).toString(),
     }),
     buildTrendItem({
@@ -76,18 +78,22 @@ export default function HomePage() {
       tokenId: ChartTokenId.STRESS_LOAD_7DAYS,
       metricKey: 'stress.load',
       data: stressTrend.data,
-      isLoading: stressTrend.isLoading,
+      isLoading: stressTrend.isLoading || stressTrend.isFetching,
       formatValue: (value) => Math.round(value).toString(),
     }),
   ]), [
     hrvTrend.data,
     hrvTrend.isLoading,
+    hrvTrend.isFetching,
     sleepTrend.data,
     sleepTrend.isLoading,
+    sleepTrend.isFetching,
     activityTrend.data,
     activityTrend.isLoading,
+    activityTrend.isFetching,
     stressTrend.data,
     stressTrend.isLoading,
+    stressTrend.isFetching,
   ]);
 
   return (
@@ -103,10 +109,10 @@ export default function HomePage() {
         <Button 
           variant="ghost" 
           onClick={() => refetch()} 
-          disabled={isLoading || isRefetching}
+          disabled={isAnyLoading}
           className="text-xs text-slate-500 h-auto py-1 px-2"
         >
-          {isRefetching ? '正在刷新...' : '手动刷新'}
+          {isFetching ? '正在刷新...' : '手动刷新'}
         </Button>
       </header>
 
@@ -114,7 +120,7 @@ export default function HomePage() {
       <Section title="今日简报" className="space-y-4">
         <MorningBriefCard 
           {...briefData} 
-          isLoading={isLoading} 
+          isLoading={isAnyLoading} 
         />
       </Section>
 
