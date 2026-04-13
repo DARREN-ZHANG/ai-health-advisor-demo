@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import Fastify from 'fastify';
+import type { FastifyRequest } from 'fastify';
 import { requestContextPlugin } from '../../plugins/request-context';
 
 describe('requestContextPlugin', () => {
@@ -8,7 +9,7 @@ describe('requestContextPlugin', () => {
   beforeAll(async () => {
     app = Fastify();
     await app.register(requestContextPlugin);
-    app.get('/test', async (request: any) => ({
+    app.get('/test', async (request: FastifyRequest) => ({
       requestId: request.ctx.requestId,
       sessionId: request.ctx.sessionId,
       profileId: request.ctx.profileId,
@@ -85,7 +86,7 @@ describe('requestContextPlugin', () => {
     // 需要单独实例以注册额外路由
     const testApp = Fastify();
     await testApp.register(requestContextPlugin);
-    testApp.get('/ai-test', async (request: any) => {
+    testApp.get('/ai-test', async (request: FastifyRequest) => {
       request.ctx.aiMeta = {
         provider: 'openai',
         model: 'gpt-4o-mini',

@@ -58,7 +58,8 @@ export async function withTimeout<T>(
   }
 }
 
-withTimeout.createController = function (_timeoutMs: number): TimeoutController {
+withTimeout.createController = function (timeoutMs: number = AGENT_SLA_TIMEOUT_MS): TimeoutController {
+  void timeoutMs;
   const abortController = new AbortController();
   return {
     signal: abortController.signal,

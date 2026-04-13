@@ -46,7 +46,7 @@ describe('AiOrchestrator', () => {
     mockedExecuteAgent.mockResolvedValueOnce(completeResponse);
     const metrics = makeMetrics();
     const orchestrator = new AiOrchestrator({
-      registry: {} as any,
+      registry: {} as unknown as import('../../runtime/registry').RuntimeRegistry,
       metrics,
       timeoutMs: 6000,
     });
@@ -73,7 +73,7 @@ describe('AiOrchestrator', () => {
     };
     mockedExecuteAgent.mockResolvedValueOnce(fallbackResponse);
     const metrics = makeMetrics();
-    const orchestrator = new AiOrchestrator({ registry: {} as any, metrics, timeoutMs: 6000 });
+    const orchestrator = new AiOrchestrator({ registry: {} as unknown as import('../../runtime/registry').RuntimeRegistry, metrics, timeoutMs: 6000 });
 
     const result = await orchestrator.execute({
       requestId: 'req-2', sessionId: 'sess-1', profileId: 'profile-a',
@@ -93,7 +93,7 @@ describe('AiOrchestrator', () => {
     };
     mockedExecuteAgent.mockResolvedValueOnce(timeoutResponse);
     const metrics = makeMetrics();
-    const orchestrator = new AiOrchestrator({ registry: {} as any, metrics, timeoutMs: 6000 });
+    const orchestrator = new AiOrchestrator({ registry: {} as unknown as import('../../runtime/registry').RuntimeRegistry, metrics, timeoutMs: 6000 });
 
     const result = await orchestrator.execute({
       requestId: 'req-3', sessionId: 'sess-1', profileId: 'profile-a',
@@ -107,7 +107,7 @@ describe('AiOrchestrator', () => {
   it('provider error 时增加 providerError 计数并抛出', async () => {
     mockedExecuteAgent.mockRejectedValueOnce(new Error('connection failed'));
     const metrics = makeMetrics();
-    const orchestrator = new AiOrchestrator({ registry: {} as any, metrics, timeoutMs: 6000 });
+    const orchestrator = new AiOrchestrator({ registry: {} as unknown as import('../../runtime/registry').RuntimeRegistry, metrics, timeoutMs: 6000 });
 
     await expect(
       orchestrator.execute({

@@ -13,12 +13,10 @@ import {
 import {
   loadAllProfiles,
   getProfile as sandboxGetProfile,
-  listProfiles,
   selectByTimeframe,
   applyOverrides,
   mergeEvents,
 } from '@health-advisor/sandbox';
-import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
 import type { AppConfig } from '../config/env.js';
 import { createSessionStore, type SessionStoreService } from './session-store.js';
 import { createOverrideStore, type OverrideStoreService } from './override-store.js';

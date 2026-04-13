@@ -7,6 +7,7 @@ import { AgentTaskType } from '@health-advisor/shared';
 
 // mock executeAgent 以隔离 AI 路由
 vi.mock('@health-advisor/agent-core', async (importOriginal) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mod = await importOriginal<any>();
   return { ...mod, executeAgent: vi.fn() };
 });
@@ -59,7 +60,8 @@ describe('API Response Envelope Consistency', () => {
   });
 
   /** 断言 success envelope 结构 */
-  function assertSuccessEnvelope(body: any, label: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function assertSuccessEnvelope(body: any) {
     expect(body.success).toBe(true);
     expect(body.data).toBeDefined();
     expect(body.meta).toBeDefined();
@@ -69,7 +71,8 @@ describe('API Response Envelope Consistency', () => {
   }
 
   /** 断言 error envelope 结构 */
-  function assertErrorEnvelope(body: any, label: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function assertErrorEnvelope(body: any) {
     expect(body.success).toBe(false);
     expect(body.error).toBeDefined();
     expect(body.meta).toBeDefined();
@@ -79,7 +82,7 @@ describe('API Response Envelope Consistency', () => {
     test('GET /health 返回统一 envelope', async () => {
       const response = await app.inject({ method: 'GET', url: '/health' });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'health');
+      assertSuccessEnvelope(response.json());
     });
   });
 
@@ -87,19 +90,19 @@ describe('API Response Envelope Consistency', () => {
     test('GET /profiles 返回统一 envelope', async () => {
       const response = await app.inject({ method: 'GET', url: '/profiles' });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'profiles list');
+      assertSuccessEnvelope(response.json());
     });
 
     test('GET /profiles/:profileId 返回统一 envelope', async () => {
       const response = await app.inject({ method: 'GET', url: '/profiles/profile-a' });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'profile detail');
+      assertSuccessEnvelope(response.json());
     });
 
     test('GET /profiles/:nonexistent 返回 error envelope', async () => {
       const response = await app.inject({ method: 'GET', url: '/profiles/nonexistent' });
       expect(response.statusCode).toBe(404);
-      assertErrorEnvelope(response.json(), 'profile 404');
+      assertErrorEnvelope(response.json());
     });
   });
 
@@ -110,7 +113,7 @@ describe('API Response Envelope Consistency', () => {
         url: '/profiles/profile-a/timeline?timeframe=week',
       });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'timeline');
+      assertSuccessEnvelope(response.json());
     });
 
     test('GET /profiles/:profileId/data 返回统一 envelope', async () => {
@@ -119,7 +122,7 @@ describe('API Response Envelope Consistency', () => {
         url: '/profiles/profile-a/data?tab=hrv&timeframe=week',
       });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'data-center');
+      assertSuccessEnvelope(response.json());
     });
 
     test('GET /profiles/:profileId/chart-data 返回统一 envelope', async () => {
@@ -128,7 +131,7 @@ describe('API Response Envelope Consistency', () => {
         url: '/profiles/profile-a/chart-data?tokens=HRV_7DAYS&timeframe=week',
       });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'chart-data');
+      assertSuccessEnvelope(response.json());
     });
 
     test('无效 timeframe 返回 error envelope', async () => {
@@ -137,7 +140,7 @@ describe('API Response Envelope Consistency', () => {
         url: '/profiles/profile-a/timeline?timeframe=invalid',
       });
       expect(response.statusCode).toBe(400);
-      assertErrorEnvelope(response.json(), 'timeline 400');
+      assertErrorEnvelope(response.json());
     });
   });
 
@@ -151,7 +154,7 @@ describe('API Response Envelope Consistency', () => {
         headers: { 'x-session-id': 'sess-test' },
       });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'morning-brief');
+      assertSuccessEnvelope(response.json());
       expect(response.headers['x-session-id']).toBe('sess-test');
       expect(response.json().data.meta.sessionId).toBe('sess-test');
     });
@@ -165,7 +168,7 @@ describe('API Response Envelope Consistency', () => {
         headers: { 'x-session-id': 'sess-test' },
       });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'chat');
+      assertSuccessEnvelope(response.json());
       expect(response.headers['x-session-id']).toBe('sess-test');
       expect(response.json().data.meta.sessionId).toBe('sess-test');
     });
@@ -180,7 +183,7 @@ describe('API Response Envelope Consistency', () => {
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      assertSuccessEnvelope(body, 'chat auto session');
+      assertSuccessEnvelope(body);
       expect(typeof body.data.meta.sessionId).toBe('string');
       expect(response.headers['x-session-id']).toBe(body.data.meta.sessionId);
     });
@@ -192,7 +195,7 @@ describe('API Response Envelope Consistency', () => {
         payload: { profileId: 'profile-a', pageContext: { invalid: true } },
       });
       expect(response.statusCode).toBe(400);
-      assertErrorEnvelope(response.json(), 'ai 400');
+      assertErrorEnvelope(response.json());
     });
   });
 
@@ -204,7 +207,7 @@ describe('API Response Envelope Consistency', () => {
         payload: { profileId: 'profile-c' },
       });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'switch-profile');
+      assertSuccessEnvelope(response.json());
 
       // 恢复
       await app.inject({
@@ -220,7 +223,7 @@ describe('API Response Envelope Consistency', () => {
         url: '/god-mode/state',
       });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'god-mode state');
+      assertSuccessEnvelope(response.json());
     });
 
     test('POST /god-mode/inject-event 返回统一 envelope', async () => {
@@ -230,7 +233,7 @@ describe('API Response Envelope Consistency', () => {
         payload: { eventType: 'test', data: {} },
       });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'inject-event');
+      assertSuccessEnvelope(response.json());
 
       // 恢复
       await app.inject({
@@ -247,7 +250,7 @@ describe('API Response Envelope Consistency', () => {
         payload: { metric: 'hrv', value: 10 },
       });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'override-metric');
+      assertSuccessEnvelope(response.json());
 
       // 恢复
       await app.inject({
@@ -264,7 +267,7 @@ describe('API Response Envelope Consistency', () => {
         payload: { scenarioId: 'switch-to-stress' },
       });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'scenario-apply');
+      assertSuccessEnvelope(response.json());
 
       await app.inject({
         method: 'POST',
@@ -280,7 +283,7 @@ describe('API Response Envelope Consistency', () => {
         payload: { scope: 'all' },
       });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'reset');
+      assertSuccessEnvelope(response.json());
     });
 
     test('POST /god-mode/demo-script/run 返回统一 envelope', async () => {
@@ -290,7 +293,7 @@ describe('API Response Envelope Consistency', () => {
         payload: { scenarioId: 'demo-stress-journey' },
       });
       expect(response.statusCode).toBe(200);
-      assertSuccessEnvelope(response.json(), 'demo-script');
+      assertSuccessEnvelope(response.json());
 
       // 恢复
       await app.inject({
@@ -307,7 +310,7 @@ describe('API Response Envelope Consistency', () => {
         payload: { profileId: 'nonexistent' },
       });
       expect(response.statusCode).toBe(404);
-      assertErrorEnvelope(response.json(), 'switch-profile 404');
+      assertErrorEnvelope(response.json());
     });
   });
 });

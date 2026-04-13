@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Fastify from 'fastify';
-import { ZodError, z } from 'zod';
+import { ZodError } from 'zod';
 import { requestContextPlugin } from '../../plugins/request-context';
 import { errorHandlerPlugin } from '../../plugins/error-handler';
 

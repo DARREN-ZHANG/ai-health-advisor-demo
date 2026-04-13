@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createPromptLoader, type PromptLoader } from '../../prompts/prompt-loader';
 
 // 模拟 fs 读取

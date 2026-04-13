@@ -236,6 +236,8 @@ describe('AgentResponseEnvelopeSchema', () => {
   it('accepts valid envelope', () => {
     const envelope = {
       summary: '健康状态良好',
+      source: 'llm',
+      statusColor: 'good' as const,
       chartTokens: [ChartTokenId.HRV_7DAYS],
       microTips: ['保持规律作息'],
       meta: {

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import path from 'node:path';
 import { buildApp } from '../../../app.js';
 import type { FastifyInstance } from 'fastify';

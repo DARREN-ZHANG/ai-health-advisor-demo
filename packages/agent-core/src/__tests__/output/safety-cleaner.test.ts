@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cleanSafetyIssues, type SafetyCleanResult } from '../../output/safety-cleaner';
+import { cleanSafetyIssues } from '../../output/safety-cleaner';
 
 describe('cleanSafetyIssues', () => {
   it('正常 summary 直接通过', () => {

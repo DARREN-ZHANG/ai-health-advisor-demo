@@ -20,6 +20,7 @@ function makeProfileData(records?: DailyRecord[]): ProfileData {
       age: 32,
       gender: 'male',
       avatar: '👨‍💻',
+      tags: ['test'],
       baseline: { restingHr: 62, hrv: 58, spo2: 98, avgSleepMinutes: 420, avgSteps: 8500 },
     },
     records: records ?? [

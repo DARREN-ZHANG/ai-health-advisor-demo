@@ -114,7 +114,7 @@ function computeDefaultStatus(lowData: boolean, missingFields: string[]): AgentS
  * 当前 sandbox 数据模型中 records 本身不携带事件类型，
  * 此函数预留为后续接入真实事件系统时的桥接点。
  */
-function extractBaseEvents(_records: unknown[]): DatedEvent[] {
+function extractBaseEvents(_records: unknown[]): DatedEvent[] { // eslint-disable-line @typescript-eslint/no-unused-vars
   // sandbox 阶段暂无 base events，返回空数组
   return [];
 }

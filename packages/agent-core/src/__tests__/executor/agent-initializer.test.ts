@@ -1,6 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { initializeAgent } from '../../executor/agent-initializer';
-import { FakeChatModel } from '../../provider/fake-chat-model';
 
 describe('initializeAgent', () => {
   it('串联 provider config → chat model → health agent', async () => {

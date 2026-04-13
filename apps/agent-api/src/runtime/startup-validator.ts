@@ -2,7 +2,7 @@
  * 启动时资产校验
  * 确保关键 sandbox 数据完整，防止运行时因缺失资产而出错
  */
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadManifest, loadAllProfiles } from '@health-advisor/sandbox';
 import { isValidChartTokenId } from '@health-advisor/shared';

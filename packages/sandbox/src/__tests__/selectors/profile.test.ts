@@ -11,6 +11,7 @@ function makeProfileData(id: string, name: string, age: number): ProfileData {
       age,
       gender: 'male',
       avatar: `avatar-${id}.png`,
+      tags: ['test'],
       baseline: { restingHr: 60, hrv: 55, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
     } satisfies SandboxProfile,
     records: [

@@ -129,7 +129,7 @@ export async function godModeRoutes(app: FastifyInstance) {
       const state = service.applyScenario(parsed.data.scenarioId, request.ctx?.sessionId);
       return createSuccessResponse(state, buildMeta(request));
     } catch (error) {
-      const statusCode = (error as any).statusCode ?? 500;
+      const statusCode = (error as unknown as { statusCode?: number }).statusCode ?? 500;
       const message = error instanceof Error ? error.message : 'Unknown error';
       return reply.status(statusCode).send(
         createErrorResponse(ErrorCode.VALIDATION_ERROR, message, buildMeta(request)),
@@ -150,7 +150,7 @@ export async function godModeRoutes(app: FastifyInstance) {
       const result = service.runDemoScript(parsed.data.scenarioId, request.ctx?.sessionId);
       return createSuccessResponse(result, buildMeta(request));
     } catch (error) {
-      const statusCode = (error as any).statusCode ?? 500;
+      const statusCode = (error as unknown as { statusCode?: number }).statusCode ?? 500;
       const message = error instanceof Error ? error.message : 'Unknown error';
       return reply.status(statusCode).send(
         createErrorResponse(ErrorCode.VALIDATION_ERROR, message, buildMeta(request)),

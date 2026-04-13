@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { describe, it, expect, afterEach } from 'vitest';
+import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { validateStartupAssets } from '../../runtime/startup-validator';
@@ -89,7 +89,7 @@ describe('validateStartupAssets', () => {
 
   afterEach(() => {
     for (const dir of dirsToCleanup) {
-      try { rmSync(dir, { recursive: true }); } catch {}
+      try { rmSync(dir, { recursive: true }); } catch { /* expected */ }
     }
     dirsToCleanup.length = 0;
   });

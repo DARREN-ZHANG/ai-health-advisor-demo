@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { InsightRuleEngine } from '../../rules/rule-engine';
-import type { InsightRule, InsightSignal } from '../../rules/types';
+import type { InsightRule } from '../../rules/types';
 import type { AgentContext } from '../../types/agent-context';
 import { AgentTaskType } from '@health-advisor/shared';
 

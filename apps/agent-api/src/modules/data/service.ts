@@ -1,4 +1,4 @@
-import type { ProfileData, DailyRecord, DataTab, Timeframe, DateRange, StressTimelineResponse, StressTimelinePoint, StressTrend, DataCenterResponse } from '@health-advisor/shared';
+import type { DailyRecord, DataTab, Timeframe, DateRange, StressTimelineResponse, StressTimelinePoint, StressTrend, DataCenterResponse } from '@health-advisor/shared';
 import { timeframeToDateRange } from '@health-advisor/shared';
 import { normalizeTimeline, rollingMedian, type TimelinePoint } from '@health-advisor/sandbox';
 import type { RuntimeRegistry } from '../../runtime/registry.js';
@@ -111,6 +111,7 @@ function buildStressTimelineResponse(
   timeline: TimelinePoint[],
   range: DateRange,
 ): StressTimelineResponse {
+  void range;
   // 优先使用 stress.load（含 override），缺失时从底层指标推导
   const rawLoads = timeline.map((p) => p.values['stress.load'] ?? deriveStressLoadScore(p));
   const smoothedLoads = rollingMedian(rawLoads, 7);

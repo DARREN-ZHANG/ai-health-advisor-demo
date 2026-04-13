@@ -7,6 +7,7 @@ import { AgentTaskType } from '@health-advisor/shared';
 
 // mock executeAgent
 vi.mock('@health-advisor/agent-core', async (importOriginal) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mod = await importOriginal<any>();
   return { ...mod, executeAgent: vi.fn() };
 });

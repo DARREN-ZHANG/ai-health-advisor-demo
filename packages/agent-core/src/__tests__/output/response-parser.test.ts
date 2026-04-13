@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseAgentResponse, type ParseResult } from '../../output/response-parser';
+import { parseAgentResponse } from '../../output/response-parser';
 import { AgentTaskType, ChartTokenId } from '@health-advisor/shared';
 
 const basePageContext = {

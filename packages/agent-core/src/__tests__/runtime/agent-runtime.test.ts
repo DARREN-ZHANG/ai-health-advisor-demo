@@ -1,16 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import { executeAgent, type AgentRuntimeDeps } from '../../runtime/agent-runtime';
 import type { AgentRequest } from '../../types/agent-request';
-import type { AgentContext } from '../../types/agent-context';
 import type { HealthAgent } from '../../executor/create-agent';
 import type { PromptLoader } from '../../prompts/prompt-loader';
 import type { FallbackEngine } from '../../fallback/fallback-engine';
 import type { ProfileData, DailyRecord } from '@health-advisor/shared';
-import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
+import type { DatedEvent } from '@health-advisor/sandbox';
 import { AgentTaskType, ChartTokenId } from '@health-advisor/shared';
 import { InMemorySessionMemoryStore } from '../../memory/session-memory-store';
 import { InMemoryAnalyticalMemoryStore } from '../../memory/analytical-memory-store';
-import { LOW_DATA_THRESHOLD } from '../../constants/limits';
 
 function makeRecord(date: string, overrides: Partial<DailyRecord> = {}): DailyRecord {
   return {
@@ -32,6 +30,7 @@ function makeProfileData(records?: DailyRecord[]): ProfileData {
       age: 32,
       gender: 'male',
       avatar: '👨‍💻',
+      tags: ['test'],
       baseline: { restingHr: 62, hrv: 58, spo2: 98, avgSleepMinutes: 420, avgSteps: 8500 },
     },
     records: records ?? Array.from({ length: 7 }, (_, i) => makeRecord(`2026-04-${String(4 + i).padStart(2, '0')}`)),
@@ -65,6 +64,8 @@ const mockPromptLoader: PromptLoader = {
 const mockFallbackEngine: FallbackEngine = {
   getFallback: (taskType, key) => ({
     summary: '健康数据正在分析中。',
+    source: 'fallback',
+    statusColor: 'warning' as const,
     chartTokens: [],
     microTips: ['请稍后再试'],
     meta: { taskType, pageContext: key.pageContext, finishReason: 'fallback' as const },
@@ -155,7 +156,6 @@ describe('executeAgent', () => {
     );
 
     expect(invokeMock).toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect((invokeMock.mock.calls as unknown as Array<Array<{ userPrompt: string }>>)[0]![0]!.userPrompt).toContain('最近感觉怎样');
   });
 
@@ -180,7 +180,6 @@ describe('executeAgent', () => {
     );
 
     expect(invokeMock).toHaveBeenCalled();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect((invokeMock.mock.calls as unknown as Array<Array<{ userPrompt: string }>>)[0]![0]!.userPrompt).toContain('hrv');
   });
 

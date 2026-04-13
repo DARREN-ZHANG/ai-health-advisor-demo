@@ -1,5 +1,5 @@
 import type { AgentContext } from '../types/agent-context';
-import type { PromptLoader, PromptName } from './prompt-loader';
+import type { PromptLoader } from './prompt-loader';
 
 export function buildSystemPrompt(
   context: AgentContext,
