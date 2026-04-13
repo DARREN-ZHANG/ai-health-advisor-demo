@@ -8,7 +8,17 @@ import { useProfileStore } from '@/stores/profile.store';
 import { useGodModeActions, useGodModeState } from '@/hooks/use-god-mode-actions';
 
 export function GodModePanel() {
-  const { isEnabled, isOpen, toggleOpen, activeScenarioId, setScenarioId } = useGodModeStore();
+  const { isEnabled } = useGodModeStore();
+
+  if (!isEnabled) {
+    return null;
+  }
+
+  return <GodModePanelContent />;
+}
+
+function GodModePanelContent() {
+  const { isOpen, toggleOpen, activeScenarioId, setScenarioId } = useGodModeStore();
   const { currentProfileId } = useProfileStore();
   const { 
     switchProfile, isSwitchingProfile, 
@@ -20,8 +30,6 @@ export function GodModePanel() {
   } = useGodModeActions();
 
   const { data: godModeState, isLoading: isLoadingState } = useGodModeState();
-
-  if (!isEnabled) return null;
 
   const handleClose = () => toggleOpen(false);
 

@@ -6,6 +6,7 @@ import {
 export interface SessionStoreService {
   readonly store: SessionMemoryStore;
   clearOnProfileSwitch(sessionId: string): void;
+  clearAll(): void;
   evictExpired(): void;
 }
 
@@ -16,6 +17,9 @@ export function createSessionStore(): SessionStoreService {
     store,
     clearOnProfileSwitch(sessionId: string) {
       store.clearOnProfileSwitch(sessionId);
+    },
+    clearAll() {
+      store.clearAll();
     },
     evictExpired() {
       store.evictExpired();

@@ -261,6 +261,33 @@ describe('God-Mode Routes', () => {
       expect(app.runtime.sessionStore.store.get(sessionId)).toBeUndefined();
     });
 
+    test('scope=all 在无 session header 时清空全部会话与分析记忆', async () => {
+      app.runtime.sessionStore.store.appendMessage('sess-global-a', 'profile-a', {
+        role: 'user',
+        text: '保留前的会话 A',
+        createdAt: Date.now(),
+      });
+      app.runtime.sessionStore.store.appendMessage('sess-global-b', 'profile-b', {
+        role: 'assistant',
+        text: '保留前的会话 B',
+        createdAt: Date.now(),
+      });
+      app.runtime.analyticalMemory.setHomepageBrief('sess-global-a', 'profile-a', '摘要 A');
+      app.runtime.analyticalMemory.setHomepageBrief('sess-global-b', 'profile-b', '摘要 B');
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(app.runtime.sessionStore.store.get('sess-global-a')).toBeUndefined();
+      expect(app.runtime.sessionStore.store.get('sess-global-b')).toBeUndefined();
+      expect(app.runtime.analyticalMemory.get('sess-global-a')).toBeUndefined();
+      expect(app.runtime.analyticalMemory.get('sess-global-b')).toBeUndefined();
+    });
+
     test('无效 scope 返回 400', async () => {
       const response = await app.inject({
         method: 'POST',

@@ -57,6 +57,17 @@ describe('InMemorySessionMemoryStore', () => {
     expect(store.get('sess-1')).toBeUndefined();
   });
 
+  it('clearAll deletes every session', () => {
+    const store = new InMemorySessionMemoryStore();
+    store.appendMessage('sess-1', 'profile-a', makeMessage('user', 'a'));
+    store.appendMessage('sess-2', 'profile-b', makeMessage('assistant', 'b'));
+
+    store.clearAll();
+
+    expect(store.get('sess-1')).toBeUndefined();
+    expect(store.get('sess-2')).toBeUndefined();
+  });
+
   it('getRecentMessages respects maxTurns', () => {
     const store = new InMemorySessionMemoryStore();
     for (let i = 0; i < 10; i++) {

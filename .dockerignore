@@ -13,3 +13,10 @@ playwright-report
 docs
 *.md
 !.env.example
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+**/test-results
+**/playwright-report

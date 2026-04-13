@@ -66,4 +66,15 @@ describe('InMemoryAnalyticalMemoryStore', () => {
     const store = new InMemoryAnalyticalMemoryStore();
     expect(() => store.invalidateOnOverride('sess-unknown')).not.toThrow();
   });
+
+  it('clearAll deletes every analytical memory entry', () => {
+    const store = new InMemoryAnalyticalMemoryStore();
+    store.setHomepageBrief('sess-1', 'profile-a', '首页摘要');
+    store.setHomepageBrief('sess-2', 'profile-b', '第二条摘要');
+
+    store.clearAll();
+
+    expect(store.get('sess-1')).toBeUndefined();
+    expect(store.get('sess-2')).toBeUndefined();
+  });
 });

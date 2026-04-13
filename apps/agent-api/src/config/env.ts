@@ -19,6 +19,15 @@ const AppConfigSchema = z.object({
   ENABLE_GOD_MODE: envBool,
   FALLBACK_ONLY_MODE: envBool,
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  CORS_ALLOWED_ORIGINS: z
+    .string()
+    .optional()
+    .transform((value) =>
+      value
+        ?.split(',')
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0) ?? []
+    ),
   DATA_DIR: z.string().optional(),
 }).refine(
   (data) => data.FALLBACK_ONLY_MODE || data.LLM_API_KEY.length > 0,

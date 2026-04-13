@@ -7,6 +7,7 @@ export interface AnalyticalMemoryStore {
   setRuleSummary(sessionId: string, profileId: string, summary: string): void;
   invalidateOnProfileSwitch(sessionId: string): void;
   invalidateOnOverride(sessionId: string): void;
+  clearAll(): void;
 }
 
 export class InMemoryAnalyticalMemoryStore implements AnalyticalMemoryStore {
@@ -63,5 +64,9 @@ export class InMemoryAnalyticalMemoryStore implements AnalyticalMemoryStore {
       latestRuleSummary: undefined,
       updatedAt: Date.now(),
     });
+  }
+
+  clearAll(): void {
+    this.store.clear();
   }
 }

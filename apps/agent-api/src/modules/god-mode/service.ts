@@ -57,9 +57,17 @@ export class GodModeService {
   /** BE-025: reset / restore */
   reset(payload: ResetPayload, sessionId?: string): GodModeStateResponse {
     this.registry.overrideStore.reset(payload.scope);
-    if (sessionId && (payload.scope === 'profile' || payload.scope === 'all')) {
+
+    if (payload.scope === 'all') {
+      this.registry.sessionStore.clearAll();
+      this.registry.analyticalMemory.clearAll();
+      return this.getState();
+    }
+
+    if (sessionId && payload.scope === 'profile') {
       this.registry.sessionStore.clearOnProfileSwitch(sessionId);
     }
+
     this.invalidateSessionAnalytical(sessionId);
     return this.getState();
   }

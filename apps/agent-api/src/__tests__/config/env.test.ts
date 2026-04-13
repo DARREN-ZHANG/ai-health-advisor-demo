@@ -71,4 +71,16 @@ describe('loadConfig', () => {
     const config = loadConfig({ ...validEnv, ENABLE_GOD_MODE: '1' });
     expect(config.ENABLE_GOD_MODE).toBe(true);
   });
+
+  it('CORS_ALLOWED_ORIGINS 解析为去空白的列表', () => {
+    const config = loadConfig({
+      ...validEnv,
+      CORS_ALLOWED_ORIGINS: ' http://localhost:3000, https://demo.example.com ',
+    });
+
+    expect(config.CORS_ALLOWED_ORIGINS).toEqual([
+      'http://localhost:3000',
+      'https://demo.example.com',
+    ]);
+  });
 });

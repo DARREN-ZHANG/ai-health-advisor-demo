@@ -14,6 +14,7 @@ export interface SessionMemoryStore {
   ): SessionConversationMemory;
   getRecentMessages(sessionId: string, maxTurns?: number): ConversationMessage[];
   clearOnProfileSwitch(sessionId: string): void;
+  clearAll(): void;
   evictExpired(): void;
 }
 
@@ -61,6 +62,10 @@ export class InMemorySessionMemoryStore implements SessionMemoryStore {
 
   clearOnProfileSwitch(sessionId: string): void {
     this.store.delete(sessionId);
+  }
+
+  clearAll(): void {
+    this.store.clear();
   }
 
   evictExpired(): void {
