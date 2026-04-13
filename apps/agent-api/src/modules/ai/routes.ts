@@ -4,6 +4,7 @@ import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 import { AgentRequestSchema } from '@health-advisor/agent-core';
 import { buildMeta } from '../../utils/meta.js';
 import { AiOrchestrator } from '../../services/ai-orchestrator.js';
+import type { AiRequestMeta } from '../../plugins/request-context.js';
 
 interface MorningBriefBody {
   profileId: string;
@@ -32,6 +33,19 @@ export async function aiRoutes(app: FastifyInstance) {
     timeoutMs: app.config.AI_TIMEOUT_MS,
   });
 
+  /** 将 AI 结果元数据附加到请求上下文，供 onResponse 日志使用 */
+  function attachAiLogMeta(
+    request: { ctx: { aiMeta?: AiRequestMeta } },
+    finishReason: string,
+  ) {
+    request.ctx.aiMeta = {
+      provider: app.config.LLM_PROVIDER,
+      model: app.config.LLM_MODEL,
+      finishReason,
+      fallbackTriggered: finishReason === 'fallback' || finishReason === 'timeout',
+    };
+  }
+
   // BE-018: /ai/morning-brief
   app.post<{ Body: MorningBriefBody }>('/ai/morning-brief', async (request, reply) => {
     const { profileId, pageContext } = request.body;
@@ -59,6 +73,7 @@ export async function aiRoutes(app: FastifyInstance) {
     }
 
     const result = await orchestrator.execute(parseResult.data);
+    attachAiLogMeta(request, result.meta.finishReason);
     return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
   });
 
@@ -91,6 +106,7 @@ export async function aiRoutes(app: FastifyInstance) {
     }
 
     const result = await orchestrator.execute(parseResult.data);
+    attachAiLogMeta(request, result.meta.finishReason);
     return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
   });
 
@@ -130,6 +146,7 @@ export async function aiRoutes(app: FastifyInstance) {
     }
 
     const result = await orchestrator.execute(parseResult.data);
+    attachAiLogMeta(request, result.meta.finishReason);
     return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
   });
 }

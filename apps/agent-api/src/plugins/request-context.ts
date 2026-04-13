@@ -2,11 +2,21 @@ import fp from 'fastify-plugin';
 import crypto from 'node:crypto';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
+/** AI 路由的额外日志字段 */
+export interface AiRequestMeta {
+  provider: string;
+  model: string;
+  finishReason: string;
+  fallbackTriggered: boolean;
+}
+
 export interface RequestContext {
   requestId: string;
   sessionId?: string;
   profileId?: string;
   startTime: number;
+  /** AI 路由设置：provider/model/finishReason/fallbackTriggered */
+  aiMeta?: AiRequestMeta;
 }
 
 declare module 'fastify' {
@@ -39,7 +49,16 @@ export const requestContextPlugin = fp(async function (app: FastifyInstance) {
   app.addHook('onResponse', async (request: FastifyRequest, reply: FastifyReply) => {
     const durationMs = Math.round(performance.now() - request.ctx.startTime);
     request.log.info(
-      { requestId: request.ctx.requestId, route: request.url, method: request.method, statusCode: reply.statusCode, durationMs },
+      {
+        requestId: request.ctx.requestId,
+        route: request.url,
+        method: request.method,
+        statusCode: reply.statusCode,
+        durationMs,
+        sessionId: request.ctx.sessionId,
+        profileId: request.ctx.profileId,
+        ...request.ctx.aiMeta,
+      },
       'request completed',
     );
   });
