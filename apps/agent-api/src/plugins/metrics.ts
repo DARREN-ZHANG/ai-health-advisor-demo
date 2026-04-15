@@ -6,6 +6,7 @@ export interface MetricsSnapshot {
   aiTimeouts: number;
   fallbackUsed: number;
   providerErrors: number;
+  briefCacheHits: number;
   latencyByRoute: Record<string, { sum: number; count: number }>;
   totalRequests: number;
   startTime: string;
@@ -16,6 +17,7 @@ export interface MetricsStore {
   incrementAiTimeout(): void;
   incrementFallbackUsed(): void;
   incrementProviderError(): void;
+  incrementBriefCacheHit(): void;
   recordLatency(route: string, durationMs: number): void;
   snapshot(): MetricsSnapshot;
 }
@@ -25,6 +27,7 @@ function createMetricsStore(): MetricsStore {
   let aiTimeouts = 0;
   let fallbackUsed = 0;
   let providerErrors = 0;
+  let briefCacheHits = 0;
   const latencyByRoute = new Map<string, { sum: number; count: number }>();
   const startTime = new Date().toISOString();
 
@@ -40,6 +43,7 @@ function createMetricsStore(): MetricsStore {
     incrementAiTimeout() { aiTimeouts++; },
     incrementFallbackUsed() { fallbackUsed++; },
     incrementProviderError() { providerErrors++; },
+    incrementBriefCacheHit() { briefCacheHits++; },
     recordLatency(route: string, durationMs: number) {
       const entry = latencyByRoute.get(route);
       if (entry) {
@@ -67,6 +71,7 @@ function createMetricsStore(): MetricsStore {
         aiTimeouts,
         fallbackUsed,
         providerErrors,
+        briefCacheHits,
         latencyByRoute: latency,
         totalRequests,
         startTime,

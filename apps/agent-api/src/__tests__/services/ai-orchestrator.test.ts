@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { AiOrchestrator } from '../../services/ai-orchestrator';
+import { BriefCache } from '../../services/brief-cache';
 import type { AgentRequest } from '@health-advisor/agent-core';
 import type { AgentResponseEnvelope, PageContext } from '@health-advisor/shared';
 import { AgentTaskType } from '@health-advisor/shared';
@@ -27,8 +28,9 @@ function makeMetrics() {
     incrementAiTimeout: () => { calls.aiTimeout = (calls.aiTimeout ?? 0) + 1; },
     incrementFallbackUsed: () => { calls.fallbackUsed = (calls.fallbackUsed ?? 0) + 1; },
     incrementProviderError: () => { calls.providerError = (calls.providerError ?? 0) + 1; },
+    incrementBriefCacheHit: () => { calls.briefCacheHit = (calls.briefCacheHit ?? 0) + 1; },
     recordLatency: () => {},
-    snapshot: () => ({ apiRequests: {}, aiTimeouts: 0, fallbackUsed: 0, providerErrors: 0, latencyByRoute: {}, totalRequests: 0, startTime: '' }),
+    snapshot: () => ({ apiRequests: {}, aiTimeouts: 0, fallbackUsed: 0, providerErrors: 0, briefCacheHits: 0, latencyByRoute: {}, totalRequests: 0, startTime: '' }),
   };
 }
 
@@ -117,5 +119,33 @@ describe('AiOrchestrator', () => {
     ).rejects.toThrow('connection failed');
 
     expect(metrics.calls.providerError).toBe(1);
+  });
+
+  it('briefCache 命中时跳过 LLM 调用并记录指标', async () => {
+    mockedExecuteAgent.mockClear();
+    const briefCache = new BriefCache();
+    // 先写入缓存
+    briefCache.set('profile-a', completeResponse);
+
+    const metrics = makeMetrics();
+    const orchestrator = new AiOrchestrator({
+      registry: {} as unknown as import('../../runtime/registry').RuntimeRegistry,
+      metrics,
+      timeoutMs: 6000,
+      briefCache,
+    });
+
+    const result = await orchestrator.execute({
+      requestId: 'req-5',
+      sessionId: 'sess-1',
+      profileId: 'profile-a',
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: defaultPageContext,
+    });
+
+    expect(result.meta.finishReason).toBe('cached');
+    expect(metrics.calls.briefCacheHit).toBe(1);
+    // 不应调用 LLM
+    expect(mockedExecuteAgent).not.toHaveBeenCalled();
   });
 });

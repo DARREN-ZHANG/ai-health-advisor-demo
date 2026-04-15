@@ -29,7 +29,7 @@ export interface AgentResponseEnvelope {
   meta: {
     taskType: AgentTaskType;
     pageContext: PageContext;
-    finishReason: 'complete' | 'fallback' | 'timeout';
+    finishReason: 'complete' | 'fallback' | 'timeout' | 'cached';
     sessionId?: string;
   };
 }
