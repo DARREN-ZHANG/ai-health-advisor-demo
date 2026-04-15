@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import path from 'node:path';
 
+// 基于 src/config/ 的位置推导项目根目录（monorepo root/data/sandbox）
+const monorepoRoot = path.resolve(__dirname, '../../../..');
+
 /** 环境变量布尔值：'true'/'1' → true，其余 → false */
 const envBool = z
   .string()
@@ -12,6 +15,7 @@ const AppConfigSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LLM_PROVIDER: z.enum(['openai', 'anthropic', 'gemini']).default('openai'),
   LLM_MODEL: z.string().default('gpt-4o-mini'),
+  LLM_BASE_URL: z.string().default(''),
   LLM_API_KEY: z.string().default(''),
   LLM_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.3),
   LLM_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
@@ -44,7 +48,7 @@ export function loadConfig(env?: Record<string, string | undefined>): AppConfig 
   const parsed = AppConfigSchema.parse(source);
   const dataDir = parsed.DATA_DIR
     ? path.resolve(parsed.DATA_DIR)
-    : path.resolve(process.cwd(), 'data/sandbox');
+    : path.resolve(monorepoRoot, 'data/sandbox');
   return { ...parsed, dataDir };
 }
 

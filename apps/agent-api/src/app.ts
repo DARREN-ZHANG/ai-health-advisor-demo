@@ -43,9 +43,9 @@ export async function buildApp() {
     requestIdLogLabel: 'requestId',
   });
 
-  // 注册插件（顺序重要）
-  await app.register(corsPlugin, { config });
+  // 注册插件（顺序重要：requestContext 必须在 cors 之前，否则 OPTIONS preflight 会跳过 ctx 初始化）
   await app.register(requestContextPlugin);
+  await app.register(corsPlugin, { config });
   await app.register(errorHandlerPlugin);
   await app.register(metricsPlugin);
 
