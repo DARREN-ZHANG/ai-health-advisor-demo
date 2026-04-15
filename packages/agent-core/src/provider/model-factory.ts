@@ -8,6 +8,9 @@ export function createChatModel(config: ResolvedProviderConfig): ChatOpenAI {
       return new ChatOpenAI({
         modelName: config.model,
         openAIApiKey: config.apiKey,
+        configuration: config.baseUrl
+          ? { baseURL: config.baseUrl }
+          : undefined,
         temperature: config.temperature,
         maxRetries: config.maxRetries,
         timeout: config.timeoutMs,

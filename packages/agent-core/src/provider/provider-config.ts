@@ -21,10 +21,13 @@ export function resolveProviderConfig(
     ? parseInt(env.LLM_MAX_RETRIES, 10)
     : DEFAULT_MAX_RETRIES;
 
+  const baseUrl = env.LLM_BASE_URL ?? '';
+
   return {
     provider,
     model,
     apiKey,
+    baseUrl,
     timeoutMs,
     temperature,
     maxRetries,

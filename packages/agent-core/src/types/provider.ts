@@ -4,6 +4,7 @@ export interface ModelRuntimeConfig {
   provider: LlmProvider;
   model: string;
   apiKey: string;
+  baseUrl: string;
   timeoutMs: number;
   temperature: number;
   maxRetries: number;
