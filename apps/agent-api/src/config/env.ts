@@ -19,6 +19,7 @@ const AppConfigSchema = z.object({
   LLM_API_KEY: z.string().default(''),
   LLM_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.3),
   LLM_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
+  LLM_TIMEOUT_MS: z.coerce.number().positive().default(5000),
   AI_TIMEOUT_MS: z.coerce.number().positive().default(6000),
   ENABLE_GOD_MODE: envBool,
   FALLBACK_ONLY_MODE: envBool,

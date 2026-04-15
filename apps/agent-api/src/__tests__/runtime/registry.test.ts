@@ -91,6 +91,7 @@ describe('RuntimeRegistry', () => {
       LLM_PROVIDER: 'openai',
       LLM_MODEL: 'glm-4.7',
       LLM_BASE_URL: 'https://open.bigmodel.cn/api/paas/v4',
+      LLM_TIMEOUT_MS: '60000',
       DATA_DIR,
     });
 
@@ -99,6 +100,7 @@ describe('RuntimeRegistry', () => {
       LLM_MODEL: 'glm-4.7',
       LLM_API_KEY: 'sk-test',
       LLM_BASE_URL: 'https://open.bigmodel.cn/api/paas/v4',
+      LLM_TIMEOUT_MS: '60000',
     });
   });
 });

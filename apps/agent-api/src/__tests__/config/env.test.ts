@@ -20,6 +20,7 @@ describe('loadConfig', () => {
     expect(config.NODE_ENV).toBe('development');
     expect(config.LLM_PROVIDER).toBe('openai');
     expect(config.LLM_API_KEY).toBe('sk-test');
+    expect(config.LLM_TIMEOUT_MS).toBe(5000);
     expect(config.ENABLE_GOD_MODE).toBe(true);
     expect(config.FALLBACK_ONLY_MODE).toBe(false);
   });
@@ -30,6 +31,7 @@ describe('loadConfig', () => {
     expect(config.NODE_ENV).toBe('development');
     expect(config.LLM_MODEL).toBe('gpt-4o-mini');
     expect(config.AI_TIMEOUT_MS).toBe(6000);
+    expect(config.LLM_TIMEOUT_MS).toBe(5000);
     expect(config.LOG_LEVEL).toBe('info');
     expect(config.FALLBACK_ONLY_MODE).toBe(true);
   });
@@ -82,5 +84,10 @@ describe('loadConfig', () => {
       'http://localhost:3000',
       'https://demo.example.com',
     ]);
+  });
+
+  it('LLM_TIMEOUT_MS 可覆盖 provider 超时', () => {
+    const config = loadConfig({ ...validEnv, LLM_TIMEOUT_MS: '60000' });
+    expect(config.LLM_TIMEOUT_MS).toBe(60000);
   });
 });

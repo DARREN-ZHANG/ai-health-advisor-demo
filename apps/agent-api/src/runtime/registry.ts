@@ -107,5 +107,6 @@ export function toProviderEnv(config: AppConfig): Record<string, string> {
     LLM_BASE_URL: config.LLM_BASE_URL,
     LLM_TEMPERATURE: String(config.LLM_TEMPERATURE),
     LLM_MAX_RETRIES: String(config.LLM_MAX_RETRIES),
+    LLM_TIMEOUT_MS: String(config.LLM_TIMEOUT_MS),
   };
 }
