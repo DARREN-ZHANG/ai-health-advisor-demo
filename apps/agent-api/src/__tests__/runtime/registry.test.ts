@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import Fastify from 'fastify';
 import path from 'node:path';
 import { loadConfig } from '../../config/env';
-import { createRuntimeRegistry } from '../../runtime/registry';
+import { createRuntimeRegistry, toProviderEnv } from '../../runtime/registry';
 import { metricsPlugin } from '../../plugins/metrics';
 import { requestContextPlugin } from '../../plugins/request-context';
 import type { RuntimeRegistry } from '../../runtime/registry';
@@ -82,5 +82,23 @@ describe('RuntimeRegistry', () => {
 
   it('overrideStore 可用', () => {
     expect(registry.overrideStore.getCurrentProfileId()).toBeDefined();
+  });
+
+  it('provider env 包含自定义 base URL', () => {
+    const config = loadConfig({
+      FALLBACK_ONLY_MODE: 'false',
+      LLM_API_KEY: 'sk-test',
+      LLM_PROVIDER: 'openai',
+      LLM_MODEL: 'glm-4.7',
+      LLM_BASE_URL: 'https://open.bigmodel.cn/api/paas/v4',
+      DATA_DIR,
+    });
+
+    expect(toProviderEnv(config)).toMatchObject({
+      LLM_PROVIDER: 'openai',
+      LLM_MODEL: 'glm-4.7',
+      LLM_API_KEY: 'sk-test',
+      LLM_BASE_URL: 'https://open.bigmodel.cn/api/paas/v4',
+    });
   });
 });

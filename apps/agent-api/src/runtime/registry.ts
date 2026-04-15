@@ -59,13 +59,7 @@ export function createRuntimeRegistry(
   // 6. 创建 agent
   const agent = config.FALLBACK_ONLY_MODE
     ? createHealthAgent({ chatModel: new FakeChatModel('{"summary":"fallback","chartTokens":[],"microTips":[]}') })
-    : initializeAgent(resolveProviderConfig({
-        LLM_PROVIDER: config.LLM_PROVIDER,
-        LLM_MODEL: config.LLM_MODEL,
-        LLM_API_KEY: config.LLM_API_KEY,
-        LLM_TEMPERATURE: String(config.LLM_TEMPERATURE),
-        LLM_MAX_RETRIES: String(config.LLM_MAX_RETRIES),
-      }));
+    : initializeAgent(resolveProviderConfig(toProviderEnv(config)));
 
   // 7. getProfile 中间层：应用 override
   function getProfileWithOverrides(profileId: string): ProfileData {
@@ -102,5 +96,16 @@ export function createRuntimeRegistry(
     agent,
     promptLoader,
     fallbackEngine,
+  };
+}
+
+export function toProviderEnv(config: AppConfig): Record<string, string> {
+  return {
+    LLM_PROVIDER: config.LLM_PROVIDER,
+    LLM_MODEL: config.LLM_MODEL,
+    LLM_API_KEY: config.LLM_API_KEY,
+    LLM_BASE_URL: config.LLM_BASE_URL,
+    LLM_TEMPERATURE: String(config.LLM_TEMPERATURE),
+    LLM_MAX_RETRIES: String(config.LLM_MAX_RETRIES),
   };
 }
