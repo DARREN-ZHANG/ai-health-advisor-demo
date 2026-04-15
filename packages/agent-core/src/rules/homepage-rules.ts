@@ -6,40 +6,56 @@ import { InsightRuleEngine } from './rule-engine';
 import { average, getRecords, computeHrv, computeTrend } from './helpers';
 
 // ────────────────────────────────────────────
-// HRV 趋势规则
+// HRV 规则 (趋势 + 绝对值)
 // ────────────────────────────────────────────
 
-const hrvTrendRule: InsightRule = {
-  id: 'homepage-hrv-trend',
+const hrvRule: InsightRule = {
+  id: 'homepage-hrv',
   appliesTo: [AgentTaskType.HOMEPAGE_SUMMARY],
   evaluate(ctx: AgentContext): InsightSignal[] {
     const records = getRecords(ctx);
     const hrValues = records.map((r) => computeHrv(r)).filter(Number.isFinite);
-    if (hrValues.length < 3) return [];
+    if (hrValues.length === 0) return [];
 
-    const trend = computeTrend(hrValues);
-    if (trend < -0.15) {
-      return [{
+    const signals: InsightSignal[] = [];
+    const latestHrv = hrValues[hrValues.length - 1];
+
+    // 绝对值极低预警 (临床标准：持续低于 20ms 可能预示过度劳累或急性压力)
+    if (latestHrv < 20) {
+      signals.push({
         category: 'anomaly',
-        severity: 'warning',
+        severity: 'critical',
         metric: 'hrv',
-        message: '心率变异性呈下降趋势，自主神经调节能力可能减弱',
-      }];
+        message: '心率变异性极低，身体恢复能力严重受阻，建议强制休息',
+      });
     }
-    if (trend > 0.15) {
-      return [{
-        category: 'trend',
-        severity: 'info',
-        metric: 'hrv',
-        message: '心率变异性呈上升趋势，恢复状态良好',
-      }];
+
+    // 趋势分析
+    if (hrValues.length >= 3) {
+      const trend = computeTrend(hrValues);
+      if (trend < -0.15) {
+        signals.push({
+          category: 'anomaly',
+          severity: 'warning',
+          metric: 'hrv',
+          message: '心率变异性显著下降，自主神经调节能力减弱，需关注压力积累',
+        });
+      } else if (trend > 0.15) {
+        signals.push({
+          category: 'trend',
+          severity: 'info',
+          metric: 'hrv',
+          message: '心率变异性稳步上升，身体恢复状态良好',
+        });
+      }
     }
-    return [];
+
+    return signals;
   },
 };
 
 // ────────────────────────────────────────────
-// 睡眠规则
+// 睡眠规则 (时长 + 质量)
 // ────────────────────────────────────────────
 
 const sleepRule: InsightRule = {
@@ -47,31 +63,42 @@ const sleepRule: InsightRule = {
   appliesTo: [AgentTaskType.HOMEPAGE_SUMMARY],
   evaluate(ctx: AgentContext): InsightSignal[] {
     const records = getRecords(ctx);
-    const sleepMinutes = records
-      .map((r) => r.sleep?.totalMinutes)
-      .filter((v): v is number => v !== undefined);
-    if (sleepMinutes.length < 3) return [];
+    const latest = records[records.length - 1];
+    if (!latest?.sleep) return [];
 
-    const avg = average(sleepMinutes);
+    const signals: InsightSignal[] = [];
+    const sleepMinutes = latest.sleep.totalMinutes;
     const baseline = ctx.profile.baselines.avgSleepMinutes;
 
-    if (avg < baseline * 0.6) {
-      return [{
+    // 1. 时长判定 (收紧至 75% 预警，符合临床对睡眠剥夺的定义)
+    if (sleepMinutes < baseline * 0.6) {
+      signals.push({
         category: 'anomaly',
         severity: 'warning',
         metric: 'sleep',
-        message: `近 ${sleepMinutes.length} 天平均睡眠 ${Math.round(avg / 60 * 10) / 10} 小时，严重不足`,
-      }];
-    }
-    if (avg < baseline * 0.8) {
-      return [{
+        message: '昨晚睡眠时长严重不足（低于基线 40% 以上），认知能力将受显著影响',
+      });
+    } else if (sleepMinutes < baseline * 0.75) {
+      signals.push({
         category: 'status',
         severity: 'info',
         metric: 'sleep',
-        message: `近 ${sleepMinutes.length} 天平均睡眠 ${Math.round(avg / 60 * 10) / 10} 小时，略低于推荐`,
-      }];
+        message: '昨晚睡眠不足，建议今日适当补觉或减少高强度工作',
+      });
     }
-    return [];
+
+    // 2. 质量判定 (深睡比例 < 15% 视为质量不佳)
+    const deepMinutes = (latest.sleep as any).stages?.deep || 0;
+    if (sleepMinutes > 0 && (deepMinutes / sleepMinutes) < 0.15) {
+      signals.push({
+        category: 'anomaly',
+        severity: 'warning',
+        metric: 'sleep',
+        message: '深睡比例偏低（未达 15%），身体修复效果欠佳，晨间可能感到乏力',
+      });
+    }
+
+    return signals;
   },
 };
 
@@ -169,7 +196,7 @@ const activityRule: InsightRule = {
 // ────────────────────────────────────────────
 
 export const homepageRules: InsightRule[] = [
-  hrvTrendRule,
+  hrvRule,
   sleepRule,
   spo2Rule,
   stressRule,

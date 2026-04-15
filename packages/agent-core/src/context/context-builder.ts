@@ -68,7 +68,7 @@ export function buildAgentContext(
       profileId: profile.profileId,
       name: profile.name,
       age: profile.age,
-      tags: [], // TODO: Wave 5+ 接入生理标签系统后从此处注入
+      tags: profile.tags || [],
       baselines: {
         restingHR: profile.baseline.restingHr,
         hrv: profile.baseline.hrv,
