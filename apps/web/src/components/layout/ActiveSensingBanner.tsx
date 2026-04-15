@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useActiveSensingStore } from '@/stores/active-sensing.store';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { useUIStore } from '@/stores/ui.store';
 import type { ActiveSensingBanner as ActiveSensingBannerPayload } from '@/stores/active-sensing.store';
 
@@ -29,7 +29,7 @@ export function ActiveSensingBanner() {
   return (
     <AnimatePresence onExitComplete={() => setRenderedBanner(null)}>
       {isVisible && banner ? (
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: -24 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -24 }}
@@ -72,7 +72,7 @@ export function ActiveSensingBanner() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       ) : null}
     </AnimatePresence>
   );

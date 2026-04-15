@@ -1,7 +1,7 @@
 'use client';
 
 import { useUIStore } from '@/stores/ui.store';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 
 const typeColors = {
   info: 'bg-blue-600 border-blue-400',
@@ -17,7 +17,7 @@ export function ToastContainer() {
     <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-3 w-full max-w-sm px-4">
       <AnimatePresence>
         {toasts.map((toast) => (
-          <motion.div
+          <m.div
             key={toast.id}
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -31,7 +31,7 @@ export function ToastContainer() {
                 <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </button>
-          </motion.div>
+          </m.div>
         ))}
       </AnimatePresence>
     </div>
