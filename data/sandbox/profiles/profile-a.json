@@ -466,6 +466,166 @@
       "stress": {
         "load": 23
       }
+    },
+    {
+      "date": "2026-04-11",
+      "hr": [
+        57,
+        60,
+        59,
+        62,
+        58
+      ],
+      "sleep": {
+        "totalMinutes": 470,
+        "startTime": "22:05",
+        "endTime": "06:15",
+        "stages": {
+          "deep": 95,
+          "light": 213,
+          "rem": 108,
+          "awake": 22
+        },
+        "score": 90
+      },
+      "activity": {
+        "steps": 10100,
+        "calories": 2490,
+        "activeMinutes": 53,
+        "distanceKm": 7.4
+      },
+      "spo2": 98,
+      "stress": {
+        "load": 20
+      }
+    },
+    {
+      "date": "2026-04-12",
+      "hr": [
+        59,
+        62,
+        61,
+        64,
+        60
+      ],
+      "sleep": {
+        "totalMinutes": 450,
+        "startTime": "22:20",
+        "endTime": "06:10",
+        "stages": {
+          "deep": 89,
+          "light": 205,
+          "rem": 102,
+          "awake": 24
+        },
+        "score": 87
+      },
+      "activity": {
+        "steps": 8400,
+        "calories": 2340,
+        "activeMinutes": 39,
+        "distanceKm": 6.2
+      },
+      "spo2": 97,
+      "stress": {
+        "load": 27
+      }
+    },
+    {
+      "date": "2026-04-13",
+      "hr": [
+        58,
+        61,
+        60,
+        63,
+        59
+      ],
+      "sleep": {
+        "totalMinutes": 480,
+        "startTime": "21:55",
+        "endTime": "06:15",
+        "stages": {
+          "deep": 99,
+          "light": 220,
+          "rem": 110,
+          "awake": 20
+        },
+        "score": 93
+      },
+      "activity": {
+        "steps": 7800,
+        "calories": 2260,
+        "activeMinutes": 33,
+        "distanceKm": 5.7
+      },
+      "spo2": 98,
+      "stress": {
+        "load": 19
+      }
+    },
+    {
+      "date": "2026-04-14",
+      "hr": [
+        57,
+        60,
+        59,
+        62,
+        58
+      ],
+      "sleep": {
+        "totalMinutes": 460,
+        "startTime": "22:15",
+        "endTime": "06:15",
+        "stages": {
+          "deep": 94,
+          "light": 209,
+          "rem": 105,
+          "awake": 21
+        },
+        "score": 89
+      },
+      "activity": {
+        "steps": 9600,
+        "calories": 2460,
+        "activeMinutes": 50,
+        "distanceKm": 7.1
+      },
+      "spo2": 98,
+      "stress": {
+        "load": 22
+      }
+    },
+    {
+      "date": "2026-04-15",
+      "hr": [
+        58,
+        61,
+        60,
+        63,
+        59
+      ],
+      "sleep": {
+        "totalMinutes": 455,
+        "startTime": "22:20",
+        "endTime": "06:15",
+        "stages": {
+          "deep": 91,
+          "light": 207,
+          "rem": 104,
+          "awake": 24
+        },
+        "score": 88
+      },
+      "activity": {
+        "steps": 9000,
+        "calories": 2400,
+        "activeMinutes": 44,
+        "distanceKm": 6.7
+      },
+      "spo2": 97,
+      "stress": {
+        "load": 25
+      }
     }
   ]
 }
