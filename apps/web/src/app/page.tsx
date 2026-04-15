@@ -37,7 +37,7 @@ export default function HomePage() {
   }, [error, showToast]);
 
   const briefData = {
-    status: (data?.statusColor || (data?.meta.finishReason === 'fallback' ? 'warning' : 'good')) as StatusColor,
+    status: mapApiStatusToUi(data?.statusColor, data?.meta.finishReason),
     title: '今日简报',
     summary: data?.summary || (error ? '无法获取简报数据，请检查网络连接。' : '正在为您准备今日健康简报...'),
     microTips: data?.microTips || [],
@@ -241,4 +241,20 @@ function hideSingleAxis(axis: Record<string, unknown>) {
     axisTick: { ...axisTick, show: false },
     splitLine: { ...splitLine, show: false },
   };
+}
+
+/**
+ * 将 API 返回的 AgentStatusColor 映射为 UI 组件期望的 StatusColor。
+ * API 使用 'error' 表示红色状态，UI 使用 'alert'。
+ */
+function mapApiStatusToUi(
+  apiStatus?: string,
+  finishReason?: string,
+): StatusColor {
+  if (apiStatus === 'error') return 'alert';
+  if (apiStatus === 'warning') return 'warning';
+  if (apiStatus === 'good') return 'good';
+  // fallback 时显示警告色
+  if (finishReason === 'fallback') return 'warning';
+  return 'good';
 }
