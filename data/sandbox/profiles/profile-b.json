@@ -194,6 +194,74 @@
       "activity": { "steps": 5300, "calories": 1910, "activeMinutes": 24, "distanceKm": 3.9 },
       "spo2": 96,
       "stress": { "load": 45 }
+    },
+    {
+      "date": "2026-04-11",
+      "hr": [71, 77, 74, 79, 72],
+      "sleep": {
+        "totalMinutes": 330,
+        "startTime": "23:25",
+        "endTime": "06:05",
+        "stages": { "deep": 50, "light": 155, "rem": 64, "awake": 31 },
+        "score": 55
+      },
+      "activity": { "steps": 4800, "calories": 1860, "activeMinutes": 21, "distanceKm": 3.5 },
+      "spo2": 96,
+      "stress": { "load": 50 }
+    },
+    {
+      "date": "2026-04-12",
+      "hr": [68, 73, 70, 75, 69],
+      "sleep": {
+        "totalMinutes": 360,
+        "startTime": "23:00",
+        "endTime": "06:00",
+        "stages": { "deep": 64, "light": 170, "rem": 74, "awake": 22 },
+        "score": 62
+      },
+      "activity": { "steps": 6000, "calories": 1980, "activeMinutes": 29, "distanceKm": 4.4 },
+      "spo2": 95,
+      "stress": { "load": 41 }
+    },
+    {
+      "date": "2026-04-13",
+      "hr": [70, 76, 73, 78, 71],
+      "sleep": {
+        "totalMinutes": 310,
+        "startTime": "23:40",
+        "endTime": "05:50",
+        "stages": { "deep": 42, "light": 148, "rem": 58, "awake": 32 },
+        "score": 51
+      },
+      "activity": { "steps": 4100, "calories": 1790, "activeMinutes": 16, "distanceKm": 3.0 },
+      "stress": { "load": 54 }
+    },
+    {
+      "date": "2026-04-14",
+      "hr": [72, 78, 75, 80, 73],
+      "sleep": {
+        "totalMinutes": 340,
+        "startTime": "23:20",
+        "endTime": "06:00",
+        "stages": { "deep": 54, "light": 160, "rem": 68, "awake": 28 },
+        "score": 58
+      },
+      "spo2": 96,
+      "stress": { "load": 48 }
+    },
+    {
+      "date": "2026-04-15",
+      "hr": [69, 74, 71, 76, 70],
+      "sleep": {
+        "totalMinutes": 345,
+        "startTime": "23:15",
+        "endTime": "06:00",
+        "stages": { "deep": 56, "light": 163, "rem": 70, "awake": 26 },
+        "score": 59
+      },
+      "activity": { "steps": 5400, "calories": 1920, "activeMinutes": 25, "distanceKm": 3.9 },
+      "spo2": 95,
+      "stress": { "load": 46 }
     }
   ]
 }
