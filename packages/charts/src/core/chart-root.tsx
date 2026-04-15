@@ -6,6 +6,7 @@ import {
   TooltipComponent,
   LegendComponent,
   DataZoomComponent,
+  TitleComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import type { ChartRootProps } from './types';
@@ -19,6 +20,7 @@ echarts.use([
   TooltipComponent,
   LegendComponent,
   DataZoomComponent,
+  TitleComponent,
   CanvasRenderer,
 ]);
 
