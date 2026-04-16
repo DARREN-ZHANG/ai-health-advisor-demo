@@ -62,20 +62,28 @@ export function ChartTokenRenderer({ tokenId }: ChartTokenRendererProps) {
   }, [data, tokenId]);
 
   return (
-    <Card className="bg-slate-900 border-slate-700 p-3 flex flex-col gap-2 w-full max-w-[300px]">
+    <Card className="bg-slate-900 border-slate-700 p-4 flex flex-col gap-3 w-full">
       <div className="flex justify-between items-center">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-slate-700 pl-2">
           {tokenMeta?.label || tokenId}
         </span>
-        <span className="text-[10px] text-blue-500 font-medium cursor-pointer hover:underline">详情 →</span>
+        <button className="text-[10px] text-blue-500 font-bold hover:text-blue-400 transition-colors bg-blue-500/5 px-2 py-1 rounded">
+          详情 →
+        </button>
       </div>
-      <div className="h-20 w-full bg-slate-950/50 rounded flex items-center justify-center overflow-hidden">
+      <div className="h-32 w-full bg-slate-950/40 rounded-lg flex items-center justify-center overflow-hidden border border-slate-800/50">
         {isLoading ? (
-          <div className="w-full h-full bg-slate-800 animate-pulse" />
+          <div className="w-full h-full bg-slate-900/50 animate-pulse flex items-center justify-center">
+            <div className="flex gap-1">
+              <div className="w-1 h-1 bg-slate-700 rounded-full animate-bounce" />
+              <div className="w-1 h-1 bg-slate-700 rounded-full animate-bounce [animation-delay:0.2s]" />
+              <div className="w-1 h-1 bg-slate-700 rounded-full animate-bounce [animation-delay:0.4s]" />
+            </div>
+          </div>
         ) : option ? (
-          <MicroChart option={option} height={70} />
+          <MicroChart option={option} height={110} />
         ) : (
-          <span className="text-[10px] text-slate-600">
+          <span className="text-xs text-slate-600 font-medium">
             {!getChartBuilder(tokenId) ? '暂未注册渲染器' : '无数据'}
           </span>
         )}

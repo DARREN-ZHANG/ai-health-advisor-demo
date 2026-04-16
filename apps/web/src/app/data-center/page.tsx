@@ -1,6 +1,6 @@
 'use client';
 
-import { Container, Section, Modal } from '@health-advisor/ui';
+import { Container, Section, Drawer } from '@health-advisor/ui';
 import { ChartRoot } from '@health-advisor/charts';
 import { DataCenterControls } from '@/components/data-center/DataCenterControls';
 import { ChartContainer } from '@/components/data-center/ChartContainer';
@@ -26,7 +26,7 @@ const tabLabels: Record<string, string> = {
 export default function DataCenterPage() {
   const { activeTab, timeframe } = useDataCenterStore();
   const { currentProfileId } = useProfileStore();
-  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [isSummaryDrawerOpen, setIsSummaryDrawerOpen] = useState(false);
 
   // 获取图表数据
   const { data: chartData, isLoading, isFetching, error } = useDataCenterQuery(currentProfileId, activeTab, timeframe);
@@ -43,7 +43,7 @@ export default function DataCenterPage() {
   } = useViewSummary(currentProfileId, activeTab, timeframe);
 
   const handleSummaryClick = () => {
-    setIsSummaryModalOpen(true);
+    setIsSummaryDrawerOpen(true);
     fetchSummary();
   };
 
@@ -104,63 +104,81 @@ export default function DataCenterPage() {
       </div>
 
       {/* 悬浮总结按钮 */}
-      <ViewSummaryTrigger onClick={handleSummaryClick} isLoading={isSummaryLoading || isSummaryFetching} />
+      {!isSummaryDrawerOpen && (
+        <ViewSummaryTrigger onClick={handleSummaryClick} isLoading={isSummaryLoading || isSummaryFetching} />
+      )}
 
-      {/* AI 总结 Modal */}
-      <Modal
-        open={isSummaryModalOpen}
-        onClose={() => setIsSummaryModalOpen(false)}
+      {/* AI 总结 Drawer */}
+      <Drawer
+        open={isSummaryDrawerOpen}
+        onClose={() => setIsSummaryDrawerOpen(false)}
         title="AI 视图总结"
+        size="lg"
       >
-        <div className="space-y-4 py-2">
+        <div className="space-y-6 py-2">
           {(isSummaryLoading || isSummaryFetching) ? (
-            <div className="space-y-3 animate-pulse">
+            <div className="space-y-4 animate-pulse">
               <div className="h-4 bg-slate-800 rounded w-full" />
-              <div className="h-4 bg-slate-800 rounded w-5/6" />
-              <div className="h-4 bg-slate-800 rounded w-4/6" />
+              <div className="h-4 bg-slate-800 rounded w-11/12" />
+              <div className="h-4 bg-slate-800 rounded w-4/5" />
+              <div className="h-32 bg-slate-800/50 rounded-xl w-full mt-8" />
             </div>
           ) : summaryData ? (
             <>
               <ResponseMetaRow response={summaryData} />
-              <p className="text-slate-300 leading-relaxed text-sm">
-                {summaryData.summary}
-              </p>
+              
+              <div className="bg-slate-800/30 rounded-xl p-5 border border-slate-800/50">
+                <p className="text-slate-200 leading-relaxed text-sm whitespace-pre-wrap font-medium">
+                  {summaryData.summary}
+                </p>
+              </div>
+
               {summaryData.chartTokens && summaryData.chartTokens.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-slate-800">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">相关图表</p>
-                  <div className="flex flex-col gap-2">
+                <div className="space-y-4 pt-4">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest border-l-2 border-blue-500 pl-2">
+                    相关数据趋势
+                  </p>
+                  <div className="flex flex-col gap-4">
                     {summaryData.chartTokens.map((token, i) => (
                       <ChartTokenRenderer key={i} tokenId={token} />
                     ))}
                   </div>
                 </div>
               )}
+
               {summaryData.microTips.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-slate-800">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">建议动作</p>
-                  <div className="flex flex-wrap gap-2">
+                <div className="space-y-4 pt-4">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest border-l-2 border-emerald-500 pl-2">
+                    建议动作
+                  </p>
+                  <div className="grid grid-cols-1 gap-3">
                     {summaryData.microTips.map((tip, i) => (
-                      <span key={i} className="text-xs px-2 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                        {tip}
-                      </span>
+                      <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-emerald-400">
+                        <span className="mt-1 text-sm">✨</span>
+                        <span className="text-sm font-medium">{tip}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
             </>
           ) : (
-            <p className="text-slate-500 text-center py-8">无法获取总结内容</p>
+            <div className="flex flex-col items-center justify-center py-20 space-y-4 text-slate-500">
+              <div className="text-4xl">📭</div>
+              <p>无法获取总结内容</p>
+            </div>
           )}
-          <div className="pt-4 flex justify-end">
+          
+          <div className="pt-8 pb-4 flex justify-center">
             <button
-              onClick={() => setIsSummaryModalOpen(false)}
-              className="text-xs text-slate-400 hover:text-slate-200"
+              onClick={() => setIsSummaryDrawerOpen(false)}
+              className="px-6 py-2 text-sm font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-full transition-all border border-slate-800"
             >
-              关闭
+              关闭回顾
             </button>
           </div>
         </div>
-      </Modal>
+      </Drawer>
     </Container>
   );
 }
