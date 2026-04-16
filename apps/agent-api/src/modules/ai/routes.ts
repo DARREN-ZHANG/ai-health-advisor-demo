@@ -10,6 +10,7 @@ import type { AiRequestMeta } from '../../plugins/request-context.js';
 interface MorningBriefBody {
   profileId: string;
   pageContext: PageContext;
+  bustCache?: boolean;
 }
 
 interface ViewSummaryBody {
@@ -51,7 +52,12 @@ export async function aiRoutes(app: FastifyInstance) {
 
   // BE-018: /ai/morning-brief
   app.post<{ Body: MorningBriefBody }>('/ai/morning-brief', async (request, reply) => {
-    const { profileId, pageContext } = request.body;
+    const { profileId, pageContext, bustCache } = request.body;
+
+    // 手动刷新时清除该 profile 的当日缓存，确保调用 LLM
+    if (bustCache) {
+      briefCache.invalidate(profileId);
+    }
 
     const parsed = PageContextSchema.safeParse(pageContext);
     if (!parsed.success) {

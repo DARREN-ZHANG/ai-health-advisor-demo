@@ -46,6 +46,12 @@ export class BriefCache {
     this.store.set(key, { date: today, response, cachedAt: Date.now() });
   }
 
+  /** 清除指定 profile 的当日缓存 */
+  invalidate(profileId: string): void {
+    const today = getToday();
+    this.store.delete(`${profileId}:${today}`);
+  }
+
   /** 清除所有过期条目 */
   evictExpired(): void {
     const now = Date.now();

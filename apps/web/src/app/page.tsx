@@ -7,24 +7,34 @@ import { MorningBriefCard } from '@/components/homepage/MorningBriefCard';
 import { MicroInsightPills } from '@/components/homepage/MicroInsightPills';
 import { HistoricalTrendsGrid } from '@/components/homepage/HistoricalTrendsGrid';
 import { useProfileStore } from '@/stores/profile.store';
-import { useMorningBrief } from '@/hooks/use-ai-query';
+import { useMorningBrief, useRefetchBrief } from '@/hooks/use-ai-query';
+import { queryKeys } from '@/lib/query-keys';
 import { useChartDataQuery } from '@/hooks/use-data-query';
 import type { StatusColor } from '@health-advisor/ui';
 import type { EChartsOption } from 'echarts';
 
 import { useUIStore } from '@/stores/ui.store';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 
 export default function HomePage() {
   const { currentProfileId } = useProfileStore();
   const { showToast } = useUIStore();
-  const { data, isLoading, error, refetch, isFetching } = useMorningBrief(currentProfileId);
+  const queryClient = useQueryClient();
+  const { data, isLoading, error, isFetching } = useMorningBrief(currentProfileId);
+  const refetchBrief = useRefetchBrief(currentProfileId, {
+    onSuccess: (result) => {
+      if (result && currentProfileId) {
+        queryClient.setQueryData(queryKeys.homepage.brief(currentProfileId), result);
+      }
+    },
+  });
   const hrvTrend = useChartDataQuery(currentProfileId, [ChartTokenId.HRV_7DAYS]);
   const sleepTrend = useChartDataQuery(currentProfileId, [ChartTokenId.SLEEP_7DAYS]);
   const activityTrend = useChartDataQuery(currentProfileId, [ChartTokenId.ACTIVITY_7DAYS]);
   const stressTrend = useChartDataQuery(currentProfileId, [ChartTokenId.STRESS_LOAD_7DAYS]);
 
-  const isAnyLoading = isLoading || isFetching;
+  const isAnyLoading = isLoading || isFetching || refetchBrief.isPending;
 
   useEffect(() => {
     if (error) {
@@ -106,13 +116,13 @@ export default function HomePage() {
             {describeBriefSource(data?.source)}
           </p>
         </div>
-        <Button 
-          variant="ghost" 
-          onClick={() => refetch()} 
+        <Button
+          variant="ghost"
+          onClick={() => refetchBrief.mutate()}
           disabled={isAnyLoading}
           className="text-xs text-slate-500 h-auto py-1 px-2"
         >
-          {isFetching ? '正在刷新...' : '手动刷新'}
+          {refetchBrief.isPending ? '正在刷新...' : '手动刷新'}
         </Button>
       </header>
 

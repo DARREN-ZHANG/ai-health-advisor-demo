@@ -18,7 +18,7 @@ export function useMorningBrief(profileId: string | undefined) {
     queryKey: queryKeys.homepage.brief(profileId || ''),
     queryFn: async () => {
       if (!profileId) return null;
-      
+
       const pageContext: PageContext = {
         profileId,
         page: 'homepage',
@@ -33,6 +33,34 @@ export function useMorningBrief(profileId: string | undefined) {
     enabled: !!profileId,
     staleTime: 30 * 60 * 1000, // 30 minutes
     retry: 1,
+  });
+}
+
+/**
+ * 手动刷新 morning brief，绕过前后端缓存强制调用 LLM。
+ * 使用 useMutation 而非 refetch，以便传递 bustCache 标记。
+ */
+export function useRefetchBrief(
+  profileId: string | undefined,
+  options?: { onSuccess?: (data: AgentResponseEnvelope | null) => void },
+) {
+  return useMutation({
+    mutationFn: async () => {
+      if (!profileId) return null;
+
+      const pageContext: PageContext = {
+        profileId,
+        page: 'homepage',
+        timeframe: 'week',
+      };
+
+      return apiClient.post<AgentResponseEnvelope>('/ai/morning-brief', {
+        profileId,
+        pageContext,
+        bustCache: true,
+      });
+    },
+    onSuccess: options?.onSuccess,
   });
 }
 
