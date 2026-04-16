@@ -55,15 +55,21 @@ export function MorningBriefCard({
           </p>
 
           {microTips.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-2">
-              {microTips.map((tip, index) => (
-                <span
-                  key={index}
-                  className="px-2 py-1 text-xs rounded-full bg-slate-700 text-slate-300 border border-slate-600"
-                >
-                  {tip}
-                </span>
-              ))}
+            <div className="space-y-3 pt-4 border-t border-slate-800/50">
+              <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-1 h-3 bg-blue-500 rounded-full" />
+                智能洞察
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {microTips.map((tip, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                  >
+                    {tip}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>

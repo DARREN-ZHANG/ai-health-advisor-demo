@@ -2,6 +2,7 @@
 
 import { m } from 'framer-motion';
 import { useUIStore } from '@/stores/ui.store';
+import { ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/outline';
 
 export function AIAdvisorTrigger() {
   const { toggleAdvisorDrawer, isAdvisorDrawerOpen } = useUIStore();
@@ -17,9 +18,7 @@ export function AIAdvisorTrigger() {
         className="w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/40 flex items-center justify-center text-2xl border-2 border-blue-400/30 hover:bg-blue-500 transition-colors"
         aria-label="打开 AI 顾问"
       >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+        <ChatBubbleOvalLeftEllipsisIcon className="w-7 h-7" />
         <m.div
           className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-slate-950"
           initial={{ scale: 0 }}

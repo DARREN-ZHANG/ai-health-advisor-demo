@@ -1,4 +1,5 @@
 import { useEffect, useCallback, type ReactNode, type HTMLAttributes } from 'react';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 
 export interface ModalProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   /** 是否打开 */
@@ -59,14 +60,7 @@ export function Modal({
               className="text-slate-400 hover:text-slate-200 p-1"
               aria-label="关闭"
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M4 4l8 8M12 4l-8 8"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-              </svg>
+              <XMarkIcon className="w-5 h-5" />
             </button>
           </div>
         )}

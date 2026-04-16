@@ -121,105 +121,107 @@ function GodModePanelContent() {
     <Drawer
       open={isOpen}
       onClose={handleClose}
-      side="left"
-      title={<span className="font-bold flex items-center gap-2 text-yellow-500">GOD MODE <span className="text-[10px] bg-yellow-500 text-slate-900 px-1.5 py-0.5 rounded uppercase">ADMIN</span></span>}
-      className="w-[320px]"
+      side="bottom"
+      size="lg"
+      title={<span className="font-bold flex items-center gap-2 text-yellow-500 uppercase tracking-tighter">God Mode <span className="text-[10px] bg-yellow-500 text-slate-950 px-1.5 py-0.5 rounded font-black">ADMIN</span></span>}
     >
-      <div className="flex flex-col h-full gap-6 overflow-y-auto no-scrollbar pb-6">
-        {/* 身份切换 */}
-        <Section title="Profile Switch" className="space-y-3">
-          <div className="grid grid-cols-1 gap-2">
-            {['profile-a', 'profile-b', 'profile-c'].map((id) => (
-              <button
-                key={id}
-                disabled={isSwitchingProfile || isRunningScenario}
-                onClick={() => handleProfileSwitch(id)}
-                className={`px-4 py-2 rounded-lg text-sm text-left transition-all border ${
-                  currentProfileId === id
-                    ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20'
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:bg-slate-700/50'
-                } ${isSwitchingProfile || isRunningScenario ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {id === 'profile-a' ? '👨‍💻 用户 A (平衡型)' : id === 'profile-b' ? '🏃 用户 B (运动型)' : '🧘 用户 C (静息型)'}
-                {isSwitchingProfile && currentProfileId !== id && ' ...'}
-              </button>
-            ))}
-          </div>
-        </Section>
-
-        {/* 场景模拟 */}
-        <Section title="Scenario Scents" className="space-y-3">
-          {isLoadingState ? (
-            <div className="grid grid-cols-2 gap-2">
-              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 rounded-xl bg-slate-800" />)}
-            </div>
-          ) : scenarios.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-700 px-3 py-4 text-xs text-slate-500">
-              当前没有可用的预置场景。
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              {scenarios.map((s) => (
+      <div className="flex flex-col h-full -mx-5 -my-4 bg-slate-950/20">
+        <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-6 space-y-8 pb-12">
+          {/* 身份切换 */}
+          <Section title="Profile Switch" className="space-y-4">
+            <div className="grid grid-cols-1 gap-2.5">
+              {['profile-a', 'profile-b', 'profile-c'].map((id) => (
                 <button
-                  key={s.scenarioId}
-                  disabled={isRunningScenario}
-                  onClick={() => handleScenarioRun(s)}
-                  className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${
-                    activeScenarioId === s.scenarioId
-                      ? 'bg-yellow-500/10 border-yellow-500 text-yellow-500 shadow-lg shadow-yellow-500/10'
-                      : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:bg-slate-700/50'
-                  } ${isRunningScenario ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  key={id}
+                  disabled={isSwitchingProfile || isRunningScenario}
+                  onClick={() => handleProfileSwitch(id)}
+                  className={`px-5 py-3 rounded-2xl text-sm font-medium text-left transition-all border-2 ${
+                    currentProfileId === id
+                      ? 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-500/20'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-800/80'
+                  } ${isSwitchingProfile || isRunningScenario ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  <span className="text-xl">{getScenarioIcon(s.type)}</span>
-                  <span className="text-[10px] font-bold text-center leading-tight">{s.label}</span>
-                  {isRunningScenario && activeScenarioId === s.scenarioId && <span className="text-[8px] animate-pulse">Running...</span>}
+                  {id === 'profile-a' ? '👨‍💻 用户 A (平衡型)' : id === 'profile-b' ? '🏃 用户 B (运动型)' : '🧘 用户 C (静息型)'}
+                  {isSwitchingProfile && currentProfileId !== id && ' ...'}
                 </button>
               ))}
             </div>
-          )}
-        </Section>
+          </Section>
 
-        {/* 运行时操作 */}
-        <Section title="Runtime Actions" className="space-y-3">
-          <div className="space-y-2">
-            <Button
-              variant="secondary"
-              disabled={isRunningScenario}
-              onClick={handleInjectSportEvent}
-              className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700 hover:bg-slate-700"
-            >
-              {isInjectingEvent ? '处理中...' : '⚡ 注入即时运动事件'}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={isRunningScenario}
-              onClick={handleSimulateLowHRV}
-              className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700 hover:bg-slate-700"
-            >
-              {isOverridingMetric ? '处理中...' : '📉 模拟极低 HRV 状态'}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={isRunningScenario}
-              onClick={handleSimulateInsomnia}
-              className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700 hover:bg-slate-700"
-            >
-              {isInjectingEvent ? '处理中...' : '🔴 模拟睡眠缺失'}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={isRunningScenario}
-              onClick={handleReset}
-              className="w-full justify-start gap-2 text-xs py-2 bg-slate-800 border-slate-700 hover:bg-slate-700"
-            >
-              {isResetting ? '处理中...' : '🧪 重置所有 Overrides'}
-            </Button>
-          </div>
-        </Section>
+          {/* 场景模拟 */}
+          <Section title="Scenario Simulation" className="space-y-4">
+            {isLoadingState ? (
+              <div className="grid grid-cols-2 gap-3">
+                {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 rounded-2xl bg-slate-900" />)}
+              </div>
+            ) : scenarios.length === 0 ? (
+              <div className="rounded-2xl border-2 border-dashed border-slate-800 px-4 py-8 text-center text-xs text-slate-500">
+                当前没有可用的预置场景。
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {scenarios.map((s) => (
+                  <button
+                    key={s.scenarioId}
+                    disabled={isRunningScenario}
+                    onClick={() => handleScenarioRun(s)}
+                    className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${
+                      activeScenarioId === s.scenarioId
+                        ? 'bg-yellow-500/10 border-yellow-500 text-yellow-500 shadow-xl shadow-yellow-500/10'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-800/80'
+                    } ${isRunningScenario ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <span className="text-2xl">{getScenarioIcon(s.type)}</span>
+                    <span className="text-[11px] font-bold text-center leading-tight uppercase tracking-wide">{s.label}</span>
+                    {isRunningScenario && activeScenarioId === s.scenarioId && <span className="text-[8px] animate-pulse font-black">RUNNING</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </Section>
 
-        <div className="mt-auto pt-6 border-t border-slate-800">
-          <div className="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/10 text-[10px] text-yellow-500/60 leading-relaxed italic">
-            提示：God-Mode 操作会实时触发全链路 Data Re-validation，不推荐在正式生产环境下开启。
+          {/* 运行时操作 */}
+          <Section title="Quick Actions" className="space-y-4">
+            <div className="grid grid-cols-1 gap-3">
+              <Button
+                variant="secondary"
+                disabled={isRunningScenario}
+                onClick={handleInjectSportEvent}
+                className="w-full justify-start gap-3 text-sm py-4 bg-slate-900 border-2 border-slate-800 hover:border-slate-700 rounded-2xl"
+              >
+                {isInjectingEvent ? '处理中...' : '⚡ 注入即时运动事件'}
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={isRunningScenario}
+                onClick={handleSimulateLowHRV}
+                className="w-full justify-start gap-3 text-sm py-4 bg-slate-900 border-2 border-slate-800 hover:border-slate-700 rounded-2xl"
+              >
+                {isOverridingMetric ? '处理中...' : '📉 模拟极低 HRV 状态'}
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={isRunningScenario}
+                onClick={handleSimulateInsomnia}
+                className="w-full justify-start gap-3 text-sm py-4 bg-slate-900 border-2 border-slate-800 hover:border-slate-700 rounded-2xl"
+              >
+                {isInjectingEvent ? '处理中...' : '🔴 模拟睡眠缺失'}
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={isRunningScenario}
+                onClick={handleReset}
+                className="w-full justify-start gap-3 text-sm py-4 bg-slate-900 border-2 border-slate-800 hover:border-slate-700 rounded-2xl"
+              >
+                {isResetting ? '处理中...' : '🧪 重置所有 Overrides'}
+              </Button>
+            </div>
+          </Section>
+
+          <div className="pt-4">
+            <div className="p-4 rounded-2xl bg-yellow-500/5 border-2 border-yellow-500/10 text-xs text-yellow-500/60 leading-relaxed italic text-center">
+              提示：God Mode 操作会实时触发全链路数据重验证。
+            </div>
           </div>
         </div>
       </div>

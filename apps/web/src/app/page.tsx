@@ -4,7 +4,6 @@ import { Container, Section, Button } from '@health-advisor/ui';
 import { CHART_TOKEN_META, ChartTokenId } from '@health-advisor/shared';
 import { getChartBuilder, type StandardTimeSeries } from '@health-advisor/charts';
 import { MorningBriefCard } from '@/components/homepage/MorningBriefCard';
-import { MicroInsightPills } from '@/components/homepage/MicroInsightPills';
 import { HistoricalTrendsGrid } from '@/components/homepage/HistoricalTrendsGrid';
 import { useProfileStore } from '@/stores/profile.store';
 import { useMorningBrief, useRefetchBrief } from '@/hooks/use-ai-query';
@@ -53,7 +52,6 @@ export default function HomePage() {
     microTips: data?.microTips || [],
   };
 
-  const insights = data?.microTips || [];
   const trends = useMemo(() => ([
     buildTrendItem({
       id: 'hrv',
@@ -132,11 +130,6 @@ export default function HomePage() {
           {...briefData} 
           isLoading={isAnyLoading} 
         />
-      </Section>
-
-      {/* 微贴士部分 */}
-      <Section title="智能洞察" className="space-y-3">
-        <MicroInsightPills insights={insights} />
       </Section>
 
       {/* 历史趋势概览 */}

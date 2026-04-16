@@ -5,6 +5,7 @@ import { useActiveSensingStore } from '@/stores/active-sensing.store';
 import { m, AnimatePresence } from 'framer-motion';
 import { useUIStore } from '@/stores/ui.store';
 import type { ActiveSensingBanner as ActiveSensingBannerPayload } from '@/stores/active-sensing.store';
+import { XMarkIcon, CpuChipIcon } from '@heroicons/react/24/outline';
 
 export function ActiveSensingBanner() {
   const { activeBanner, isVisible, hideBanner } = useActiveSensingStore();
@@ -39,13 +40,11 @@ export function ActiveSensingBanner() {
             <div className="p-4 flex flex-col gap-2">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">🤖</span>
+                  <CpuChipIcon className="w-5 h-5 text-blue-100" />
                   <span className="text-xs font-bold text-blue-100 uppercase tracking-widest">AI Proactive Insight</span>
                 </div>
                 <button onClick={hideBanner} className="text-blue-200 hover:text-white">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
+                  <XMarkIcon className="w-5 h-5" />
                 </button>
               </div>
               

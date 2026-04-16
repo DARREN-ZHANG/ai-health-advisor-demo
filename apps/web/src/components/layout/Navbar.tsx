@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Container, Button } from '@health-advisor/ui';
 import { useGodModeStore } from '@/stores/god-mode.store';
+import { HeartIcon } from '@heroicons/react/24/solid';
 
 const navItems = [
   { href: '/', label: '首页' },
@@ -18,8 +19,11 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
       <Container className="h-14 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/" className="font-bold text-slate-100 tracking-tight">
-            HEALTH <span className="text-blue-500">ADVISOR</span>
+          <Link href="/" className="font-bold text-slate-100 tracking-tight flex items-center gap-2">
+            <HeartIcon className="w-6 h-6 text-blue-500" />
+            <span>
+              HEALTH <span className="text-blue-500">ADVISOR</span>
+            </span>
           </Link>
           <div className="hidden md:flex items-center gap-6">
             {navItems.map((item) => (

@@ -2,6 +2,7 @@
 
 import { Button } from '@health-advisor/ui';
 import { m } from 'framer-motion';
+import { SparklesIcon } from '@heroicons/react/24/outline';
 
 interface ViewSummaryTriggerProps {
   onClick: () => void;
@@ -10,7 +11,7 @@ interface ViewSummaryTriggerProps {
 
 export function ViewSummaryTrigger({ onClick, isLoading = false }: ViewSummaryTriggerProps) {
   return (
-    <div className="fixed bottom-24 right-24 z-40 md:bottom-8 md:right-24">
+    <div className="fixed bottom-44 right-6 z-40 md:bottom-28 md:right-6">
       <m.div
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -28,7 +29,7 @@ export function ViewSummaryTrigger({ onClick, isLoading = false }: ViewSummaryTr
             </div>
           ) : (
             <>
-              <span className="text-lg">✨</span>
+              <SparklesIcon className="w-5 h-5 text-yellow-400" />
               <span className="font-bold">总结当前视图</span>
             </>
           )}

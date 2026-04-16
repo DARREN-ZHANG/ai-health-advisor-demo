@@ -13,6 +13,7 @@ import { useDataChartOption } from '@/hooks/use-data-chart-option';
 import { useViewSummary } from '@/hooks/use-ai-query';
 import { useState } from 'react';
 import type { AgentResponseEnvelope, DataCenterResponse, DataTab, StressTimelineResponse } from '@health-advisor/shared';
+import { SparklesIcon, InboxIcon } from '@heroicons/react/24/outline';
 
 const tabLabels: Record<string, string> = {
   sleep: '睡眠分析',
@@ -154,7 +155,7 @@ export default function DataCenterPage() {
                   <div className="grid grid-cols-1 gap-3">
                     {summaryData.microTips.map((tip, i) => (
                       <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-emerald-400">
-                        <span className="mt-1 text-sm">✨</span>
+                        <SparklesIcon className="w-4 h-4 mt-0.5 shrink-0" />
                         <span className="text-sm font-medium">{tip}</span>
                       </div>
                     ))}
@@ -164,7 +165,7 @@ export default function DataCenterPage() {
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-20 space-y-4 text-slate-500">
-              <div className="text-4xl">📭</div>
+              <InboxIcon className="w-12 h-12 opacity-20" />
               <p>无法获取总结内容</p>
             </div>
           )}

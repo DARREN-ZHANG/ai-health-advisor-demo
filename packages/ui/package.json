@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "@health-advisor/shared": "workspace:*",
+    "@heroicons/react": "^2.2.0",
+    "framer-motion": "^11.11.17",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

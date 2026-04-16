@@ -89,19 +89,17 @@ export default function UiDemoPage() {
                   <IconButton>+</IconButton>
                 </div>
                 <div className="flex gap-3">
-                  <Button onClick={() => setDrawerOpen(true)}>打开 Drawer</Button>
-                  <Button onClick={() => setSheetOpen(true)} variant="secondary">打开 Sheet</Button>
+                  <Button onClick={() => setDrawerOpen(true)}>打开 Bottom Drawer</Button>
                   <Button onClick={() => setModalOpen(true)} variant="ghost">打开 Modal</Button>
                 </div>
               </div>
 
-              <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title="抽屉面板">
-                <p className="text-sm text-slate-400">侧边抽屉内容区域</p>
+              <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title="抽屉面板" side="bottom" size="md">
+                <div className="space-y-4">
+                  <p className="text-sm text-slate-400">底部抽屉内容区域，支持弹性动画与磨砂背景。</p>
+                  <Button onClick={() => setDrawerOpen(false)} className="w-full">关闭</Button>
+                </div>
               </Drawer>
-
-              <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="底部面板">
-                <p className="text-sm text-slate-400">底部弹出面板内容区域</p>
-              </Sheet>
 
               <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="模态弹窗">
                 <p className="text-sm text-slate-400">弹窗内容区域</p>
