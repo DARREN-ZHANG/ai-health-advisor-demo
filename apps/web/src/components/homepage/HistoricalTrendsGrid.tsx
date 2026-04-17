@@ -39,16 +39,19 @@ export function HistoricalTrendsGrid({ trends }: HistoricalTrendsGridProps) {
                 {trend.label}
               </span>
               {trend.change !== undefined && (
-                <span 
-                  className={`text-xs px-1.5 py-0.5 rounded ${
-                    trend.change >= 0 ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'
-                  }`}
-                >
-                  {trend.change >= 0 ? '+' : ''}{trend.change}%
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-slate-400">较昨日</span>
+                  <span
+                    className={`text-xs px-1.5 py-0.5 rounded ${
+                      trend.change >= 0 ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'
+                    }`}
+                  >
+                    {trend.change >= 0 ? '+' : ''}{trend.change}%
+                  </span>
+                </div>
               )}
             </div>
-            
+
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-bold text-slate-100">{trend.value}</span>
               <span className="text-sm text-slate-500">{trend.unit}</span>

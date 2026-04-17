@@ -27,8 +27,14 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const sourceLabel = message.source === 'fallback'
     ? 'Fallback'
     : message.source === 'llm'
-      ? 'LLM'
+      ? 'AI Advisor'
       : message.source;
+
+  const statusLabel = message.statusColor === 'error'
+    ? 'Serious'
+    : message.statusColor === 'warning'
+      ? 'Concern'
+      : message.statusColor;
 
   const statusClassName = message.statusColor === 'error'
     ? 'text-red-400 bg-red-400/10'
@@ -65,7 +71,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           {message.statusColor && (
             <span className={`rounded px-1.5 py-0.5 uppercase tracking-wider ${statusClassName}`}>
-              {message.statusColor}
+              {statusLabel}
             </span>
           )}
           {message.source && (

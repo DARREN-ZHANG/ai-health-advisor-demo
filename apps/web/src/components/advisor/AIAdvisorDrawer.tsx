@@ -179,7 +179,7 @@ export function AIAdvisorDrawer() {
               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               {isTimeoutHint && (
-                <span className="text-[10px] text-yellow-500/80 ml-2">响应较慢，正在等待...</span>
+                <span className="text-[10px] text-yellow-500/80 ml-2">仔细分析中...</span>
               )}
             </div>
           </div>

@@ -170,14 +170,6 @@ export default function DataCenterPage() {
             </div>
           )}
           
-          <div className="pt-8 pb-4 flex justify-center">
-            <button
-              onClick={() => setIsSummaryDrawerOpen(false)}
-              className="px-6 py-2 text-sm font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-full transition-all border border-slate-800"
-            >
-              关闭回顾
-            </button>
-          </div>
         </div>
       </Drawer>
     </Container>
