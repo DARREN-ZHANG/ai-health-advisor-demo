@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, AI_REQUEST_TIMEOUT_MS } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
 import type { AgentResponseEnvelope, PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 
@@ -28,7 +28,7 @@ export function useMorningBrief(profileId: string | undefined) {
       return apiClient.post<AgentResponseEnvelope>('/ai/morning-brief', {
         profileId,
         pageContext,
-      });
+      }, { timeoutMs: AI_REQUEST_TIMEOUT_MS });
     },
     enabled: !!profileId,
     staleTime: 30 * 60 * 1000, // 30 minutes
@@ -58,7 +58,7 @@ export function useRefetchBrief(
         profileId,
         pageContext,
         bustCache: true,
-      });
+      }, { timeoutMs: AI_REQUEST_TIMEOUT_MS });
     },
     onSuccess: options?.onSuccess,
   });
@@ -84,7 +84,7 @@ export function useViewSummary(
       return apiClient.post<AgentResponseEnvelope>('/ai/view-summary', {
         profileId,
         pageContext,
-      });
+      }, { timeoutMs: AI_REQUEST_TIMEOUT_MS });
     },
     enabled: false, // 按需触发，不在页面加载时自动请求
     staleTime: 5 * 60 * 1000,
@@ -95,7 +95,7 @@ export function useViewSummary(
 export function useAdvisorChat() {
   return useMutation({
     mutationFn: (payload: ChatRequest) => {
-      return apiClient.post<AgentResponseEnvelope>('/ai/chat', payload);
+      return apiClient.post<AgentResponseEnvelope>('/ai/chat', payload, { timeoutMs: AI_REQUEST_TIMEOUT_MS });
     },
   });
 }

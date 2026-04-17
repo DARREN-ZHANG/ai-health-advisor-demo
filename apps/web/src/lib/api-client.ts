@@ -1,8 +1,10 @@
 import { env } from '@/config/env';
 import type { ApiResponse } from '@health-advisor/shared';
 
-/** 网络请求安全兜底超时（毫秒），远大于后端 AI 超时，用于防止请求永远挂起 */
+/** 网络请求安全兜底超时（毫秒），用于防止请求永远挂起 */
 const DEFAULT_TIMEOUT_MS = 30_000;
+/** AI 请求超时（毫秒），需大于后端 AI_TIMEOUT_MS 以等待 fallback 降级响应 */
+export const AI_REQUEST_TIMEOUT_MS = 65_000;
 /** AI 请求建议的 UI 等待阈值（毫秒），前端可据此展示 timeout 状态 */
 export const AI_UI_TIMEOUT_MS = 6_000;
 const SESSION_ID_STORAGE_KEY = 'session-id';
@@ -110,7 +112,7 @@ export const apiClient = {
   get: <T>(path: string, options?: RequestInit) =>
     request<T>(path, { ...options, method: 'GET' }),
 
-  post: <T>(path: string, body?: unknown, options?: RequestInit) =>
+  post: <T>(path: string, body?: unknown, options?: RequestInit & { timeoutMs?: number }) =>
     request<T>(path, {
       ...options,
       method: 'POST',
