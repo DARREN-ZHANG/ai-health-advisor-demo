@@ -125,8 +125,8 @@ function GodModePanelContent() {
       size="lg"
       title={<span className="font-bold flex items-center gap-2 text-yellow-500 uppercase tracking-tighter">God Mode <span className="text-[10px] bg-yellow-500 text-slate-950 px-1.5 py-0.5 rounded font-black">ADMIN</span></span>}
     >
-      <div className="flex flex-col h-full -mx-5 -my-4 bg-slate-950/20">
-        <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-6 space-y-8 pb-12">
+      <div className="flex h-full min-h-0 flex-col -mx-5 -my-4 bg-slate-950/20">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 space-y-8 pb-12">
           {/* 身份切换 */}
           <Section title="Profile Switch" className="space-y-4">
             <div className="grid grid-cols-1 gap-2.5">

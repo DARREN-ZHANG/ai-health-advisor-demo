@@ -9,6 +9,8 @@ export interface DrawerProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title
   onClose: () => void;
   /** 抽屉标题 */
   title?: ReactNode;
+  /** 头部操作区域 */
+  headerActions?: ReactNode;
   /** 抽屉方向 */
   side?: 'left' | 'right' | 'bottom';
   /** 抽屉大小 */
@@ -26,11 +28,11 @@ const sizeClasses = {
     full: 'w-screen',
   },
   bottom: {
-    sm: 'h-[40vh]',
-    md: 'h-[60vh]',
-    lg: 'h-[80vh]',
-    xl: 'h-[90vh]',
-    full: 'h-[98vh]',
+    sm: 'h-[40dvh]',
+    md: 'h-[60dvh]',
+    lg: 'h-[80dvh]',
+    xl: 'h-[90dvh]',
+    full: 'h-[98dvh]',
   }
 };
 
@@ -39,6 +41,7 @@ export function Drawer({
   open,
   onClose,
   title,
+  headerActions,
   side = 'bottom',
   size = 'md',
   className = '',
@@ -69,6 +72,7 @@ export function Drawer({
   const isRight = side === 'right';
   const sizeClass = isBottom ? sizeClasses.bottom[size] : sizeClasses.side[size];
 
+  // 关键修复：确保在 bottom-0 的情况下，高度不会溢出屏幕，且 flex-col 能正确工作
   const positionClass = isBottom 
     ? 'bottom-0 left-0 right-0 border-t rounded-t-[2.5rem]' 
     : `top-0 bottom-0 ${isRight ? 'right-0 border-l' : 'left-0 border-r'}`;
@@ -115,8 +119,8 @@ export function Drawer({
             initial="hidden"
             animate="visible"
             exit="exit"
-            className={`absolute ${positionClass} ${sizeClass} bg-slate-900 border-slate-800 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.6)] 
-              flex flex-col ${className}`}
+            className={`absolute ${positionClass} ${sizeClass} max-h-[98dvh] bg-slate-900 border-slate-800 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.6)] 
+              flex flex-col overflow-hidden ${className}`}
           >
             {isBottom && (
               <div className="w-full flex justify-center pt-5 pb-1 shrink-0">
@@ -125,19 +129,26 @@ export function Drawer({
             )}
 
             {title && (
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800/30 shrink-0">
-                <h2 className="text-xl font-black text-slate-100 tracking-tighter">{title}</h2>
-                <button
-                  onClick={onClose}
-                  className="text-slate-500 hover:text-slate-100 p-2.5 hover:bg-slate-800 rounded-2xl transition-all duration-200 active:scale-90"
-                  aria-label="关闭"
-                >
-                  <XMarkIcon className="w-6 h-6 stroke-[2.5]" />
-                </button>
+              <div className="flex items-center justify-between px-5 py-2.5 border-b border-slate-800 shrink-0">
+                <h2 className="text-lg font-black text-slate-100 tracking-tighter flex-1 truncate">{title}</h2>
+                <div className="flex items-center gap-1 shrink-0">
+                  {headerActions}
+                  <button
+                    onClick={onClose}
+                    className="text-slate-500 hover:text-slate-100 p-2 hover:bg-slate-800 rounded-2xl transition-all duration-200 active:scale-90"
+                    aria-label="关闭"
+                  >
+                    <XMarkIcon className="w-6 h-6 stroke-[2.5]" />
+                  </button>
+                </div>
               </div>
             )}
-            <div className="flex-1 overflow-y-auto px-5 py-4 scrollbar-hide selection:bg-blue-500/30">
-              {children}
+            
+            {/* 关键修复：子容器必须占据剩余空间，且内部滚动 */}
+            <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide selection:bg-blue-500/30">
+              <div className="px-5 py-4">
+                {children}
+              </div>
             </div>
           </m.div>
         </div>
