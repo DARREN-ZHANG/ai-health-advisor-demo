@@ -1,18 +1,13 @@
 services:
   - type: web
     name: health-advisor-api
-    env: node
+    env: docker
     region: singapore
     plan: free
-    buildCommand: NODE_ENV=development pnpm install && pnpm --filter @health-advisor/agent-api... build
-    startCommand: pnpm --filter @health-advisor/agent-api start
-    rootDir: .
+    dockerfilePath: ./apps/agent-api/Dockerfile
+    dockerContext: .
     healthCheckPath: /health
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NODE_VERSION
-        value: "23"
       - key: CORS_ALLOWED_ORIGINS
         sync: false
       - key: LLM_PROVIDER
