@@ -21,7 +21,7 @@ const hrvRule: InsightRule = {
     const latestHrv = hrValues[hrValues.length - 1];
 
     // 绝对值极低预警 (临床标准：持续低于 20ms 可能预示过度劳累或急性压力)
-    if (latestHrv < 20) {
+    if (latestHrv != null && latestHrv < 20) {
       signals.push({
         category: 'anomaly',
         severity: 'critical',
