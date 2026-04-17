@@ -136,6 +136,18 @@ describe('Drawer', () => {
     );
     expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
   });
+
+  it('bottom drawer 使用内联尺寸约束高度', () => {
+    render(
+      <Drawer open={true} onClose={() => {}} side="bottom" size="lg">
+        内容
+      </Drawer>,
+    );
+
+    const panel = screen.getByRole('dialog').lastElementChild as HTMLElement | null;
+    expect(panel?.style.height).toBe('80dvh');
+    expect(panel?.style.maxHeight).toBe('90vh');
+  });
 });
 
 describe('Sheet', () => {

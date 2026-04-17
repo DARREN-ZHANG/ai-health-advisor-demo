@@ -1,4 +1,4 @@
-import { useEffect, useCallback, type ReactNode, type HTMLAttributes } from 'react';
+import { useEffect, useCallback, type ReactNode, type HTMLAttributes, type CSSProperties } from 'react';
 import { m, AnimatePresence } from 'framer-motion';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
@@ -19,21 +19,21 @@ export interface DrawerProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title
   children: ReactNode;
 }
 
-const sizeClasses = {
+const sizeStyles = {
   side: {
-    sm: 'sm:w-64 w-[85vw]',
-    md: 'sm:w-80 w-[85vw]',
-    lg: 'sm:w-[450px] w-[90vw]',
-    xl: 'sm:w-[650px] w-[95vw]',
-    full: 'w-screen',
+    sm: { width: 'min(85vw, 16rem)' },
+    md: { width: 'min(85vw, 20rem)' },
+    lg: { width: 'min(90vw, 450px)' },
+    xl: { width: 'min(95vw, 650px)' },
+    full: { width: '100vw' },
   },
   bottom: {
-    sm: 'h-[40dvh]',
-    md: 'h-[60dvh]',
-    lg: 'h-[80dvh]',
-    xl: 'h-[90dvh]',
-    full: 'h-[98dvh]',
-  }
+    sm: { height: '40dvh', maxHeight: '50vh' },
+    md: { height: '60dvh', maxHeight: '70vh' },
+    lg: { height: '80dvh', maxHeight: '90vh' },
+    xl: { height: '90dvh', maxHeight: '95vh' },
+    full: { height: '98dvh', maxHeight: '100vh' },
+  },
 };
 
 /** 侧边/底部抽屉组件 */
@@ -70,11 +70,20 @@ export function Drawer({
 
   const isBottom = side === 'bottom';
   const isRight = side === 'right';
-  const sizeClass = isBottom ? sizeClasses.bottom[size] : sizeClasses.side[size];
+  const panelSizeStyle = (isBottom ? sizeStyles.bottom[size] : sizeStyles.side[size]) as CSSProperties;
+  const panelStyle: CSSProperties = {
+    ...panelSizeStyle,
+    boxShadow: '0 -20px 60px -15px rgba(0, 0, 0, 0.6)',
+    ...(isBottom
+      ? {
+          borderTopLeftRadius: '2.5rem',
+          borderTopRightRadius: '2.5rem',
+        }
+      : {}),
+  };
 
-  // 关键修复：确保在 bottom-0 的情况下，高度不会溢出屏幕，且 flex-col 能正确工作
   const positionClass = isBottom 
-    ? 'bottom-0 left-0 right-0 border-t rounded-t-[2.5rem]' 
+    ? 'bottom-0 left-0 right-0 border-t'
     : `top-0 bottom-0 ${isRight ? 'right-0 border-l' : 'left-0 border-r'}`;
 
   const variants = {
@@ -119,8 +128,8 @@ export function Drawer({
             initial="hidden"
             animate="visible"
             exit="exit"
-            className={`absolute ${positionClass} ${sizeClass} max-h-[98dvh] bg-slate-900 border-slate-800 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.6)] 
-              flex flex-col overflow-hidden ${className}`}
+            style={panelStyle}
+            className={`absolute ${positionClass} bg-slate-900 border-slate-800 flex flex-col overflow-hidden ${className}`}
           >
             {isBottom && (
               <div className="w-full flex justify-center pt-5 pb-1 shrink-0">
@@ -138,13 +147,12 @@ export function Drawer({
                     className="text-slate-500 hover:text-slate-100 p-2 hover:bg-slate-800 rounded-2xl transition-all duration-200 active:scale-90"
                     aria-label="关闭"
                   >
-                    <XMarkIcon className="w-6 h-6 stroke-[2.5]" />
+                    <XMarkIcon className="w-6 h-6" strokeWidth={2.5} />
                   </button>
                 </div>
               </div>
             )}
             
-            {/* 关键修复：子容器必须占据剩余空间，且内部滚动 */}
             <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide selection:bg-blue-500/30">
               <div className="px-5 py-4">
                 {children}
