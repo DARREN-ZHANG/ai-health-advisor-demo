@@ -35,7 +35,8 @@ export function ActiveSensingBanner() {
   const handleAction = () => {
     if (banner?.events && banner.events.length > 0) {
       const event = banner.events[0];
-      const prompt = EVENT_PROMPTS[event] || `关于“${banner.title}”，我需要一些建议。`;
+      if (!event) return;
+      const prompt = EVENT_PROMPTS[event] || `关于”${banner.title}”，我需要一些建议。`;
       
       setPendingPrompt(prompt);
     }
