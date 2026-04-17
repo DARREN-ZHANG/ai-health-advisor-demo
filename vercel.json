@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm --filter @health-advisor/web... build",
+  "devCommand": "pnpm --filter @health-advisor/web dev",
+  "installCommand": "corepack enable && corepack prepare pnpm@9.15.0 --activate && pnpm install",
+  "framework": "nextjs",
+  "outputDirectory": "apps/web/.next"
+}
