@@ -2,12 +2,12 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import { Drawer, Sheet, IconButton } from '@health-advisor/ui';
+import { m, AnimatePresence } from 'framer-motion';
+import { Drawer, IconButton } from '@health-advisor/ui';
 import { useUIStore } from '@/stores/ui.store';
 import { useAIAdvisorStore } from '@/stores/ai-advisor.store';
 import { useProfileStore } from '@/stores/profile.store';
 import { useDataCenterStore } from '@/stores/data-center.store';
-import { useMediaQuery } from '@/hooks/use-media-query';
 import { useAdvisorChat } from '@/hooks/use-ai-query';
 import { clearSessionId, AI_UI_TIMEOUT_MS } from '@/lib/api-client';
 import { MessageBubble } from './MessageBubble';
@@ -15,11 +15,7 @@ import { SmartPrompts } from './SmartPrompts';
 import type { SmartPromptOption } from './SmartPrompts';
 import { PhysiologicalTags } from './PhysiologicalTags';
 import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
-import { PaperAirplaneIcon, SparklesIcon, TrashIcon } from '@heroicons/react/24/outline';
-
-/** 响应式断点，与架构文档对齐：Mobile < 768, Tablet 768-1279, Desktop >= 1280 */
-const DESKTOP_QUERY = '(min-width: 1280px)';
-const TABLET_QUERY = '(min-width: 768px)';
+import { PaperAirplaneIcon, SparklesIcon, TrashIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 
 export function AIAdvisorDrawer() {
   const pathname = usePathname();
@@ -28,9 +24,8 @@ export function AIAdvisorDrawer() {
   const { currentProfileId } = useProfileStore();
   const { activeTab, timeframe } = useDataCenterStore();
   
-  const isDesktop = useMediaQuery(DESKTOP_QUERY);
-  const isTablet = useMediaQuery(TABLET_QUERY);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const { mutateAsync: sendChatRequest } = useAdvisorChat();
 
@@ -50,20 +45,46 @@ export function AIAdvisorDrawer() {
   };
 
   const Title = (
-    <div className="flex items-center justify-between flex-1">
-      <span className="font-bold flex items-center gap-2">
-        AI Health Advisor 
-        <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded uppercase">BETA</span>
-      </span>
-      {messages.length > 0 && (
-        <button 
-          onClick={handleClearChat}
-          className="flex items-center gap-1.5 text-[10px] text-slate-500 hover:text-red-400 transition-colors uppercase tracking-wider font-bold mr-4"
-        >
-          <TrashIcon className="w-3.5 h-3.5" />
-          Clear Chat
-        </button>
-      )}
+    <span className="font-bold flex items-center gap-2">
+      AI Health Advisor 
+      <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded uppercase">BETA</span>
+    </span>
+  );
+
+  const HeaderActions = (
+    <div className="relative">
+      <IconButton 
+        onClick={() => setIsMenuOpen(!isMenuOpen)}
+        className="text-slate-500 hover:text-slate-100 p-2.5 hover:bg-slate-800 rounded-2xl transition-all active:scale-90"
+      >
+        <EllipsisVerticalIcon className="w-6 h-6 stroke-[2.5]" />
+      </IconButton>
+      
+      <AnimatePresence>
+        {isMenuOpen && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setIsMenuOpen(false)} />
+            <m.div
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              className="absolute right-0 mt-1 w-44 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-20 py-1.5 overflow-hidden"
+            >
+              <button
+                onClick={() => {
+                  handleClearChat();
+                  setIsMenuOpen(false);
+                }}
+                disabled={messages.length === 0}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold text-slate-300 hover:bg-red-500/10 hover:text-red-400 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <TrashIcon className="w-4 h-4" />
+                Clear Chat
+              </button>
+            </m.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 
@@ -131,7 +152,7 @@ export function AIAdvisorDrawer() {
   }, [composerValue, isLoading, currentProfileId, pathname, activeTab, timeframe, addMessage, setComposerValue, setLoading, sendChatRequest]);
 
   const Content = (
-    <div className="flex flex-col h-full bg-slate-950">
+    <div className="flex flex-col h-[70dvh] bg-slate-950">
       {/* 顶部状态标签 */}
       <PhysiologicalTags />
 
@@ -187,9 +208,9 @@ export function AIAdvisorDrawer() {
           <IconButton
             onClick={() => handleSendMessage('')}
             disabled={!composerValue.trim()}
-            className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white rounded-xl h-11 w-11 transition-all shadow-lg shadow-blue-500/10 shrink-0"
+            className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white rounded-xl h-11 w-11 transition-all shadow-lg shadow-blue-500/10 shrink-0 p-0 flex items-center justify-center"
           >
-            <PaperAirplaneIcon className="w-5 h-5 -rotate-45 translate-x-0.5" />
+            <PaperAirplaneIcon className="w-5 h-5 -rotate-45" />
           </IconButton>
         </div>
       </div>
@@ -202,6 +223,7 @@ export function AIAdvisorDrawer() {
       open={isAdvisorDrawerOpen}
       onClose={handleClose}
       title={Title}
+      headerActions={HeaderActions}
       side="bottom"
       size="lg"
       className="overflow-hidden"

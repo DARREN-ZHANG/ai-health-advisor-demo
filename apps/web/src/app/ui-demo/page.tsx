@@ -13,7 +13,6 @@ import {
   IconButton,
   Tabs,
   Drawer,
-  Sheet,
   Modal,
   Skeleton,
   EmptyState,
@@ -25,7 +24,6 @@ import { useState } from 'react';
 export default function UiDemoPage() {
   const [activeTab, setActiveTab] = useState('layout');
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
   const tabs = [
