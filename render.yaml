@@ -4,7 +4,7 @@ services:
     env: node
     region: singapore
     plan: free
-    buildCommand: pnpm install --prod=false && pnpm --filter @health-advisor/agent-api... build
+    buildCommand: pnpm install --prod=false && pnpm --filter @health-advisor/agent-api... build && node scripts/patch-package-exports.mjs
     startCommand: pnpm --filter @health-advisor/agent-api start
     healthCheckPath: /health
     envVars:
