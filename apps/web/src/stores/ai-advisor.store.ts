@@ -21,11 +21,13 @@ interface AIAdvisorState {
   messages: Message[];
   composerValue: string;
   isLoading: boolean;
+  pendingPrompt: string | null;
   setIsOpen: (open: boolean) => void;
   setComposerValue: (value: string) => void;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
+  setPendingPrompt: (prompt: string | null) => void;
 }
 
 export const useAIAdvisorStore = create<AIAdvisorState>((set) => ({
@@ -33,6 +35,7 @@ export const useAIAdvisorStore = create<AIAdvisorState>((set) => ({
   messages: [],
   composerValue: '',
   isLoading: false,
+  pendingPrompt: null,
   setIsOpen: (open) => set({ isOpen: open }),
   setComposerValue: (composerValue) => set({ composerValue }),
   addMessage: (msg) =>
@@ -46,6 +49,7 @@ export const useAIAdvisorStore = create<AIAdvisorState>((set) => ({
         },
       ],
     })),
-  clearMessages: () => set({ messages: [], composerValue: '', isLoading: false }),
+  clearMessages: () => set({ messages: [], composerValue: '', isLoading: false, pendingPrompt: null }),
   setLoading: (loading) => set({ isLoading: loading }),
+  setPendingPrompt: (pendingPrompt) => set({ pendingPrompt }),
 }));

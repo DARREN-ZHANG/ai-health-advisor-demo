@@ -29,7 +29,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <AIAdvisorDrawer />
             <GodModePanel />
             <ToastContainer />
-            <ActiveSensingBanner />
           </div>
         </Providers>
       </body>

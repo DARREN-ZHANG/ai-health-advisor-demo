@@ -20,10 +20,20 @@ import { PaperAirplaneIcon, SparklesIcon, TrashIcon, EllipsisVerticalIcon } from
 export function AIAdvisorDrawer() {
   const pathname = usePathname();
   const { isAdvisorDrawerOpen, toggleAdvisorDrawer } = useUIStore();
-  const { messages, isLoading, composerValue, setComposerValue, addMessage, setLoading, clearMessages } = useAIAdvisorStore();
+  const { 
+    messages, 
+    isLoading, 
+    composerValue, 
+    setComposerValue, 
+    addMessage, 
+    setLoading, 
+    clearMessages,
+    pendingPrompt,
+    setPendingPrompt
+  } = useAIAdvisorStore();
   const { currentProfileId } = useProfileStore();
   const { activeTab, timeframe } = useDataCenterStore();
-  
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -35,8 +45,15 @@ export function AIAdvisorDrawer() {
     }
   }, [messages, isLoading]);
 
-  const handleClose = () => toggleAdvisorDrawer(false);
+  // 处理 Active Sensing 触发的自动发送逻辑
+  useEffect(() => {
+    if (isAdvisorDrawerOpen && pendingPrompt && !isLoading && currentProfileId) {
+      handleSendMessage(pendingPrompt);
+      setPendingPrompt(null);
+    }
+  }, [isAdvisorDrawerOpen, pendingPrompt, isLoading, currentProfileId]);
 
+  const handleClose = () => toggleAdvisorDrawer(false);
   const handleClearChat = () => {
     if (window.confirm('确定要清除所有对话记录并重置 AI 会话吗？')) {
       clearMessages();

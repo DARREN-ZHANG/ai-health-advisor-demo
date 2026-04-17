@@ -5,6 +5,7 @@ import { CHART_TOKEN_META, ChartTokenId } from '@health-advisor/shared';
 import { getChartBuilder, type StandardTimeSeries } from '@health-advisor/charts';
 import { MorningBriefCard } from '@/components/homepage/MorningBriefCard';
 import { HistoricalTrendsGrid } from '@/components/homepage/HistoricalTrendsGrid';
+import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
 import { useProfileStore } from '@/stores/profile.store';
 import { useMorningBrief, useRefetchBrief } from '@/hooks/use-ai-query';
 import { queryKeys } from '@/lib/query-keys';
@@ -123,6 +124,9 @@ export default function HomePage() {
           {refetchBrief.isPending ? '正在刷新...' : '手动刷新'}
         </Button>
       </header>
+
+      {/* Active Sensing 灵动监测 */}
+      <ActiveSensingBanner />
 
       {/* 晨报部分 */}
       <Section title="今日简报" className="space-y-4">

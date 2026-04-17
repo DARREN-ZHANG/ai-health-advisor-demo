@@ -6,6 +6,7 @@ export interface ActiveSensingBanner {
   title: string;
   content: string;
   priority: number;
+  events?: string[]; // 包含触发该 banner 的原始事件列表
 }
 
 interface ActiveSensingState {
