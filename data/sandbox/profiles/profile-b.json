@@ -262,6 +262,20 @@
       "activity": { "steps": 5400, "calories": 1920, "activeMinutes": 25, "distanceKm": 3.9 },
       "spo2": 95,
       "stress": { "load": 46 }
+    },
+    {
+      "date": "2026-04-16",
+      "hr": [70, 76, 73, 78, 71],
+      "sleep": {
+        "totalMinutes": 325,
+        "startTime": "23:35",
+        "endTime": "06:00",
+        "stages": { "deep": 48, "light": 153, "rem": 63, "awake": 31 },
+        "score": 54
+      },
+      "activity": { "steps": 4700, "calories": 1840, "activeMinutes": 20, "distanceKm": 3.4 },
+      "spo2": 96,
+      "stress": { "load": 50 }
     }
   ]
 }

@@ -626,6 +626,20 @@
         "activeMinutes": 3,
         "distanceKm": 1.1
       }
+    },
+    {
+      "date": "2026-04-16",
+      "hr": [91, 97, 94, 100, 93],
+      "sleep": {
+        "totalMinutes": 155,
+        "startTime": "04:30",
+        "endTime": "07:05",
+        "stages": { "deep": 5, "light": 68, "rem": 14, "awake": 48 },
+        "score": 9
+      },
+      "spo2": 91,
+      "stress": { "load": 95 },
+      "activity": { "steps": 1300, "calories": 1460, "activeMinutes": 2, "distanceKm": 0.9 }
     }
   ]
 }

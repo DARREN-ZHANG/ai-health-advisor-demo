@@ -626,6 +626,20 @@
       "stress": {
         "load": 25
       }
+    },
+    {
+      "date": "2026-04-16",
+      "hr": [53, 58, 73, 130, 66],
+      "sleep": {
+        "totalMinutes": 462,
+        "startTime": "22:10",
+        "endTime": "06:12",
+        "stages": { "deep": 95, "light": 210, "rem": 106, "awake": 23 },
+        "score": 89
+      },
+      "activity": { "steps": 9200, "calories": 2410, "activeMinutes": 46, "distanceKm": 6.8 },
+      "spo2": 98,
+      "stress": { "load": 23 }
     }
   ]
 }
