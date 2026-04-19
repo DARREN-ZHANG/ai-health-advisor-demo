@@ -11,7 +11,7 @@ const envBool = z
   .default('false');
 
 const AppConfigSchema = z.object({
-  PORT: z.coerce.number().int().min(1).max(65535).default(3001),
+  PORT: z.coerce.number().int().min(1).max(65535).default(3002),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LLM_PROVIDER: z.enum(['openai', 'anthropic', 'gemini']).default('openai'),
   LLM_MODEL: z.string().default('gpt-4o-mini'),

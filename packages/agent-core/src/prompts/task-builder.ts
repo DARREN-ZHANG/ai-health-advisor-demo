@@ -55,7 +55,7 @@ export function buildTaskPrompt(
       sections.push(`- 心率：均值 ${avg} bpm`);
     }
     if (latestRecord.sleep) {
-      sections.push(`- 睡眠：${latestRecord.sleep.totalMinutes} 分钟，评分 ${latestRecord.sleep.score}`);
+      sections.push(`- 睡眠：${latestRecord.sleep.totalMinutes} 分钟`);
       sections.push(`  - 深睡 ${latestRecord.sleep.stages?.deep ?? 0} 分钟 / REM ${latestRecord.sleep.stages?.rem ?? 0} 分钟`);
     }
     if (latestRecord.activity) {
