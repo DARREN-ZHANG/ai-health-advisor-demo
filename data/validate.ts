@@ -70,11 +70,20 @@ function validateProfiles(): { results: ProfileResult[]; hasErrors: boolean } {
     const dates = data.records.map((r) => r.date).sort();
     const start = dates[0]!;
     const end = dates[dates.length - 1]!;
-    const missingDates = validateDateContinuity(data.records, '2026-03-28', '2026-04-10');
+    const missingDates = validateDateContinuity(data.records, '2026-03-28', '2026-04-16');
     const errors: string[] = [];
 
-    if (data.records.length !== 14) {
-      errors.push(`Expected 14 records, got ${data.records.length}`);
+    if (data.records.length !== 20) {
+      errors.push(`Expected 20 records, got ${data.records.length}`);
+    }
+
+    if (data.device) {
+      if (data.device.samplingIntervalMinutes !== 1) {
+        errors.push(`Expected device sampling interval to be 1, got ${data.device.samplingIntervalMinutes}`);
+      }
+      if (data.device.syncSessions.length === 0) {
+        errors.push('Expected at least one device sync session');
+      }
     }
 
     if (errors.length > 0) {

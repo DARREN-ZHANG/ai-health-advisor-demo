@@ -22,3 +22,13 @@ export { isMissing, fillMissing } from './helpers/missing-value';
 // Helpers — timeline
 export { normalizeTimeline, rollingMedian } from './helpers/timeline';
 export type { TimelinePoint } from './helpers/timeline';
+
+// Helpers — device stream
+export {
+  materializeDeviceSamples,
+  getSyncedSamples,
+  getPendingSamples,
+  getSamplesForSyncSession,
+  summarizeSyncSessions,
+} from './helpers/device-stream';
+export type { DeviceSyncSessionSummary } from './helpers/device-stream';

@@ -641,5 +641,46 @@
       "spo2": 98,
       "stress": { "load": 23 }
     }
-  ]
+  ],
+  "device": {
+    "samplingIntervalMinutes": 1,
+    "syncSessions": [
+      {
+        "syncId": "sync-a-001",
+        "connectedAt": "2026-04-01T08:10",
+        "disconnectedAt": "2026-04-01T08:14",
+        "uploadedRange": {
+          "start": "2026-03-27T22:30",
+          "end": "2026-04-01T23:59"
+        }
+      },
+      {
+        "syncId": "sync-a-002",
+        "connectedAt": "2026-04-06T07:45",
+        "disconnectedAt": "2026-04-06T07:49",
+        "uploadedRange": {
+          "start": "2026-04-02T00:00",
+          "end": "2026-04-06T23:59"
+        }
+      },
+      {
+        "syncId": "sync-a-003",
+        "connectedAt": "2026-04-11T08:05",
+        "disconnectedAt": "2026-04-11T08:09",
+        "uploadedRange": {
+          "start": "2026-04-07T00:00",
+          "end": "2026-04-11T23:59"
+        }
+      },
+      {
+        "syncId": "sync-a-004",
+        "connectedAt": "2026-04-16T08:20",
+        "disconnectedAt": "2026-04-16T08:24",
+        "uploadedRange": {
+          "start": "2026-04-12T00:00",
+          "end": "2026-04-16T23:59"
+        }
+      }
+    ]
+  }
 }

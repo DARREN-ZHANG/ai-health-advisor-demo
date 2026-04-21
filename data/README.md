@@ -7,7 +7,7 @@
 ```
 data/sandbox/
 ├── manifest.json          # 数据清单，列出所有可用 profile
-├── profiles/              # 用户健康档案
+├── profiles/              # 用户健康档案（含日级汇总和设备同步配置）
 │   ├── profile-a.json     # 张健康 — 32岁男性，健康稳定
 │   ├── profile-b.json     # 李普通 — 45岁女性，数据有缺失
 │   └── profile-c.json     # 王压力 — 28岁男性，高压力边缘
@@ -30,4 +30,4 @@ data/sandbox/
 npx tsx data/validate.ts
 ```
 
-此脚本会校验所有 profile 的 JSON schema、日期连续性和数据合理性。
+此脚本会校验所有 profile 的 JSON schema、日期连续性、设备同步配置和数据合理性。

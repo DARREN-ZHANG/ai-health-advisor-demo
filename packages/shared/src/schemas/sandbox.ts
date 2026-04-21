@@ -44,6 +44,35 @@ export const StressDataSchema = z.object({
   load: z.number().min(0).max(100),
 });
 
+export const SleepStageTypeSchema = z.enum(['awake', 'light', 'deep', 'rem']);
+
+export const SensorSampleSchema = z.object({
+  timestamp: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
+  heartRate: z.number().min(30).max(220).optional(),
+  spo2: z.number().min(80).max(100).optional(),
+  stressLoad: z.number().min(0).max(100).optional(),
+  stepsDelta: z.number().min(0).optional(),
+  caloriesDelta: z.number().min(0).optional(),
+  activeMinutesDelta: z.number().min(0).optional(),
+  distanceKmDelta: z.number().min(0).optional(),
+  sleepStage: SleepStageTypeSchema.optional(),
+});
+
+export const DeviceSyncSessionSchema = z.object({
+  syncId: z.string().min(1),
+  connectedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
+  disconnectedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
+  uploadedRange: z.object({
+    start: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
+    end: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
+  }),
+});
+
+export const DeviceConnectionSchema = z.object({
+  samplingIntervalMinutes: z.number().int().min(1).max(60),
+  syncSessions: z.array(DeviceSyncSessionSchema),
+});
+
 export const DailyRecordSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   hr: z.array(z.number().min(30).max(220)).optional(),
@@ -56,4 +85,5 @@ export const DailyRecordSchema = z.object({
 export const ProfileDataSchema = z.object({
   profile: SandboxProfileSchema,
   records: z.array(DailyRecordSchema),
+  device: DeviceConnectionSchema.optional(),
 });

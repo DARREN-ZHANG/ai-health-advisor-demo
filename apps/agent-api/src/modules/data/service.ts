@@ -1,6 +1,6 @@
 import type { DailyRecord, DataTab, Timeframe, DateRange, StressTimelineResponse, StressTimelinePoint, StressTrend, DataCenterResponse } from '@health-advisor/shared';
 import { timeframeToDateRange } from '@health-advisor/shared';
-import { normalizeTimeline, rollingMedian, type TimelinePoint } from '@health-advisor/sandbox';
+import { normalizeTimeline, rollingMedian, materializeDeviceSamples, getPendingSamples, getSamplesForSyncSession, summarizeSyncSessions, type TimelinePoint } from '@health-advisor/sandbox';
 import type { RuntimeRegistry } from '../../runtime/registry.js';
 
 // tab → 需要提取的 metrics
@@ -18,6 +18,36 @@ export interface TimelineDataResponse {
   profileId: string;
   range: DateRange;
   records: DailyRecord[];
+}
+
+export interface DeviceSyncOverviewResponse {
+  profileId: string;
+  samplingIntervalMinutes: number | null;
+  totalDeviceSamples: number;
+  pendingDeviceSamples: number;
+  firstDeviceSampleAt: string | null;
+  lastDeviceSampleAt: string | null;
+  lastSyncedSampleAt: string | null;
+  syncSessions: Array<{
+    syncId: string;
+    connectedAt: string;
+    disconnectedAt: string;
+    uploadedRange: {
+      start: string;
+      end: string;
+    };
+    sampleCount: number;
+    firstSampleAt: string | null;
+    lastSampleAt: string | null;
+  }>;
+}
+
+export interface DeviceSyncSamplesResponse {
+  profileId: string;
+  scope: 'pending' | 'sync-session';
+  syncId: string | null;
+  sampleCount: number;
+  samples: ReturnType<typeof materializeDeviceSamples>;
 }
 
 export class DataService {
@@ -66,6 +96,51 @@ export class DataService {
       range,
       timeline,
       metadata: { recordCount: records.length, metrics },
+    };
+  }
+
+  getDeviceSyncOverview(profileId: string): DeviceSyncOverviewResponse {
+    const profile = this.registry.getRawProfile(profileId);
+    const samples = materializeDeviceSamples(profile);
+    const pendingSamples = getPendingSamples(profile);
+    const syncSessions = summarizeSyncSessions(profile);
+    const lastSyncedSampleAt = syncSessions
+      .map((session) => session.lastSampleAt)
+      .filter((value): value is string => value !== null)
+      .sort()
+      .at(-1) ?? null;
+
+    return {
+      profileId,
+      samplingIntervalMinutes: profile.device?.samplingIntervalMinutes ?? null,
+      totalDeviceSamples: samples.length,
+      pendingDeviceSamples: pendingSamples.length,
+      firstDeviceSampleAt: samples[0]?.timestamp ?? null,
+      lastDeviceSampleAt: samples[samples.length - 1]?.timestamp ?? null,
+      lastSyncedSampleAt,
+      syncSessions,
+    };
+  }
+
+  getDeviceSyncSamples(
+    profileId: string,
+    scope: 'pending' | 'sync-session',
+    syncId?: string,
+    limit?: number,
+  ): DeviceSyncSamplesResponse {
+    const profile = this.registry.getRawProfile(profileId);
+    const samples = scope === 'pending'
+      ? getPendingSamples(profile)
+      : getSamplesForSyncSession(profile, syncId ?? '');
+
+    const normalizedLimit = limit == null ? samples.length : Math.max(1, limit);
+
+    return {
+      profileId,
+      scope,
+      syncId: scope === 'sync-session' ? (syncId ?? null) : null,
+      sampleCount: samples.length,
+      samples: samples.slice(0, normalizedLimit),
     };
   }
 }

@@ -30,7 +30,9 @@ describe('loadProfile', () => {
     expect(profile.profile.name).toBe('张健康');
     expect(profile.profile.age).toBe(32);
     expect(profile.profile.gender).toBe('male');
-    expect(profile.records).toHaveLength(14);
+    expect(profile.records).toHaveLength(20);
+    expect(profile.device?.samplingIntervalMinutes).toBe(1);
+    expect(profile.device?.syncSessions).toHaveLength(4);
   });
 
   it('should load and validate profile-b', () => {
@@ -38,7 +40,8 @@ describe('loadProfile', () => {
 
     expect(profile.profile.profileId).toBe('profile-b');
     expect(profile.profile.gender).toBe('female');
-    expect(profile.records).toHaveLength(14);
+    expect(profile.records).toHaveLength(20);
+    expect(profile.device?.syncSessions).toHaveLength(4);
   });
 
   it('should load and validate profile-c', () => {
@@ -46,7 +49,8 @@ describe('loadProfile', () => {
 
     expect(profile.profile.profileId).toBe('profile-c');
     expect(profile.profile.age).toBe(28);
-    expect(profile.records).toHaveLength(14);
+    expect(profile.records).toHaveLength(20);
+    expect(profile.device?.syncSessions).toHaveLength(4);
   });
 
   it('should throw for invalid profile file', () => {

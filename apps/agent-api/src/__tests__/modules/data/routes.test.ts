@@ -126,4 +126,65 @@ describe('Data Routes', () => {
       expect(response.statusCode).toBe(400);
     });
   });
+
+  describe('GET /profiles/:profileId/device-sync', () => {
+    test('返回设备同步总览', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/profiles/profile-a/device-sync',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      expect(body.data.profileId).toBe('profile-a');
+      expect(body.data.samplingIntervalMinutes).toBe(1);
+      expect(body.data.totalDeviceSamples).toBeGreaterThan(20000);
+      expect(body.data.syncSessions).toHaveLength(4);
+    });
+  });
+
+  describe('GET /profiles/:profileId/device-sync/samples', () => {
+    test('返回某次同步批次的样本', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/profiles/profile-a/device-sync/samples?scope=sync-session&syncId=sync-a-001&limit=5',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      expect(body.data.scope).toBe('sync-session');
+      expect(body.data.syncId).toBe('sync-a-001');
+      expect(body.data.sampleCount).toBeGreaterThan(0);
+      expect(body.data.samples).toHaveLength(5);
+    });
+
+    test('缺少 syncId 返回 400', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/profiles/profile-a/device-sync/samples?scope=sync-session',
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    test('无效 scope 返回 400', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/profiles/profile-a/device-sync/samples?scope=invalid',
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    test('未知同步批次返回 404', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/profiles/profile-a/device-sync/samples?scope=sync-session&syncId=missing',
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+  });
 });

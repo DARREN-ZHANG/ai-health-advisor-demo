@@ -123,6 +123,66 @@ export async function dataRoutes(app: FastifyInstance) {
       );
     }
   });
+
+  app.get<{
+    Params: { profileId: string };
+  }>('/profiles/:profileId/device-sync', async (request, reply) => {
+    const { profileId } = request.params;
+
+    try {
+      const data = dataService.getDeviceSyncOverview(profileId);
+      return createSuccessResponse(data, buildMeta(request));
+    } catch {
+      return reply.status(404).send(
+        createErrorResponse(ErrorCode.PROFILE_NOT_FOUND, `Profile ${profileId} not found`, buildMeta(request)),
+      );
+    }
+  });
+
+  app.get<{
+    Params: { profileId: string };
+    Querystring: { scope?: string; syncId?: string; limit?: string };
+  }>('/profiles/:profileId/device-sync/samples', async (request, reply) => {
+    const { profileId } = request.params;
+    const rawScope = request.query.scope ?? 'sync-session';
+    const limit = request.query.limit ? Number.parseInt(request.query.limit, 10) : undefined;
+
+    if (rawScope !== 'pending' && rawScope !== 'sync-session') {
+      return reply.status(400).send(
+        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'scope must be "pending" or "sync-session"', buildMeta(request)),
+      );
+    }
+
+    const scope = rawScope;
+
+    if (scope === 'sync-session' && !request.query.syncId) {
+      return reply.status(400).send(
+        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'scope=sync-session requires syncId', buildMeta(request)),
+      );
+    }
+
+    if (request.query.limit && Number.isNaN(limit)) {
+      return reply.status(400).send(
+        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'limit must be a number', buildMeta(request)),
+      );
+    }
+
+    try {
+      const data = dataService.getDeviceSyncSamples(profileId, scope, request.query.syncId, limit);
+      return createSuccessResponse(data, buildMeta(request));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.startsWith('Sync session not found:')) {
+        return reply.status(404).send(
+          createErrorResponse(ErrorCode.NOT_FOUND, message, buildMeta(request)),
+        );
+      }
+
+      return reply.status(404).send(
+        createErrorResponse(ErrorCode.PROFILE_NOT_FOUND, `Profile ${profileId} not found`, buildMeta(request)),
+      );
+    }
+  });
 }
 
 /** 解析自定义日期范围，仅当 startDate 和 endDate 同时存在时返回 */

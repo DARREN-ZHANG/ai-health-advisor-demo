@@ -42,6 +42,35 @@ export interface StressData {
   load: number;
 }
 
+export type SleepStageType = 'awake' | 'light' | 'deep' | 'rem';
+
+export interface SensorSample {
+  timestamp: string;
+  heartRate?: number;
+  spo2?: number;
+  stressLoad?: number;
+  stepsDelta?: number;
+  caloriesDelta?: number;
+  activeMinutesDelta?: number;
+  distanceKmDelta?: number;
+  sleepStage?: SleepStageType;
+}
+
+export interface DeviceSyncSession {
+  syncId: string;
+  connectedAt: string;
+  disconnectedAt: string;
+  uploadedRange: {
+    start: string;
+    end: string;
+  };
+}
+
+export interface DeviceConnection {
+  samplingIntervalMinutes: number;
+  syncSessions: DeviceSyncSession[];
+}
+
 export interface DailyRecord {
   date: string;
   hr?: number[];
@@ -61,4 +90,5 @@ export interface VitalSignsData {
 export interface ProfileData {
   profile: SandboxProfile;
   records: DailyRecord[];
+  device?: DeviceConnection;
 }
