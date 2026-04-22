@@ -1,5 +1,104 @@
 import { z } from 'zod';
 
+// 时间戳格式：YYYY-MM-DDTHH:mm
+const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+// ============================================================
+// 时间轴与原始流相关 Schema
+// ============================================================
+
+export const ActivitySegmentTypeSchema = z.enum([
+  'meal_intake',
+  'steady_cardio',
+  'prolonged_sedentary',
+  'intermittent_exercise',
+  'walk',
+  'sleep',
+]);
+
+export const DemoClockSchema = z.object({
+  profileId: z.string().min(1),
+  timezone: z.string().min(1),
+  currentTime: z.string().regex(timestampPattern),
+});
+
+export const ActivitySegmentSchema = z.object({
+  segmentId: z.string().min(1),
+  profileId: z.string().min(1),
+  type: ActivitySegmentTypeSchema,
+  start: z.string().regex(timestampPattern),
+  end: z.string().regex(timestampPattern),
+  params: z.record(z.union([z.number(), z.string(), z.boolean()])).optional(),
+  source: z.enum(['baseline_script', 'god_mode']),
+  scenarioId: z.string().min(1).optional(),
+});
+
+export const DeviceMetricSchema = z.enum([
+  'heartRate',
+  'steps',
+  'spo2',
+  'motion',
+  'sleepStage',
+  'wearState',
+]);
+
+export const DeviceEventSchema = z.object({
+  eventId: z.string().min(1),
+  profileId: z.string().min(1),
+  measuredAt: z.string().regex(timestampPattern),
+  metric: DeviceMetricSchema,
+  value: z.union([z.number(), z.string(), z.boolean()]),
+  source: z.literal('sensor'),
+  segmentId: z.string().min(1).optional(),
+});
+
+export const DeviceBufferStateSchema = z.object({
+  profileId: z.string().min(1),
+  lastSyncedMeasuredAt: z.string().regex(timestampPattern).nullable(),
+});
+
+export const SyncSessionSchema = z.object({
+  syncId: z.string().min(1),
+  profileId: z.string().min(1),
+  trigger: z.enum(['app_open', 'manual_refresh']),
+  startedAt: z.string().regex(timestampPattern),
+  finishedAt: z.string().regex(timestampPattern),
+  uploadedMeasuredRange: z
+    .object({
+      start: z.string().regex(timestampPattern),
+      end: z.string().regex(timestampPattern),
+    })
+    .nullable(),
+  uploadedEventCount: z.number().int().min(0),
+});
+
+export const RecognizedEventTypeSchema = ActivitySegmentTypeSchema;
+
+export const RecognizedEventSchema = z.object({
+  recognizedEventId: z.string().min(1),
+  profileId: z.string().min(1),
+  type: RecognizedEventTypeSchema,
+  start: z.string().regex(timestampPattern),
+  end: z.string().regex(timestampPattern),
+  confidence: z.number().min(0).max(1),
+  evidence: z.array(z.string().min(1)),
+  sourceSegmentId: z.string().min(1).optional(),
+});
+
+export const DerivedTemporalStateTypeSchema = z.literal('recent_meal_30m');
+
+export const DerivedTemporalStateSchema = z.object({
+  type: DerivedTemporalStateTypeSchema,
+  profileId: z.string().min(1),
+  sourceRecognizedEventId: z.string().min(1),
+  activeAt: z.string().regex(timestampPattern),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+// ============================================================
+// 沙箱基础 Schema（已有）
+// ============================================================
+
 export const BaselineMetricsSchema = z.object({
   restingHr: z.number().min(30).max(200),
   hrv: z.number().min(0).max(200),

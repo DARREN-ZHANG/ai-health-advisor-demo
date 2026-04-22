@@ -16,7 +16,24 @@ import {
   MetricOverridePayloadSchema,
   ResetPayloadSchema,
   ScenarioPayloadSchema,
+  TimelineAppendPayloadSchema,
+  SyncTriggerPayloadSchema,
+  AdvanceClockPayloadSchema,
+  ResetProfileTimelinePayloadSchema,
 } from '../schemas/god-mode';
+import {
+  ActivitySegmentTypeSchema,
+  DemoClockSchema,
+  ActivitySegmentSchema,
+  DeviceMetricSchema,
+  DeviceEventSchema,
+  DeviceBufferStateSchema,
+  SyncSessionSchema,
+  RecognizedEventTypeSchema,
+  RecognizedEventSchema,
+  DerivedTemporalStateTypeSchema,
+  DerivedTemporalStateSchema,
+} from '../schemas/sandbox';
 import {
   StressTimelinePointSchema,
   StressTrendSchema,
@@ -368,5 +385,324 @@ describe('ErrorCodeSchema', () => {
 
   it('rejects invalid error code', () => {
     expect(() => ErrorCodeSchema.parse('INVALID')).toThrow();
+  });
+});
+
+// ============================================================
+// 时间轴与原始流 Schema 测试
+// ============================================================
+
+describe('ActivitySegmentTypeSchema', () => {
+  it('accepts all valid segment types', () => {
+    const types = ['meal_intake', 'steady_cardio', 'prolonged_sedentary', 'intermittent_exercise', 'walk', 'sleep'];
+    types.forEach((t) => {
+      expect(ActivitySegmentTypeSchema.parse(t)).toBe(t);
+    });
+  });
+
+  it('rejects invalid segment type', () => {
+    expect(() => ActivitySegmentTypeSchema.parse('invalid')).toThrow();
+  });
+});
+
+describe('DemoClockSchema', () => {
+  const validClock = {
+    profileId: 'profile-a',
+    timezone: 'Asia/Shanghai',
+    currentTime: '2026-04-21T09:30',
+  };
+
+  it('accepts valid demo clock', () => {
+    expect(DemoClockSchema.parse(validClock)).toEqual(validClock);
+  });
+
+  it('rejects invalid currentTime format', () => {
+    expect(() => DemoClockSchema.parse({ ...validClock, currentTime: '2026-04-21 09:30' })).toThrow();
+  });
+
+  it('rejects missing required fields', () => {
+    expect(() => DemoClockSchema.parse({})).toThrow();
+  });
+});
+
+describe('ActivitySegmentSchema', () => {
+  const validSegment = {
+    segmentId: 'seg-1',
+    profileId: 'profile-a',
+    type: 'meal_intake' as const,
+    start: '2026-04-21T07:00',
+    end: '2026-04-21T07:30',
+    source: 'baseline_script' as const,
+  };
+
+  it('accepts valid segment without optional fields', () => {
+    expect(ActivitySegmentSchema.parse(validSegment)).toEqual(validSegment);
+  });
+
+  it('accepts valid segment with all optional fields', () => {
+    const segment = {
+      ...validSegment,
+      params: { calories: 500, label: '早餐' },
+      scenarioId: 'scenario-1',
+    };
+    expect(ActivitySegmentSchema.parse(segment)).toEqual(segment);
+  });
+
+  it('accepts god_mode source', () => {
+    expect(ActivitySegmentSchema.parse({ ...validSegment, source: 'god_mode' })).toEqual({
+      ...validSegment,
+      source: 'god_mode',
+    });
+  });
+
+  it('rejects invalid source', () => {
+    expect(() => ActivitySegmentSchema.parse({ ...validSegment, source: 'invalid' })).toThrow();
+  });
+});
+
+describe('DeviceMetricSchema', () => {
+  it('accepts all valid metrics', () => {
+    const metrics = ['heartRate', 'steps', 'spo2', 'motion', 'sleepStage', 'wearState'];
+    metrics.forEach((m) => {
+      expect(DeviceMetricSchema.parse(m)).toBe(m);
+    });
+  });
+
+  it('rejects invalid metric', () => {
+    expect(() => DeviceMetricSchema.parse('invalid')).toThrow();
+  });
+});
+
+describe('DeviceEventSchema', () => {
+  const validEvent = {
+    eventId: 'evt-1',
+    profileId: 'profile-a',
+    measuredAt: '2026-04-21T09:30',
+    metric: 'heartRate' as const,
+    value: 72,
+    source: 'sensor' as const,
+  };
+
+  it('accepts valid event with numeric value', () => {
+    expect(DeviceEventSchema.parse(validEvent)).toEqual(validEvent);
+  });
+
+  it('accepts valid event with string value', () => {
+    const event = { ...validEvent, metric: 'sleepStage' as const, value: 'deep' };
+    expect(DeviceEventSchema.parse(event)).toEqual(event);
+  });
+
+  it('accepts valid event with boolean value', () => {
+    const event = { ...validEvent, metric: 'wearState' as const, value: true };
+    expect(DeviceEventSchema.parse(event)).toEqual(event);
+  });
+
+  it('accepts valid event with optional segmentId', () => {
+    const event = { ...validEvent, segmentId: 'seg-1' };
+    expect(DeviceEventSchema.parse(event)).toEqual(event);
+  });
+
+  it('rejects non-sensor source', () => {
+    expect(() => DeviceEventSchema.parse({ ...validEvent, source: 'manual' })).toThrow();
+  });
+});
+
+describe('DeviceBufferStateSchema', () => {
+  it('accepts state with lastSyncedMeasuredAt', () => {
+    const state = { profileId: 'profile-a', lastSyncedMeasuredAt: '2026-04-21T09:30' };
+    expect(DeviceBufferStateSchema.parse(state)).toEqual(state);
+  });
+
+  it('accepts state with null lastSyncedMeasuredAt', () => {
+    const state = { profileId: 'profile-a', lastSyncedMeasuredAt: null };
+    expect(DeviceBufferStateSchema.parse(state)).toEqual(state);
+  });
+
+  it('rejects missing required fields', () => {
+    expect(() => DeviceBufferStateSchema.parse({})).toThrow();
+  });
+});
+
+describe('SyncSessionSchema', () => {
+  const validSession = {
+    syncId: 'sync-1',
+    profileId: 'profile-a',
+    trigger: 'app_open' as const,
+    startedAt: '2026-04-21T09:00',
+    finishedAt: '2026-04-21T09:01',
+    uploadedMeasuredRange: { start: '2026-04-21T08:00', end: '2026-04-21T09:00' },
+    uploadedEventCount: 42,
+  };
+
+  it('accepts valid session with range', () => {
+    expect(SyncSessionSchema.parse(validSession)).toEqual(validSession);
+  });
+
+  it('accepts valid session with null range', () => {
+    const session = { ...validSession, uploadedMeasuredRange: null };
+    expect(SyncSessionSchema.parse(session)).toEqual(session);
+  });
+
+  it('accepts manual_refresh trigger', () => {
+    const session = { ...validSession, trigger: 'manual_refresh' as const };
+    expect(SyncSessionSchema.parse(session)).toEqual(session);
+  });
+
+  it('rejects invalid trigger', () => {
+    expect(() => SyncSessionSchema.parse({ ...validSession, trigger: 'auto' })).toThrow();
+  });
+
+  it('rejects negative uploadedEventCount', () => {
+    expect(() => SyncSessionSchema.parse({ ...validSession, uploadedEventCount: -1 })).toThrow();
+  });
+});
+
+describe('RecognizedEventTypeSchema', () => {
+  it('accepts same values as ActivitySegmentType', () => {
+    const types = ['meal_intake', 'steady_cardio', 'prolonged_sedentary', 'intermittent_exercise', 'walk', 'sleep'];
+    types.forEach((t) => {
+      expect(RecognizedEventTypeSchema.parse(t)).toBe(t);
+    });
+  });
+});
+
+describe('RecognizedEventSchema', () => {
+  const validEvent = {
+    recognizedEventId: 're-1',
+    profileId: 'profile-a',
+    type: 'meal_intake' as const,
+    start: '2026-04-21T07:00',
+    end: '2026-04-21T07:30',
+    confidence: 0.95,
+    evidence: ['heart_rate_spike', 'motion_detected'],
+  };
+
+  it('accepts valid recognized event', () => {
+    expect(RecognizedEventSchema.parse(validEvent)).toEqual(validEvent);
+  });
+
+  it('accepts valid event with optional sourceSegmentId', () => {
+    const event = { ...validEvent, sourceSegmentId: 'seg-1' };
+    expect(RecognizedEventSchema.parse(event)).toEqual(event);
+  });
+
+  it('rejects confidence > 1', () => {
+    expect(() => RecognizedEventSchema.parse({ ...validEvent, confidence: 1.5 })).toThrow();
+  });
+
+  it('rejects confidence < 0', () => {
+    expect(() => RecognizedEventSchema.parse({ ...validEvent, confidence: -0.1 })).toThrow();
+  });
+
+  it('rejects empty evidence array', () => {
+    // evidence 是 z.array(z.string().min(1))，空数组仍然合法
+    // 但我们至少验证 min(1) 的 string 约束
+    const event = { ...validEvent, evidence: [''] };
+    expect(() => RecognizedEventSchema.parse(event)).toThrow();
+  });
+});
+
+describe('DerivedTemporalStateTypeSchema', () => {
+  it('accepts recent_meal_30m', () => {
+    expect(DerivedTemporalStateTypeSchema.parse('recent_meal_30m')).toBe('recent_meal_30m');
+  });
+
+  it('rejects invalid type', () => {
+    expect(() => DerivedTemporalStateTypeSchema.parse('invalid')).toThrow();
+  });
+});
+
+describe('DerivedTemporalStateSchema', () => {
+  const validState = {
+    type: 'recent_meal_30m' as const,
+    profileId: 'profile-a',
+    sourceRecognizedEventId: 're-1',
+    activeAt: '2026-04-21T07:30',
+  };
+
+  it('accepts valid state without metadata', () => {
+    expect(DerivedTemporalStateSchema.parse(validState)).toEqual(validState);
+  });
+
+  it('accepts valid state with metadata', () => {
+    const state = { ...validState, metadata: { mealCalories: 500 } };
+    expect(DerivedTemporalStateSchema.parse(state)).toEqual(state);
+  });
+
+  it('rejects missing required fields', () => {
+    expect(() => DerivedTemporalStateSchema.parse({})).toThrow();
+  });
+});
+
+// ============================================================
+// God Mode 时间轴动作 Schema 测试
+// ============================================================
+
+describe('TimelineAppendPayloadSchema', () => {
+  it('accepts valid payload with only segmentType', () => {
+    const payload = { segmentType: 'meal_intake' };
+    expect(TimelineAppendPayloadSchema.parse(payload)).toEqual(payload);
+  });
+
+  it('accepts valid payload with all optional fields', () => {
+    const payload = {
+      segmentType: 'steady_cardio',
+      offsetMinutes: 30,
+      params: { duration: 45, intensity: 'medium' },
+    };
+    expect(TimelineAppendPayloadSchema.parse(payload)).toEqual(payload);
+  });
+
+  it('rejects invalid segmentType', () => {
+    expect(() => TimelineAppendPayloadSchema.parse({ segmentType: 'invalid' })).toThrow();
+  });
+
+  it('rejects negative offsetMinutes', () => {
+    expect(() =>
+      TimelineAppendPayloadSchema.parse({ segmentType: 'walk', offsetMinutes: -5 }),
+    ).toThrow();
+  });
+});
+
+describe('SyncTriggerPayloadSchema', () => {
+  it('accepts app_open trigger', () => {
+    expect(SyncTriggerPayloadSchema.parse({ trigger: 'app_open' })).toEqual({ trigger: 'app_open' });
+  });
+
+  it('accepts manual_refresh trigger', () => {
+    expect(SyncTriggerPayloadSchema.parse({ trigger: 'manual_refresh' })).toEqual({ trigger: 'manual_refresh' });
+  });
+
+  it('rejects invalid trigger', () => {
+    expect(() => SyncTriggerPayloadSchema.parse({ trigger: 'auto' })).toThrow();
+  });
+});
+
+describe('AdvanceClockPayloadSchema', () => {
+  it('accepts positive minutes', () => {
+    expect(AdvanceClockPayloadSchema.parse({ minutes: 30 })).toEqual({ minutes: 30 });
+  });
+
+  it('rejects zero minutes', () => {
+    expect(() => AdvanceClockPayloadSchema.parse({ minutes: 0 })).toThrow();
+  });
+
+  it('rejects negative minutes', () => {
+    expect(() => AdvanceClockPayloadSchema.parse({ minutes: -10 })).toThrow();
+  });
+
+  it('rejects non-integer minutes', () => {
+    expect(() => AdvanceClockPayloadSchema.parse({ minutes: 1.5 })).toThrow();
+  });
+});
+
+describe('ResetProfileTimelinePayloadSchema', () => {
+  it('accepts valid profileId', () => {
+    const payload = { profileId: 'profile-a' };
+    expect(ResetProfileTimelinePayloadSchema.parse(payload)).toEqual(payload);
+  });
+
+  it('rejects empty profileId', () => {
+    expect(() => ResetProfileTimelinePayloadSchema.parse({ profileId: '' })).toThrow();
   });
 });

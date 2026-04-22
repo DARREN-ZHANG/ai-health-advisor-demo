@@ -1,5 +1,18 @@
 // Types — sandbox
 export type {
+  // 时间轴与原始流
+  ActivitySegmentType,
+  DemoClock,
+  ActivitySegment,
+  DeviceMetric,
+  DeviceEvent,
+  DeviceBufferState,
+  SyncSession,
+  RecognizedEventType,
+  RecognizedEvent,
+  DerivedTemporalStateType,
+  DerivedTemporalState,
+  // 沙箱基础
   BaselineMetrics,
   SandboxProfile,
   SleepStages,
@@ -29,6 +42,12 @@ export type { DataTab, Timeframe, PageContext, AgentResponseEnvelope } from './t
 
 // Types — god-mode
 export type {
+  // 时间轴动作载荷
+  TimelineAppendPayload,
+  SyncTriggerPayload,
+  AdvanceClockPayload,
+  ResetProfileTimelinePayload,
+  // 已有载荷
   ProfileSwitchPayload,
   EventInjectPayload,
   MetricOverridePayload,
@@ -61,6 +80,19 @@ export type {
 
 // Schemas
 export {
+  // 时间轴与原始流
+  ActivitySegmentTypeSchema,
+  DemoClockSchema,
+  ActivitySegmentSchema,
+  DeviceMetricSchema,
+  DeviceEventSchema,
+  DeviceBufferStateSchema,
+  SyncSessionSchema,
+  RecognizedEventTypeSchema,
+  RecognizedEventSchema,
+  DerivedTemporalStateTypeSchema,
+  DerivedTemporalStateSchema,
+  // 沙箱基础
   BaselineMetricsSchema,
   SandboxProfileSchema,
   SleepStagesSchema,
@@ -86,6 +118,12 @@ export {
 export { ChartTokenIdSchema, isValidChartTokenId } from './schemas/chart-token';
 
 export {
+  // 时间轴动作 Schema
+  TimelineAppendPayloadSchema,
+  SyncTriggerPayloadSchema,
+  AdvanceClockPayloadSchema,
+  ResetProfileTimelinePayloadSchema,
+  // 已有 Schema
   ProfileSwitchPayloadSchema,
   EventInjectPayloadSchema,
   MetricOverridePayloadSchema,
