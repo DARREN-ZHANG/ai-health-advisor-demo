@@ -2,6 +2,7 @@ import type { ChartTokenId, Timeframe, DateRange } from '@health-advisor/shared'
 import { timeframeToDateRange } from '@health-advisor/shared';
 import { normalizeTimeline, type TimelinePoint } from '@health-advisor/sandbox';
 import type { RuntimeRegistry } from '../../runtime/registry.js';
+import { DataService } from './service.js';
 
 interface ChartSeriesConfig {
   metrics: string[];
@@ -27,7 +28,11 @@ export interface ChartDataResponse {
 }
 
 export class ChartService {
-  constructor(private registry: RuntimeRegistry) {}
+  private dataService: DataService;
+
+  constructor(private registry: RuntimeRegistry) {
+    this.dataService = new DataService(registry);
+  }
 
   getChartData(
     profileId: string,
@@ -35,16 +40,17 @@ export class ChartService {
     timeframe: Timeframe,
     customDateRange?: DateRange,
   ): ChartDataResponse[] {
-    const profile = this.registry.getProfile(profileId);
+    // 使用冻结历史 + 当前活动日聚合的 records
+    const records = this.dataService.getRecordsForProfile(profileId);
 
     return tokenIds.map((tokenId) => {
       const config = TOKEN_CONFIG[tokenId];
       const range = timeframeToDateRange(timeframe, undefined, customDateRange);
-      const records = this.registry.selectByTimeframe(profile.records, timeframe, {
+      const filtered = this.registry.selectByTimeframe(records, timeframe, {
         referenceDate: range.end,
         customDateRange,
       });
-      const timeline = normalizeTimeline(records, config.metrics);
+      const timeline = normalizeTimeline(filtered, config.metrics);
 
       return { profileId, token: tokenId, range, timeline };
     });

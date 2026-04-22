@@ -1,6 +1,6 @@
-import type { DailyRecord, DataTab, Timeframe, DateRange, StressTimelineResponse, StressTimelinePoint, StressTrend, DataCenterResponse } from '@health-advisor/shared';
+import type { DailyRecord, DataTab, Timeframe, DateRange, StressTimelineResponse, StressTimelinePoint, StressTrend, DataCenterResponse, DeviceEvent } from '@health-advisor/shared';
 import { timeframeToDateRange } from '@health-advisor/shared';
-import { normalizeTimeline, rollingMedian, materializeDeviceSamples, getPendingSamples, getSamplesForSyncSession, summarizeSyncSessions, type TimelinePoint } from '@health-advisor/sandbox';
+import { normalizeTimeline, rollingMedian, aggregateCurrentDayRecord, type TimelinePoint } from '@health-advisor/sandbox';
 import type { RuntimeRegistry } from '../../runtime/registry.js';
 
 // tab → 需要提取的 metrics
@@ -47,25 +47,57 @@ export interface DeviceSyncSamplesResponse {
   scope: 'pending' | 'sync-session';
   syncId: string | null;
   sampleCount: number;
-  samples: ReturnType<typeof materializeDeviceSamples>;
+  samples: DeviceEvent[];
 }
 
 export class DataService {
   constructor(private registry: RuntimeRegistry) {}
+
+  /**
+   * 获取冻结历史 + 当前活动日聚合的 records
+   * - 基础 records 来自 profile 的冻结历史（由 B1 loader 加载）
+   * - 若 overrideStore 有已同步事件，则聚合当前日的 DailyRecord 并合并
+   */
+  private getRecordsWithCurrentDay(profileId: string): DailyRecord[] {
+    const profile = this.registry.getProfile(profileId);
+    const baseRecords = profile.records;
+
+    // 检查是否有已同步的设备事件
+    const clock = this.registry.overrideStore.getDemoClock(profileId);
+    const syncedEvents = this.registry.overrideStore.getSyncedEvents(profileId);
+
+    if (syncedEvents.length > 0 && clock.currentTime) {
+      const currentDate = clock.currentTime.slice(0, 10);
+      const currentDayRecord = aggregateCurrentDayRecord(syncedEvents, clock.currentTime);
+
+      // 在已有记录中查找当前日，替换或追加
+      const existingIndex = baseRecords.findIndex((r) => r.date === currentDate);
+      if (existingIndex >= 0) {
+        return [
+          ...baseRecords.slice(0, existingIndex),
+          currentDayRecord,
+          ...baseRecords.slice(existingIndex + 1),
+        ];
+      }
+      return [...baseRecords, currentDayRecord];
+    }
+
+    return baseRecords;
+  }
 
   getTimelineData(
     profileId: string,
     timeframe: Timeframe,
     customDateRange?: DateRange,
   ): TimelineDataResponse {
-    const profile = this.registry.getProfile(profileId);
+    const records = this.getRecordsWithCurrentDay(profileId);
     const range = timeframeToDateRange(timeframe, undefined, customDateRange);
-    const records = this.registry.selectByTimeframe(profile.records, timeframe, {
+    const filtered = this.registry.selectByTimeframe(records, timeframe, {
       referenceDate: range.end,
       customDateRange,
     });
 
-    return { profileId, range, records };
+    return { profileId, range, records: filtered };
   }
 
   getDataCenterData(
@@ -74,19 +106,19 @@ export class DataService {
     timeframe: Timeframe,
     customDateRange?: DateRange,
   ): DataCenterResponse | StressTimelineResponse {
-    const profile = this.registry.getProfile(profileId);
+    const records = this.getRecordsWithCurrentDay(profileId);
     const range = timeframeToDateRange(timeframe, undefined, customDateRange);
-    const records = this.registry.selectByTimeframe(profile.records, timeframe, {
+    const filtered = this.registry.selectByTimeframe(records, timeframe, {
       referenceDate: range.end,
       customDateRange,
     });
 
     const metrics = TAB_METRICS[tab] ?? ['hr'];
-    const timeline = normalizeTimeline(records, metrics);
+    const timeline = normalizeTimeline(filtered, metrics);
 
     // stress tab 返回特殊的 StressTimelineResponse
     if (tab === 'stress') {
-      return buildStressTimelineResponse(records, timeline, range);
+      return buildStressTimelineResponse(filtered, timeline, range);
     }
 
     return {
@@ -95,29 +127,45 @@ export class DataService {
       timeframe,
       range,
       timeline,
-      metadata: { recordCount: records.length, metrics },
+      metadata: { recordCount: filtered.length, metrics },
     };
   }
 
+  /** 暴露给外部（如 ChartService）使用的 records 获取方法 */
+  getRecordsForProfile(profileId: string): DailyRecord[] {
+    return this.getRecordsWithCurrentDay(profileId);
+  }
+
   getDeviceSyncOverview(profileId: string): DeviceSyncOverviewResponse {
-    const profile = this.registry.getRawProfile(profileId);
-    const samples = materializeDeviceSamples(profile);
-    const pendingSamples = getPendingSamples(profile);
-    const syncSessions = summarizeSyncSessions(profile);
-    const lastSyncedSampleAt = syncSessions
-      .map((session) => session.lastSampleAt)
-      .filter((value): value is string => value !== null)
-      .sort()
-      .at(-1) ?? null;
+    const syncState = this.registry.overrideStore.getSyncState(profileId);
+    const pendingEvents = this.registry.overrideStore.getPendingEvents(profileId);
+    const syncedEvents = this.registry.overrideStore.getSyncedEvents(profileId);
+    const allEvents = [...syncedEvents, ...pendingEvents];
+
+    // 按时间排序以获取首尾事件
+    const sortedEvents = [...allEvents].sort((a, b) =>
+      a.measuredAt.localeCompare(b.measuredAt),
+    );
+
+    // 将 SyncSession 映射为兼容旧格式的 syncSessions
+    const syncSessions = syncState.syncSessions.map((session) => ({
+      syncId: session.syncId,
+      connectedAt: session.startedAt,
+      disconnectedAt: session.finishedAt,
+      uploadedRange: session.uploadedMeasuredRange ?? { start: session.startedAt, end: session.finishedAt },
+      sampleCount: session.uploadedEventCount,
+      firstSampleAt: session.uploadedMeasuredRange?.start ?? null,
+      lastSampleAt: session.uploadedMeasuredRange?.end ?? null,
+    }));
 
     return {
       profileId,
-      samplingIntervalMinutes: profile.device?.samplingIntervalMinutes ?? null,
-      totalDeviceSamples: samples.length,
-      pendingDeviceSamples: pendingSamples.length,
-      firstDeviceSampleAt: samples[0]?.timestamp ?? null,
-      lastDeviceSampleAt: samples[samples.length - 1]?.timestamp ?? null,
-      lastSyncedSampleAt,
+      samplingIntervalMinutes: 1,
+      totalDeviceSamples: allEvents.length,
+      pendingDeviceSamples: pendingEvents.length,
+      firstDeviceSampleAt: sortedEvents[0]?.measuredAt ?? null,
+      lastDeviceSampleAt: sortedEvents[sortedEvents.length - 1]?.measuredAt ?? null,
+      lastSyncedSampleAt: syncState.lastSyncedMeasuredAt,
       syncSessions,
     };
   }
@@ -128,19 +176,36 @@ export class DataService {
     syncId?: string,
     limit?: number,
   ): DeviceSyncSamplesResponse {
-    const profile = this.registry.getRawProfile(profileId);
-    const samples = scope === 'pending'
-      ? getPendingSamples(profile)
-      : getSamplesForSyncSession(profile, syncId ?? '');
+    let events: DeviceEvent[];
 
-    const normalizedLimit = limit == null ? samples.length : Math.max(1, limit);
+    if (scope === 'pending') {
+      events = this.registry.overrideStore.getPendingEvents(profileId);
+    } else {
+      // sync-session: 从 syncState 中找到对应的 session，返回其上传的事件
+      const syncState = this.registry.overrideStore.getSyncState(profileId);
+      const session = syncState.syncSessions.find((s) => s.syncId === syncId);
+      if (!session) {
+        throw new Error(`Sync session not found: ${syncId}`);
+      }
+      const syncedEvents = this.registry.overrideStore.getSyncedEvents(profileId);
+      if (session.uploadedMeasuredRange) {
+        const { start, end } = session.uploadedMeasuredRange;
+        events = syncedEvents.filter(
+          (e) => e.measuredAt >= start && e.measuredAt <= end,
+        );
+      } else {
+        events = [];
+      }
+    }
+
+    const normalizedLimit = limit == null ? events.length : Math.max(1, limit);
 
     return {
       profileId,
       scope,
       syncId: scope === 'sync-session' ? (syncId ?? null) : null,
-      sampleCount: samples.length,
-      samples: samples.slice(0, normalizedLimit),
+      sampleCount: events.length,
+      samples: events.slice(0, normalizedLimit),
     };
   }
 }

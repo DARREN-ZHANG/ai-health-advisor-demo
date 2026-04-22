@@ -128,7 +128,7 @@ describe('Data Routes', () => {
   });
 
   describe('GET /profiles/:profileId/device-sync', () => {
-    test('返回设备同步总览', async () => {
+    test('返回设备同步总览（空状态）', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/profiles/profile-a/device-sync',
@@ -139,25 +139,30 @@ describe('Data Routes', () => {
       expect(body.success).toBe(true);
       expect(body.data.profileId).toBe('profile-a');
       expect(body.data.samplingIntervalMinutes).toBe(1);
-      expect(body.data.totalDeviceSamples).toBeGreaterThan(20000);
-      expect(body.data.syncSessions).toHaveLength(4);
+      // 初始状态无事件，数量为 0
+      expect(body.data.totalDeviceSamples).toBe(0);
+      expect(body.data.pendingDeviceSamples).toBe(0);
+      expect(body.data.syncSessions).toHaveLength(0);
+      expect(body.data.firstDeviceSampleAt).toBeNull();
+      expect(body.data.lastDeviceSampleAt).toBeNull();
+      expect(body.data.lastSyncedSampleAt).toBeNull();
     });
   });
 
   describe('GET /profiles/:profileId/device-sync/samples', () => {
-    test('返回某次同步批次的样本', async () => {
+    test('返回 pending 样本（空状态）', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/profiles/profile-a/device-sync/samples?scope=sync-session&syncId=sync-a-001&limit=5',
+        url: '/profiles/profile-a/device-sync/samples?scope=pending',
       });
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.success).toBe(true);
-      expect(body.data.scope).toBe('sync-session');
-      expect(body.data.syncId).toBe('sync-a-001');
-      expect(body.data.sampleCount).toBeGreaterThan(0);
-      expect(body.data.samples).toHaveLength(5);
+      expect(body.data.scope).toBe('pending');
+      expect(body.data.syncId).toBeNull();
+      expect(body.data.sampleCount).toBe(0);
+      expect(body.data.samples).toHaveLength(0);
     });
 
     test('缺少 syncId 返回 400', async () => {
