@@ -72,3 +72,12 @@ export type { RawEventRepository } from './helpers/raw-event-repository';
 // Helpers — timeline append
 export { appendSegment } from './helpers/timeline-append';
 export type { TimelineAppendResult } from './helpers/timeline-append';
+
+// Helpers — event recognition
+export { recognizeEvents } from './helpers/event-recognition';
+
+// Helpers — derived temporal state
+export { computeDerivedTemporalStates } from './helpers/derived-temporal-state';
+
+// Helpers — raw to daily aggregation
+export { aggregateDailyRecord, aggregateCurrentDayRecord } from './helpers/raw-to-daily';
