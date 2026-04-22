@@ -130,7 +130,10 @@ function validateScenarios(dataDir: string, fatal: string[]): void {
       fatal.push('scenarios/manifest.json has no scenarios');
     }
 
-    const validTypes = ['profile_switch', 'event_inject', 'metric_override', 'reset', 'demo_script'];
+    const validTypes = [
+      'profile_switch', 'event_inject', 'metric_override', 'reset', 'demo_script',
+      'timeline_append', 'sync_trigger', 'advance_clock', 'reset_profile_timeline',
+    ];
     for (const s of content.scenarios) {
       if (!s.scenarioId || !s.label || !s.type) {
         fatal.push(`scenario missing required fields: ${JSON.stringify(s)}`);

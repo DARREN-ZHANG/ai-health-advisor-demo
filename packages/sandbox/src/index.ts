@@ -79,5 +79,15 @@ export { recognizeEvents } from './helpers/event-recognition';
 // Helpers — derived temporal state
 export { computeDerivedTemporalStates } from './helpers/derived-temporal-state';
 
+// Helpers — sync engine
+export {
+  createSyncState,
+  performSync,
+  getPendingEvents,
+  getSyncedEvents,
+  addEventsToSyncState,
+} from './helpers/sync-engine';
+export type { SyncState } from './helpers/sync-engine';
+
 // Helpers — raw to daily aggregation
 export { aggregateDailyRecord, aggregateCurrentDayRecord } from './helpers/raw-to-daily';

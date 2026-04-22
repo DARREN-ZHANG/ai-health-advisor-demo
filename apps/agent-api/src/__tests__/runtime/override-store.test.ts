@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { createOverrideStore } from '../../runtime/override-store';
 import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
 
-describe('OverrideStore', () => {
+// ============================================================
+// 现有能力测试（向后兼容）
+// ============================================================
+
+describe('OverrideStore — 现有能力', () => {
   it('默认 profileId 为传入值', () => {
     const store = createOverrideStore('profile-a');
     expect(store.getCurrentProfileId()).toBe('profile-a');
@@ -86,5 +90,224 @@ describe('OverrideStore', () => {
     store.reset('events');
     expect(store.getActiveOverrides('profile-a')).toHaveLength(1);
     expect(store.getInjectedEvents('profile-a')).toHaveLength(0);
+  });
+});
+
+// ============================================================
+// Timeline Sync 新能力测试
+// ============================================================
+
+const INITIAL_TIME = '2026-04-21T08:00';
+
+describe('OverrideStore — Timeline Sync', () => {
+  // — Demo Clock —
+  it('getDemoClock 返回初始时钟', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    const clock = store.getDemoClock('profile-a');
+    expect(clock.profileId).toBe('profile-a');
+    expect(clock.currentTime).toBe(INITIAL_TIME);
+    expect(clock.timezone).toBe('Asia/Shanghai');
+  });
+
+  it('getDemoClock 返回不可变副本', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    const a = store.getDemoClock('profile-a');
+    const b = store.getDemoClock('profile-a');
+    expect(a).not.toBe(b);
+    expect(a).toEqual(b);
+  });
+
+  it('advanceClock 推进时间', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    store.advanceClock('profile-a', 30);
+    const clock = store.getDemoClock('profile-a');
+    expect(clock.currentTime).toBe('2026-04-21T08:30');
+  });
+
+  it('advanceClock 多次推进累积', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    store.advanceClock('profile-a', 15);
+    store.advanceClock('profile-a', 45);
+    expect(store.getDemoClock('profile-a').currentTime).toBe('2026-04-21T09:00');
+  });
+
+  // — Segments —
+  it('getSegments 初始为空', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    expect(store.getSegments('profile-a')).toEqual([]);
+  });
+
+  // — Append Segment —
+  it('appendSegment 创建事件并推进时间', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    const result = store.appendSegment('profile-a', 'meal_intake');
+
+    // meal_intake 默认持续 25 分钟
+    expect(result.newCurrentTime).toBe('2026-04-21T08:25');
+    expect(result.events.length).toBeGreaterThan(0);
+    expect(store.getDemoClock('profile-a').currentTime).toBe('2026-04-21T08:25');
+
+    // 片段列表有新片段
+    const segments = store.getSegments('profile-a');
+    expect(segments).toHaveLength(1);
+    expect(segments[0]!.type).toBe('meal_intake');
+  });
+
+  it('appendSegment 带自定义参数', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    const result = store.appendSegment('profile-a', 'steady_cardio', {
+      durationMinutes: 45,
+    });
+
+    expect(result.newCurrentTime).toBe('2026-04-21T08:45');
+  });
+
+  it('appendSegment 带偏移量', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    const result = store.appendSegment('profile-a', 'walk', undefined, 10);
+
+    // walk 从 08:10 开始，默认 20 分钟，结束于 08:30
+    expect(result.newCurrentTime).toBe('2026-04-21T08:30');
+  });
+
+  // — Profile 隔离 —
+  it('不同 profile 的时间轴互相隔离', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    store.appendSegment('profile-a', 'meal_intake');
+    store.appendSegment('profile-b', 'walk');
+
+    // profile-a 有 meal_intake
+    expect(store.getSegments('profile-a')).toHaveLength(1);
+    expect(store.getSegments('profile-a')[0]!.type).toBe('meal_intake');
+
+    // profile-b 有 walk
+    expect(store.getSegments('profile-b')).toHaveLength(1);
+    expect(store.getSegments('profile-b')[0]!.type).toBe('walk');
+
+    // 时钟各自独立
+    expect(store.getDemoClock('profile-a').currentTime).not.toBe(
+      store.getDemoClock('profile-b').currentTime,
+    );
+  });
+
+  // — Sync 操作 —
+  it('getSyncState 初始无同步记录', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    const syncState = store.getSyncState('profile-a');
+    expect(syncState.lastSyncedMeasuredAt).toBeNull();
+    expect(syncState.syncSessions).toHaveLength(0);
+  });
+
+  it('getPendingEvents 初始为空', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    expect(store.getPendingEvents('profile-a')).toEqual([]);
+  });
+
+  it('getSyncedEvents 初始为空', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    expect(store.getSyncedEvents('profile-a')).toEqual([]);
+  });
+
+  it('appendSegment 后 pending 事件正确', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    store.appendSegment('profile-a', 'meal_intake');
+    const pending = store.getPendingEvents('profile-a');
+    expect(pending.length).toBeGreaterThan(0);
+    // 未同步时 synced 为空
+    expect(store.getSyncedEvents('profile-a')).toEqual([]);
+  });
+
+  it('performSync 创建同步会话并更新水位线', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    store.appendSegment('profile-a', 'meal_intake');
+
+    const session = store.performSync('profile-a', 'app_open');
+
+    // 验证 session 基本结构
+    expect(session.profileId).toBe('profile-a');
+    expect(session.trigger).toBe('app_open');
+    expect(session.syncId).toBeTruthy();
+
+    // 水位线更新为当前时间
+    const syncState = store.getSyncState('profile-a');
+    expect(syncState.lastSyncedMeasuredAt).toBe(store.getDemoClock('profile-a').currentTime);
+    expect(syncState.syncSessions).toHaveLength(1);
+
+    // synced 事件有值，pending 为空
+    expect(store.getSyncedEvents('profile-a').length).toBeGreaterThan(0);
+    expect(store.getPendingEvents('profile-a')).toEqual([]);
+  });
+
+  it('performSync 手动刷新也正常工作', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    store.appendSegment('profile-a', 'walk');
+    const session = store.performSync('profile-a', 'manual_refresh');
+    expect(session.trigger).toBe('manual_refresh');
+  });
+
+  it('多次同步：追加后同步，再追加再同步', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+
+    // 第一次追加 + 同步
+    store.appendSegment('profile-a', 'meal_intake');
+    store.performSync('profile-a', 'app_open');
+
+    // 第二次追加 + 同步
+    store.appendSegment('profile-a', 'walk');
+    const session2 = store.performSync('profile-a', 'manual_refresh');
+
+    expect(session2.trigger).toBe('manual_refresh');
+
+    const syncState = store.getSyncState('profile-a');
+    expect(syncState.syncSessions).toHaveLength(2);
+    expect(store.getPendingEvents('profile-a')).toEqual([]);
+  });
+
+  // — Reset Timeline —
+  it('resetProfileTimeline 恢复初始状态', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+
+    store.appendSegment('profile-a', 'meal_intake');
+    store.performSync('profile-a', 'app_open');
+
+    // 重置时间轴
+    store.resetProfileTimeline('profile-a');
+
+    // 时钟回到初始值
+    expect(store.getDemoClock('profile-a').currentTime).toBe(INITIAL_TIME);
+    // 片段清空
+    expect(store.getSegments('profile-a')).toEqual([]);
+    // 同步状态清空
+    expect(store.getSyncState('profile-a').syncSessions).toHaveLength(0);
+    expect(store.getSyncState('profile-a').lastSyncedMeasuredAt).toBeNull();
+    // 事件清空
+    expect(store.getPendingEvents('profile-a')).toEqual([]);
+  });
+
+  it('resetProfileTimeline 不影响 override 和 injectedEvents', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+
+    store.addOverride('profile-a', { metric: 'hrv', value: 15 });
+    store.injectEvent('profile-a', { date: '2026-04-10', type: 'illness', data: {} });
+    store.appendSegment('profile-a', 'meal_intake');
+
+    store.resetProfileTimeline('profile-a');
+
+    // override 和 injectedEvents 不受影响
+    expect(store.getActiveOverrides('profile-a')).toHaveLength(1);
+    expect(store.getInjectedEvents('profile-a')).toHaveLength(1);
+    // 时间轴已重置
+    expect(store.getSegments('profile-a')).toEqual([]);
+  });
+
+  it('reset("all") 同时清除 demo 状态', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    store.appendSegment('profile-a', 'meal_intake');
+    store.advanceClock('profile-a', 30);
+    store.reset('all');
+
+    // demo 状态被清除，下次访问会重建为初始值
+    expect(store.getDemoClock('profile-a').currentTime).toBe(INITIAL_TIME);
+    expect(store.getSegments('profile-a')).toEqual([]);
   });
 });
