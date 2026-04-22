@@ -51,3 +51,24 @@ export {
   summarizeSyncSessions,
 } from './helpers/device-stream';
 export type { DeviceSyncSessionSummary } from './helpers/device-stream';
+
+// Helpers — activity generators
+export {
+  generateEventsForSegment,
+  generateMealIntakeEvents,
+  generateSteadyCardioEvents,
+  generateProlongedSedentaryEvents,
+  generateIntermittentExerciseEvents,
+  generateWalkEvents,
+  generateSleepEvents,
+} from './helpers/activity-generators';
+
+// Helpers — raw event repository
+export {
+  createRawEventRepository,
+} from './helpers/raw-event-repository';
+export type { RawEventRepository } from './helpers/raw-event-repository';
+
+// Helpers — timeline append
+export { appendSegment } from './helpers/timeline-append';
+export type { TimelineAppendResult } from './helpers/timeline-append';
