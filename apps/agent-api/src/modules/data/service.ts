@@ -55,34 +55,47 @@ export class DataService {
 
   /**
    * 获取冻结历史 + 当前活动日聚合的 records
-   * - 基础 records 来自 profile 的冻结历史（由 B1 loader 加载）
-   * - 若 overrideStore 有已同步事件，则聚合当前日的 DailyRecord 并合并
+   *
+   * 核心约束（§7.1, §7.3, §9.3, §13.4）：
+   * - 当前活动日的数据只能来源于"已同步可见事件"的聚合
+   * - 历史天的完整数据使用冻结 DailyRecord[]
+   * - 无 synced events 时，当前活动日不包含任何记录（"今日白天尚未发生"）
+   *
+   * 处理流程：
+   * 1. 当存在 demo clock 时，从 baseRecords 中排除当前活动日
+   * 2. 若有 synced events，用聚合结果替换当前日
+   * 3. 若无 synced events，当前日为空（不追加）
    */
   private getRecordsWithCurrentDay(profileId: string): DailyRecord[] {
     const profile = this.registry.getProfile(profileId);
     const baseRecords = profile.records;
 
-    // 检查是否有已同步的设备事件
+    // 检查是否存在 demo clock（处于 demo timeline 模式）
     const clock = this.registry.overrideStore.getDemoClock(profileId);
-    const syncedEvents = this.registry.overrideStore.getSyncedEvents(profileId);
-
-    if (syncedEvents.length > 0 && clock.currentTime) {
-      const currentDate = clock.currentTime.slice(0, 10);
-      const currentDayRecord = aggregateCurrentDayRecord(syncedEvents, clock.currentTime);
-
-      // 在已有记录中查找当前日，替换或追加
-      const existingIndex = baseRecords.findIndex((r) => r.date === currentDate);
-      if (existingIndex >= 0) {
-        return [
-          ...baseRecords.slice(0, existingIndex),
-          currentDayRecord,
-          ...baseRecords.slice(existingIndex + 1),
-        ];
-      }
-      return [...baseRecords, currentDayRecord];
+    if (!clock.currentTime) {
+      // 非 demo 模式，直接返回原始 records
+      return baseRecords;
     }
 
-    return baseRecords;
+    const currentDate = clock.currentTime.slice(0, 10);
+
+    // 从 baseRecords 中排除当前活动日的完整历史记录
+    // 这样防止冻结历史中的当前日完整数据泄露给前端
+    const historicalRecords = baseRecords.filter(
+      (r) => r.date !== currentDate,
+    );
+
+    // 获取已同步的设备事件
+    const syncedEvents = this.registry.overrideStore.getSyncedEvents(profileId);
+
+    if (syncedEvents.length > 0) {
+      // 有已同步事件：聚合当前日记录并追加
+      const currentDayRecord = aggregateCurrentDayRecord(syncedEvents, clock.currentTime);
+      return [...historicalRecords, currentDayRecord];
+    }
+
+    // 无已同步事件：当前日为空，只返回历史记录
+    return historicalRecords;
   }
 
   getTimelineData(
