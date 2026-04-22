@@ -45,7 +45,7 @@
 3. App 将这些数据上传到云端
 4. 后端只基于“已同步可见”的数据生成首页回顾、状态总结和后续建议
 5. 在 God Mode 下，可以把一段新的活动场景追加到主时间轴末尾
-6. 这些活动片段既能产出原始数据，也能被规则识别为“空腹有氧 / 久坐办公 / 无氧训练 / 散步 / 睡眠”等事件
+6. 这些活动片段既能产出原始数据，也能被规则识别为“进餐 / 稳态有氧 / 长时静坐 / 间歇运动 / 散步 / 睡眠”等事件
 
 ---
 
@@ -61,7 +61,8 @@
 4. 首页晨间场景能准确表达“昨夜数据已同步、今日白天尚未发生”
 5. God Mode 可以把可识别活动片段沿时间轴向后追加
 6. 系统可以从原始数据中识别出这些片段对应的活动类型
-7. 保留现有页面对聚合视图的消费方式，避免一次性重写整站
+7. 支持把“半小时之前进餐”表达为由已识别进餐事件和主时间轴推导出的状态
+8. 保留现有页面对聚合视图的消费方式，避免一次性重写整站
 
 ## 3.2 非目标
 
@@ -89,9 +90,11 @@
 
 设备中尚未同步的数据不能直接进入 Agent context。否则“打开 App 触发同步”的演示链路在语义上是假的。
 
-## 4.4 God Mode 注入的是“时间片段”，不是“结果覆盖”
+## 4.4 God Mode 注入的是“可识别时间片段”，不是“结果覆盖”
 
-场景系统要从“改一个值”升级成“追加一段活动”。结果指标、识别事件、汇总记录都应从这段活动推导得到。
+场景系统要从“改一个值”升级成“追加一段可被传感器识别的活动”。结果指标、识别事件、汇总记录都应从这段活动推导得到。
+
+不应为了剧情方便引入无法由传感器支撑的事件类型。像“早餐 / 午餐 / 晚餐”这类日程标签，如果保留，必须降级为 `meal_intake` 的上下文标签，而不是新的识别类别。
 
 ## 4.5 生成模型与识别模型使用同一特征空间
 
@@ -105,7 +108,7 @@
 
 1. **事实层**
    - 主时间轴
-   - 活动片段
+   - 可识别活动片段
    - 原始设备事件
 
 2. **传输层**
@@ -172,18 +175,15 @@ export interface DemoClock {
 
 ### 6.1.2 ActivitySegment
 
-用于表达一段“活动片段模板实例”，它是原始数据生成的直接原因。
+用于表达一段“可识别活动片段模板实例”，它是原始数据生成的直接原因。
 
 ```ts
 export type ActivitySegmentType =
-  | 'fasted_cardio'
-  | 'breakfast'
-  | 'sedentary_work'
-  | 'lunch'
-  | 'strength_training'
-  | 'dinner'
+  | 'meal_intake'
+  | 'steady_cardio'
+  | 'prolonged_sedentary'
+  | 'intermittent_exercise'
   | 'walk'
-  | 'leisure'
   | 'sleep';
 
 export interface ActivitySegment {
@@ -202,7 +202,8 @@ export interface ActivitySegment {
 
 - `baseline_script` 表示 profile 自带的标准日程脚本
 - `god_mode` 表示运行时注入的增量片段
-- `params` 用于表达强度、时长、餐后状态、目标步频等可控参数
+- `params` 用于表达强度、时长、目标步频、是否空腹、是否晨起等可控参数
+- 如需保留“早餐 / 午餐 / 晚餐”语义，应以 `mealContext` 形式放入 `params`，而不是扩展新的事件类型
 
 ### 6.1.3 DeviceEvent
 
@@ -233,6 +234,7 @@ export interface DeviceEvent {
 - `DeviceEvent` 是事实记录，不直接表示“已上传”
 - 步数事件建议使用累计计数，而不是分钟增量，避免后续同步切片时重复累计语义不清
 - `motion` 用于表达运动强度或加速度等级，作为活动识别输入
+- 若要支持 `meal_intake` 识别，`motion` 不能只是粗粒度活动量，必须能够表达腕部惯性/手到口动作特征；否则仅靠 `heartRate/steps/spo2` 不足以稳定识别进餐
 
 ## 6.2 传输层模型
 
@@ -276,6 +278,7 @@ export interface SyncSession {
 - `startedAt/finishedAt` 是同步动作发生时间
 - `uploadedMeasuredRange` 是本次上传覆盖的原始测量时间范围
 - 允许某次同步没有新数据，此时 `uploadedMeasuredRange = null`
+- 本轮同步算法严格依赖单调时间轴，不支持回填早于 `lastSyncedMeasuredAt` 的历史事件
 
 ## 6.3 派生层模型
 
@@ -284,10 +287,18 @@ export interface SyncSession {
 用于表达规则识别出的可消费事件。
 
 ```ts
+export type RecognizedEventType =
+  | 'meal_intake'
+  | 'steady_cardio'
+  | 'prolonged_sedentary'
+  | 'intermittent_exercise'
+  | 'walk'
+  | 'sleep';
+
 export interface RecognizedEvent {
   recognizedEventId: string;
   profileId: string;
-  type: ActivitySegmentType;
+  type: RecognizedEventType;
   start: string;
   end: string;
   confidence: number;
@@ -299,6 +310,27 @@ export interface RecognizedEvent {
 ### 6.3.2 DailyRecord
 
 现有 `DailyRecord` 暂时保留，但角色变更为“从已同步原始事件聚合得到的兼容视图”，不再视为顶层事实源。
+
+### 6.3.3 DerivedTemporalState
+
+用于表达依赖“已识别事件 + 主时间轴”计算出的状态，而不是新的传感器识别类别。
+
+```ts
+export type DerivedTemporalStateType = 'recent_meal_30m';
+
+export interface DerivedTemporalState {
+  type: DerivedTemporalStateType;
+  profileId: string;
+  sourceRecognizedEventId: string;
+  activeAt: string;
+  metadata?: Record<string, string | number | boolean>;
+}
+```
+
+说明：
+
+- “半小时之前进餐”不应作为独立传感器识别事件建模
+- 更合理的表达是：先识别 `meal_intake`，再基于 meal end time 与 `currentTime` 推导 `recent_meal_30m`
 
 ---
 
@@ -320,7 +352,7 @@ export interface RecognizedEvent {
 
 ## 7.2 时间推进规则
 
-系统支持三种推进方式：
+系统支持四种推进方式：
 
 1. `app_open`
    - 不推进 `currentTime`
@@ -335,14 +367,20 @@ export interface RecognizedEvent {
    - 生成一段原始设备事件
    - 默认把 `currentTime` 推进到片段结束时刻
 
+4. `reset_profile_timeline`
+   - 将当前 profile 的运行时状态恢复到初始 demo 时刻
+   - 恢复初始设备缓存、同步边界、活动片段和同步历史
+
 ## 7.3 时间轴上的合法性约束
 
 必须保证：
 
 - 新片段不得与已有片段重叠
 - 新片段开始时间必须大于等于当前时间
+- `timeline_append.offsetMinutes` 若存在，必须为非负数
 - 同一个 profile 的活动片段按时间顺序存储
 - 所有派生视图都只基于 `measuredAt <= currentTime` 的事件计算
+- `reset_profile_timeline` 之后，状态必须精确回到“有昨夜睡眠数据、但今日白天事件尚未发生”的初始时刻
 
 ---
 
@@ -354,9 +392,10 @@ export interface RecognizedEvent {
 
 建议按片段类型分别实现生成器：
 
-- `generateFastedCardioEvents()`
-- `generateSedentaryWorkEvents()`
-- `generateStrengthTrainingEvents()`
+- `generateMealIntakeEvents()`
+- `generateSteadyCardioEvents()`
+- `generateProlongedSedentaryEvents()`
+- `generateIntermittentExerciseEvents()`
 - `generateWalkEvents()`
 - `generateSleepEvents()`
 
@@ -380,31 +419,42 @@ export interface RecognizedEvent {
 
 以下特征不是 UI 文案，而是生成模型和识别模型共享的约束。
 
-### 8.3.1 空腹有氧 15 分钟
+### 8.3.1 进餐（meal_intake）
+
+- 持续时长：10 到 30 分钟
+- 关键输入：腕部惯性/手到口动作模式
+- 辅助输入：低位移、低步数、轻微心率变化
+- 识别说明：应识别为“发生过一次进餐事件”，而不是“早餐/午餐/晚餐”这样的日程标签
+- 派生状态：`meal_intake` 结束后 30 分钟内可推导 `recent_meal_30m`
+
+### 8.3.2 稳态有氧 15 分钟
 
 - 持续时长：15 分钟
 - 心率：快速抬升后维持在中高平台
 - 步数：稳定连续增长
 - motion：持续中高
-- 可识别标签：`fasted_cardio`
+- 可识别标签：`steady_cardio`
+- “空腹”不应由传感器直接识别，应作为起始时段上下文或派生标签
 
-### 8.3.2 静坐工作 4 小时
+### 8.3.3 长时静坐 4 小时
 
 - 持续时长：240 分钟
 - 心率：低波动
 - 步数：接近停滞，仅有零星微增
 - motion：持续低
-- 可识别标签：`sedentary_work`
+- 可识别标签：`prolonged_sedentary`
+- 识别结果应表达“长时静坐”，而不是直接推断为“在工作”
 
-### 8.3.3 无氧训练 30 分钟
+### 8.3.4 间歇运动 30 分钟
 
 - 持续时长：30 分钟
 - 心率：多次波峰，呈间歇变化
 - 步数：可低于有氧与散步
 - motion：高 burst，模式不同于步行
-- 可识别标签：`strength_training`
+- 可识别标签：`intermittent_exercise`
+- 若后续业务仍需要展示“无氧训练”，应作为规则层或文案层解释，而不是底层识别类别
 
-### 8.3.4 晚间散步 30 分钟
+### 8.3.5 晚间散步 30 分钟
 
 - 持续时长：30 分钟
 - 心率：中等稳定抬升
@@ -412,7 +462,7 @@ export interface RecognizedEvent {
 - motion：中等稳定
 - 可识别标签：`walk`
 
-### 8.3.5 夜间睡眠
+### 8.3.6 夜间睡眠
 
 - 持续时长：跨天
 - 心率：夜间下降，后半夜随 REM 出现波动
@@ -502,6 +552,7 @@ export type ScenarioType =
   | 'sync_trigger'
   | 'advance_clock'
   | 'reset'
+  | 'reset_profile_timeline'
   | 'demo_script';
 ```
 
@@ -518,6 +569,11 @@ export type ScenarioType =
 
 - `advance_clock`
   - 仅推进主时间轴，不追加片段
+
+- `reset_profile_timeline`
+  - 恢复当前 profile 到初始 demo 时刻
+  - 清空该 profile 的运行时追加片段与运行时同步历史
+  - 恢复预置的昨夜睡眠原始数据与初始同步边界
 
 ## 10.3 新 scenario payload 设计
 
@@ -537,28 +593,30 @@ export interface SyncTriggerPayload {
 export interface AdvanceClockPayload {
   minutes: number;
 }
+
+export interface ResetProfileTimelinePayload {
+  profileId?: string;
+}
 ```
 
 ## 10.4 典型 scenario 组织方式
 
 `profile-a` 需要拆出一组可单独注入的识别片段：
 
-1. `profile-a-fasted-cardio-15m`
-2. `profile-a-breakfast-20m`
-3. `profile-a-sedentary-work-4h`
-4. `profile-a-lunch-30m`
-5. `profile-a-strength-training-30m`
-6. `profile-a-afternoon-sedentary-work-4h`
-7. `profile-a-dinner-30m`
-8. `profile-a-evening-walk-30m`
-9. `profile-a-leisure-2h`
-10. `profile-a-night-sleep`
+1. `profile-a-meal-intake-20m`
+2. `profile-a-steady-cardio-15m`
+3. `profile-a-prolonged-sedentary-4h`
+4. `profile-a-intermittent-exercise-30m`
+5. `profile-a-evening-walk-30m`
+6. `profile-a-night-sleep`
+7. `profile-a-reset-timeline`
 
 每个 scenario 的职责是：
 
 - 在主时间轴尾部追加一段活动片段
 - 让设备缓存中新增一段原始事件
 - 必要时由用户手动触发同步后让页面/LLM 看到变化
+- 若业务需要“早餐/午餐/晚餐”文案，使用 `meal_intake + mealContext` 表达，而不是扩展新的传感器识别事件
 
 ---
 
@@ -569,7 +627,7 @@ export interface AdvanceClockPayload {
 识别器负责从“已同步可见”的原始事件中输出 `RecognizedEvent[]`，供：
 
 - God Mode 面板展示“系统识别到了什么”
-- 首页和 LLM 解释“你刚刚完成了一段空腹有氧”
+- 首页和 LLM 解释“你刚刚完成了一段稳态有氧”或“你在半小时内发生过一次进餐”
 - 后续规则与 summary 逻辑复用
 
 ## 11.2 识别输入
@@ -588,6 +646,7 @@ export interface AdvanceClockPayload {
 
 - 在测试中允许用 `sourceSegmentId` 做对账
 - 在运行时识别器不应直接靠 `segment.type` 反查答案
+- `recent_meal_30m` 这类状态必须由 `RecognizedEvent(meal_intake)` + 主时间轴推导，不单独参与识别分类
 
 ## 11.3 识别输出与可信度
 
@@ -627,16 +686,18 @@ export interface AdvanceClockPayload {
 
 ## 12.3 Agent Context
 
-`packages/agent-core` 的 context builder 需要新增两块输入：
+`packages/agent-core` 的 context builder 需要新增三块输入：
 
 1. `recognizedEvents`
 2. `syncMetadata`
+3. `derivedTemporalStates`
 
 例如：
 
 - 最近一次同步时间
 - 是否存在未同步 pending 数据
 - 最近识别到的活动片段
+- 是否处于 `recent_meal_30m`
 
 但 Agent 仍不直接读取设备侧未同步事件。
 
@@ -660,6 +721,10 @@ export interface AdvanceClockPayload {
 ```text
 data/sandbox/
 ├── profiles/
+├── history/
+│   ├── profile-a-daily-records.json
+│   ├── profile-b-daily-records.json
+│   └── profile-c-daily-records.json
 ├── scenarios/
 ├── timeline-scripts/
 │   ├── profile-a-day-1.json
@@ -669,8 +734,12 @@ data/sandbox/
 
 这些文件用于定义：
 
-- 初始 baseline 活动片段
-- 每个 profile 的标准日程模板
+- `history/*.json`
+  - 冻结的多日 `DailyRecord` 历史档案
+  - 用于支撑数据分析页的周/月视图
+- `timeline-scripts/*.json`
+  - 当前活动日的 baseline 活动片段
+  - 用于支撑主时间轴推进、同步和日视图
 - 可供 God Mode 片段注入复用的参数预设
 
 ## 13.3 运行时状态
@@ -681,8 +750,34 @@ data/sandbox/
 - 运行时追加的活动片段
 - 设备缓存同步边界
 - 同步历史
+- 当前活动日的运行时原始事件缓存
 
 这与现有 demo 的内存态原则一致。
+
+## 13.4 历史数据的推荐实现
+
+推荐采用“冻结历史聚合 + 当前活动日原始流”的混合方案：
+
+1. 历史天数据
+   - 以文件形式保存为冻结的 `DailyRecord[]`
+   - 不参与主时间轴推进
+   - 主要服务周/月维度切换
+
+2. 当前活动日
+   - 以 `ActivitySegment + DeviceEvent + SyncSession` 运行
+   - 支持主时间轴推进、同步、识别和 reset
+   - 聚合后生成当前日的 `DailyRecord`
+
+3. 数据分析页查询
+   - `day`：优先读取当前活动日的原始流派生视图
+   - `week/month`：组合冻结历史 `DailyRecord[]` 与当前日聚合结果
+
+这样可以同时满足：
+
+- 保留 demo 历史数据
+- 支持日/周/月切换
+- 避免为所有历史天都维护可推进的原始流状态
+- 降低实现和维护复杂度
 
 ---
 
@@ -704,10 +799,12 @@ data/sandbox/
 
 新增：
 
+- history archive loader
 - timeline script loader
 - segment generator
 - raw event repository helpers
 - recognition helpers
+- derived temporal state helpers
 - raw-to-daily aggregation helpers
 
 调整：
@@ -720,15 +817,16 @@ data/sandbox/
 新增或重构：
 
 - `demo-state-store` 取代当前 `override-store` 的主职责
-- `timeline_append` / `sync_trigger` / `advance_clock` 路由与服务
+- `timeline_append` / `sync_trigger` / `advance_clock` / `reset_profile_timeline` 路由与服务
 - 首页初次打开触发同步的服务编排
 - 数据模块新增“只读取已同步数据”的约束
+- 数据模块支持“冻结历史 + 当前活动日聚合”的混合查询
 
 ## 14.4 `packages/agent-core`
 
 调整：
 
-- context builder 加入 recognized events 与 sync metadata
+- context builder 加入 recognized events、sync metadata 与 derived temporal states
 - 规则引擎支持“最近活动片段”类信号
 
 ## 14.5 `apps/web`
@@ -737,6 +835,7 @@ data/sandbox/
 
 - God Mode 面板按时间轴展示动作与当前时刻
 - 可显示最近一次同步、pending 数据量、最近识别事件
+- 可执行当前 profile 时间轴 reset
 - 首页首次打开时触发同步并刷新晨报
 
 ---
@@ -750,6 +849,7 @@ data/sandbox/
 - 引入 `DemoClock`
 - 引入 `DeviceEvent`
 - 引入 `SyncSession`
+- 引入冻结历史 `DailyRecord` 资产
 - 首页读取“已同步可见数据”
 
 完成标志：
@@ -757,6 +857,7 @@ data/sandbox/
 - 首次打开首页会触发同步
 - LLM 只看到同步后的昨夜数据
 - 可查询 pending / synced 事件
+- 数据分析页的 `week/month` 可继续使用历史聚合数据
 
 ## Phase 2：God Mode 升级为时间片段注入
 
@@ -765,12 +866,14 @@ data/sandbox/
 - 新增 `timeline_append`
 - 新增 `advance_clock`
 - 新增 `sync_trigger`
-- `profile-a` 一天中的标准活动片段可逐段推进
+- 新增 `reset_profile_timeline`
+- `profile-a` 一天中的标准可识别活动片段可逐段推进
 
 完成标志：
 
-- God Mode 能按顺序追加“空腹有氧/静坐工作/无氧训练/散步/睡眠”片段
+- God Mode 能按顺序追加“进餐/稳态有氧/长时静坐/间歇运动/散步/睡眠”片段
 - 每次追加后设备缓存中能看到新增原始事件
+- reset 后能精确回到初始早晨状态
 
 ## Phase 3：活动识别闭环
 
@@ -778,11 +881,13 @@ data/sandbox/
 
 - 从已同步事件识别活动片段
 - 在 God Mode 和首页中展示识别结果
+- 支持从 `meal_intake` 推导 `recent_meal_30m`
 
 完成标志：
 
 - 新增事件能被识别为正确类型
 - LLM 能引用识别结果生成建议
+- “半小时之前进餐”以派生状态而非独立识别类别进入上下文
 
 ## Phase 4：兼容视图与收敛
 
@@ -819,6 +924,15 @@ data/sandbox/
 
 因为现有首页、数据中心、部分 AI 流程已经围绕该视图组织。保留它作为派生层，可以在不重写所有页面的前提下完成主链路升级。
 
+## 16.4 为什么选择“冻结历史聚合 + 当前活动日原始流”
+
+因为这是当前维护成本最低且最不容易失真的组合：
+
+- 只有当前活动日需要维护主时间轴和同步语义
+- 周/月视图继续复用稳定的历史聚合数据
+- 不必为整个月份都构建可推进的原始事件与同步状态
+- reset 的实现边界清晰，只影响当前活动日
+
 ---
 
 ## 17. 测试策略
@@ -830,6 +944,7 @@ data/sandbox/
 - 片段生成器输出事件的时间顺序和特征分布
 - 同步算法对 pending / synced 边界的处理
 - 识别器对典型片段的分类结果
+- `meal_intake -> recent_meal_30m` 的派生状态计算
 - raw event 到 `DailyRecord` 的聚合正确性
 
 ## 17.2 集成测试
@@ -838,9 +953,11 @@ data/sandbox/
 
 1. 初次打开首页触发同步
 2. 同步后晨报可读取昨夜睡眠
-3. 注入 `fasted_cardio` 片段后，未同步前首页不可见
+3. 注入 `steady_cardio` 片段后，未同步前首页不可见
 4. 触发手动刷新后，新增事件变为可见
-5. 识别器输出 `fasted_cardio`
+5. 识别器输出 `steady_cardio`
+6. reset 后回到初始早晨状态
+7. `week/month` 查询可拼接冻结历史与当前日聚合结果
 
 ## 17.3 回归测试
 
