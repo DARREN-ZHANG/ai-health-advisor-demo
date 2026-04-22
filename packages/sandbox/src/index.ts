@@ -1,5 +1,24 @@
 // Loader
-export { loadManifest, loadProfile, loadAllProfiles } from './loader';
+export {
+  loadManifest,
+  loadProfile,
+  loadAllProfiles,
+  loadHistoryRecords,
+  loadTimelineScript,
+  buildInitialProfileState,
+} from './loader';
+export type { ManifestProfileEntry, Manifest, ProfileFileV2, InitialProfileState } from './loader';
+
+// Helpers — history archive
+export { loadHistoryArchive, validateHistoryArchive } from './helpers/history-archive';
+export type { HistoryArchiveFile } from './helpers/history-archive';
+
+// Helpers — timeline script
+export { loadTimelineScriptFile, validateTimelineScript } from './helpers/timeline-script';
+export type { TimelineScriptFile } from './helpers/timeline-script';
+
+// Helpers — demo clock
+export { createDemoClock, advanceDemoClock, isTimeInRange } from './helpers/demo-clock';
 
 // Selectors — profile
 export { getProfile, listProfiles } from './selectors/profile';
