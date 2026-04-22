@@ -11,6 +11,8 @@ import type {
   SyncState,
 } from '@health-advisor/sandbox';
 import {
+  buildInitialProfileState,
+  generateEventsForSegment,
   createDemoClock,
   appendSegment,
   performSync as sandboxPerformSync,
@@ -84,7 +86,7 @@ export interface OverrideStoreService {
 
 export function createOverrideStore(
   defaultProfileId: string,
-  options?: { initialDemoTime?: string },
+  options?: { dataDir?: string; initialDemoTime?: string },
 ): OverrideStoreService {
   let currentProfileId = defaultProfileId;
   const overridesByProfile = new Map<string, OverrideEntry[]>();
@@ -96,15 +98,31 @@ export function createOverrideStore(
     const existing = demoStateByProfile.get(profileId);
     if (existing) return existing;
 
-    const initialTime = options?.initialDemoTime ?? '2026-04-21T08:00';
-    const clock = createDemoClock(profileId, initialTime);
+    let clock: DemoClock;
+    let segments: ActivitySegment[];
+    let rawEvents: DeviceEvent[];
+
+    // 如果提供了 dataDir，从 timeline script 构建完整初始状态
+    if (options?.dataDir) {
+      const initial = buildInitialProfileState(options.dataDir, profileId);
+      clock = initial.demoClock;
+      segments = initial.segments;
+      // 从 baseline segments 生成初始 raw events（如昨夜睡眠事件）
+      rawEvents = segments.flatMap((seg) => generateEventsForSegment(seg));
+    } else {
+      // 回退：使用硬编码初始时间，不加载 segments
+      const initialTime = options?.initialDemoTime ?? '2026-04-21T08:00';
+      clock = createDemoClock(profileId, initialTime);
+      segments = [];
+      rawEvents = [];
+    }
 
     const state: DemoProfileState = {
       overrides: [],
       injectedEvents: [],
       clock,
-      segments: [],
-      rawEvents: [],
+      segments,
+      rawEvents,
       syncState: {
         lastSyncedMeasuredAt: null,
         syncSessions: [],

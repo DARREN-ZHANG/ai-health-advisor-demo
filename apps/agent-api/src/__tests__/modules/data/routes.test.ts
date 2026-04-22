@@ -128,7 +128,7 @@ describe('Data Routes', () => {
   });
 
   describe('GET /profiles/:profileId/device-sync', () => {
-    test('返回设备同步总览（空状态）', async () => {
+    test('返回设备同步总览（初始状态含 baseline events）', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/profiles/profile-a/device-sync',
@@ -139,18 +139,18 @@ describe('Data Routes', () => {
       expect(body.success).toBe(true);
       expect(body.data.profileId).toBe('profile-a');
       expect(body.data.samplingIntervalMinutes).toBe(1);
-      // 初始状态无事件，数量为 0
-      expect(body.data.totalDeviceSamples).toBe(0);
-      expect(body.data.pendingDeviceSamples).toBe(0);
+      // 初始状态有 baseline sleep 事件（尚未同步）
+      expect(body.data.totalDeviceSamples).toBeGreaterThan(0);
+      expect(body.data.pendingDeviceSamples).toBeGreaterThan(0);
       expect(body.data.syncSessions).toHaveLength(0);
-      expect(body.data.firstDeviceSampleAt).toBeNull();
-      expect(body.data.lastDeviceSampleAt).toBeNull();
+      expect(body.data.firstDeviceSampleAt).not.toBeNull();
+      expect(body.data.lastDeviceSampleAt).not.toBeNull();
       expect(body.data.lastSyncedSampleAt).toBeNull();
     });
   });
 
   describe('GET /profiles/:profileId/device-sync/samples', () => {
-    test('返回 pending 样本（空状态）', async () => {
+    test('返回 pending 样本（含 baseline events）', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/profiles/profile-a/device-sync/samples?scope=pending',
@@ -161,8 +161,9 @@ describe('Data Routes', () => {
       expect(body.success).toBe(true);
       expect(body.data.scope).toBe('pending');
       expect(body.data.syncId).toBeNull();
-      expect(body.data.sampleCount).toBe(0);
-      expect(body.data.samples).toHaveLength(0);
+      // baseline sleep 事件尚未同步，pending 不为空
+      expect(body.data.sampleCount).toBeGreaterThan(0);
+      expect(body.data.samples.length).toBeGreaterThan(0);
     });
 
     test('缺少 syncId 返回 400', async () => {

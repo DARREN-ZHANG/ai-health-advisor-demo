@@ -642,8 +642,8 @@ describe('God-Mode Routes', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.success).toBe(true);
-      // 重置后 pendingEventCount 应为 0
-      expect(body.data.pendingEventCount).toBe(0);
+      // 重置后恢复 baseline 初始状态，有 baseline sleep 的 pending events
+      expect(body.data.pendingEventCount).toBeGreaterThan(0);
 
       // 清理
       await app.inject({

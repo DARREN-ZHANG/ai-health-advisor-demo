@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
+import path from 'node:path';
 import { createOverrideStore } from '../../runtime/override-store';
 import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
+
+// vitest 从 apps/agent-api 运行，需要回溯到 monorepo 根
+const DATA_DIR = path.resolve(process.cwd(), '../../data/sandbox');
 
 // ============================================================
 // 现有能力测试（向后兼容）
@@ -309,5 +313,131 @@ describe('OverrideStore — Timeline Sync', () => {
     // demo 状态被清除，下次访问会重建为初始值
     expect(store.getDemoClock('profile-a').currentTime).toBe(INITIAL_TIME);
     expect(store.getSegments('profile-a')).toEqual([]);
+  });
+});
+
+// ============================================================
+// 带 dataDir 的初始化测试：从 timeline script 加载初始状态
+// ============================================================
+
+describe('OverrideStore — dataDir 初始化', () => {
+  it('从 timeline script 加载 profile-a 初始时钟', () => {
+    const store = createOverrideStore('profile-a', { dataDir: DATA_DIR });
+    const clock = store.getDemoClock('profile-a');
+    // profile-a-day-1.json 定义 initialDemoTime = 2026-04-16T07:05
+    expect(clock.currentTime).toBe('2026-04-16T07:05');
+    expect(clock.profileId).toBe('profile-a');
+    expect(clock.timezone).toBe('Asia/Shanghai');
+  });
+
+  it('从 timeline script 加载 baseline segments', () => {
+    const store = createOverrideStore('profile-a', { dataDir: DATA_DIR });
+    const segments = store.getSegments('profile-a');
+    // profile-a-day-1.json 有 1 个 baseline sleep segment
+    expect(segments.length).toBe(1);
+    expect(segments[0]!.type).toBe('sleep');
+    expect(segments[0]!.segmentId).toBe('seg-baseline-sleep-a');
+  });
+
+  it('从 baseline segments 生成初始 raw events', () => {
+    const store = createOverrideStore('profile-a', { dataDir: DATA_DIR });
+    // baseline sleep segment 应该生成了设备事件（wearState, sleepStage, heartRate, spo2 等）
+    const pending = store.getPendingEvents('profile-a');
+    expect(pending.length).toBeGreaterThan(0);
+    // 应包含睡眠阶段事件（metric 字段，不是 type）
+    expect(pending.some((e) => e.metric === 'sleepStage')).toBe(true);
+  });
+
+  it('初始同步状态：尚未同步', () => {
+    const store = createOverrideStore('profile-a', { dataDir: DATA_DIR });
+    const syncState = store.getSyncState('profile-a');
+    expect(syncState.lastSyncedMeasuredAt).toBeNull();
+    expect(syncState.syncSessions).toHaveLength(0);
+  });
+
+  it('初始 synced 事件为空（尚未同步）', () => {
+    const store = createOverrideStore('profile-a', { dataDir: DATA_DIR });
+    expect(store.getSyncedEvents('profile-a')).toEqual([]);
+  });
+
+  it('performSync 同步昨夜睡眠后 synced 事件有值', () => {
+    const store = createOverrideStore('profile-a', { dataDir: DATA_DIR });
+
+    // 首次 app_open 同步
+    const session = store.performSync('profile-a', 'app_open');
+
+    expect(session.trigger).toBe('app_open');
+    expect(session.syncId).toBeTruthy();
+
+    // 同步后 synced 事件有值（昨夜睡眠）
+    const synced = store.getSyncedEvents('profile-a');
+    expect(synced.length).toBeGreaterThan(0);
+
+    // pending 清空
+    expect(store.getPendingEvents('profile-a')).toEqual([]);
+
+    // 水位线更新
+    const syncState = store.getSyncState('profile-a');
+    expect(syncState.lastSyncedMeasuredAt).toBeTruthy();
+  });
+
+  it('同步后追加新片段，pending 包含新事件', () => {
+    const store = createOverrideStore('profile-a', { dataDir: DATA_DIR });
+
+    // 首次同步
+    store.performSync('profile-a', 'app_open');
+
+    // 追加早餐
+    store.appendSegment('profile-a', 'meal_intake');
+
+    // pending 应只有早餐事件
+    const pending = store.getPendingEvents('profile-a');
+    expect(pending.length).toBeGreaterThan(0);
+
+    // synced 仍然是昨夜睡眠
+    const synced = store.getSyncedEvents('profile-a');
+    expect(synced.length).toBeGreaterThan(0);
+  });
+
+  it('resetProfileTimeline 恢复带 baseline 的初始状态', () => {
+    const store = createOverrideStore('profile-a', { dataDir: DATA_DIR });
+
+    // 操作：追加 + 同步
+    store.appendSegment('profile-a', 'meal_intake');
+    store.performSync('profile-a', 'app_open');
+
+    // 重置
+    store.resetProfileTimeline('profile-a');
+
+    // 时钟回到 timeline script 定义的时刻
+    expect(store.getDemoClock('profile-a').currentTime).toBe('2026-04-16T07:05');
+    // segments 恢复为 baseline
+    const segments = store.getSegments('profile-a');
+    expect(segments.length).toBe(1);
+    expect(segments[0]!.type).toBe('sleep');
+    // 同步状态重置
+    expect(store.getSyncState('profile-a').lastSyncedMeasuredAt).toBeNull();
+    // raw events 重新生成（pending 有值）
+    expect(store.getPendingEvents('profile-a').length).toBeGreaterThan(0);
+    // synced 为空
+    expect(store.getSyncedEvents('profile-a')).toEqual([]);
+  });
+
+  it('不同 profile 从各自的 timeline script 初始化', () => {
+    const store = createOverrideStore('profile-a', { dataDir: DATA_DIR });
+
+    // profile-a: initialDemoTime = 2026-04-16T07:05
+    expect(store.getDemoClock('profile-a').currentTime).toBe('2026-04-16T07:05');
+
+    // profile-b: initialDemoTime = 2026-04-16T07:30
+    expect(store.getDemoClock('profile-b').currentTime).toBe('2026-04-16T07:30');
+
+    // profile-c: initialDemoTime = 2026-04-16T06:45
+    expect(store.getDemoClock('profile-c').currentTime).toBe('2026-04-16T06:45');
+
+    // 各有 1 个 baseline sleep segment
+    expect(store.getSegments('profile-a')).toHaveLength(1);
+    expect(store.getSegments('profile-b')).toHaveLength(1);
+    expect(store.getSegments('profile-c')).toHaveLength(1);
   });
 });

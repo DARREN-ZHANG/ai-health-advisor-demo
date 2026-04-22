@@ -48,7 +48,7 @@ export function createRuntimeRegistry(
   // 3. 创建 override store（支持 timeline sync 的 demo-state-store）
   const defaultProfileId = [...profiles.keys()][0] ?? 'profile-a';
   const overrideStore = createOverrideStore(defaultProfileId, {
-    initialDemoTime: '2026-04-21T08:00',
+    dataDir: config.dataDir,
   });
 
   // 4. 创建 scenario registry
