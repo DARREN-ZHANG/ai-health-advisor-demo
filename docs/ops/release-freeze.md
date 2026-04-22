@@ -18,7 +18,7 @@
 
 | 变量 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `PORT` | number | `3001` | 服务端口 |
+| `PORT` | number | `3002` | 服务端口 |
 | `NODE_ENV` | enum | `development` | 运行环境 |
 | `LLM_PROVIDER` | enum | `openai` | LLM 提供商 |
 | `LLM_MODEL` | string | `gpt-4o-mini` | 模型名称 |
@@ -35,7 +35,7 @@
 
 | 变量 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `NEXT_PUBLIC_AGENT_API_BASE_URL` | string | `http://localhost:3001` | 后端 API 地址 |
+| `NEXT_PUBLIC_AGENT_API_BASE_URL` | string | `http://localhost:3002` | 后端 API 地址 |
 | `NEXT_PUBLIC_ENABLE_GOD_MODE` | boolean | `false` | 启用上帝模式 |
 
 ### Docker Compose 变量覆盖

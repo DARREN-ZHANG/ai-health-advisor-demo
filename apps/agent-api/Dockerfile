@@ -46,5 +46,5 @@ RUN pnpm install --frozen-lockfile --prod
 WORKDIR /app/apps/agent-api
 ENV NODE_ENV=production
 ENV DATA_DIR=/app/data/sandbox
-EXPOSE 3001
+EXPOSE 3002
 CMD ["node", "dist/index.js"]

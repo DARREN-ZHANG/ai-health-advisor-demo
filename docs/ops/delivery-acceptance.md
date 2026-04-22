@@ -16,7 +16,7 @@
 
 ## 二、后端（agent-api）
 
-- [ ] Fastify 服务正常启动，监听 3001 端口
+- [ ] Fastify 服务正常启动，监听 3002 端口
 - [ ] `/health` 端点返回 200
 - [ ] 环境变量 Zod 校验生效（缺少 LLM_API_KEY 时拒绝启动）
 - [ ] 启动资产校验（profiles/fallbacks 缺失时 FATAL 退出）

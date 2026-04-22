@@ -4,7 +4,7 @@
 
 ## 前置条件
 
-- agent-api 运行在 `http://localhost:3001`
+- agent-api 运行在 `http://localhost:3002`
 - web 运行在 `http://localhost:3000`
 - 浏览器：Chrome / Edge 最新版
 

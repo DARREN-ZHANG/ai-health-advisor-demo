@@ -35,7 +35,7 @@ ENABLE_GOD_MODE=true              # 是否启用 God-Mode 管理面板
 AI_TIMEOUT_MS=15000               # AI 请求超时（毫秒），推理模型建议 ≥ 15s
 
 # === 以下一般不用改 ===
-PORT=3001
+PORT=3002
 LOG_LEVEL=info
 CORS_ALLOWED_ORIGINS=http://localhost:3000
 DATA_DIR=                         # 沙盒数据目录，默认自动定位到 monorepo 根目录的 data/sandbox
@@ -44,7 +44,7 @@ DATA_DIR=                         # 沙盒数据目录，默认自动定位到 m
 #### 前端 `apps/web/.env`
 
 ```bash
-NEXT_PUBLIC_AGENT_API_BASE_URL=http://localhost:3001
+NEXT_PUBLIC_AGENT_API_BASE_URL=http://localhost:3002
 NEXT_PUBLIC_ENABLE_GOD_MODE=true
 ```
 
@@ -69,7 +69,7 @@ pnpm dev
 ```
 
 这将同时启动：
-- **后端 API**：http://localhost:3001
+- **后端 API**：http://localhost:3002
 - **前端 Web**：http://localhost:3000
 
 启动后访问 http://localhost:3000 即可使用。
@@ -132,7 +132,7 @@ corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 ### 端口被占用
 
-后端默认 3001，前端默认 3000。修改对应 `.env` 中的 `PORT`（后端）或启动参数 `--port`（前端）。
+后端默认 3002，前端默认 3000。修改对应 `.env` 中的 `PORT`（后端）或启动参数 `--port`（前端）。
 
 ### 前端白屏
 

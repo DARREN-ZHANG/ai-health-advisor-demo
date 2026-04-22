@@ -57,7 +57,7 @@
 docker compose up --build
 
 # 自定义 API 地址
-NEXT_PUBLIC_AGENT_API_BASE_URL=http://localhost:3001 docker compose up --build
+NEXT_PUBLIC_AGENT_API_BASE_URL=http://localhost:3002 docker compose up --build
 ```
 
 ### 默认配置
@@ -71,7 +71,7 @@ NEXT_PUBLIC_AGENT_API_BASE_URL=http://localhost:3001 docker compose up --build
 ### 验证服务健康
 
 ```bash
-curl -f http://localhost:3001/health
+curl -f http://localhost:3002/health
 # 应返回 200 OK
 ```
 
@@ -100,7 +100,7 @@ curl -f http://localhost:3001/health
 ## 常见问题
 
 ### Q: 页面白屏？
-A: 确认 agent-api 是否正常运行，检查 `http://localhost:3001/health`。
+A: 确认 agent-api 是否正常运行，检查 `http://localhost:3002/health`。
 
 ### Q: AI 回复很慢？
 A: 检查是否误用了 LLM 模式。确认 `FALLBACK_ONLY_MODE=true`。

@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-API_BASE="${1:-http://localhost:3001}"
+API_BASE="${1:-http://localhost:3002}"
 RESET_URL="${API_BASE}/god-mode/reset"
 
 echo ">>> 重置 runtime state: ${RESET_URL}"

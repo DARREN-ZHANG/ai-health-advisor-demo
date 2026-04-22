@@ -6,7 +6,7 @@
 
 ## 一、环境准备
 
-- [ ] agent-api 正常启动（`http://localhost:3001/health` 返回 200）
+- [ ] agent-api 正常启动（`http://localhost:3002/health` 返回 200）
 - [ ] web 正常启动（`http://localhost:3000` 可访问）
 - [ ] 数据文件完整（`pnpm validate` 通过）
 - [ ] 浏览器清除缓存后重新加载

@@ -21,7 +21,7 @@ pnpm dev
 
 这会并行启动：
 
-- `apps/agent-api` (tsx watch, 端口 3001) — 后端代码改动自动重启
+- `apps/agent-api` (tsx watch, 端口 3002) — 后端代码改动自动重启
 - `apps/web` (next dev, 端口 3000) — 前端代码改动热更新
 
 ### 2. 仅重启后端（prompt / 配置 / agent-core 改动后）
@@ -38,8 +38,8 @@ pnpm dev
 如果只想单独重启后端：
 
 ```bash
-# 先杀掉占用 3001 端口的进程
-pids=$(lsof -ti:3001); [ -z "$pids" ] || kill -9 $pids
+# 先杀掉占用 3002 端口的进程
+pids=$(lsof -ti:3002); [ -z "$pids" ] || kill -9 $pids
 
 # 单独启动后端
 pnpm --filter @health-advisor/agent-api dev
@@ -109,7 +109,7 @@ FALLBACK_ONLY_MODE=false
 
 ```bash
 # 1. 后端健康检查
-curl -s http://localhost:3001/health | head -c 200
+curl -s http://localhost:3002/health | head -c 200
 
 # 预期返回 JSON envelope，data.status 为 "ok"
 
@@ -119,7 +119,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:3000
 # 预期返回 200
 
 # 3. AI 晨报接口（需要 LLM API Key 或 fallback 模式）
-curl -s -X POST http://localhost:3001/ai/morning-brief \
+curl -s -X POST http://localhost:3002/ai/morning-brief \
   -H "Content-Type: application/json" \
   -d '{"profileId":"profile-a","pageContext":{"profileId":"profile-a","page":"homepage","timeframe":"week"}}' \
   | head -c 500
@@ -134,6 +134,6 @@ curl -s -X POST http://localhost:3001/ai/morning-brief \
 | prompt 改了不生效      | prompt-loader 内存缓存                  | 重启 agent-api                                               |
 | .env 改了不生效        | 环境变量只在启动时加载                  | 重启 agent-api                                               |
 | agent-core 改了不生效  | 依赖包需要重新构建或后端 watch 未触发   | `pnpm --filter @health-advisor/agent-core... build` 然后重启 |
-| 端口被占用             | 上次进程未正常退出                      | `pids=$(lsof -ti:3001); [ -z "$pids" ] \|\| kill -9 $pids`   |
+| 端口被占用             | 上次进程未正常退出                      | `pids=$(lsof -ti:3002); [ -z "$pids" ] \|\| kill -9 $pids`   |
 | 前端显示"离线受限模式" | 后端返回 fallback（LLM 调用失败或超时） | 检查 API Key 配置和后端日志                                  |
 | packages build 报错    | 依赖包未安装或构建顺序问题              | 根目录执行 `pnpm build`                                      |

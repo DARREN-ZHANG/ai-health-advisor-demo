@@ -1170,7 +1170,7 @@ interface RequestContext {
 ## 14.1 必要环境变量
 
 ```bash
-PORT=3001
+PORT=3002
 NODE_ENV=development
 LLM_PROVIDER=openai
 LLM_MODEL=gpt-4.1-mini

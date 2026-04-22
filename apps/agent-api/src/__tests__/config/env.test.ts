@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { loadConfig } from '../../config/env';
 
 const validEnv: Record<string, string> = {
-  PORT: '3001',
+  PORT: '3002',
   NODE_ENV: 'development',
   LLM_PROVIDER: 'openai',
   LLM_MODEL: 'gpt-4o-mini',
@@ -16,7 +16,7 @@ const validEnv: Record<string, string> = {
 describe('loadConfig', () => {
   it('解析有效环境变量', () => {
     const config = loadConfig(validEnv);
-    expect(config.PORT).toBe(3001);
+    expect(config.PORT).toBe(3002);
     expect(config.NODE_ENV).toBe('development');
     expect(config.LLM_PROVIDER).toBe('openai');
     expect(config.LLM_API_KEY).toBe('sk-test');
@@ -27,7 +27,7 @@ describe('loadConfig', () => {
 
   it('使用默认值填充缺失字段（fallbackOnly 模式）', () => {
     const config = loadConfig({ FALLBACK_ONLY_MODE: 'true' });
-    expect(config.PORT).toBe(3001);
+    expect(config.PORT).toBe(3002);
     expect(config.NODE_ENV).toBe('development');
     expect(config.LLM_MODEL).toBe('gpt-4o-mini');
     expect(config.AI_TIMEOUT_MS).toBe(6000);
