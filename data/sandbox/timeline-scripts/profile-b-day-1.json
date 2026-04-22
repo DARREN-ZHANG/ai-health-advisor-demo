@@ -8,7 +8,9 @@
       "type": "sleep",
       "start": "2026-04-15T23:00",
       "end": "2026-04-16T06:00",
-      "params": { "durationMinutes": 420 },
+      "params": {
+        "durationMinutes": 420
+      },
       "source": "baseline_script"
     }
   ]

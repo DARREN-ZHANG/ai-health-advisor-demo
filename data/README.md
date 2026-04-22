@@ -40,6 +40,54 @@ data/sandbox/
 2. **history/*.json** — 冻结历史 DailyRecord[]（20 天连续数据）
 3. **timeline-scripts/*.json** — 当前活动日 baseline 活动片段（demo 开始时已在设备缓冲区的数据）
 
+## 数据生成
+
+### 重生成历史数据
+
+```bash
+# 生成单个 profile
+npx tsx data/generate-history.ts --profile profile-a
+
+# 生成所有 profile
+npx tsx data/generate-history.ts --profile all
+```
+
+### 重生成 Timeline Script
+
+```bash
+# 生成单个 profile
+npx tsx data/generate-timeline-script.ts --profile profile-a
+
+# 生成所有 profile
+npx tsx data/generate-timeline-script.ts --profile all
+```
+
+### 什么时候需要重生成
+
+- **Profile baseline 调整后**：当 `profiles/*.json` 中的 baseline 指标变化时，需重新生成 history 和 timeline script
+- **日期范围变更后**：当需要修改 20 天历史窗口的起止日期时
+- **数据结构演进后**：当 DailyRecord 或 TimelineSegment 的 schema 发生变化时
+- **新增 profile 时**：在 `generate-history.ts` 和 `generate-timeline-script.ts` 中添加新配置后运行
+
+### 确定性保证
+
+生成器使用 seeded PRNG (mulberry32)，同一 seed + profile 参数始终产生相同输出。
+每个 profile 使用固定 seed（profile-a: 42, profile-b: 137, profile-c: 256）。
+
+### 人工可编辑边界
+
+以下内容由脚本生成，**不建议手工编辑**（会被下次生成覆盖）：
+
+- `history/*.json` — 20 天日级汇总数据
+- `timeline-scripts/*.json` — baseline 活动片段
+
+以下内容**可安全手工编辑**，生成器不会覆盖：
+
+- `profiles/*.json` — 画像基础字段、baseline、initialDemoTime
+- `fallbacks/*.json` — AI 回退响应文案
+- `prompts/*.md` — AI 提示词模板
+- `scenarios/manifest.json` — God Mode 场景定义
+
 ## 验证数据
 
 ```bash
