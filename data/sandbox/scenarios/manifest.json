@@ -65,52 +65,64 @@
       "payload": { "scope": "all" }
     },
     {
-      "scenarioId": "timeline-append-meal",
-      "label": "追加用餐片段",
-      "description": "在当前时间轴追加用餐活动片段",
+      "scenarioId": "profile-a-meal-intake-20m",
+      "label": "用餐 20 分钟",
+      "description": "在当前时间轴追加 20 分钟用餐片段",
       "type": "timeline_append",
       "payload": {
         "segmentType": "meal_intake",
+        "durationMinutes": 20,
         "params": { "mealContext": "breakfast" }
       }
     },
     {
-      "scenarioId": "timeline-append-cardio",
-      "label": "追加有氧运动片段",
-      "description": "在当前时间轴追加 30 分钟有氧运动片段",
+      "scenarioId": "profile-a-steady-cardio-15m",
+      "label": "稳态有氧 15 分钟",
+      "description": "在当前时间轴追加 15 分钟稳态有氧片段",
       "type": "timeline_append",
       "payload": {
         "segmentType": "steady_cardio",
-        "params": { "durationMinutes": 30 }
+        "durationMinutes": 15
       }
     },
     {
-      "scenarioId": "timeline-append-sedentary",
-      "label": "追加久坐片段",
-      "description": "在当前时间轴追加 120 分钟久坐片段",
+      "scenarioId": "profile-a-prolonged-sedentary-4h",
+      "label": "久坐 4 小时",
+      "description": "在当前时间轴追加 240 分钟久坐片段",
       "type": "timeline_append",
       "payload": {
         "segmentType": "prolonged_sedentary",
-        "params": { "durationMinutes": 120 }
+        "durationMinutes": 240
       }
     },
     {
-      "scenarioId": "timeline-append-walk",
-      "label": "追加步行片段",
-      "description": "在当前时间轴追加步行活动片段",
+      "scenarioId": "profile-a-intermittent-exercise-30m",
+      "label": "间歇运动 30 分钟",
+      "description": "在当前时间轴追加 30 分钟间歇运动片段",
       "type": "timeline_append",
       "payload": {
-        "segmentType": "walk"
+        "segmentType": "intermittent_exercise",
+        "durationMinutes": 30
       }
     },
     {
-      "scenarioId": "timeline-append-sleep",
-      "label": "追加睡眠片段",
-      "description": "在当前时间轴追加 480 分钟睡眠片段",
+      "scenarioId": "profile-a-evening-walk-30m",
+      "label": "散步 30 分钟",
+      "description": "在当前时间轴追加 30 分钟散步片段",
+      "type": "timeline_append",
+      "payload": {
+        "segmentType": "walk",
+        "durationMinutes": 30
+      }
+    },
+    {
+      "scenarioId": "profile-a-night-sleep",
+      "label": "夜间睡眠",
+      "description": "在当前时间轴追加 480 分钟夜间睡眠片段",
       "type": "timeline_append",
       "payload": {
         "segmentType": "sleep",
-        "params": { "durationMinutes": 480 }
+        "durationMinutes": 480
       }
     },
     {
@@ -138,6 +150,13 @@
       "scenarioId": "reset-timeline",
       "label": "重置时间轴",
       "description": "重置指定 profile 的时间轴到初始状态",
+      "type": "reset_profile_timeline",
+      "payload": { "profileId": "profile-a" }
+    },
+    {
+      "scenarioId": "profile-a-reset-timeline",
+      "label": "重置 profile-a 时间轴",
+      "description": "重置 profile-a 的时间轴到初始状态",
       "type": "reset_profile_timeline",
       "payload": { "profileId": "profile-a" }
     },
@@ -218,7 +237,7 @@
           "action": "timeline_append",
           "payload": {
             "segmentType": "sleep",
-            "params": { "durationMinutes": 480 }
+            "durationMinutes": 480
           }
         },
         {
@@ -226,6 +245,7 @@
           "action": "timeline_append",
           "payload": {
             "segmentType": "meal_intake",
+            "durationMinutes": 20,
             "params": { "mealContext": "breakfast" }
           }
         },
@@ -239,7 +259,7 @@
           "action": "timeline_append",
           "payload": {
             "segmentType": "prolonged_sedentary",
-            "params": { "durationMinutes": 120 }
+            "durationMinutes": 240
           }
         },
         {

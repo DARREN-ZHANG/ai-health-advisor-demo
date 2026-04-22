@@ -7,8 +7,10 @@ import { ActivitySegmentTypeSchema } from './sandbox';
 
 export const TimelineAppendPayloadSchema = z.object({
   segmentType: ActivitySegmentTypeSchema,
+  durationMinutes: z.number().int().positive().optional(),
   offsetMinutes: z.number().int().min(0).optional(),
   params: z.record(z.union([z.number(), z.string(), z.boolean()])).optional(),
+  advanceClock: z.boolean().optional(),
 });
 
 export const SyncTriggerPayloadSchema = z.object({

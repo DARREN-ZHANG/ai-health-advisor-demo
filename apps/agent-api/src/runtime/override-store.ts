@@ -68,6 +68,7 @@ export interface OverrideStoreService {
     segmentType: ActivitySegmentType,
     params?: Record<string, number | string | boolean>,
     offsetMinutes?: number,
+    options?: { durationMinutes?: number; advanceClock?: boolean },
   ): { events: DeviceEvent[]; newCurrentTime: string };
 
   // — 同步操作 —
@@ -196,6 +197,7 @@ export function createOverrideStore(
       segmentType: ActivitySegmentType,
       params?: Record<string, number | string | boolean>,
       offsetMinutes?: number,
+      options?: { durationMinutes?: number; advanceClock?: boolean },
     ): { events: DeviceEvent[]; newCurrentTime: string } {
       const state = ensureDemoState(profileId);
       const result = appendSegment(
@@ -205,14 +207,17 @@ export function createOverrideStore(
         profileId,
         params,
         offsetMinutes,
+        options,
       );
 
       // 将新事件追加到 rawEvents，保留已有水位线
+      // 仅在 advanceClock 为 true 时推进时钟
+      const advanceClock = options?.advanceClock !== false;
       demoStateByProfile.set(profileId, {
         ...state,
         segments: result.segments,
         rawEvents: [...state.rawEvents, ...result.events],
-        clock: { ...state.clock, currentTime: result.newCurrentTime },
+        ...(advanceClock ? { clock: { ...state.clock, currentTime: result.newCurrentTime } } : {}),
       });
 
       return { events: [...result.events], newCurrentTime: result.newCurrentTime };

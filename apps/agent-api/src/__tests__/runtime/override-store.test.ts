@@ -146,10 +146,10 @@ describe('OverrideStore — Timeline Sync', () => {
     const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
     const result = store.appendSegment('profile-a', 'meal_intake');
 
-    // meal_intake 默认持续 25 分钟
-    expect(result.newCurrentTime).toBe('2026-04-21T08:25');
+    // meal_intake 默认持续 20 分钟（文档 §8.3）
+    expect(result.newCurrentTime).toBe('2026-04-21T08:20');
     expect(result.events.length).toBeGreaterThan(0);
-    expect(store.getDemoClock('profile-a').currentTime).toBe('2026-04-21T08:25');
+    expect(store.getDemoClock('profile-a').currentTime).toBe('2026-04-21T08:20');
 
     // 片段列表有新片段
     const segments = store.getSegments('profile-a');
@@ -159,7 +159,7 @@ describe('OverrideStore — Timeline Sync', () => {
 
   it('appendSegment 带自定义参数', () => {
     const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
-    const result = store.appendSegment('profile-a', 'steady_cardio', {
+    const result = store.appendSegment('profile-a', 'steady_cardio', undefined, undefined, {
       durationMinutes: 45,
     });
 
@@ -170,8 +170,8 @@ describe('OverrideStore — Timeline Sync', () => {
     const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
     const result = store.appendSegment('profile-a', 'walk', undefined, 10);
 
-    // walk 从 08:10 开始，默认 20 分钟，结束于 08:30
-    expect(result.newCurrentTime).toBe('2026-04-21T08:30');
+    // walk 从 08:10 开始，默认 30 分钟（文档 §8.3），结束于 08:40
+    expect(result.newCurrentTime).toBe('2026-04-21T08:40');
   });
 
   // — Profile 隔离 —

@@ -21,13 +21,13 @@ export interface TimelineAppendResult {
 // 需要在此处导入 DeviceEvent（用于类型标注）
 import type { DeviceEvent } from '@health-advisor/shared';
 
-/** 各片段类型的默认持续时长（分钟） */
+/** 各片段类型的默认持续时长（分钟），与文档 §8.3 对齐 */
 const DEFAULT_DURATION: Record<ActivitySegmentType, number> = {
-  meal_intake: 25,
-  steady_cardio: 30,
-  prolonged_sedentary: 90,
-  intermittent_exercise: 25,
-  walk: 20,
+  meal_intake: 20,
+  steady_cardio: 15,
+  prolonged_sedentary: 240,
+  intermittent_exercise: 30,
+  walk: 30,
   sleep: 480,
 };
 
@@ -61,6 +61,7 @@ function addMinutes(timestamp: string, minutes: number): string {
  * @param profileId - profile 标识
  * @param params - 片段参数
  * @param offsetMinutes - 起始偏移分钟数（默认 0）
+ * @param options - 可选配置：durationMinutes 覆盖默认时长，advanceClock 控制是否推进时钟
  */
 export function appendSegment(
   currentSegments: ActivitySegment[],
@@ -69,6 +70,7 @@ export function appendSegment(
   profileId: string,
   params?: Record<string, number | string | boolean>,
   offsetMinutes: number = 0,
+  options?: { durationMinutes?: number; advanceClock?: boolean },
 ): TimelineAppendResult {
   // 校验偏移量
   if (offsetMinutes < 0) {
@@ -78,8 +80,8 @@ export function appendSegment(
   // 计算新片段的起始时间
   const start = addMinutes(currentTime, offsetMinutes);
 
-  // 从 params 中提取持续时间（如果有）
-  const duration = getDuration(segmentType, params);
+  // 确定持续时长：优先使用 options.durationMinutes，其次使用默认值
+  const duration = options?.durationMinutes ?? DEFAULT_DURATION[segmentType];
   const end = addMinutes(start, duration);
 
   // 生成片段 ID（使用起始时间的时间戳使其唯一）
@@ -111,23 +113,13 @@ export function appendSegment(
   // 构建新的片段列表（不可变追加）
   const updatedSegments = [...currentSegments, newSegment];
 
+  // advanceClock 默认为 true；为 false 时不推进时钟
+  const advanceClock = options?.advanceClock !== false;
+  const newCurrentTime = advanceClock ? end : currentTime;
+
   return {
     segments: updatedSegments,
     events,
-    newCurrentTime: end,
+    newCurrentTime,
   };
-}
-
-/**
- * 根据片段类型和参数获取持续时长
- * 优先使用 params.durationMinutes，否则使用默认值
- */
-function getDuration(
-  segmentType: ActivitySegmentType,
-  params?: Record<string, number | string | boolean>,
-): number {
-  if (params?.durationMinutes && typeof params.durationMinutes === 'number') {
-    return params.durationMinutes;
-  }
-  return DEFAULT_DURATION[segmentType];
 }

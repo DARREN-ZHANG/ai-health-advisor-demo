@@ -11,8 +11,14 @@ import type {
 /** 时间轴追加片段载荷 */
 export interface TimelineAppendPayload {
   segmentType: ActivitySegmentType;
+  /** 片段持续时长（分钟），不提供时使用各片段类型的默认时长 */
+  durationMinutes?: number;
+  /** 起始偏移分钟数（默认 0） */
   offsetMinutes?: number;
+  /** 片段参数 */
   params?: Record<string, number | string | boolean>;
+  /** 是否推进时钟（默认 true） */
+  advanceClock?: boolean;
 }
 
 /** 同步触发载荷 */

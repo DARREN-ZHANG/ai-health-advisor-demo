@@ -37,8 +37,8 @@ describe('appendSegment', () => {
       profileId,
     );
 
-    // meal_intake 默认 25 分钟
-    expect(result.newCurrentTime).toBe('2026-04-16T07:25');
+    // meal_intake 默认 20 分钟（与文档 §8.3 对齐）
+    expect(result.newCurrentTime).toBe('2026-04-16T07:20');
   });
 
   it('should generate events for the new segment', () => {
@@ -137,9 +137,9 @@ describe('appendSegment', () => {
       10,
     );
 
-    // walk 默认 20 分钟，从 07:00+10 = 07:10 开始
+    // walk 默认 30 分钟（与文档 §8.3 对齐），从 07:00+10 = 07:10 开始
     expect(result.segments[0]!.start).toBe('2026-04-16T07:10');
-    expect(result.newCurrentTime).toBe('2026-04-16T07:30');
+    expect(result.newCurrentTime).toBe('2026-04-16T07:40');
   });
 
   it('should generate unique segment IDs', () => {
@@ -175,23 +175,23 @@ describe('appendSegment', () => {
     let currentTime = '2026-04-16T07:00';
     let segments: ActivitySegment[] = [];
 
-    // 追加 meal_intake (25 min)
+    // 追加 meal_intake (20 min，文档 §8.3 默认)
     const r1 = appendSegment(segments, currentTime, 'meal_intake', profileId);
     segments = r1.segments;
     currentTime = r1.newCurrentTime;
-    expect(currentTime).toBe('2026-04-16T07:25');
+    expect(currentTime).toBe('2026-04-16T07:20');
 
-    // 追加 walk (20 min)
+    // 追加 walk (30 min，文档 §8.3 默认)
     const r2 = appendSegment(segments, currentTime, 'walk', profileId);
     segments = r2.segments;
     currentTime = r2.newCurrentTime;
-    expect(currentTime).toBe('2026-04-16T07:45');
+    expect(currentTime).toBe('2026-04-16T07:50');
 
-    // 追加 prolonged_sedentary (90 min)
+    // 追加 prolonged_sedentary (240 min，文档 §8.3 默认)
     const r3 = appendSegment(segments, currentTime, 'prolonged_sedentary', profileId);
     segments = r3.segments;
     currentTime = r3.newCurrentTime;
-    expect(currentTime).toBe('2026-04-16T09:15');
+    expect(currentTime).toBe('2026-04-16T11:50');
 
     // 验证总共有 3 个片段
     expect(segments).toHaveLength(3);
@@ -203,12 +203,13 @@ describe('appendSegment', () => {
   });
 
   it('should use default durations for each segment type', () => {
+    // 与文档 §8.3 对齐的默认时长
     const defaultDurations: Record<string, number> = {
-      meal_intake: 25,
-      steady_cardio: 30,
-      prolonged_sedentary: 90,
-      intermittent_exercise: 25,
-      walk: 20,
+      meal_intake: 20,
+      steady_cardio: 15,
+      prolonged_sedentary: 240,
+      intermittent_exercise: 30,
+      walk: 30,
       sleep: 480,
     };
 
@@ -222,12 +223,14 @@ describe('appendSegment', () => {
     }
   });
 
-  it('should use params.durationMinutes if provided', () => {
+  it('should use options.durationMinutes if provided', () => {
     const result = appendSegment(
       [],
       initialTime,
       'meal_intake',
       profileId,
+      undefined,
+      0,
       { durationMinutes: 40 },
     );
 
@@ -235,6 +238,54 @@ describe('appendSegment', () => {
     const duration = diffMinutes(segment.start, segment.end);
     expect(duration).toBe(40);
     expect(result.newCurrentTime).toBe('2026-04-16T07:40');
+  });
+
+  it('should not advance clock when advanceClock is false', () => {
+    const result = appendSegment(
+      [],
+      initialTime,
+      'meal_intake',
+      profileId,
+      undefined,
+      0,
+      { advanceClock: false },
+    );
+
+    // 片段仍然被创建（20 分钟），但 currentTime 不推进
+    const segment = result.segments[0]!;
+    const duration = diffMinutes(segment.start, segment.end);
+    expect(duration).toBe(20);
+    expect(result.newCurrentTime).toBe(initialTime);
+  });
+
+  it('should advance clock by default', () => {
+    const result = appendSegment(
+      [],
+      initialTime,
+      'meal_intake',
+      profileId,
+    );
+
+    expect(result.newCurrentTime).toBe('2026-04-16T07:20');
+  });
+
+  it('should support both durationMinutes and advanceClock together', () => {
+    const result = appendSegment(
+      [],
+      initialTime,
+      'walk',
+      profileId,
+      undefined,
+      5,
+      { durationMinutes: 15, advanceClock: false },
+    );
+
+    // 片段从 07:05 开始，持续 15 分钟到 07:20
+    const segment = result.segments[0]!;
+    expect(segment.start).toBe('2026-04-16T07:05');
+    expect(segment.end).toBe('2026-04-16T07:20');
+    // 但时钟不推进
+    expect(result.newCurrentTime).toBe(initialTime);
   });
 
   it('should generate segment ID with correct prefix', () => {

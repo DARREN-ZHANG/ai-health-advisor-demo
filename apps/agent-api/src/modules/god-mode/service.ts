@@ -86,9 +86,10 @@ export class GodModeService {
     params?: Record<string, number | string | boolean>,
     offsetMinutes?: number,
     sessionId?: string,
+    options?: { durationMinutes?: number; advanceClock?: boolean },
   ): GodModeStateResponse {
     const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
-    this.registry.overrideStore.appendSegment(currentProfileId, segmentType, params, offsetMinutes);
+    this.registry.overrideStore.appendSegment(currentProfileId, segmentType, params, offsetMinutes, options);
     this.invalidateSessionAnalytical(sessionId);
     return this.getStateForProfile(currentProfileId);
   }
@@ -218,6 +219,10 @@ export class GodModeService {
           payload.params as Record<string, number | string | boolean> | undefined,
           payload.offsetMinutes as number | undefined,
           sessionId,
+          {
+            durationMinutes: payload.durationMinutes as number | undefined,
+            advanceClock: payload.advanceClock as boolean | undefined,
+          },
         );
         break;
       case 'sync_trigger':

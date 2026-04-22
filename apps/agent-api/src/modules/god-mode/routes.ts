@@ -176,6 +176,10 @@ export async function godModeRoutes(app: FastifyInstance) {
       parsed.data.params,
       parsed.data.offsetMinutes,
       request.ctx?.sessionId,
+      {
+        durationMinutes: parsed.data.durationMinutes,
+        advanceClock: parsed.data.advanceClock,
+      },
     );
     return createSuccessResponse(result, buildMeta(request));
   });
