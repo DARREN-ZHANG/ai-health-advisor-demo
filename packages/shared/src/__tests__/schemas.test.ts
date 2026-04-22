@@ -555,6 +555,12 @@ describe('SyncSessionSchema', () => {
   it('rejects negative uploadedEventCount', () => {
     expect(() => SyncSessionSchema.parse({ ...validSession, uploadedEventCount: -1 })).toThrow();
   });
+
+  // 注意：schema 不校验 startedAt <= finishedAt 语义约束，业务层需自行处理
+  it('schema 允许 startedAt 晚于 finishedAt（语义无效但 schema 通过）', () => {
+    const session = { ...validSession, startedAt: '2026-04-21T10:00', finishedAt: '2026-04-21T09:00' };
+    expect(() => SyncSessionSchema.parse(session)).not.toThrow();
+  });
 });
 
 describe('RecognizedEventTypeSchema', () => {
@@ -594,11 +600,17 @@ describe('RecognizedEventSchema', () => {
     expect(() => RecognizedEventSchema.parse({ ...validEvent, confidence: -0.1 })).toThrow();
   });
 
-  it('rejects empty evidence array', () => {
-    // evidence 是 z.array(z.string().min(1))，空数组仍然合法
-    // 但我们至少验证 min(1) 的 string 约束
+  it('rejects empty string in evidence array', () => {
+    // evidence 数组中的元素必须是非空字符串，min(1) 约束
     const event = { ...validEvent, evidence: [''] };
     expect(() => RecognizedEventSchema.parse(event)).toThrow();
+  });
+
+  it('accepts confidence boundary value 1', () => {
+    expect(RecognizedEventSchema.parse({ ...validEvent, confidence: 1 })).toEqual({
+      ...validEvent,
+      confidence: 1,
+    });
   });
 });
 
