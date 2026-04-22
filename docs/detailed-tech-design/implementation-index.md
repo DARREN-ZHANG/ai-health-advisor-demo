@@ -19,6 +19,10 @@
 3. `frontend-detailed-implementation-plan.md`
 4. `others-detailed-implementation-plan.md`
 
+补充说明：
+
+- 若本轮评审主题是“主时间轴推进、设备缓存/同步、God Mode 片段注入”，应额外阅读 `demo-timeline-device-sync-plan.md`
+
 ---
 
 ## 2. 如何使用这份 Index
