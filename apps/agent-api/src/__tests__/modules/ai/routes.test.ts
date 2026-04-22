@@ -71,6 +71,67 @@ describe('AI Routes', () => {
       expect(response.headers['x-session-id']).toBe('sess-1');
     });
 
+    test('有 pending 事件时隐式触发 app_open 同步', async () => {
+      // 清理前序测试残留的 mock 和缓存
+      mockedExecuteAgent.mockReset();
+      mockedExecuteAgent.mockResolvedValueOnce(mockResponse);
+
+      // 先注入一个活动片段产生 pending 事件
+      app.runtime.overrideStore.appendSegment('profile-a', 'sleep', { duration: 480 });
+      const pendingBefore = app.runtime.overrideStore.getPendingEvents('profile-a');
+      expect(pendingBefore.length).toBeGreaterThan(0);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          bustCache: true,
+        },
+        headers: { 'x-session-id': 'sess-sync' },
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      // 同步后 pending 事件应被清空（变为已同步）
+      const pendingAfter = app.runtime.overrideStore.getPendingEvents('profile-a');
+      expect(pendingAfter.length).toBe(0);
+
+      // 同步会话中应有 app_open 记录
+      const syncState = app.runtime.overrideStore.getSyncState('profile-a');
+      const appOpenSessions = syncState.syncSessions.filter(s => s.trigger === 'app_open');
+      expect(appOpenSessions.length).toBeGreaterThan(0);
+    });
+
+    test('无 pending 事件时不触发同步', async () => {
+      // 清理前序测试残留的 mock 和缓存
+      mockedExecuteAgent.mockReset();
+      mockedExecuteAgent.mockResolvedValueOnce(mockResponse);
+
+      // 先执行一次同步清空 pending
+      app.runtime.overrideStore.performSync('profile-a', 'manual_refresh');
+
+      const syncStateBefore = app.runtime.overrideStore.getSyncState('profile-a');
+      const sessionCountBefore = syncStateBefore.syncSessions.length;
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          bustCache: true,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      // 无 pending 事件时同步会话数量不变
+      const syncStateAfter = app.runtime.overrideStore.getSyncState('profile-a');
+      expect(syncStateAfter.syncSessions.length).toBe(sessionCountBefore);
+    });
+
     test('无效 pageContext 返回 400', async () => {
       const response = await app.inject({
         method: 'POST',

@@ -59,6 +59,15 @@ export async function aiRoutes(app: FastifyInstance) {
       briefCache.invalidate(profileId);
     }
 
+    // 后端隐式触发 app_open 同步：将 pending 事件同步到已同步状态，
+    // 确保首页晨间简报基于最新已同步数据生成
+    const pendingEvents = app.runtime.overrideStore.getPendingEvents(profileId);
+    if (pendingEvents.length > 0) {
+      app.runtime.overrideStore.performSync(profileId, 'app_open');
+      // 同步后刷新 brief 缓存，避免返回过期的缓存结果
+      briefCache.invalidate(profileId);
+    }
+
     const parsed = PageContextSchema.safeParse(pageContext);
     if (!parsed.success) {
       return reply.status(400).send(
