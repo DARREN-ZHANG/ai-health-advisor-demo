@@ -1,8 +1,9 @@
 import type { ResolvedProviderConfig } from '../types/provider';
 import { ChatOpenAI } from '@langchain/openai';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 
-export function createChatModel(config: ResolvedProviderConfig): ChatOpenAI {
-  // 首期仅实现 OpenAI provider
+export function createChatModel(config: ResolvedProviderConfig): BaseChatModel {
   switch (config.provider) {
     case 'openai':
       return new ChatOpenAI({
@@ -15,10 +16,15 @@ export function createChatModel(config: ResolvedProviderConfig): ChatOpenAI {
         maxRetries: config.maxRetries,
         timeout: config.timeoutMs,
       });
+    case 'gemini':
+      return new ChatGoogleGenerativeAI({
+        model: config.model,
+        apiKey: config.apiKey,
+        temperature: config.temperature,
+        maxRetries: config.maxRetries,
+      });
     case 'anthropic':
       throw new Error('Anthropic provider not yet implemented');
-    case 'gemini':
-      throw new Error('Gemini provider not yet implemented');
     default:
       throw new Error(`Unknown provider: ${config.provider satisfies never}`);
   }
