@@ -7,6 +7,10 @@ const SCENARIO_ICONS: Record<ScenarioType, string> = {
   metric_override: '📉',
   reset: '🧪',
   demo_script: '🎬',
+  timeline_append: '➕',
+  sync_trigger: '🔄',
+  advance_clock: '⏰',
+  reset_profile_timeline: '🗑️',
 };
 
 const EVENT_TRANSLATIONS: Record<string, string> = {
