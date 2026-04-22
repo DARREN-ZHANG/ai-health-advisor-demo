@@ -1,3 +1,5 @@
+// 兼容视图：从 DailyRecord 物化分钟级样本
+// 新代码应使用 sync-engine 的原始事件模型
 import type { DailyRecord, DeviceSyncSession, ProfileData, SensorSample, SleepStageType } from '@health-advisor/shared';
 
 const MINUTES_PER_DAY = 24 * 60;
