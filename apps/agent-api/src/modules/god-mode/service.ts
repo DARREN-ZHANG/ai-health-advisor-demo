@@ -2,6 +2,7 @@ import type { RuntimeRegistry } from '../../runtime/registry.js';
 import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
 import type {
   ActiveSensingState,
+  ActivitySegmentType,
   DemoScriptRunResponse,
   DemoScriptStepResult,
   EventInjectPayload,
@@ -78,15 +79,60 @@ export class GodModeService {
     return this.getStateForProfile(currentProfileId);
   }
 
+  /** 追加活动片段到时间轴 */
+  appendToTimeline(
+    segmentType: ActivitySegmentType,
+    params?: Record<string, number | string | boolean>,
+    offsetMinutes?: number,
+    sessionId?: string,
+  ): GodModeStateResponse {
+    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
+    this.registry.overrideStore.appendSegment(currentProfileId, segmentType, params, offsetMinutes);
+    this.invalidateSessionAnalytical(sessionId);
+    return this.getStateForProfile(currentProfileId);
+  }
+
+  /** 触发同步 */
+  triggerSync(trigger: 'app_open' | 'manual_refresh', sessionId?: string): GodModeStateResponse {
+    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
+    this.registry.overrideStore.performSync(currentProfileId, trigger);
+    this.invalidateSessionAnalytical(sessionId);
+    return this.getStateForProfile(currentProfileId);
+  }
+
+  /** 推进时钟 */
+  advanceClock(minutes: number): GodModeStateResponse {
+    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
+    this.registry.overrideStore.advanceClock(currentProfileId, minutes);
+    return this.getStateForProfile(currentProfileId);
+  }
+
+  /** 重置时间轴 */
+  resetProfileTimeline(profileId: string, sessionId?: string): GodModeStateResponse {
+    this.registry.overrideStore.resetProfileTimeline(profileId);
+    this.invalidateSessionAnalytical(sessionId);
+    return this.getState();
+  }
+
   /** 获取指定 profile 的 God-Mode 状态 */
   private getStateForProfile(profileId: string): GodModeStateResponse {
     const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
+    const clock = this.registry.overrideStore.getDemoClock(profileId);
+    const syncState = this.registry.overrideStore.getSyncState(profileId);
+    const pendingEvents = this.registry.overrideStore.getPendingEvents(profileId);
+
     return {
       currentProfileId,
       activeOverrides: this.registry.overrideStore.getActiveOverrides(profileId),
       injectedEvents: this.registry.overrideStore.getInjectedEvents(profileId),
       availableScenarios: this.registry.scenarioRegistry.list(),
       activeSensing: this.deriveActiveSensing(profileId),
+      // 时间轴同步状态字段
+      currentDemoTime: clock.currentTime,
+      lastSyncTime: syncState.lastSyncedMeasuredAt,
+      pendingEventCount: pendingEvents.length,
+      recentRecognizedEvents: [],
+      recentDerivedStates: [],
     };
   }
 
@@ -158,6 +204,29 @@ export class GodModeService {
         break;
       case 'reset':
         this.reset({ scope: (payload.scope as 'profile' | 'events' | 'overrides' | 'all') }, sessionId);
+        break;
+      case 'timeline_append':
+        this.appendToTimeline(
+          payload.segmentType as ActivitySegmentType,
+          payload.params as Record<string, number | string | boolean> | undefined,
+          payload.offsetMinutes as number | undefined,
+          sessionId,
+        );
+        break;
+      case 'sync_trigger':
+        this.triggerSync(
+          payload.trigger as 'app_open' | 'manual_refresh',
+          sessionId,
+        );
+        break;
+      case 'advance_clock':
+        this.advanceClock(payload.minutes as number);
+        break;
+      case 'reset_profile_timeline':
+        this.resetProfileTimeline(
+          payload.profileId as string,
+          sessionId,
+        );
         break;
       default:
         throw new Error(`Unknown action: ${action}`);

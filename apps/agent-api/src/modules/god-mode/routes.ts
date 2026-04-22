@@ -8,6 +8,10 @@ import {
   MetricOverridePayloadSchema,
   ResetPayloadSchema,
   ScenarioPayloadSchema,
+  TimelineAppendPayloadSchema,
+  SyncTriggerPayloadSchema,
+  AdvanceClockPayloadSchema,
+  ResetProfileTimelinePayloadSchema,
 } from '@health-advisor/shared';
 import type { EventInjectPayload, MetricOverridePayload, ResetPayload } from '@health-advisor/shared';
 import { buildMeta } from '../../utils/meta.js';
@@ -156,5 +160,62 @@ export async function godModeRoutes(app: FastifyInstance) {
         createErrorResponse(ErrorCode.VALIDATION_ERROR, message, buildMeta(request)),
       );
     }
+  });
+
+  // 时间轴追加片段
+  app.post('/god-mode/timeline-append', async (request, reply) => {
+    const parsed = TimelineAppendPayloadSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send(
+        createErrorResponse(ErrorCode.VALIDATION_ERROR, parsed.error.issues.map((i) => i.message).join('; '), buildMeta(request)),
+      );
+    }
+
+    const result = service.appendToTimeline(
+      parsed.data.segmentType,
+      parsed.data.params,
+      parsed.data.offsetMinutes,
+      request.ctx?.sessionId,
+    );
+    return createSuccessResponse(result, buildMeta(request));
+  });
+
+  // 触发同步
+  app.post('/god-mode/sync-trigger', async (request, reply) => {
+    const parsed = SyncTriggerPayloadSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send(
+        createErrorResponse(ErrorCode.VALIDATION_ERROR, parsed.error.issues.map((i) => i.message).join('; '), buildMeta(request)),
+      );
+    }
+
+    const result = service.triggerSync(parsed.data.trigger, request.ctx?.sessionId);
+    return createSuccessResponse(result, buildMeta(request));
+  });
+
+  // 推进时钟
+  app.post('/god-mode/advance-clock', async (request, reply) => {
+    const parsed = AdvanceClockPayloadSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send(
+        createErrorResponse(ErrorCode.VALIDATION_ERROR, parsed.error.issues.map((i) => i.message).join('; '), buildMeta(request)),
+      );
+    }
+
+    const result = service.advanceClock(parsed.data.minutes);
+    return createSuccessResponse(result, buildMeta(request));
+  });
+
+  // 重置时间轴
+  app.post('/god-mode/reset-profile-timeline', async (request, reply) => {
+    const parsed = ResetProfileTimelinePayloadSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send(
+        createErrorResponse(ErrorCode.VALIDATION_ERROR, parsed.error.issues.map((i) => i.message).join('; '), buildMeta(request)),
+      );
+    }
+
+    const result = service.resetProfileTimeline(parsed.data.profileId, request.ctx?.sessionId);
+    return createSuccessResponse(result, buildMeta(request));
   });
 }

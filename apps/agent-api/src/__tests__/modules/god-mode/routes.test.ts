@@ -3,7 +3,7 @@ import path from 'node:path';
 import { buildApp } from '../../../app.js';
 import type { FastifyInstance } from 'fastify';
 
-const DATA_DIR = path.resolve(process.cwd(), '../../data/sandbox');
+const DATA_DIR = path.resolve(import.meta.dirname, '../../../../../../data/sandbox');
 
 describe('God-Mode Routes', () => {
   let app: FastifyInstance;
@@ -425,6 +425,282 @@ describe('God-Mode Routes', () => {
       });
 
       expect(response.statusCode).toBe(400);
+    });
+
+    test('执行 demo-timeline-day 返回 200', async () => {
+      // 先重置确保干净状态
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/demo-script/run',
+        payload: { scenarioId: 'demo-timeline-day' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      expect(body.data.scenarioId).toBe('demo-timeline-day');
+      expect(body.data.executedSteps).toHaveLength(7);
+      // 验证步骤顺序：睡眠 → 用餐 → 同步 → 久坐 → 推进时钟 → 同步 → 重置
+      expect(body.data.executedSteps[0].action).toBe('timeline_append');
+      expect(body.data.executedSteps[1].action).toBe('timeline_append');
+      expect(body.data.executedSteps[2].action).toBe('sync_trigger');
+      expect(body.data.executedSteps[3].action).toBe('timeline_append');
+      expect(body.data.executedSteps[4].action).toBe('advance_clock');
+      expect(body.data.executedSteps[5].action).toBe('sync_trigger');
+      expect(body.data.executedSteps[6].action).toBe('reset_profile_timeline');
+      // 所有步骤应成功
+      for (const step of body.data.executedSteps) {
+        expect(step.status).toBe('success');
+      }
+
+      // 清理
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+    });
+  });
+
+  describe('POST /god-mode/timeline-append', () => {
+    test('追加 meal_intake 片段返回 200', async () => {
+      // 先重置确保干净状态
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/timeline-append',
+        payload: {
+          segmentType: 'meal_intake',
+          params: { mealContext: 'breakfast' },
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      expect(body.data).toHaveProperty('currentDemoTime');
+      expect(body.data.pendingEventCount).toBeGreaterThanOrEqual(0);
+
+      // 清理
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+    });
+
+    test('无效 segmentType 返回 400', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/timeline-append',
+        payload: {
+          segmentType: 'invalid_type',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    test('缺少 segmentType 返回 400', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/timeline-append',
+        payload: {},
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  describe('POST /god-mode/sync-trigger', () => {
+    test('app_open 同步返回 200', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/sync-trigger',
+        payload: { trigger: 'app_open' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      expect(body.data).toHaveProperty('currentDemoTime');
+      expect(body.data).toHaveProperty('lastSyncTime');
+    });
+
+    test('manual_refresh 同步返回 200', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/sync-trigger',
+        payload: { trigger: 'manual_refresh' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+    });
+
+    test('无效 trigger 返回 400', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/sync-trigger',
+        payload: { trigger: 'invalid_trigger' },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    test('缺少 trigger 返回 400', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/sync-trigger',
+        payload: {},
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  describe('POST /god-mode/advance-clock', () => {
+    test('推进 60 分钟返回 200', async () => {
+      // 先获取当前时间
+      const beforeState = await app.inject({
+        method: 'GET',
+        url: '/god-mode/state',
+      });
+      const beforeTime = beforeState.json().data.currentDemoTime;
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/advance-clock',
+        payload: { minutes: 60 },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      // 时钟应推进 60 分钟
+      expect(body.data.currentDemoTime).not.toBe(beforeTime);
+
+      // 清理
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+    });
+
+    test('无效 minutes 返回 400', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/advance-clock',
+        payload: { minutes: -5 },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    test('缺少 minutes 返回 400', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/advance-clock',
+        payload: {},
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  describe('POST /god-mode/reset-profile-timeline', () => {
+    test('重置时间轴返回 200', async () => {
+      // 先追加一些片段
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/timeline-append',
+        payload: {
+          segmentType: 'meal_intake',
+          params: { mealContext: 'lunch' },
+        },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset-profile-timeline',
+        payload: { profileId: 'profile-a' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      // 重置后 pendingEventCount 应为 0
+      expect(body.data.pendingEventCount).toBe(0);
+
+      // 清理
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+    });
+
+    test('无效 profileId 返回 400', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset-profile-timeline',
+        payload: { profileId: '' },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    test('缺少 profileId 返回 400', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset-profile-timeline',
+        payload: {},
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  describe('GET /god-mode/state (时间轴同步字段)', () => {
+    test('返回时间轴同步状态字段', async () => {
+      // 先重置确保干净状态
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/god-mode/state',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      // 新增的时间轴同步字段
+      expect(body.data).toHaveProperty('currentDemoTime');
+      expect(typeof body.data.currentDemoTime).toBe('string');
+      expect(body.data).toHaveProperty('lastSyncTime');
+      expect(body.data).toHaveProperty('pendingEventCount');
+      expect(typeof body.data.pendingEventCount).toBe('number');
+      expect(body.data).toHaveProperty('recentRecognizedEvents');
+      expect(Array.isArray(body.data.recentRecognizedEvents)).toBe(true);
+      expect(body.data).toHaveProperty('recentDerivedStates');
+      expect(Array.isArray(body.data.recentDerivedStates)).toBe(true);
     });
   });
 });
