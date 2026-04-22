@@ -3,7 +3,7 @@
 // Types
 export type { AgentRequest } from './types/agent-request';
 export type { InternalTaskType } from './types/internal-task-type';
-export type { AgentContext, AgentStatusColor } from './types/agent-context';
+export type { AgentContext, AgentStatusColor, TimelineSyncContext } from './types/agent-context';
 export type {
   ConversationMessage,
   SessionConversationMemory,

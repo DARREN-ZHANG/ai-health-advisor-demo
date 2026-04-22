@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import type { ProfileData } from '@health-advisor/shared';
 import type { AgentRuntimeDeps } from '@health-advisor/agent-core';
+import type { TimelineSyncContext } from '@health-advisor/agent-core';
 import {
   initializeAgent,
   resolveProviderConfig,
@@ -16,6 +17,9 @@ import {
   selectByTimeframe,
   applyOverrides,
   mergeEvents,
+  recognizeEvents,
+  computeDerivedTemporalStates,
+  aggregateCurrentDayRecord,
 } from '@health-advisor/sandbox';
 import type { AppConfig } from '../config/env.js';
 import { createSessionStore, type SessionStoreService } from './session-store.js';
@@ -63,16 +67,84 @@ export function createRuntimeRegistry(
     ? createHealthAgent({ chatModel: new FakeChatModel('{"summary":"fallback","chartTokens":[],"microTips":[]}') })
     : initializeAgent(resolveProviderConfig(toProviderEnv(config)));
 
-  // 7. getProfile 中间层：应用 override
+  // 7. getProfile 中间层：应用 override，并正确处理当前活动日
   function getProfileWithOverrides(profileId: string): ProfileData {
     const raw = sandboxGetProfile(profiles, profileId);
     const overrides = overrideStore.getActiveOverrides(profileId);
-    if (overrides.length === 0) return raw;
-    return { ...raw, records: applyOverrides(raw.records, overrides) };
+
+    // 先应用 override
+    const overriddenRecords = overrides.length > 0
+      ? applyOverrides(raw.records, overrides)
+      : raw.records;
+
+    // 检查是否处于 demo timeline 模式，需要替换当前活动日
+    // 如果 timeline state 初始化失败（如缺少 V2 配置），降级为普通模式
+    let clock: ReturnType<typeof overrideStore.getDemoClock> | null = null;
+    try {
+      clock = overrideStore.getDemoClock(profileId);
+    } catch {
+      // V1 profile 不支持 timeline mode，直接使用 override 后的 records
+      return { ...raw, records: overriddenRecords };
+    }
+
+    if (!clock.currentTime) {
+      // 非 demo 模式，直接返回 override 后的 records
+      return { ...raw, records: overriddenRecords };
+    }
+
+    const currentDate = clock.currentTime.slice(0, 10);
+    // 从 records 中排除当前活动日的完整历史记录
+    const historicalRecords = overriddenRecords.filter(
+      (r) => r.date !== currentDate,
+    );
+
+    // 获取已同步事件，聚合当前日记录
+    const syncedEvents = overrideStore.getSyncedEvents(profileId);
+    if (syncedEvents.length > 0) {
+      const currentDayRecord = aggregateCurrentDayRecord(syncedEvents, clock.currentTime);
+      return { ...raw, records: [...historicalRecords, currentDayRecord] };
+    }
+
+    // 无已同步事件：当前日为空
+    return { ...raw, records: historicalRecords };
   }
 
   function getRawProfile(profileId: string): ProfileData {
     return sandboxGetProfile(profiles, profileId);
+  }
+
+  /** 获取时间轴同步上下文（识别事件 + 派生状态 + 同步元数据） */
+  function getTimelineSync(profileId: string): TimelineSyncContext | undefined {
+    let clock: ReturnType<typeof overrideStore.getDemoClock> | null = null;
+    try {
+      clock = overrideStore.getDemoClock(profileId);
+    } catch {
+      // V1 profile 不支持 timeline mode
+      return undefined;
+    }
+
+    if (!clock.currentTime) {
+      // 非 demo 模式，不提供 timeline sync 上下文
+      return undefined;
+    }
+
+    const syncedEvents = overrideStore.getSyncedEvents(profileId);
+    const syncState = overrideStore.getSyncState(profileId);
+    const pendingEvents = overrideStore.getPendingEvents(profileId);
+
+    // 从已同步事件计算识别结果
+    const recognizedEvents = recognizeEvents(syncedEvents, profileId, clock.currentTime);
+    // 从识别结果计算派生状态
+    const derivedTemporalStates = computeDerivedTemporalStates(recognizedEvents, clock.currentTime, profileId);
+
+    return {
+      recognizedEvents,
+      derivedTemporalStates,
+      syncMetadata: {
+        lastSyncedMeasuredAt: syncState.lastSyncedMeasuredAt,
+        pendingEventCount: pendingEvents.length,
+      },
+    };
   }
 
   return {
@@ -93,6 +165,7 @@ export function createRuntimeRegistry(
     analyticalMemory,
     getActiveOverrides: (profileId: string) => overrideStore.getActiveOverrides(profileId),
     getInjectedEvents: (profileId: string) => overrideStore.getInjectedEvents(profileId),
+    getTimelineSync,
 
     // AgentRuntimeDeps 自己的字段
     agent,

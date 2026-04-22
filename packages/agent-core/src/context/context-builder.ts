@@ -63,6 +63,9 @@ export function buildAgentContext(
   const effectiveTimeframe = request.timeframe ?? request.pageContext.timeframe;
   const scope = effectiveTab && effectiveTimeframe ? `${effectiveTab}:${effectiveTimeframe}` : undefined;
 
+  // 9. 获取时间轴同步上下文（可选）
+  const timelineSync = deps.getTimelineSync?.(request.profileId);
+
   return {
     profile: {
       profileId: profile.profileId,
@@ -100,6 +103,7 @@ export function buildAgentContext(
       latestViewSummary: scope ? analytical?.latestViewSummaryByScope?.[scope] : undefined,
       latestRuleSummary: analytical?.latestRuleSummary,
     },
+    ...(timelineSync ? { timelineSync } : {}),
   };
 }
 

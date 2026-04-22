@@ -1,5 +1,6 @@
 import type { RuntimeRegistry } from '../../runtime/registry.js';
 import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
+import { recognizeEvents, computeDerivedTemporalStates } from '@health-advisor/sandbox';
 import type {
   ActiveSensingState,
   ActivitySegmentType,
@@ -121,6 +122,12 @@ export class GodModeService {
     const syncState = this.registry.overrideStore.getSyncState(profileId);
     const pendingEvents = this.registry.overrideStore.getPendingEvents(profileId);
 
+    // 从已同步事件计算识别结果和派生状态
+    const syncedEvents = this.registry.overrideStore.getSyncedEvents(profileId);
+    const currentTime = clock.currentTime ?? new Date().toISOString().slice(0, 16);
+    const recognizedEvents = recognizeEvents(syncedEvents, profileId, currentTime);
+    const derivedStates = computeDerivedTemporalStates(recognizedEvents, currentTime, profileId);
+
     return {
       currentProfileId,
       activeOverrides: this.registry.overrideStore.getActiveOverrides(profileId),
@@ -131,8 +138,8 @@ export class GodModeService {
       currentDemoTime: clock.currentTime,
       lastSyncTime: syncState.lastSyncedMeasuredAt,
       pendingEventCount: pendingEvents.length,
-      recentRecognizedEvents: [],
-      recentDerivedStates: [],
+      recentRecognizedEvents: recognizedEvents,
+      recentDerivedStates: derivedStates,
     };
   }
 

@@ -1,7 +1,8 @@
-import type { DailyRecord, Timeframe } from '@health-advisor/shared';
+import type { DailyRecord, Timeframe, RecognizedEvent, DerivedTemporalState } from '@health-advisor/shared';
 import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
 import type { SessionMemoryStore } from '../memory/session-memory-store';
 import type { AnalyticalMemoryStore } from '../memory/analytical-memory-store';
+import type { TimelineSyncContext } from '../types/agent-context';
 
 export interface ContextBuilderDeps {
   getProfile: (profileId: string) => import('@health-advisor/shared').ProfileData;
@@ -16,4 +17,6 @@ export interface ContextBuilderDeps {
   analyticalMemory: AnalyticalMemoryStore;
   getActiveOverrides: (profileId: string) => OverrideEntry[];
   getInjectedEvents: (profileId: string) => DatedEvent[];
+  /** 获取时间轴同步上下文（可选，demo timeline 模式下提供） */
+  getTimelineSync?: (profileId: string) => TimelineSyncContext | undefined;
 }
