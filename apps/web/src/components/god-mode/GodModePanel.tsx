@@ -1,11 +1,21 @@
 'use client';
 
 import { Drawer, Button, Section, Skeleton } from '@health-advisor/ui';
-import type { ScenarioEntry } from '@health-advisor/shared';
+import type { ScenarioEntry, TimelineAppendPayload } from '@health-advisor/shared';
 import { getScenarioIcon } from '@/lib/god-mode';
 import { useGodModeStore } from '@/stores/god-mode.store';
 import { useProfileStore } from '@/stores/profile.store';
 import { useGodModeActions, useGodModeState } from '@/hooks/use-god-mode-actions';
+
+/** 时间轴可追加的活动片段 */
+const TIMELINE_SEGMENTS: { type: TimelineAppendPayload['segmentType']; label: string; icon: string; params?: Record<string, number | string | boolean> }[] = [
+  { type: 'meal_intake', label: '进餐', icon: '🍽️', params: { mealContext: 'breakfast' } },
+  { type: 'steady_cardio', label: '有氧', icon: '🏃', params: { durationMinutes: 30 } },
+  { type: 'prolonged_sedentary', label: '久坐', icon: '🪑', params: { durationMinutes: 120 } },
+  { type: 'intermittent_exercise', label: '间歇运动', icon: '🏋️', params: { rounds: 5 } },
+  { type: 'walk', label: '散步', icon: '🚶', params: undefined },
+  { type: 'sleep', label: '睡眠', icon: '😴', params: { durationMinutes: 480 } },
+];
 
 export function GodModePanel() {
   const { isEnabled } = useGodModeStore();
@@ -20,13 +30,17 @@ export function GodModePanel() {
 function GodModePanelContent() {
   const { isOpen, toggleOpen, activeScenarioId, setScenarioId } = useGodModeStore();
   const { currentProfileId } = useProfileStore();
-  const { 
-    switchProfile, isSwitchingProfile, 
-    injectEvent, isInjectingEvent, 
+  const {
+    switchProfile, isSwitchingProfile,
+    injectEvent, isInjectingEvent,
     overrideMetric, isOverridingMetric,
     reset, isResetting,
     applyScenario, isApplyingScenario,
-    runDemoScript, isRunningDemoScript
+    runDemoScript, isRunningDemoScript,
+    appendTimeline, isAppendingTimeline,
+    triggerSync, isTriggeringSync,
+    advanceClock, isAdvancingClock,
+    resetTimeline, isResettingTimeline,
   } = useGodModeActions();
 
   const { data: godModeState, isLoading: isLoadingState } = useGodModeState();
@@ -43,6 +57,39 @@ function GodModePanelContent() {
   };
 
   const isRunningScenario = isApplyingScenario || isRunningDemoScript;
+  const isTimelineBusy = isAppendingTimeline || isTriggeringSync || isAdvancingClock || isResettingTimeline;
+
+  const handleAppendTimeline = async (segment: typeof TIMELINE_SEGMENTS[number]) => {
+    try {
+      await appendTimeline({ segmentType: segment.type, params: segment.params });
+    } catch (error) {
+      console.error('Failed to append timeline segment:', error);
+    }
+  };
+
+  const handleAdvanceClock = async (minutes: number) => {
+    try {
+      await advanceClock(minutes);
+    } catch (error) {
+      console.error('Failed to advance clock:', error);
+    }
+  };
+
+  const handleTriggerSync = async () => {
+    try {
+      await triggerSync('manual_refresh');
+    } catch (error) {
+      console.error('Failed to trigger sync:', error);
+    }
+  };
+
+  const handleResetTimeline = async () => {
+    try {
+      await resetTimeline({ profileId: currentProfileId });
+    } catch (error) {
+      console.error('Failed to reset timeline:', error);
+    }
+  };
 
   const handleScenarioRun = async (scenario: ScenarioEntry) => {
     setScenarioId(scenario.scenarioId);
@@ -145,6 +192,61 @@ function GodModePanelContent() {
                   {isSwitchingProfile && currentProfileId !== id && ' ...'}
                 </button>
               ))}
+            </div>
+          </Section>
+
+          {/* 时间轴控制 */}
+          <Section title="Timeline Control" className="space-y-4">
+            {/* 状态显示 */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wide">当前时间</div>
+                <div className="text-sm font-mono text-cyan-400 mt-1">
+                  {godModeState?.currentDemoTime?.slice(11) ?? '--:--'}
+                </div>
+              </div>
+              <div className="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wide">Pending</div>
+                <div className="text-sm font-mono text-yellow-400 mt-1">
+                  {godModeState?.pendingEventCount ?? 0}
+                </div>
+              </div>
+              <div className="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wide">上次同步</div>
+                <div className="text-sm font-mono text-green-400 mt-1">
+                  {godModeState?.lastSyncTime?.slice(11) ?? '未同步'}
+                </div>
+              </div>
+            </div>
+
+            {/* 时间轴操作 - 活动片段追加 */}
+            <div className="grid grid-cols-2 gap-3">
+              {TIMELINE_SEGMENTS.map(seg => (
+                <button
+                  key={seg.type}
+                  disabled={isTimelineBusy}
+                  onClick={() => handleAppendTimeline(seg)}
+                  className="p-3 rounded-xl bg-slate-900 border-2 border-slate-800 hover:border-slate-700 text-xs text-slate-400 transition-all disabled:opacity-50"
+                >
+                  {seg.icon} {seg.label}
+                </button>
+              ))}
+            </div>
+
+            {/* 时钟控制 */}
+            <div className="grid grid-cols-3 gap-3">
+              <Button variant="secondary" onClick={() => handleAdvanceClock(60)} disabled={isTimelineBusy}
+                className="bg-slate-900 border-2 border-slate-800 rounded-xl text-xs">
+                ⏰ +1h
+              </Button>
+              <Button variant="secondary" onClick={handleTriggerSync} disabled={isTimelineBusy}
+                className="bg-slate-900 border-2 border-slate-800 rounded-xl text-xs">
+                🔄 同步
+              </Button>
+              <Button variant="secondary" onClick={handleResetTimeline} disabled={isTimelineBusy}
+                className="bg-slate-900 border-2 border-red-900/50 rounded-xl text-xs text-red-400">
+                🗑️ 重置
+              </Button>
             </div>
           </Section>
 

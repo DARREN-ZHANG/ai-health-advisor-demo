@@ -13,6 +13,8 @@ import type {
   GodModeStateResponse,
   MetricOverridePayload,
   ResetPayload,
+  TimelineAppendPayload,
+  ResetProfileTimelinePayload,
 } from '@health-advisor/shared';
 
 export function useGodModeState() {
@@ -150,6 +152,68 @@ export function useGodModeActions() {
     },
   });
 
+  /**
+   * GM-TL1: 追加活动片段
+   */
+  const appendTimelineMutation = useMutation({
+    mutationFn: async (payload: TimelineAppendPayload) => {
+      return apiClient.post<GodModeStateResponse>('/god-mode/timeline-append', payload);
+    },
+    onSuccess: (state) => {
+      setProfileId(state.currentProfileId);
+      syncActiveSensingBanner(state.activeSensing);
+      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
+    },
+  });
+
+  /**
+   * GM-TL2: 触发同步
+   */
+  const triggerSyncMutation = useMutation({
+    mutationFn: async (trigger: 'app_open' | 'manual_refresh') => {
+      return apiClient.post<GodModeStateResponse>('/god-mode/sync-trigger', { trigger });
+    },
+    onSuccess: (state) => {
+      setProfileId(state.currentProfileId);
+      syncActiveSensingBanner(state.activeSensing);
+      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
+    },
+  });
+
+  /**
+   * GM-TL3: 推进时钟
+   */
+  const advanceClockMutation = useMutation({
+    mutationFn: async (minutes: number) => {
+      return apiClient.post<GodModeStateResponse>('/god-mode/advance-clock', { minutes });
+    },
+    onSuccess: (state) => {
+      setProfileId(state.currentProfileId);
+      syncActiveSensingBanner(state.activeSensing);
+      queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
+    },
+  });
+
+  /**
+   * GM-TL4: 重置时间轴
+   */
+  const resetTimelineMutation = useMutation({
+    mutationFn: async (payload: ResetProfileTimelinePayload) => {
+      return apiClient.post<GodModeStateResponse>('/god-mode/reset-profile-timeline', payload);
+    },
+    onSuccess: (state) => {
+      setProfileId(state.currentProfileId);
+      syncActiveSensingBanner(state.activeSensing);
+      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
+    },
+  });
+
   return {
     switchProfile: switchProfileMutation.mutateAsync,
     isSwitchingProfile: switchProfileMutation.isPending,
@@ -163,5 +227,13 @@ export function useGodModeActions() {
     isApplyingScenario: applyScenarioMutation.isPending,
     runDemoScript: runDemoScriptMutation.mutateAsync,
     isRunningDemoScript: runDemoScriptMutation.isPending,
+    appendTimeline: appendTimelineMutation.mutateAsync,
+    isAppendingTimeline: appendTimelineMutation.isPending,
+    triggerSync: triggerSyncMutation.mutateAsync,
+    isTriggeringSync: triggerSyncMutation.isPending,
+    advanceClock: advanceClockMutation.mutateAsync,
+    isAdvancingClock: advanceClockMutation.isPending,
+    resetTimeline: resetTimelineMutation.mutateAsync,
+    isResettingTimeline: resetTimelineMutation.isPending,
   };
 }
