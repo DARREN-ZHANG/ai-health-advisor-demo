@@ -4,6 +4,7 @@ import type { EChartsOption } from 'echarts';
 import { useMemo } from 'react';
 import {
   ChartTokenId,
+  CHART_TOKEN_META,
   type DataCenterResponse,
   type DataTab,
   type StressTimelineResponse,
@@ -55,4 +56,67 @@ function toStandardTimeSeries(
 
   const standardData = data as DataCenterResponse;
   return toTimeSeries(standardData.timeline as ChartDataPoint[]);
+}
+
+/**
+ * 各 tokenId 对应的 series key 映射，用于从 StandardTimeSeries 中提取数据
+ */
+const TOKEN_SERIES_KEY: Partial<Record<ChartTokenId, string>> = {
+  [ChartTokenId.HRV_7DAYS]: 'hr',
+  [ChartTokenId.SLEEP_7DAYS]: 'sleep.totalMinutes',
+  [ChartTokenId.RESTING_HR_7DAYS]: 'hr',
+  [ChartTokenId.ACTIVITY_7DAYS]: 'activity.steps',
+  [ChartTokenId.SPO2_7DAYS]: 'spo2',
+  [ChartTokenId.STRESS_LOAD_7DAYS]: 'stress.load',
+};
+
+/**
+ * 创建紧凑型图表选项，用于趋势卡片中的微型折线图
+ * 不包含 title、tooltip、axis label 等元素
+ */
+export function createCompactChartOption(
+  tokenId: ChartTokenId,
+  data: StandardTimeSeries | null | undefined
+): EChartsOption | null {
+  if (!data || data.dates.length === 0) return null;
+
+  const meta = CHART_TOKEN_META[tokenId];
+  const seriesKey = TOKEN_SERIES_KEY[tokenId] ?? '';
+  let seriesData = data.series[seriesKey] ?? [];
+
+  // 睡眠数据需要将分钟转换为小时
+  if (tokenId === ChartTokenId.SLEEP_7DAYS) {
+    seriesData = seriesData.map((v) =>
+      v !== null ? Number((v / 60).toFixed(1)) : null
+    );
+  }
+
+  // 过滤掉全为 null 的数据
+  const hasData = seriesData.some((v) => v !== null);
+  if (!hasData) return null;
+
+  return {
+    backgroundColor: 'transparent',
+    grid: { left: 0, right: 0, top: 4, bottom: 0 },
+    xAxis: {
+      type: 'category',
+      data: data.dates,
+      show: false,
+      boundaryGap: false,
+    },
+    yAxis: {
+      type: 'value',
+      show: false,
+    },
+    series: [
+      {
+        type: 'line',
+        data: seriesData,
+        smooth: true,
+        symbol: 'none',
+        lineStyle: { color: meta.color, width: 2 },
+        areaStyle: { color: meta.color, opacity: 0.15 },
+      },
+    ],
+  };
 }

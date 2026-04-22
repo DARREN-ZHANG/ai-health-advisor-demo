@@ -6,13 +6,22 @@ import { DataCenterControls } from '@/components/data-center/DataCenterControls'
 import { ChartContainer } from '@/components/data-center/ChartContainer';
 import { ViewSummaryTrigger } from '@/components/data-center/ViewSummaryTrigger';
 import { ChartTokenRenderer } from '@/components/advisor/ChartTokenRenderer';
+import { HistoricalTrendsGrid } from '@/components/homepage/HistoricalTrendsGrid';
 import { useDataCenterStore } from '@/stores/data-center.store';
 import { useProfileStore } from '@/stores/profile.store';
-import { useDataCenterQuery } from '@/hooks/use-data-query';
-import { useDataChartOption } from '@/hooks/use-data-chart-option';
+import { useDataCenterQuery, useChartDataQuery } from '@/hooks/use-data-query';
+import { useDataChartOption, createCompactChartOption } from '@/hooks/use-data-chart-option';
 import { useViewSummary } from '@/hooks/use-ai-query';
-import { useState } from 'react';
-import type { AgentResponseEnvelope, DataCenterResponse, DataTab, StressTimelineResponse } from '@health-advisor/shared';
+import { useState, useMemo } from 'react';
+import {
+  CHART_TOKEN_META,
+  ChartTokenId,
+  type AgentResponseEnvelope,
+  type DataCenterResponse,
+  type DataTab,
+  type StressTimelineResponse,
+} from '@health-advisor/shared';
+import type { StandardTimeSeries } from '@health-advisor/charts';
 import { SparklesIcon, InboxIcon } from '@heroicons/react/24/outline';
 
 const tabLabels: Record<string, string> = {
@@ -24,14 +33,59 @@ const tabLabels: Record<string, string> = {
   stress: '压力负荷',
 };
 
+/** 趋势卡片配置 */
+const TREND_TOKEN_CONFIGS = [
+  { id: 'hrv', label: 'HRV', tokenId: ChartTokenId.HRV_7DAYS, metricKey: 'hr', formatValue: (v: number) => Math.round(v) },
+  { id: 'sleep', label: '睡眠', tokenId: ChartTokenId.SLEEP_7DAYS, metricKey: 'sleep.totalMinutes', formatValue: (v: number) => (v / 60).toFixed(1) },
+  { id: 'activity', label: '活动', tokenId: ChartTokenId.ACTIVITY_7DAYS, metricKey: 'activity.steps', formatValue: (v: number) => Math.round(v).toLocaleString() },
+  { id: 'stress', label: '压力', tokenId: ChartTokenId.STRESS_LOAD_7DAYS, metricKey: 'stress.load', formatValue: (v: number) => Math.round(v) },
+] as const;
+
+/** 所有趋势 token 的 ID 列表 */
+const TREND_TOKEN_IDS = TREND_TOKEN_CONFIGS.map((c) => c.tokenId);
+
 export default function DataCenterPage() {
   const { activeTab, timeframe } = useDataCenterStore();
   const { currentProfileId } = useProfileStore();
   const [isSummaryDrawerOpen, setIsSummaryDrawerOpen] = useState(false);
 
-  // 获取图表数据
+  // 获取主图表数据
   const { data: chartData, isLoading, isFetching, error } = useDataCenterQuery(currentProfileId, activeTab, timeframe);
   const chartOption = useDataChartOption(activeTab as DataTab, chartData);
+
+  // 获取趋势汇总数据（HRV、睡眠、活动、压力）
+  const { data: trendData, isLoading: isTrendLoading } = useChartDataQuery(
+    currentProfileId,
+    TREND_TOKEN_IDS,
+    timeframe
+  );
+
+  // 构建趋势卡片数据
+  const trends = useMemo(() => {
+    if (!trendData) {
+      // 加载中状态：返回骨架卡片
+      return TREND_TOKEN_CONFIGS.map((config) => ({
+        id: config.id,
+        label: config.label,
+        value: '--',
+        unit: CHART_TOKEN_META[config.tokenId].unit,
+        accentColor: CHART_TOKEN_META[config.tokenId].color,
+        isLoading: true,
+      }));
+    }
+
+    return TREND_TOKEN_CONFIGS.map((config) =>
+      buildTrendItem({
+        id: config.id,
+        label: config.label,
+        tokenId: config.tokenId,
+        metricKey: config.metricKey,
+        data: trendData,
+        isLoading: isTrendLoading,
+        formatValue: config.formatValue,
+      })
+    );
+  }, [trendData, isTrendLoading]);
 
   const isAnyLoading = isLoading || isFetching;
 
@@ -49,8 +103,8 @@ export default function DataCenterPage() {
   };
 
   const isChartEmpty = !chartData || (
-    activeTab === 'stress' 
-      ? (chartData as StressTimelineResponse).points?.length === 0 
+    activeTab === 'stress'
+      ? (chartData as StressTimelineResponse).points?.length === 0
       : (chartData as DataCenterResponse).timeline?.length === 0
   );
 
@@ -72,16 +126,25 @@ export default function DataCenterPage() {
       {/* 控制区域：Tab 切换与时间窗 */}
       <DataCenterControls />
 
-      {/* 图表展示区域 */}
+      {/* 当前 tab 主图 */}
       <Section className="space-y-4">
-        <ChartContainer 
-          title={tabLabels[activeTab] || '数据指标'} 
+        <ChartContainer
+          title={tabLabels[activeTab] || '数据指标'}
           isLoading={isAnyLoading}
           isEmpty={isChartEmpty}
           error={error ? '加载失败，请重试' : undefined}
         >
           {chartOption && <ChartRoot option={chartOption} height={350} />}
         </ChartContainer>
+      </Section>
+
+      {/* 趋势汇总区域 */}
+      <Section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-slate-200">历史趋势</h2>
+          <span className="text-xs text-slate-500">汇总所有核心指标</span>
+        </div>
+        <HistoricalTrendsGrid trends={trends} />
       </Section>
 
       {/* 补充指标卡片 */}
@@ -219,4 +282,49 @@ function getStatusColorClassName(statusColor: AgentResponseEnvelope['statusColor
   }
 
   return 'text-emerald-400 bg-emerald-400/10';
+}
+
+/**
+ * 计算环比变化百分比
+ */
+function calculateChange(current: number | null | undefined, previous: number | null | undefined): number | undefined {
+  if (current == null || previous == null || previous === 0) return undefined;
+  return Number(((current - previous) / previous * 100).toFixed(1));
+}
+
+/**
+ * 构建单个趋势卡片数据
+ */
+function buildTrendItem({
+  id,
+  label,
+  tokenId,
+  metricKey,
+  data,
+  isLoading,
+  formatValue,
+}: {
+  id: string;
+  label: string;
+  tokenId: ChartTokenId;
+  metricKey: string;
+  data: StandardTimeSeries;
+  isLoading: boolean;
+  formatValue: (v: number) => string | number;
+}) {
+  const series = data.series[metricKey] ?? [];
+  const current = series.at(-1);
+  const previous = series.at(-2);
+  const meta = CHART_TOKEN_META[tokenId];
+
+  return {
+    id,
+    label,
+    value: current == null ? '--' : formatValue(current),
+    unit: meta.unit,
+    change: calculateChange(current, previous),
+    accentColor: meta.color,
+    chartOption: createCompactChartOption(tokenId, data),
+    isLoading,
+  };
 }
