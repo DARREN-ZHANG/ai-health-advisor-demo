@@ -90,17 +90,18 @@ describe('sync-engine', () => {
       // 会话记录正确
       expect(session.trigger).toBe('app_open');
       expect(session.uploadedEventCount).toBe(3);
+      // uploadedMeasuredRange.end 应为实际最大 measuredAt，而非 currentTime
       expect(session.uploadedMeasuredRange).toEqual({
         start: '2026-04-16T08:00',
-        end: '2026-04-16T08:03',
+        end: '2026-04-16T08:02',
       });
       expect(session.startedAt).toBe('2026-04-16T08:03');
       expect(session.finishedAt).toBe('2026-04-16T08:03');
       expect(session.profileId).toBe('p1');
       expect(session.syncId).toMatch(/^sync-/);
 
-      // 状态更新
-      expect(newState.lastSyncedMeasuredAt).toBe('2026-04-16T08:03');
+      // 水位线应为实际最大 measuredAt，而非 currentTime
+      expect(newState.lastSyncedMeasuredAt).toBe('2026-04-16T08:02');
       expect(getPendingEvents(newState)).toHaveLength(0);
       expect(getSyncedEvents(newState)).toHaveLength(3);
 
@@ -141,7 +142,8 @@ describe('sync-engine', () => {
 
       expect(session.uploadedMeasuredRange).toBeNull();
       expect(session.uploadedEventCount).toBe(0);
-      expect(newState.lastSyncedMeasuredAt).toBe('2026-04-16T08:00');
+      // 无 pending 事件时水位线应保持 null 不变
+      expect(newState.lastSyncedMeasuredAt).toBeNull();
     });
   });
 

@@ -55,17 +55,27 @@ export function performSync(
     (evt) => evt.measuredAt <= currentTime,
   );
 
+  // 计算本批待同步事件的最大 measuredAt
+  const maxMeasuredAt = toSync.length > 0
+    ? toSync.reduce(
+        (max, evt) => (evt.measuredAt > max ? evt.measuredAt : max),
+        toSync[0]!.measuredAt,
+      )
+    : null;
+
   const session = buildSyncSession(
     state.profileId,
     trigger,
     currentTime,
     state.lastSyncedMeasuredAt,
     toSync,
+    maxMeasuredAt,
   );
 
+  // 水位线：有新数据时用最大 measuredAt，无新数据时保留旧水位线
   const newState: SyncState = {
     ...state,
-    lastSyncedMeasuredAt: currentTime,
+    lastSyncedMeasuredAt: maxMeasuredAt ?? state.lastSyncedMeasuredAt,
     syncSessions: [...state.syncSessions, session],
   };
 
@@ -130,6 +140,7 @@ function buildSyncSession(
   currentTime: string,
   lastSynced: string | null,
   syncedEvents: DeviceEvent[],
+  maxMeasuredAt: string | null,
 ): SyncSession {
   const count = syncedEvents.length;
 
@@ -145,8 +156,9 @@ function buildSyncSession(
     };
   }
 
-  // 计算上传范围：从最早的待同步事件到 currentTime
+  // 计算上传范围：从最早的待同步事件到实际最大 measuredAt
   const start = syncedEvents[0]!.measuredAt;
+  const end = maxMeasuredAt!;
 
   return {
     syncId: generateSyncId(currentTime),
@@ -154,7 +166,7 @@ function buildSyncSession(
     trigger,
     startedAt: currentTime,
     finishedAt: currentTime,
-    uploadedMeasuredRange: { start, end: currentTime },
+    uploadedMeasuredRange: { start, end },
     uploadedEventCount: count,
   };
 }
