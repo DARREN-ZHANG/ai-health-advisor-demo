@@ -4,7 +4,7 @@ import { normalizeTimeline, rollingMedian, aggregateCurrentDayRecord, type Timel
 import type { RuntimeRegistry } from '../../runtime/registry.js';
 
 // tab → 需要提取的 metrics
-const TAB_METRICS: Record<DataTab, string[]> = {
+const TAB_METRICS: Partial<Record<DataTab, string[]>> = {
   hrv: ['hr'],
   sleep: ['sleep.totalMinutes', 'sleep.score', 'sleep.stages.deep', 'sleep.stages.rem', 'sleep.stages.light'],
   'resting-hr': ['hr'],

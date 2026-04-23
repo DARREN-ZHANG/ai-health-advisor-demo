@@ -1,6 +1,6 @@
 import type { ChartTokenId, Timeframe, DateRange } from '@health-advisor/shared';
 import { timeframeToDateRange } from '@health-advisor/shared';
-import { normalizeTimeline, type TimelinePoint } from '@health-advisor/sandbox';
+import { normalizeTimeline, normalizeIntradayTimeline, type TimelinePoint } from '@health-advisor/sandbox';
 import type { RuntimeRegistry } from '../../runtime/registry.js';
 import { DataService } from './service.js';
 
@@ -50,7 +50,11 @@ export class ChartService {
         referenceDate: range.end,
         customDateRange,
       });
-      const timeline = normalizeTimeline(filtered, config.metrics);
+
+      // day timeframe 使用分时数据（2小时窗口，12个点）
+      const timeline = timeframe === 'day'
+        ? normalizeIntradayTimeline(filtered, config.metrics)
+        : normalizeTimeline(filtered, config.metrics);
 
       return { profileId, token: tokenId, range, timeline };
     });
