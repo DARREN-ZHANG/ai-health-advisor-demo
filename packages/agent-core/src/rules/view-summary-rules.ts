@@ -214,6 +214,89 @@ const restingHrTabRule: InsightRule = {
   },
 };
 
+const overviewTabRule: InsightRule = {
+  id: 'view-summary-overview',
+  appliesTo: [AgentTaskType.VIEW_SUMMARY],
+  evaluate(ctx: AgentContext): InsightSignal[] {
+    if (ctx.task.tab !== 'overview') return [];
+    const records = getRecords(ctx);
+    if (records.length < 2) return [];
+
+    const signals: InsightSignal[] = [];
+
+    // HRV
+    const hrvValues = records.map(computeHrv).filter(Number.isFinite);
+    if (hrvValues.length >= 3) {
+      const hrvTrend = computeTrend(hrvValues);
+      const hrvAvg = average(hrvValues);
+      if (hrvTrend < -0.15) {
+        signals.push({ category: 'anomaly', severity: 'warning', metric: 'hrv', message: `HRV 下降，均值 ${hrvAvg.toFixed(1)} ms` });
+      }
+    }
+
+    // Sleep
+    const sleepMinutes = records.map((r) => r.sleep?.totalMinutes).filter((v): v is number => v !== undefined);
+    if (sleepMinutes.length >= 3) {
+      const sleepAvg = average(sleepMinutes);
+      const sleepScores = records.map((r) => r.sleep?.score).filter((v): v is number => v !== undefined);
+      const avgScore = sleepScores.length > 0 ? average(sleepScores) : 100;
+      if (sleepAvg < 300 || avgScore < 40) {
+        signals.push({ category: 'anomaly', severity: 'warning', metric: 'sleep', message: `睡眠偏差：平均 ${Math.round(sleepAvg / 60 * 10) / 10} 小时，评分 ${Math.round(avgScore)}` });
+      }
+    }
+
+    // Resting HR
+    const hrValues = records.map((r) => r.hr?.[0]).filter((v): v is number => v !== undefined);
+    if (hrValues.length >= 3) {
+      const avgHr = average(hrValues);
+      const baseline = ctx.profile.baselines.restingHR;
+      if ((avgHr - baseline) / baseline > 0.2) {
+        signals.push({ category: 'anomaly', severity: 'warning', metric: 'resting-hr', message: `静息心率偏高（均值 ${Math.round(avgHr)} bpm）` });
+      }
+    }
+
+    // Activity
+    const steps = records.map((r) => r.activity?.steps).filter((v): v is number => v !== undefined);
+    if (steps.length >= 3) {
+      const avgSteps = average(steps);
+      if (avgSteps < 4000) {
+        signals.push({ category: 'suggestion', severity: 'warning', metric: 'activity', message: `日均步数 ${Math.round(avgSteps)}，活动不足` });
+      }
+    }
+
+    // SpO2
+    const spo2Values = records.map((r) => r.spo2).filter((v): v is number => v !== undefined);
+    if (spo2Values.length >= 2) {
+      const avgSpo2 = average(spo2Values);
+      if (avgSpo2 < 93) {
+        signals.push({ category: 'anomaly', severity: 'critical', metric: 'spo2', message: `血氧均值 ${Math.round(avgSpo2)}%，严重偏低` });
+      } else if (avgSpo2 < 95) {
+        signals.push({ category: 'anomaly', severity: 'warning', metric: 'spo2', message: `血氧均值 ${Math.round(avgSpo2)}%，略低` });
+      }
+    }
+
+    // Stress
+    const loads = records.map((r) => r.stress?.load).filter((v): v is number => v !== undefined);
+    if (loads.length >= 3) {
+      const avgLoad = average(loads);
+      if (avgLoad >= 70) {
+        signals.push({ category: 'anomaly', severity: 'warning', metric: 'stress', message: `压力负荷偏高（均值 ${Math.round(avgLoad)}）` });
+      }
+    }
+
+    if (signals.length > 0) {
+      return signals;
+    }
+
+    return [{
+      category: 'trend',
+      severity: 'info',
+      metric: 'overview',
+      message: '核心指标整体平稳，无显著异常',
+    }];
+  },
+};
+
 // ────────────────────────────────────────────
 // 导出
 // ────────────────────────────────────────────
@@ -225,9 +308,11 @@ export const viewSummaryRules: InsightRule[] = [
   activityTabRule,
   spo2TabRule,
   restingHrTabRule,
+  overviewTabRule,
 ];
 
 const TAB_TOKEN_MAP: Record<DataTab, ChartTokenId> = {
+  overview: ChartTokenId.HRV_7DAYS,
   hrv: ChartTokenId.HRV_7DAYS,
   sleep: ChartTokenId.SLEEP_7DAYS,
   'resting-hr': ChartTokenId.RESTING_HR_7DAYS,
@@ -236,13 +321,26 @@ const TAB_TOKEN_MAP: Record<DataTab, ChartTokenId> = {
   stress: ChartTokenId.STRESS_LOAD_7DAYS,
 };
 
+const OVERVIEW_TOKENS: ChartTokenId[] = [
+  ChartTokenId.HRV_7DAYS,
+  ChartTokenId.SLEEP_7DAYS,
+  ChartTokenId.RESTING_HR_7DAYS,
+  ChartTokenId.ACTIVITY_7DAYS,
+  ChartTokenId.SPO2_7DAYS,
+  ChartTokenId.STRESS_LOAD_7DAYS,
+];
+
 export function evaluateViewSummaryRules(ctx: AgentContext): RuleEvaluationResult {
   const engine = new InsightRuleEngine(viewSummaryRules);
   const base = engine.evaluate(ctx);
   const tab = ctx.task.tab;
-  const tokens: ChartTokenId[] = tab && TAB_TOKEN_MAP[tab]
-    ? [TAB_TOKEN_MAP[tab]]
-    : [];
+
+  const tokens: ChartTokenId[] =
+    tab === 'overview'
+      ? OVERVIEW_TOKENS
+      : tab && TAB_TOKEN_MAP[tab]
+        ? [TAB_TOKEN_MAP[tab]]
+        : [];
 
   return {
     ...base,

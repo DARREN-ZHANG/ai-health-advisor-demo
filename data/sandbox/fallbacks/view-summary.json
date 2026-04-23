@@ -1,4 +1,9 @@
 {
+  "overview": {
+    "summary": "近期核心指标整体平稳，睡眠、心率、活动量均处于正常范围，无明显异常需关注。",
+    "chartTokens": ["HRV_7DAYS", "SLEEP_7DAYS", "RESTING_HR_7DAYS", "ACTIVITY_7DAYS", "SPO2_7DAYS", "STRESS_LOAD_7DAYS"],
+    "microTips": ["保持规律作息有助于维持各项指标稳定", "适当有氧运动可进一步提升心肺功能"]
+  },
   "hrv": {
     "summary": "近 7 天 HRV 数据整体在正常范围内，未发现明显异常波动。",
     "chartTokens": ["HRV_7DAYS"],

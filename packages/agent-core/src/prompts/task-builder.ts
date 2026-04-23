@@ -118,6 +118,60 @@ export function buildTaskPrompt(
     sections.push(`- 时间粒度：${context.task.timeframe ?? 'week'}`);
   }
 
+  // 概览页：注入全量核心指标摘要
+  if (taskType === AgentTaskType.VIEW_SUMMARY && context.task.tab === 'overview' && context.dataWindow.records.length > 0) {
+    const records = context.dataWindow.records as any[];
+    const latest = records[records.length - 1];
+
+    sections.push('');
+    sections.push('## 核心指标概览');
+
+    // HRV
+    const hrvValues = records.map((r: any) => Array.isArray(r.hr) ? r.hr.filter((v: number) => v > 30 && v < 220) : [])
+      .flat().filter((v: number) => typeof v === 'number');
+    if (hrvValues.length > 0) {
+      const hrvAvg = Math.round(hrvValues.reduce((a: number, b: number) => a + b, 0) / hrvValues.length);
+      sections.push(`- HRV：近 ${records.length} 天均值 ${hrvAvg} ms`);
+    }
+
+    // Sleep
+    if (latest.sleep) {
+      const sleepVals = records.map((r: any) => r.sleep?.totalMinutes).filter((v: number | undefined) => typeof v === 'number');
+      const sleepAvg = sleepVals.length > 0 ? Math.round(sleepVals.reduce((a: number, b: number) => a + b, 0) / sleepVals.length) : 0;
+      sections.push(`- 睡眠：平均 ${(sleepAvg / 60).toFixed(1)} 小时，昨日 ${(latest.sleep.totalMinutes / 60).toFixed(1)} 小时`);
+    }
+
+    // Resting HR
+    if (latest.hr && Array.isArray(latest.hr) && latest.hr.length > 0) {
+      const restingVals = records.map((r: any) => Array.isArray(r.hr) && r.hr.length > 0 ? r.hr[0] : undefined).filter((v: number | undefined) => typeof v === 'number');
+      const restingAvg = restingVals.length > 0 ? Math.round(restingVals.reduce((a: number, b: number) => a + b, 0) / restingVals.length) : latest.hr[0];
+      const baseline = context.profile.baselines.restingHR;
+      const deviation = baseline ? Math.round(((restingAvg - baseline) / baseline) * 100) : 0;
+      sections.push(`- 静息心率：均值 ${restingAvg} bpm（基线 ${baseline} bpm，偏离 ${deviation > 0 ? '+' : ''}${deviation}%）`);
+    }
+
+    // Activity
+    if (latest.activity) {
+      const stepsVals = records.map((r: any) => r.activity?.steps).filter((v: number | undefined) => typeof v === 'number');
+      const stepsAvg = stepsVals.length > 0 ? Math.round(stepsVals.reduce((a: number, b: number) => a + b, 0) / stepsVals.length) : 0;
+      sections.push(`- 活动：日均 ${stepsAvg.toLocaleString()} 步，昨日 ${latest.activity.steps.toLocaleString()} 步`);
+    }
+
+    // SpO2
+    if (latest.spo2) {
+      const spo2Vals = records.map((r: any) => r.spo2).filter((v: number | undefined) => typeof v === 'number');
+      const spo2Avg = spo2Vals.length > 0 ? Math.round(spo2Vals.reduce((a: number, b: number) => a + b, 0) / spo2Vals.length) : latest.spo2;
+      sections.push(`- 血氧：均值 ${spo2Avg}%`);
+    }
+
+    // Stress
+    if (latest.stress) {
+      const stressVals = records.map((r: any) => r.stress?.load).filter((v: number | undefined) => typeof v === 'number');
+      const stressAvg = stressVals.length > 0 ? (stressVals.reduce((a: number, b: number) => a + b, 0) / stressVals.length).toFixed(1) : latest.stress.load;
+      sections.push(`- 压力负荷：均值 ${stressAvg}`);
+    }
+  }
+
   // 规则引擎 insights
   if (rulesResult.insights.length > 0) {
     sections.push('');
