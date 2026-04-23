@@ -28,8 +28,8 @@ export default function HomePage() {
 
   const briefData = {
     status: mapApiStatusToUi(data?.statusColor, data?.meta.finishReason),
-    title: '今日简报',
-    summary: data?.summary || (error ? '无法获取简报数据，请检查网络连接。' : '正在为您准备今日健康简报...'),
+    title: '实时简报',
+    summary: data?.summary || (error ? '无法获取简报数据，请检查网络连接。' : '正在为您准备实时健康简报...'),
     microTips: data?.microTips || [],
   };
 
@@ -57,7 +57,7 @@ export default function HomePage() {
       <ActiveSensingBanner />
 
       {/* 晨报部分 */}
-      <Section title="今日简报" className="space-y-4">
+      <Section title="实时简报" className="space-y-4">
         <MorningBriefCard
           {...briefData}
           isLoading={isAnyLoading}

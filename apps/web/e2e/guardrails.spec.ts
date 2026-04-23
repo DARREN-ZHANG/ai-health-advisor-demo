@@ -7,7 +7,7 @@ test.describe('Platform Guardrails & Navigation', () => {
 
   test('should navigate between Home and Data Center', async ({ page }) => {
     // 检查首页内容
-    await expect(page.getByText('今日简报')).toBeVisible();
+    await expect(page.getByText('实时简报')).toBeVisible();
 
     // 点击导航到数据中心
     await page.getByRole('link', { name: '数据中心' }).click();

@@ -29,7 +29,7 @@ test.describe('God-Mode E2E', () => {
 
     // 5. 检查首页数据是否触发刷新 (isAnyLoading 状态)
     // 因为是 Mock 或 Dev 环境，可能很快，但我们至少能看到页面内容依然存在
-    await expect(page.getByText('今日简报')).toBeVisible();
+    await expect(page.getByText('实时简报')).toBeVisible();
   });
 
   test('should inject sport event and show active sensing banner', async ({ page }) => {
