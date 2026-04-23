@@ -36,6 +36,8 @@ export interface RuntimeRegistry extends AgentRuntimeDeps {
   profiles: Map<string, ProfileData>;
   /** 不含 override 的原始 profile 数据 */
   getRawProfile(profileId: string): ProfileData;
+  /** 重新从磁盘加载所有 profile 数据 */
+  reloadProfiles(): void;
 }
 
 export function createRuntimeRegistry(
@@ -147,6 +149,14 @@ export function createRuntimeRegistry(
     };
   }
 
+  function reloadProfiles(): void {
+    const newProfiles = loadAllProfiles(config.dataDir);
+    profiles.clear();
+    for (const [key, value] of newProfiles) {
+      profiles.set(key, value);
+    }
+  }
+
   return {
     config,
     metrics,
@@ -155,6 +165,7 @@ export function createRuntimeRegistry(
     scenarioRegistry,
     profiles,
     getRawProfile,
+    reloadProfiles,
 
     // AgentRuntimeDeps (extends ContextBuilderDeps)
     getProfile: getProfileWithOverrides,

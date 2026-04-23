@@ -1,6 +1,15 @@
+import { writeFileSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { RuntimeRegistry } from '../../runtime/registry.js';
 import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
-import { recognizeEvents, computeDerivedTemporalStates } from '@health-advisor/sandbox';
+import {
+  recognizeEvents,
+  computeDerivedTemporalStates,
+  loadManifest,
+  generateHistory,
+  PROFILE_CONFIGS,
+  generateTimelineScript,
+} from '@health-advisor/sandbox';
 import type {
   ActiveSensingState,
   ActivitySegmentType,
@@ -263,6 +272,60 @@ export class GodModeService {
       date: latestEvent.date,
       events: [latestEvent.type],
     };
+  }
+
+  /** 一键校准演示数据：以当前真实日期为演示日，重新生成 31 天历史数据 */
+  recalibrate(sessionId?: string): GodModeStateResponse {
+    const today = new Date();
+    const endDate = today.toISOString().slice(0, 10);
+    const startDateObj = new Date(today);
+    startDateObj.setDate(startDateObj.getDate() - 30);
+    const startDate = startDateObj.toISOString().slice(0, 10);
+
+    const dataDir = this.registry.config.dataDir;
+    const manifest = loadManifest(dataDir);
+
+    // 各 profile 的早间时间偏移
+    const demoTimeOffsets: Record<string, { hour: number; min: number }> = {
+      'profile-a': { hour: 7, min: 5 },
+      'profile-b': { hour: 7, min: 30 },
+      'profile-c': { hour: 6, min: 45 },
+    };
+
+    for (const entry of manifest.profiles) {
+      const config = PROFILE_CONFIGS[entry.profileId];
+      if (!config) continue;
+
+      // 1. 生成并写入 history
+      const history = generateHistory(config, startDate, endDate);
+      const historyPath = join(dataDir, 'history', `${entry.profileId}-daily-records.json`);
+      writeFileSync(historyPath, JSON.stringify(history, null, 2) + '\n', 'utf-8');
+
+      // 2. 更新 profile 的 initialDemoTime
+      const offset = demoTimeOffsets[entry.profileId] ?? { hour: 7, min: 0 };
+      const initialDemoTime = `${endDate}T${String(offset.hour).padStart(2, '0')}:${String(offset.min).padStart(2, '0')}`;
+
+      const profilePath = join(dataDir, entry.file);
+      const profileData = JSON.parse(readFileSync(profilePath, 'utf-8'));
+      profileData.initialDemoTime = initialDemoTime;
+      writeFileSync(profilePath, JSON.stringify(profileData, null, 2) + '\n', 'utf-8');
+
+      // 3. 生成并写入 timeline script
+      const script = generateTimelineScript(entry.profileId, endDate, initialDemoTime);
+      const scriptPath = join(dataDir, 'timeline-scripts', `${entry.profileId}-day-1.json`);
+      writeFileSync(scriptPath, JSON.stringify(script, null, 2) + '\n', 'utf-8');
+    }
+
+    // 4. 重新加载内存中的 profile 数据
+    this.registry.reloadProfiles();
+
+    // 5. 清空所有 demo state、session 和 analytical memory
+    this.registry.overrideStore.reset('all');
+    this.registry.sessionStore.clearAll();
+    this.registry.analyticalMemory.clearAll();
+
+    this.invalidateSessionAnalytical(sessionId);
+    return this.getState();
   }
 
   /** 数据变更后失效 session 的 analytical memory，防止 AI 请求用过期上下文 */

@@ -150,4 +150,5 @@ export type GodModeAction =
   | { type: 'timeline_append'; payload: TimelineAppendPayload }
   | { type: 'sync_trigger'; payload: SyncTriggerPayload }
   | { type: 'advance_clock'; payload: AdvanceClockPayload }
-  | { type: 'reset_profile_timeline'; payload: ResetProfileTimelinePayload };
+  | { type: 'reset_profile_timeline'; payload: ResetProfileTimelinePayload }
+  | { type: 'recalibrate'; payload: Record<string, never> };

@@ -222,4 +222,10 @@ export async function godModeRoutes(app: FastifyInstance) {
     const result = service.resetProfileTimeline(parsed.data.profileId, request.ctx?.sessionId);
     return createSuccessResponse(result, buildMeta(request));
   });
+
+  // 一键校准演示数据：以当前真实日期为演示日，重新生成 31 天历史
+  app.post('/god-mode/recalibrate', async (request) => {
+    const result = service.recalibrate(request.ctx?.sessionId);
+    return createSuccessResponse(result, buildMeta(request));
+  });
 }
