@@ -91,3 +91,9 @@ export type { SyncState } from './helpers/sync-engine';
 
 // Helpers — raw to daily aggregation
 export { aggregateDailyRecord, aggregateCurrentDayRecord } from './helpers/raw-to-daily';
+
+// Generators — deterministic data generation
+export { generateHistory, PROFILE_CONFIGS, generateDateRange } from './generators/history';
+export type { HistoryFile, DailyRecord, ProfileConfig, ProfileBaseline } from './generators/history';
+export { generateTimelineScript } from './generators/timeline-script';
+export type { TimelineScript } from './generators/timeline-script';

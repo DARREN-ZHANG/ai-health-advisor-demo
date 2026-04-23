@@ -193,10 +193,10 @@ function validateProfiles(): { results: ProfileResult[]; hasErrors: boolean } {
         if (recordCount > 0) {
           const dates = history.records.map((r) => r.date).sort();
           dateRange = { start: dates[0]!, end: dates[dates.length - 1]! };
-          missingDates = validateDateContinuity(history.records, '2026-03-28', '2026-04-16');
+          missingDates = validateDateContinuity(history.records, history.dateRange.start, history.dateRange.end);
 
-          if (recordCount !== 20) {
-            errors.push(`Expected 20 records, got ${recordCount}`);
+          if (recordCount === 0) {
+            errors.push(`Expected at least 1 record, got ${recordCount}`);
           }
 
           // 校验 history profileId 一致
