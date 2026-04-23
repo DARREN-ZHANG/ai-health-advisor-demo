@@ -18,7 +18,11 @@
       "avgSteps": 2800
     }
   },
-  "initialDemoTime": "2026-04-16T06:45",
-  "historyRef": { "file": "history/profile-c-daily-records.json" },
-  "timelineScriptRef": { "file": "timeline-scripts/profile-c-day-1.json" }
+  "initialDemoTime": "2026-04-23T06:45",
+  "historyRef": {
+    "file": "history/profile-c-daily-records.json"
+  },
+  "timelineScriptRef": {
+    "file": "timeline-scripts/profile-c-day-1.json"
+  }
 }
