@@ -41,14 +41,44 @@ export function buildTaskPrompt(
   sections.push(`- 时间范围：${context.dataWindow.start} ~ ${context.dataWindow.end}`);
   sections.push(`- 记录数：${context.dataWindow.records.length}`);
 
-  // 首页任务：注入昨日（最新一条）记录的具体数据与 14 天历史趋势分析
+  // 首页任务：注入最近事件、昨日数据、7天趋势
   if (taskType === AgentTaskType.HOMEPAGE_SUMMARY && context.dataWindow.records.length > 0) {
     const records = context.dataWindow.records as any[];
     const latestRecord = records[records.length - 1];
 
-    // 1. 昨日数据详情
+    // 1. 最近发生的事件（timelineSync 模式）
+    if (context.timelineSync && context.timelineSync.recognizedEvents.length > 0) {
+      sections.push('');
+      sections.push('## 最近发生的事件');
+      for (const ev of context.timelineSync.recognizedEvents) {
+        const durationMin = Math.round((new Date(ev.end).getTime() - new Date(ev.start).getTime()) / 60000);
+        sections.push(`- [${ev.type}] 开始时间: ${ev.start}, 持续: ${durationMin} 分钟, 置信度: ${Math.round(ev.confidence * 100)}%`);
+        if (ev.evidence && ev.evidence.length > 0) {
+          sections.push(`  证据: ${ev.evidence.join('; ')}`);
+        }
+      }
+
+      if (context.timelineSync.derivedTemporalStates.length > 0) {
+        sections.push('');
+        sections.push('## 当前派生状态');
+        for (const state of context.timelineSync.derivedTemporalStates) {
+          sections.push(`- [${state.type}] 激活时间: ${state.activeAt}`);
+        }
+      }
+    }
+
+    // 同时注入 injected events 作为补充
+    if (context.signals.events.length > 0) {
+      sections.push('');
+      sections.push('## 系统检测到的事件');
+      for (const ev of context.signals.events) {
+        sections.push(`- ${ev}`);
+      }
+    }
+
+    // 2. 过去24小时数据详情（昨日最新记录）
     sections.push('');
-    sections.push('## 昨日数据');
+    sections.push('## 过去24小时状态（昨日数据）');
     sections.push(`- 日期：${latestRecord.date ?? '未知'}`);
     if (latestRecord.hr && Array.isArray(latestRecord.hr)) {
       const avg = Math.round(latestRecord.hr.reduce((a: number, b: number) => a + b, 0) / latestRecord.hr.length);
@@ -65,23 +95,19 @@ export function buildTaskPrompt(
       sections.push(`- 压力负荷：${latestRecord.stress.load}`);
     }
 
-    // 2. 14 天趋势分析
-    sections.push('');
-    sections.push('## 14 天趋势参考 (均值 vs 昨日)');
-    const avgSleep = Math.round(records.reduce((sum, r) => sum + (r.sleep?.totalMinutes || 0), 0) / records.length);
-    const avgSteps = Math.round(records.reduce((sum, r) => sum + (r.activity?.steps || 0), 0) / records.length);
-    const avgStress = (records.reduce((sum, r) => sum + (r.stress?.load || 0), 0) / records.length).toFixed(1);
+    // 3. 过去7天趋势（取最近7条记录）
+    const weekRecords = records.slice(-7);
+    if (weekRecords.length >= 3) {
+      sections.push('');
+      sections.push('## 过去一周趋势参考');
+      const avgSleep = Math.round(weekRecords.reduce((sum, r) => sum + (r.sleep?.totalMinutes || 0), 0) / weekRecords.length);
+      const avgSteps = Math.round(weekRecords.reduce((sum, r) => sum + (r.activity?.steps || 0), 0) / weekRecords.length);
+      const avgStress = (weekRecords.reduce((sum, r) => sum + (r.stress?.load || 0), 0) / weekRecords.length).toFixed(1);
 
-    sections.push(`- 睡眠均值：${avgSleep} 分钟 (昨日偏移: ${latestRecord.sleep?.totalMinutes - avgSleep} 分钟)`);
-    sections.push(`- 步数均值：${avgSteps} 步 (昨日偏移: ${latestRecord.activity?.steps - avgSteps} 步)`);
-    sections.push(`- 压力均值：${avgStress} (昨日偏移: ${(latestRecord.stress?.load - Number(avgStress)).toFixed(1)})`);
-
-    // 3. 图表联动指令
-    sections.push('');
-    sections.push('## 图表联动规则');
-    sections.push('- 若发现睡眠异常，必须在 chartTokens 中包含 "SLEEP_7DAYS"');
-    sections.push('- 若发现运动不足或过量，必须包含 "ACTIVITY_7DAYS"');
-    sections.push('- 若发现压力过载或 HRV 异常，必须包含 "HRV_7DAYS" 或 "STRESS_LOAD_7DAYS"');
+      sections.push(`- 睡眠周均值：${avgSleep} 分钟 (昨日: ${latestRecord.sleep?.totalMinutes ?? 0} 分钟)`);
+      sections.push(`- 步数周均值：${avgSteps} 步 (昨日: ${latestRecord.activity?.steps ?? 0} 步)`);
+      sections.push(`- 压力周均值：${avgStress} (昨日: ${latestRecord.stress?.load ?? 0})`);
+    }
   }
 
   // 视图上下文（view_summary 需要）
