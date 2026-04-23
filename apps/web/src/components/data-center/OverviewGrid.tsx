@@ -22,11 +22,7 @@ interface OverviewGridProps {
 
 export function OverviewGrid({ trends, onTrendClick, showChange }: OverviewGridProps) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <h2 className="text-lg font-semibold text-slate-200">核心指标概览</h2>
-        <span className="text-xs text-slate-500">全部 6 项指标</span>
-      </div>
+    <div>
       <HistoricalTrendsGrid trends={trends} onTrendClick={onTrendClick} showChange={showChange} />
     </div>
   );

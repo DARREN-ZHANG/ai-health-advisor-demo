@@ -196,8 +196,6 @@ function AISummarySection({
       <div className="relative rounded-xl border border-blue-500/10 bg-gradient-to-r from-blue-500/5 via-slate-900/50 to-emerald-500/5 p-5">
         <div className="absolute left-0 top-4 bottom-4 w-0.5 bg-gradient-to-b from-blue-500 to-emerald-500 rounded-full" />
         <div className="pl-4 space-y-4">
-          <ResponseMetaRow response={summaryData} />
-
           <p className="text-slate-200 leading-relaxed text-sm whitespace-pre-wrap font-medium">
             {summaryData.summary}
           </p>
@@ -243,32 +241,6 @@ function getSubtitle(timeframe: string): string {
     default:
       return '近期概览';
   }
-}
-
-function ResponseMetaRow({ response }: { response: AgentResponseEnvelope }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      <span className={`rounded px-2 py-1 text-[10px] uppercase tracking-wider ${getStatusColorClassName(response.statusColor)}`}>
-        {response.statusColor}
-      </span>
-      <span className="rounded px-2 py-1 text-[10px] uppercase tracking-wider text-slate-300 bg-slate-800">
-        {response.source}
-      </span>
-      <span className="rounded px-2 py-1 text-[10px] uppercase tracking-wider text-slate-400 bg-slate-900 border border-slate-800">
-        {response.meta.finishReason}
-      </span>
-    </div>
-  );
-}
-
-function getStatusColorClassName(statusColor: AgentResponseEnvelope['statusColor']): string {
-  if (statusColor === 'error') {
-    return 'text-red-400 bg-red-400/10';
-  }
-  if (statusColor === 'warning') {
-    return 'text-yellow-400 bg-yellow-400/10';
-  }
-  return 'text-emerald-400 bg-emerald-400/10';
 }
 
 function calculateChange(current: number | null | undefined, previous: number | null | undefined): number | undefined {
