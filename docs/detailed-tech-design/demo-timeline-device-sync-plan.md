@@ -601,22 +601,13 @@ export interface ResetProfileTimelinePayload {
 
 ## 10.4 典型 scenario 组织方式
 
-`profile-a` 需要拆出一组可单独注入的识别片段：
+时间轴片段的追加、同步、时钟推进和重置等操作，现已统一通过 **Timeline Control** 面板直接操作，不再以独立 scenario 形式维护。保留的 scenario 仅用于：
 
-1. `profile-a-meal-intake-20m`
-2. `profile-a-steady-cardio-15m`
-3. `profile-a-prolonged-sedentary-4h`
-4. `profile-a-intermittent-exercise-30m`
-5. `profile-a-evening-walk-30m`
-6. `profile-a-night-sleep`
-7. `profile-a-reset-timeline`
+- `profile_switch`：快速切换用户身份
+- `event_inject` / `metric_override`：注入特定事件或覆盖指标
+- `demo_script`：多步骤组合演示流程
 
-每个 scenario 的职责是：
-
-- 在主时间轴尾部追加一段活动片段
-- 让设备缓存中新增一段原始事件
-- 必要时由用户手动触发同步后让页面/LLM 看到变化
-- 若业务需要“早餐/午餐/晚餐”文案，使用 `meal_intake + mealContext` 表达，而不是扩展新的传感器识别事件
+若业务需要“早餐/午餐/晚餐”文案，使用 `meal_intake + mealContext` 表达，而不是扩展新的传感器识别事件
 
 ---
 

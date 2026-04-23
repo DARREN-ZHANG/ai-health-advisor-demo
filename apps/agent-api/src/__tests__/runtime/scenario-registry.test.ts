@@ -10,7 +10,7 @@ describe('ScenarioRegistry', () => {
     const registry = createScenarioRegistry(DATA_DIR);
     const scenarios = registry.list();
     expect(scenarios.length).toBeGreaterThanOrEqual(5);
-    expect(scenarios.some((s) => s.scenarioId === 'reset-all')).toBe(true);
+    expect(scenarios.some((s) => s.scenarioId === 'switch-to-stress')).toBe(true);
   });
 
   it('getById 返回指定场景', () => {

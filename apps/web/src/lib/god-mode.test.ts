@@ -15,8 +15,9 @@ describe('god-mode helpers', () => {
       id: 'active-sensing:2026-04-13:sport_detected|late_night_work',
       type: 'alert',
       title: 'Active Sensing 已触发',
-      content: '2026-04-13 检测到 Sport Detected / Late Night Work，请查看详情并继续对话。',
+      content: '2026年4月12日 17:00:00 检测到 您可能在运动 且 您可能在熬夜工作，需要我为您提供一些建议吗？',
       priority: 100,
+      events: ['sport_detected', 'late_night_work'],
     });
   });
 
