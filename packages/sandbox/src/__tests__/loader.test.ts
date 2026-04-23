@@ -31,7 +31,7 @@ describe('loadProfile', () => {
     expect(profile.profile.age).toBe(32);
     expect(profile.profile.gender).toBe('male');
     // 新版结构从 historyRef 加载 records
-    expect(profile.records).toHaveLength(20);
+    expect(profile.records).toHaveLength(31);
     // 新版结构 device 为 undefined（由 timeline script sync 元数据构建）
     expect(profile.device).toBeUndefined();
   });
@@ -41,7 +41,7 @@ describe('loadProfile', () => {
 
     expect(profile.profile.profileId).toBe('profile-b');
     expect(profile.profile.gender).toBe('female');
-    expect(profile.records).toHaveLength(20);
+    expect(profile.records).toHaveLength(31);
   });
 
   it('should load and validate profile-c from new structure', () => {
@@ -49,7 +49,7 @@ describe('loadProfile', () => {
 
     expect(profile.profile.profileId).toBe('profile-c');
     expect(profile.profile.age).toBe(28);
-    expect(profile.records).toHaveLength(20);
+    expect(profile.records).toHaveLength(31);
   });
 
   it('should throw for invalid profile file', () => {
@@ -93,11 +93,11 @@ describe('buildInitialProfileState', () => {
 
     // ProfileData
     expect(state.profileData.profile.profileId).toBe('profile-a');
-    expect(state.profileData.records).toHaveLength(20);
+    expect(state.profileData.records).toHaveLength(31);
 
     // DemoClock
     expect(state.demoClock.profileId).toBe('profile-a');
-    expect(state.demoClock.currentTime).toBe('2026-04-16T07:05');
+    expect(state.demoClock.currentTime).toBe('2026-04-23T07:05');
     expect(state.demoClock.timezone).toBe('Asia/Shanghai');
 
     // Segments
@@ -117,7 +117,7 @@ describe('buildInitialProfileState', () => {
     const state = buildInitialProfileState(DATA_DIR, 'profile-b');
 
     expect(state.profileData.profile.profileId).toBe('profile-b');
-    expect(state.demoClock.currentTime).toBe('2026-04-16T07:30');
+    expect(state.demoClock.currentTime).toBe('2026-04-23T07:30');
     expect(state.segments.length).toBeGreaterThan(0);
     expect(state.deviceBuffer.lastSyncedMeasuredAt).toBeNull();
   });
@@ -126,7 +126,7 @@ describe('buildInitialProfileState', () => {
     const state = buildInitialProfileState(DATA_DIR, 'profile-c');
 
     expect(state.profileData.profile.profileId).toBe('profile-c');
-    expect(state.demoClock.currentTime).toBe('2026-04-16T06:45');
+    expect(state.demoClock.currentTime).toBe('2026-04-23T06:45');
     expect(state.deviceBuffer.lastSyncedMeasuredAt).toBeNull();
   });
 

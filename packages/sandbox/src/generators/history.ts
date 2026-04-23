@@ -121,21 +121,21 @@ export const PROFILE_CONFIGS: Record<string, ProfileConfig> = {
   'profile-a': {
     profileId: 'profile-a',
     seed: 42,
-    baseline: { restingHr: 62, hrv: 60, spo2: 98, avgSleepMinutes: 450, avgSteps: 8500 },
+    baseline: { restingHr: 58, hrv: 68, spo2: 99, avgSleepMinutes: 465, avgSteps: 9500 },
     missingRate: { hr: 0, activity: 0, spo2: 0 },
     trend: { stressDirection: 0, sleepDirection: 0, hrDirection: 0 },
   },
   'profile-b': {
     profileId: 'profile-b',
     seed: 137,
-    baseline: { restingHr: 72, hrv: 42, spo2: 96, avgSleepMinutes: 340, avgSteps: 5200 },
+    baseline: { restingHr: 74, hrv: 38, spo2: 96, avgSleepMinutes: 330, avgSteps: 4800 },
     missingRate: { hr: 0.15, activity: 0.15, spo2: 0.1 },
     trend: { stressDirection: 0.5, sleepDirection: -1.5, hrDirection: 0 },
   },
   'profile-c': {
     profileId: 'profile-c',
     seed: 256,
-    baseline: { restingHr: 78, hrv: 30, spo2: 95, avgSleepMinutes: 240, avgSteps: 2800 },
+    baseline: { restingHr: 82, hrv: 25, spo2: 94, avgSleepMinutes: 210, avgSteps: 2200 },
     missingRate: { hr: 0, activity: 0, spo2: 0 },
     trend: { stressDirection: 1.5, sleepDirection: -5, hrDirection: 0.5 },
   },
@@ -235,7 +235,7 @@ function generateIntraday(
     const hr = Math.max(45, Math.min(180, jittered(rng, hrBase, 8)));
 
     // 血氧
-    const spo2Value = spo2 != null ? jittered(rng, spo2, 1) : undefined;
+    const spo2Value = spo2 != null ? Math.min(100, jittered(rng, spo2, 1)) : undefined;
 
     // 步数：累积值，白天递增
     const dayProgress = hour / 24;
@@ -286,7 +286,7 @@ export function generateHistory(config: ProfileConfig, startDate: string, endDat
     }
 
     if (rng() >= config.missingRate.spo2) {
-      record.spo2 = Math.max(90, jittered(rng, config.baseline.spo2, 2));
+      record.spo2 = Math.max(90, Math.min(100, jittered(rng, config.baseline.spo2, 2)));
     }
 
     record.stress = generateStress(rng, config.baseline, dayIndex, config.trend.stressDirection);

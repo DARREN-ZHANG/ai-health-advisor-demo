@@ -10,9 +10,9 @@ describe('loadHistoryArchive', () => {
       file: 'history/profile-a-daily-records.json',
     });
 
-    expect(records).toHaveLength(20);
-    expect(records[0]!.date).toBe('2026-03-28');
-    expect(records[records.length - 1]!.date).toBe('2026-04-16');
+    expect(records).toHaveLength(31);
+    expect(records[0]!.date).toBe('2026-03-24');
+    expect(records[records.length - 1]!.date).toBe('2026-04-23');
   });
 
   it('should load and return records for profile-b', () => {
@@ -20,8 +20,8 @@ describe('loadHistoryArchive', () => {
       file: 'history/profile-b-daily-records.json',
     });
 
-    expect(records).toHaveLength(20);
-    expect(records[0]!.date).toBe('2026-03-28');
+    expect(records).toHaveLength(31);
+    expect(records[0]!.date).toBe('2026-03-24');
   });
 
   it('should load and return records for profile-c', () => {
@@ -29,7 +29,7 @@ describe('loadHistoryArchive', () => {
       file: 'history/profile-c-daily-records.json',
     });
 
-    expect(records).toHaveLength(20);
+    expect(records).toHaveLength(31);
   });
 
   it('should throw for nonexistent file', () => {

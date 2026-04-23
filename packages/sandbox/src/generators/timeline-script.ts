@@ -27,9 +27,9 @@ interface SleepConfig {
 }
 
 const SLEEP_CONFIGS: Record<string, SleepConfig> = {
-  'profile-a': { bedHour: 22, bedMin: 30, wakeHour: 6, wakeMin: 30 },
-  'profile-b': { bedHour: 23, bedMin: 0, wakeHour: 6, wakeMin: 0 },
-  'profile-c': { bedHour: 1, bedMin: 0, wakeHour: 6, wakeMin: 0 },
+  'profile-a': { bedHour: 22, bedMin: 45, wakeHour: 6, wakeMin: 30 },
+  'profile-b': { bedHour: 0, bedMin: 30, wakeHour: 6, wakeMin: 0 },
+  'profile-c': { bedHour: 2, bedMin: 30, wakeHour: 6, wakeMin: 0 },
 };
 
 function formatTimestamp(date: string, hour: number, minute: number): string {

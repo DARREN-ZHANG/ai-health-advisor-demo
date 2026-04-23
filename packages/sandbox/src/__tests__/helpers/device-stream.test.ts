@@ -33,27 +33,27 @@ describe('device-stream helpers', () => {
           syncSessions: [
             {
               syncId: 'sync-a-001',
-              connectedAt: '2026-03-27T22:30',
-              disconnectedAt: '2026-04-01T23:59',
-              uploadedRange: { start: '2026-03-27T22:30', end: '2026-04-01T23:59' },
+              connectedAt: '2026-03-23T22:30',
+              disconnectedAt: '2026-03-30T23:59',
+              uploadedRange: { start: '2026-03-23T22:30', end: '2026-03-30T23:59' },
             },
             {
               syncId: 'sync-a-002',
-              connectedAt: '2026-04-02T00:00',
-              disconnectedAt: '2026-04-07T23:59',
-              uploadedRange: { start: '2026-04-02T00:00', end: '2026-04-07T23:59' },
+              connectedAt: '2026-03-31T00:00',
+              disconnectedAt: '2026-04-06T23:59',
+              uploadedRange: { start: '2026-03-31T00:00', end: '2026-04-06T23:59' },
             },
             {
               syncId: 'sync-a-003',
-              connectedAt: '2026-04-08T00:00',
-              disconnectedAt: '2026-04-12T23:59',
-              uploadedRange: { start: '2026-04-08T00:00', end: '2026-04-12T23:59' },
+              connectedAt: '2026-04-07T00:00',
+              disconnectedAt: '2026-04-13T23:59',
+              uploadedRange: { start: '2026-04-07T00:00', end: '2026-04-13T23:59' },
             },
             {
               syncId: 'sync-a-004',
-              connectedAt: '2026-04-13T00:00',
-              disconnectedAt: '2026-04-17T23:59',
-              uploadedRange: { start: '2026-04-13T00:00', end: '2026-04-17T23:59' },
+              connectedAt: '2026-04-14T00:00',
+              disconnectedAt: '2026-04-23T23:59',
+              uploadedRange: { start: '2026-04-14T00:00', end: '2026-04-23T23:59' },
             },
           ],
         },
@@ -75,8 +75,8 @@ describe('device-stream helpers', () => {
       const samples = getSamplesForSyncSession(profile, 'sync-a-001');
 
       expect(samples.length).toBeGreaterThan(0);
-      expect(samples[0]?.timestamp >= '2026-03-27T22:30').toBe(true);
-      expect(samples[samples.length - 1]?.timestamp <= '2026-04-01T23:59').toBe(true);
+      expect(samples[0]?.timestamp >= '2026-03-23T22:30').toBe(true);
+      expect(samples[samples.length - 1]?.timestamp <= '2026-03-30T23:59').toBe(true);
     });
 
     it('has no pending samples when all upload windows cover the full history', () => {
