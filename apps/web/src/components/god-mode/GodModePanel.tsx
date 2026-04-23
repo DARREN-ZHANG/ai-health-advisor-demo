@@ -41,6 +41,7 @@ function GodModePanelContent() {
     triggerSync, isTriggeringSync,
     advanceClock, isAdvancingClock,
     resetTimeline, isResettingTimeline,
+    recalibrate, isRecalibrating,
   } = useGodModeActions();
 
   const { data: godModeState, isLoading: isLoadingState } = useGodModeState();
@@ -58,6 +59,7 @@ function GodModePanelContent() {
 
   const isRunningScenario = isApplyingScenario || isRunningDemoScript;
   const isTimelineBusy = isAppendingTimeline || isTriggeringSync || isAdvancingClock || isResettingTimeline;
+  const isBusy = isRunningScenario || isRecalibrating;
 
   const handleAppendTimeline = async (segment: typeof TIMELINE_SEGMENTS[number]) => {
     try {
@@ -159,6 +161,24 @@ function GodModePanelContent() {
       setScenarioId(null);
     } catch (error) {
       console.error('Failed to reset:', error);
+    }
+  };
+
+  const handleRecalibrate = async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+    const start = startDate.toISOString().slice(0, 10);
+    const confirmed = window.confirm(
+      `将以 ${today} 为演示日，重新生成 ${start} ~ ${today} 的演示数据。\n\n此操作会覆盖所有历史记录和时间轴脚本，是否继续？`
+    );
+    if (!confirmed) return;
+
+    try {
+      await recalibrate();
+      setScenarioId(null);
+    } catch (error) {
+      console.error('Failed to recalibrate:', error);
     }
   };
 
@@ -316,6 +336,14 @@ function GodModePanelContent() {
                 className="w-full justify-start gap-3 text-sm py-4 bg-slate-900 border-2 border-slate-800 hover:border-slate-700 rounded-2xl"
               >
                 {isResetting ? '处理中...' : '🧪 重置所有 Overrides'}
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={isBusy}
+                onClick={handleRecalibrate}
+                className="w-full justify-start gap-3 text-sm py-4 bg-slate-900 border-2 border-amber-700/50 hover:border-amber-600 rounded-2xl text-amber-400"
+              >
+                {isRecalibrating ? '校准中...' : '📅 校准演示数据'}
               </Button>
             </div>
           </Section>

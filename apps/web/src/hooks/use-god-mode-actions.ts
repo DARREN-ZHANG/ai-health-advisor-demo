@@ -214,6 +214,23 @@ export function useGodModeActions() {
     },
   });
 
+  /**
+   * GM-RC: 一键校准演示数据
+   */
+  const recalibrateMutation = useMutation({
+    mutationFn: async () => {
+      return apiClient.post<GodModeStateResponse>('/god-mode/recalibrate', {});
+    },
+    onSuccess: (state) => {
+      setProfileId(state.currentProfileId);
+      syncActiveSensingBanner(state.activeSensing);
+      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
+    },
+  });
+
   return {
     switchProfile: switchProfileMutation.mutateAsync,
     isSwitchingProfile: switchProfileMutation.isPending,
@@ -235,5 +252,7 @@ export function useGodModeActions() {
     isAdvancingClock: advanceClockMutation.isPending,
     resetTimeline: resetTimelineMutation.mutateAsync,
     isResettingTimeline: resetTimelineMutation.isPending,
+    recalibrate: recalibrateMutation.mutateAsync,
+    isRecalibrating: recalibrateMutation.isPending,
   };
 }
