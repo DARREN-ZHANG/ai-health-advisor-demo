@@ -2,6 +2,7 @@ import type {
   ActivityData,
   DailyRecord,
   DeviceEvent,
+  IntradaySnapshot,
   SleepData,
   SleepStages,
   StressData,
@@ -49,6 +50,9 @@ export function aggregateDailyRecord(
   // 压力聚合
   const stress = aggregateStress(dayEvents);
 
+  // 分时聚合
+  const intraday = aggregateIntraday(dayEvents, sleep);
+
   return {
     date,
     ...(hr.length > 0 ? { hr } : {}),
@@ -56,6 +60,7 @@ export function aggregateDailyRecord(
     ...(activity ? { activity } : {}),
     ...(spo2 !== undefined ? { spo2 } : {}),
     ...(stress ? { stress } : {}),
+    ...(intraday.length > 0 ? { intraday } : {}),
   };
 }
 
@@ -255,4 +260,68 @@ function diffMinutes(start: string, end: string): number {
   const s = new Date(`${start}:00`);
   const e = new Date(`${end}:00`);
   return Math.round((e.getTime() - s.getTime()) / 60000);
+}
+
+// ============================================================
+// 分时聚合（2小时窗口，共12个快照）
+// ============================================================
+
+/** 从设备事件按2小时窗口聚合为分时快照 */
+function aggregateIntraday(
+  events: DeviceEvent[],
+  sleep: SleepData | undefined,
+): IntradaySnapshot[] {
+  if (events.length === 0) return [];
+
+  const snapshots: IntradaySnapshot[] = [];
+
+  // 解析睡眠时间（用于计算各窗口睡眠分钟数）
+  let sleepStartMin = 0;
+  let sleepEndMin = 0;
+  if (sleep) {
+    const [bedH, bedM] = sleep.startTime.split(':').map(Number);
+    const [wakeH, wakeM] = sleep.endTime.split(':').map(Number);
+    sleepStartMin = (bedH! * 60 + bedM!) % (24 * 60);
+    sleepEndMin = wakeH! * 60 + wakeM!;
+    if (sleepEndMin < sleepStartMin) sleepEndMin += 24 * 60;
+  }
+
+  for (let hour = 0; hour < 24; hour += 2) {
+    const windowStartMin = hour * 60;
+    const windowEndMin = (hour + 2) * 60;
+
+    const windowEvents = events.filter((e) => {
+      const h = Number(e.measuredAt.slice(11, 13));
+      return h >= hour && h < hour + 2;
+    });
+
+    if (windowEvents.length === 0) {
+      snapshots.push({ hour });
+      continue;
+    }
+
+    const hrValues = extractNumericValues(windowEvents, 'heartRate');
+    const spo2Values = extractNumericValues(windowEvents, 'spo2');
+    const stepValues = extractNumericValues(windowEvents, 'steps');
+    const stressValues = extractNumericValues(windowEvents, 'stressLoad');
+
+    // 计算该窗口内的睡眠分钟数
+    let sleepMinutes = 0;
+    if (sleep) {
+      const overlapStart = Math.max(sleepStartMin, windowStartMin);
+      const overlapEnd = Math.min(sleepEndMin, windowEndMin);
+      sleepMinutes = Math.max(0, overlapEnd - overlapStart);
+    }
+
+    snapshots.push({
+      hour,
+      ...(hrValues.length > 0 ? { hr: Math.round(average(hrValues)) } : {}),
+      ...(spo2Values.length > 0 ? { spo2: Math.round(average(spo2Values)) } : {}),
+      ...(stepValues.length > 0 ? { steps: Math.max(...stepValues) } : {}),
+      ...(sleepMinutes > 0 ? { sleepMinutes: Math.round(sleepMinutes) } : {}),
+      ...(stressValues.length > 0 ? { stressLoad: Math.round(average(stressValues)) } : {}),
+    });
+  }
+
+  return snapshots;
 }

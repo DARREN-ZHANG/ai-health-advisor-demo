@@ -39,7 +39,7 @@ export type { DatedEvent } from './merge/event';
 export { isMissing, fillMissing } from './helpers/missing-value';
 
 // Helpers — timeline
-export { normalizeTimeline, rollingMedian } from './helpers/timeline';
+export { normalizeTimeline, normalizeIntradayTimeline, rollingMedian } from './helpers/timeline';
 export type { TimelinePoint } from './helpers/timeline';
 
 // Helpers — device stream

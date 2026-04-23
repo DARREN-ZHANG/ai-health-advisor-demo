@@ -31,6 +31,15 @@ interface StressData {
   load: number;
 }
 
+interface IntradaySnapshot {
+  hour: number;
+  hr?: number;
+  spo2?: number;
+  steps?: number;
+  sleepMinutes?: number;
+  stressLoad?: number;
+}
+
 export interface DailyRecord {
   date: string;
   hr?: number[];
@@ -38,6 +47,7 @@ export interface DailyRecord {
   activity?: ActivityData;
   spo2?: number;
   stress?: StressData;
+  intraday?: IntradaySnapshot[];
 }
 
 export interface HistoryFile {
@@ -196,6 +206,67 @@ function generateStress(rng: () => number, baseline: ProfileBaseline, dayIndex: 
   return { load };
 }
 
+/** 生成分时快照（每2小时一个窗口，共12个） */
+function generateIntraday(
+  rng: () => number,
+  baseline: ProfileBaseline,
+  sleep: SleepData,
+  activity: ActivityData | undefined,
+  spo2: number | undefined,
+  stress: StressData,
+): IntradaySnapshot[] {
+  const snapshots: IntradaySnapshot[] = [];
+
+  // 解析睡眠开始/结束时间
+  const [bedHour, bedMin] = sleep.startTime.split(':').map(Number);
+  const [wakeHour, wakeMin] = sleep.endTime.split(':').map(Number);
+  const bedTotalMin = (bedHour! * 60 + bedMin!) % (24 * 60);
+  const wakeTotalMin = wakeHour! * 60 + wakeMin!;
+  const sleepStart = bedTotalMin;
+  const sleepEnd = wakeTotalMin < sleepStart ? wakeTotalMin + 24 * 60 : wakeTotalMin;
+
+  for (let hour = 0; hour < 24; hour += 2) {
+    const windowStart = hour * 60;
+    const windowEnd = (hour + 2) * 60;
+
+    // 心率：基于基线，白天较高，夜间较低
+    const isNight = hour >= 22 || hour < 6;
+    const hrBase = isNight ? baseline.restingHr - 5 : baseline.restingHr + randInt(rng, 5, 25);
+    const hr = Math.max(45, Math.min(180, jittered(rng, hrBase, 8)));
+
+    // 血氧
+    const spo2Value = spo2 != null ? jittered(rng, spo2, 1) : undefined;
+
+    // 步数：累积值，白天递增
+    const dayProgress = hour / 24;
+    const stepsValue = activity != null
+      ? Math.round(activity.steps * dayProgress * dayProgress)
+      : undefined;
+
+    // 睡眠分钟数：计算与睡眠窗口的重叠
+    let sleepMinutes = 0;
+    if (sleepStart < sleepEnd) {
+      const overlapStart = Math.max(sleepStart, windowStart);
+      const overlapEnd = Math.min(sleepEnd, windowEnd);
+      sleepMinutes = Math.max(0, overlapEnd - overlapStart);
+    }
+
+    // 压力
+    const stressValue = stress.load;
+
+    snapshots.push({
+      hour,
+      hr: Math.round(hr),
+      ...(spo2Value !== undefined ? { spo2: Math.round(spo2Value) } : {}),
+      ...(stepsValue !== undefined ? { steps: stepsValue } : {}),
+      ...(sleepMinutes > 0 ? { sleepMinutes: Math.round(sleepMinutes) } : {}),
+      stressLoad: Math.round(stressValue),
+    });
+  }
+
+  return snapshots;
+}
+
 /** 生成单个 profile 的完整历史数据 */
 export function generateHistory(config: ProfileConfig, startDate: string, endDate: string): HistoryFile {
   const dates = generateDateRange(startDate, endDate);
@@ -219,6 +290,16 @@ export function generateHistory(config: ProfileConfig, startDate: string, endDat
     }
 
     record.stress = generateStress(rng, config.baseline, dayIndex, config.trend.stressDirection);
+
+    // 生成分时数据
+    record.intraday = generateIntraday(
+      rng,
+      config.baseline,
+      record.sleep,
+      record.activity,
+      record.spo2,
+      record.stress,
+    );
 
     return record;
   });
