@@ -6,10 +6,10 @@
     {
       "segmentId": "seg-baseline-sleep-a",
       "type": "sleep",
-      "start": "2026-04-22T22:30",
+      "start": "2026-04-22T22:45",
       "end": "2026-04-23T06:30",
       "params": {
-        "durationMinutes": 480
+        "durationMinutes": 465
       },
       "source": "baseline_script"
     }

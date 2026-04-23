@@ -11,11 +11,11 @@
       "低活动恢复差"
     ],
     "baseline": {
-      "restingHr": 78,
-      "hrv": 30,
-      "spo2": 95,
-      "avgSleepMinutes": 240,
-      "avgSteps": 2800
+      "restingHr": 82,
+      "hrv": 25,
+      "spo2": 94,
+      "avgSleepMinutes": 210,
+      "avgSteps": 2200
     }
   },
   "initialDemoTime": "2026-04-23T06:45",

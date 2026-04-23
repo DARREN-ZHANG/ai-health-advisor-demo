@@ -6,16 +6,16 @@
     "gender": "male",
     "avatar": "avatar-a.png",
     "tags": [
-      "恢复稳定",
+      "精力充沛",
       "睡眠质量优",
-      "有氧适应良好"
+      "心肺耐力优秀"
     ],
     "baseline": {
-      "restingHr": 62,
-      "hrv": 60,
-      "spo2": 98,
-      "avgSleepMinutes": 450,
-      "avgSteps": 8500
+      "restingHr": 58,
+      "hrv": 68,
+      "spo2": 99,
+      "avgSleepMinutes": 465,
+      "avgSteps": 9500
     }
   },
   "initialDemoTime": "2026-04-23T07:05",

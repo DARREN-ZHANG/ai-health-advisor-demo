@@ -11,11 +11,11 @@
       "压力波动偏高"
     ],
     "baseline": {
-      "restingHr": 72,
-      "hrv": 42,
+      "restingHr": 74,
+      "hrv": 38,
       "spo2": 96,
-      "avgSleepMinutes": 340,
-      "avgSteps": 5200
+      "avgSleepMinutes": 330,
+      "avgSteps": 4800
     }
   },
   "initialDemoTime": "2026-04-23T07:30",
