@@ -172,6 +172,15 @@ export const DeviceConnectionSchema = z.object({
   syncSessions: z.array(DeviceSyncSessionSchema),
 });
 
+export const IntradaySnapshotSchema = z.object({
+  hour: z.number().int().min(0).max(23),
+  hr: z.number().min(30).max(220).optional(),
+  spo2: z.number().min(80).max(100).optional(),
+  steps: z.number().min(0).optional(),
+  sleepMinutes: z.number().min(0).max(120).optional(),
+  stressLoad: z.number().min(0).max(100).optional(),
+});
+
 export const DailyRecordSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   hr: z.array(z.number().min(30).max(220)).optional(),
@@ -179,6 +188,7 @@ export const DailyRecordSchema = z.object({
   activity: ActivityDataSchema.optional(),
   spo2: z.number().min(80).max(100).optional(),
   stress: StressDataSchema.optional(),
+  intraday: z.array(IntradaySnapshotSchema).optional(),
 });
 
 export const ProfileDataSchema = z.object({

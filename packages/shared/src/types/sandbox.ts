@@ -180,6 +180,15 @@ export interface DeviceConnection {
   syncSessions: DeviceSyncSession[];
 }
 
+export interface IntradaySnapshot {
+  hour: number;
+  hr?: number;
+  spo2?: number;
+  steps?: number;
+  sleepMinutes?: number;
+  stressLoad?: number;
+}
+
 export interface DailyRecord {
   date: string;
   hr?: number[];
@@ -187,6 +196,7 @@ export interface DailyRecord {
   activity?: ActivityData;
   spo2?: number;
   stress?: StressData;
+  intraday?: IntradaySnapshot[];
 }
 
 export interface VitalSignsData {

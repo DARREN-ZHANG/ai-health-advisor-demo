@@ -6,7 +6,7 @@ export enum AgentTaskType {
   ADVISOR_CHAT = 'advisor_chat',
 }
 
-export type DataTab = 'hrv' | 'sleep' | 'resting-hr' | 'activity' | 'spo2' | 'stress';
+export type DataTab = 'overview' | 'hrv' | 'sleep' | 'resting-hr' | 'activity' | 'spo2' | 'stress';
 
 export type Timeframe = 'day' | 'week' | 'month' | 'year' | 'custom';
 

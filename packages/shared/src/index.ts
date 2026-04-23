@@ -23,6 +23,7 @@ export type {
   SensorSample,
   DeviceSyncSession,
   DeviceConnection,
+  IntradaySnapshot,
   DailyRecord,
   VitalSignsData,
   ProfileData,
@@ -103,6 +104,7 @@ export {
   SensorSampleSchema,
   DeviceSyncSessionSchema,
   DeviceConnectionSchema,
+  IntradaySnapshotSchema,
   DailyRecordSchema,
   ProfileDataSchema,
 } from './schemas/sandbox';

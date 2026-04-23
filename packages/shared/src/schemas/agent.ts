@@ -4,7 +4,7 @@ import { AgentTaskType } from '../types/agent';
 
 export const AgentTaskTypeSchema = z.nativeEnum(AgentTaskType);
 
-export const DataTabSchema = z.enum(['hrv', 'sleep', 'resting-hr', 'activity', 'spo2', 'stress']);
+export const DataTabSchema = z.enum(['overview', 'hrv', 'sleep', 'resting-hr', 'activity', 'spo2', 'stress']);
 
 export const TimeframeSchema = z.enum(['day', 'week', 'month', 'year', 'custom']);
 
