@@ -5,6 +5,7 @@ import { useDataCenterStore } from '@/stores/data-center.store';
 import type { DataTab, Timeframe } from '@health-advisor/shared';
 
 const tabs: { id: DataTab; label: string }[] = [
+  { id: 'overview', label: '概览' },
   { id: 'sleep', label: '睡眠' },
   { id: 'hrv', label: 'HRV' },
   { id: 'resting-hr', label: '静息心率' },
@@ -17,7 +18,6 @@ const timeframes: { id: Timeframe; label: string }[] = [
   { id: 'day', label: '日' },
   { id: 'week', label: '周' },
   { id: 'month', label: '月' },
-  { id: 'year', label: '年' },
 ];
 
 export function DataCenterControls() {

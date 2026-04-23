@@ -11,7 +11,7 @@ interface DataCenterState {
 }
 
 export const useDataCenterStore = create<DataCenterState>((set) => ({
-  activeTab: 'sleep',
+  activeTab: 'overview',
   timeframe: 'week',
   dateRange: null,
   setActiveTab: (tab) => set({ activeTab: tab }),

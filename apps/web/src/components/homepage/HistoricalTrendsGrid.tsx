@@ -18,9 +18,11 @@ interface TrendItem {
 
 interface HistoricalTrendsGridProps {
   trends: TrendItem[];
+  onTrendClick?: (trendId: string) => void;
+  showChange?: boolean;
 }
 
-export function HistoricalTrendsGrid({ trends }: HistoricalTrendsGridProps) {
+export function HistoricalTrendsGrid({ trends, onTrendClick, showChange = true }: HistoricalTrendsGridProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {trends.map((trend, index) => (
@@ -33,12 +35,13 @@ export function HistoricalTrendsGrid({ trends }: HistoricalTrendsGridProps) {
           <Card
             className="flex flex-col gap-3 h-full hover:border-slate-500 transition-colors cursor-pointer group border-t-2"
             style={{ borderTopColor: trend.accentColor }}
+            onClick={() => onTrendClick?.(trend.id)}
           >
             <div className="flex justify-between items-start">
               <span className="text-sm font-medium text-slate-400 group-hover:text-slate-200 transition-colors">
                 {trend.label}
               </span>
-              {trend.change !== undefined && (
+              {showChange && trend.change !== undefined && (
                 <div className="flex items-center gap-1">
                   <span className="text-xs text-slate-400">较昨日</span>
                   <span

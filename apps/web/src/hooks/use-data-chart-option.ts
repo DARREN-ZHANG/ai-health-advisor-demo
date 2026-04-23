@@ -16,7 +16,7 @@ import {
   type StandardTimeSeries,
 } from '@health-advisor/charts';
 
-const TAB_TOKEN_MAP: Record<DataTab, ChartTokenId> = {
+const TAB_TOKEN_MAP: Partial<Record<DataTab, ChartTokenId>> = {
   hrv: ChartTokenId.HRV_7DAYS,
   sleep: ChartTokenId.SLEEP_7DAYS,
   'resting-hr': ChartTokenId.RESTING_HR_7DAYS,
@@ -33,6 +33,7 @@ export function useDataChartOption(
     if (!data) return null;
 
     const tokenId = TAB_TOKEN_MAP[tab];
+    if (!tokenId) return null;
     const builder = getChartBuilder(tokenId);
     if (!builder) return null;
 

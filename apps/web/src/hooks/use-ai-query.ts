@@ -66,7 +66,7 @@ export function useRefetchBrief(
 
 export function useViewSummary(
   profileId: string | undefined,
-  tab: string,
+  tab: DataTab,
   timeframe: string
 ) {
   return useQuery({
@@ -86,7 +86,7 @@ export function useViewSummary(
         pageContext,
       }, { timeoutMs: AI_REQUEST_TIMEOUT_MS });
     },
-    enabled: false, // 按需触发，不在页面加载时自动请求
+    enabled: !!profileId, // 页面加载时自动请求
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });

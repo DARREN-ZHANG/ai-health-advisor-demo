@@ -19,6 +19,8 @@ export const queryKeys = {
       [...queryKeys.dataCenter.all, 'chart-data', profileId, tokens, timeframe] as const,
     viewSummary: (profileId: string, tab: string, timeframe: string) =>
       [...queryKeys.dataCenter.all, 'viewSummary', profileId, tab, timeframe] as const,
+    deviceSync: (profileId: string) =>
+      [...queryKeys.dataCenter.all, 'device-sync', profileId] as const,
   },
   advisor: {
     all: ['advisor'] as const,
