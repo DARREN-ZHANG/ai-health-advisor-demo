@@ -397,14 +397,14 @@
         {
           "hour": 0,
           "hr": 51,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 0,
           "stressLoad": 24
         },
         {
           "hour": 2,
           "hr": 57,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 52,
           "stressLoad": 24
         },
@@ -418,7 +418,7 @@
         {
           "hour": 6,
           "hr": 72,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 469,
           "stressLoad": 24
         },
@@ -432,7 +432,7 @@
         {
           "hour": 10,
           "hr": 87,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 1303,
           "stressLoad": 24
         },
@@ -453,14 +453,14 @@
         {
           "hour": 16,
           "hr": 85,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 3336,
           "stressLoad": 24
         },
         {
           "hour": 18,
           "hr": 86,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 4222,
           "stressLoad": 24
         },
@@ -474,7 +474,7 @@
         {
           "hour": 22,
           "hr": 56,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 6307,
           "sleepMinutes": 60,
           "stressLoad": 24
@@ -992,7 +992,7 @@
         {
           "hour": 0,
           "hr": 51,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 0,
           "stressLoad": 18
         },
@@ -1027,7 +1027,7 @@
         {
           "hour": 10,
           "hr": 71,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 1450,
           "stressLoad": 18
         },
@@ -1041,7 +1041,7 @@
         {
           "hour": 14,
           "hr": 69,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 2841,
           "stressLoad": 18
         },
@@ -1062,14 +1062,14 @@
         {
           "hour": 20,
           "hr": 75,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 5799,
           "stressLoad": 18
         },
         {
           "hour": 22,
           "hr": 60,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 7016,
           "sleepMinutes": 66,
           "stressLoad": 18
@@ -1125,7 +1125,7 @@
         {
           "hour": 4,
           "hr": 56,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 224,
           "stressLoad": 24
         },
@@ -1153,28 +1153,28 @@
         {
           "hour": 12,
           "hr": 77,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 2014,
           "stressLoad": 24
         },
         {
           "hour": 14,
           "hr": 80,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 2741,
           "stressLoad": 24
         },
         {
           "hour": 16,
           "hr": 88,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 3580,
           "stressLoad": 24
         },
         {
           "hour": 18,
           "hr": 92,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 4530,
           "stressLoad": 24
         },
@@ -1615,7 +1615,7 @@
         {
           "hour": 8,
           "hr": 79,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 932,
           "stressLoad": 23
         },
@@ -1657,7 +1657,7 @@
         {
           "hour": 20,
           "hr": 86,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 5822,
           "stressLoad": 23
         },
@@ -2791,7 +2791,7 @@
         {
           "hour": 4,
           "hr": 57,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 232,
           "stressLoad": 20
         },
@@ -2805,7 +2805,7 @@
         {
           "hour": 8,
           "hr": 88,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 928,
           "stressLoad": 20
         },
@@ -2847,7 +2847,7 @@
         {
           "hour": 20,
           "hr": 93,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 5803,
           "stressLoad": 20
         },
@@ -3134,7 +3134,7 @@
         {
           "hour": 0,
           "hr": 58,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 0,
           "stressLoad": 33
         },
@@ -3162,7 +3162,7 @@
         {
           "hour": 8,
           "hr": 78,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 1052,
           "stressLoad": 33
         },
@@ -3183,7 +3183,7 @@
         {
           "hour": 14,
           "hr": 66,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 3221,
           "stressLoad": 33
         },
@@ -3204,14 +3204,14 @@
         {
           "hour": 20,
           "hr": 81,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 6573,
           "stressLoad": 33
         },
         {
           "hour": 22,
           "hr": 55,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 7953,
           "sleepMinutes": 91,
           "stressLoad": 33
@@ -3260,7 +3260,7 @@
         {
           "hour": 2,
           "hr": 62,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 52,
           "stressLoad": 26
         },
@@ -3295,14 +3295,14 @@
         {
           "hour": 12,
           "hr": 67,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 1857,
           "stressLoad": 26
         },
         {
           "hour": 14,
           "hr": 69,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 2528,
           "stressLoad": 26
         },
@@ -3316,14 +3316,14 @@
         {
           "hour": 18,
           "hr": 75,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 4178,
           "stressLoad": 26
         },
         {
           "hour": 20,
           "hr": 71,
-          "spo2": 101,
+          "spo2": 100,
           "steps": 5158,
           "stressLoad": 26
         },
