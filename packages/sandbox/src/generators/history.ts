@@ -310,3 +310,20 @@ export function generateHistory(config: ProfileConfig, startDate: string, endDat
     records,
   };
 }
+
+/** 根据 SandboxProfile 构建用于 generateHistory 的 ProfileConfig */
+export function buildProfileConfig(profile: { profileId: string; baseline: ProfileBaseline }): ProfileConfig {
+  // 基于字符串哈希生成确定性 seed
+  let hash = 0;
+  for (let i = 0; i < profile.profileId.length; i++) {
+    hash = ((hash << 5) - hash) + profile.profileId.charCodeAt(i);
+    hash = hash & hash; // 转为 32 位整数
+  }
+  return {
+    profileId: profile.profileId,
+    seed: Math.abs(hash),
+    baseline: { ...profile.baseline },
+    missingRate: { hr: 0, activity: 0, spo2: 0 },
+    trend: { stressDirection: 0, sleepDirection: 0, hrDirection: 0 },
+  };
+}

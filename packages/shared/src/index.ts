@@ -66,6 +66,16 @@ export type {
   GodModeAction,
 } from './types/god-mode';
 
+// Types — profile-crud
+export type {
+  UpdateProfilePayload,
+  CloneProfilePayload,
+  UpdateProfileResponse,
+  CloneProfileResponse,
+  DeleteProfileResponse,
+  ResetProfileResponse,
+} from './types/profile-crud';
+
 // Types — api
 export { ErrorCode } from './types/api';
 export type { ApiMeta, ApiError, ApiResponse } from './types/api';
@@ -132,6 +142,12 @@ export {
   ResetPayloadSchema,
   ScenarioPayloadSchema,
 } from './schemas/god-mode';
+
+// Schemas — profile-crud
+export {
+  UpdateProfileRequestSchema,
+  CloneProfileRequestSchema,
+} from './schemas/profile-crud';
 
 export { ErrorCodeSchema, ApiMetaSchema, ApiErrorSchema, ApiResponseSchema } from './schemas/api';
 

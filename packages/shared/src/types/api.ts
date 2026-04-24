@@ -6,6 +6,7 @@ export enum ErrorCode {
   AGENT_TIMEOUT = 'AGENT_TIMEOUT',
   AGENT_FALLBACK = 'AGENT_FALLBACK',
   RATE_LIMITED = 'RATE_LIMITED',
+  CONFLICT = 'CONFLICT',
 }
 
 export interface ApiMeta {

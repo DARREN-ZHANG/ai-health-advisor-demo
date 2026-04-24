@@ -25,6 +25,7 @@ import type { AppConfig } from '../config/env.js';
 import { createSessionStore, type SessionStoreService } from './session-store.js';
 import { createOverrideStore, type OverrideStoreService } from './override-store.js';
 import { createScenarioRegistry, type ScenarioRegistryService } from './scenario-registry.js';
+import { ProfileManager } from '../modules/god-mode/profile-manager.js';
 import type { MetricsStore } from '../plugins/metrics.js';
 
 export interface RuntimeRegistry extends AgentRuntimeDeps {
@@ -34,6 +35,7 @@ export interface RuntimeRegistry extends AgentRuntimeDeps {
   overrideStore: OverrideStoreService;
   scenarioRegistry: ScenarioRegistryService;
   profiles: Map<string, ProfileData>;
+  profileManager: ProfileManager;
   /** 不含 override 的原始 profile 数据 */
   getRawProfile(profileId: string): ProfileData;
   /** 重新从磁盘加载所有 profile 数据 */
@@ -157,6 +159,11 @@ export function createRuntimeRegistry(
     }
   }
 
+  const profileManager = new ProfileManager({
+    dataDir: config.dataDir,
+    reloadProfiles,
+  });
+
   return {
     config,
     metrics,
@@ -164,6 +171,7 @@ export function createRuntimeRegistry(
     overrideStore,
     scenarioRegistry,
     profiles,
+    profileManager,
     getRawProfile,
     reloadProfiles,
 

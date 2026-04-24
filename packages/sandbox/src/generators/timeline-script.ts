@@ -42,8 +42,13 @@ function formatTimestamp(date: string, hour: number, minute: number): string {
  * @param demoDate - 演示日日期（YYYY-MM-DD）
  * @param initialDemoTime - 完整的 initialDemoTime（YYYY-MM-DDTHH:mm）
  */
-export function generateTimelineScript(profileId: string, demoDate: string, initialDemoTime: string): TimelineScript {
-  const sleepConfig = SLEEP_CONFIGS[profileId];
+export function generateTimelineScript(
+  profileId: string,
+  demoDate: string,
+  initialDemoTime: string,
+  sleepConfigOverride?: SleepConfig,
+): TimelineScript {
+  const sleepConfig = sleepConfigOverride ?? SLEEP_CONFIGS[profileId];
   if (!sleepConfig) {
     throw new Error(`未找到 profile ${profileId} 的睡眠配置`);
   }
@@ -81,4 +86,15 @@ export function generateTimelineScript(profileId: string, demoDate: string, init
     initialDemoTime,
     segments,
   };
+}
+
+/** 根据日均睡眠分钟数推导睡眠时间配置 */
+export function deriveSleepConfig(avgSleepMinutes: number): SleepConfig {
+  if (avgSleepMinutes >= 420) {
+    return { bedHour: 22, bedMin: 30, wakeHour: 6, wakeMin: 0 };
+  } else if (avgSleepMinutes >= 300) {
+    return { bedHour: 0, bedMin: 0, wakeHour: 6, wakeMin: 0 };
+  } else {
+    return { bedHour: 1, bedMin: 30, wakeHour: 6, wakeMin: 0 };
+  }
 }

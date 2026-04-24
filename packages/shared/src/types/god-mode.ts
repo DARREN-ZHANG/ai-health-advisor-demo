@@ -125,6 +125,8 @@ export interface GodModeStateResponse {
   pendingEventCount: number;
   recentRecognizedEvents: RecognizedEvent[];
   recentDerivedStates: DerivedTemporalState[];
+  /** 所有可用 profile 列表 */
+  availableProfiles: Array<{ profileId: string; name: string }>;
 }
 
 export interface DemoScriptStepResult {

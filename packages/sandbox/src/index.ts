@@ -73,6 +73,14 @@ export type { RawEventRepository } from './helpers/raw-event-repository';
 export { appendSegment } from './helpers/timeline-append';
 export type { TimelineAppendResult } from './helpers/timeline-append';
 
+// Helpers — profile write
+export {
+  writeProfileFile,
+  writeManifest,
+  writeHistoryFile,
+  writeTimelineScriptFile,
+} from './helpers/profile-write';
+
 // Helpers — event recognition
 export { recognizeEvents } from './helpers/event-recognition';
 
@@ -93,7 +101,7 @@ export type { SyncState } from './helpers/sync-engine';
 export { aggregateDailyRecord, aggregateCurrentDayRecord } from './helpers/raw-to-daily';
 
 // Generators — deterministic data generation
-export { generateHistory, PROFILE_CONFIGS, generateDateRange } from './generators/history';
+export { generateHistory, PROFILE_CONFIGS, generateDateRange, buildProfileConfig } from './generators/history';
 export type { HistoryFile, DailyRecord, ProfileConfig, ProfileBaseline } from './generators/history';
-export { generateTimelineScript } from './generators/timeline-script';
+export { generateTimelineScript, deriveSleepConfig } from './generators/timeline-script';
 export type { TimelineScript } from './generators/timeline-script';

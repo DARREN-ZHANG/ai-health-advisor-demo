@@ -13,6 +13,7 @@ import {
 import type {
   ActiveSensingState,
   ActivitySegmentType,
+  CloneProfilePayload,
   DemoScriptRunResponse,
   DemoScriptStepResult,
   EventInjectPayload,
@@ -21,6 +22,7 @@ import type {
   ResetPayload,
   ScenarioEntry,
   ScenarioStep,
+  UpdateProfilePayload,
 } from '@health-advisor/shared';
 
 export class GodModeService {
@@ -150,6 +152,10 @@ export class GodModeService {
       pendingEventCount: pendingEvents.length,
       recentRecognizedEvents: recognizedEvents,
       recentDerivedStates: derivedStates,
+      availableProfiles: [...this.registry.profiles.values()].map((p) => ({
+        profileId: p.profile.profileId,
+        name: p.profile.name,
+      })),
     };
   }
 
@@ -326,6 +332,37 @@ export class GodModeService {
 
     this.invalidateSessionAnalytical(sessionId);
     return this.getState();
+  }
+
+  /** 更新 profile 字段（局部更新） */
+  updateProfile(profileId: string, changes: UpdateProfilePayload) {
+    return this.registry.profileManager.updateProfile(profileId, changes);
+  }
+
+  /** 克隆创建新 profile */
+  cloneProfile(sourceProfileId: string, newProfileId: string, overrides?: CloneProfilePayload['overrides']) {
+    return this.registry.profileManager.cloneProfile(sourceProfileId, newProfileId, overrides);
+  }
+
+  /** 删除 profile */
+  deleteProfile(profileId: string) {
+    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
+    this.registry.profileManager.deleteProfile(profileId);
+
+    // 如果删除的是当前活跃 profile，切换到第一个可用 profile
+    if (currentProfileId === profileId) {
+      const remaining = [...this.registry.profiles.keys()];
+      if (remaining.length > 0) {
+        this.registry.overrideStore.switchProfile(remaining[0]!);
+      }
+    }
+
+    return { deletedProfileId: profileId };
+  }
+
+  /** 恢复 profile 到原始模板 */
+  resetProfile(profileId: string) {
+    return this.registry.profileManager.resetProfile(profileId);
   }
 
   /** 数据变更后失效 session 的 analytical memory，防止 AI 请求用过期上下文 */

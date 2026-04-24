@@ -12,8 +12,10 @@ import {
   SyncTriggerPayloadSchema,
   AdvanceClockPayloadSchema,
   ResetProfileTimelinePayloadSchema,
+  UpdateProfileRequestSchema,
+  CloneProfileRequestSchema,
 } from '@health-advisor/shared';
-import type { EventInjectPayload, MetricOverridePayload, ResetPayload } from '@health-advisor/shared';
+import type { EventInjectPayload, MetricOverridePayload, ResetPayload, UpdateProfilePayload, CloneProfilePayload } from '@health-advisor/shared';
 import { buildMeta } from '../../utils/meta.js';
 import { GodModeService } from './service.js';
 
@@ -41,6 +43,27 @@ interface ResetBody {
 
 interface DemoScriptRunBody {
   scenarioId: string;
+}
+
+interface UpdateProfileBody {
+  name?: string;
+  age?: number;
+  gender?: 'male' | 'female';
+  avatar?: string;
+  tags?: string[];
+  baseline?: {
+    restingHr?: number;
+    hrv?: number;
+    spo2?: number;
+    avgSleepMinutes?: number;
+    avgSteps?: number;
+  };
+}
+
+interface CloneProfileBody {
+  sourceProfileId: string;
+  newProfileId: string;
+  overrides?: Record<string, unknown>;
 }
 
 interface ApplyScenarioBody {
@@ -228,4 +251,105 @@ export async function godModeRoutes(app: FastifyInstance) {
     const result = service.recalibrate(request.ctx?.sessionId);
     return createSuccessResponse(result, buildMeta(request));
   });
+
+  // Profile CRUD: 更新 profile 字段
+  app.put<{ Params: { profileId: string }; Body: UpdateProfileBody }>(
+    '/god-mode/profiles/:profileId',
+    async (request, reply) => {
+      const parsed = UpdateProfileRequestSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            parsed.error.issues.map((i) => i.message).join('; '),
+            buildMeta(request),
+          ),
+        );
+      }
+
+      try {
+        const result = service.updateProfile(request.params.profileId, parsed.data as UpdateProfilePayload);
+        return createSuccessResponse(result, buildMeta(request));
+      } catch (error) {
+        const statusCode = (error as unknown as { statusCode?: number }).statusCode ?? 500;
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        const code =
+          statusCode === 422 ? ErrorCode.VALIDATION_ERROR
+          : statusCode === 404 ? ErrorCode.PROFILE_NOT_FOUND
+          : ErrorCode.UNKNOWN;
+        return reply.status(statusCode).send(createErrorResponse(code, message, buildMeta(request)));
+      }
+    },
+  );
+
+  // Profile CRUD: 克隆创建新 profile
+  app.post<{ Body: CloneProfileBody }>('/god-mode/profiles', async (request, reply) => {
+    const parsed = CloneProfileRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send(
+        createErrorResponse(
+          ErrorCode.VALIDATION_ERROR,
+          parsed.error.issues.map((i) => i.message).join('; '),
+          buildMeta(request),
+        ),
+      );
+    }
+
+    try {
+      const result = service.cloneProfile(
+        parsed.data.sourceProfileId,
+        parsed.data.newProfileId,
+        parsed.data.overrides as CloneProfilePayload['overrides'],
+      );
+      return createSuccessResponse(result, buildMeta(request));
+    } catch (error) {
+      const statusCode = (error as unknown as { statusCode?: number }).statusCode ?? 500;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const code =
+        statusCode === 409 ? ErrorCode.CONFLICT
+        : statusCode === 404 ? ErrorCode.PROFILE_NOT_FOUND
+        : ErrorCode.UNKNOWN;
+      return reply.status(statusCode).send(createErrorResponse(code, message, buildMeta(request)));
+    }
+  });
+
+  // Profile CRUD: 删除 profile
+  app.delete<{ Params: { profileId: string } }>(
+    '/god-mode/profiles/:profileId',
+    async (request, reply) => {
+      try {
+        const result = service.deleteProfile(request.params.profileId);
+        return createSuccessResponse(result, buildMeta(request));
+      } catch (error) {
+        const statusCode = (error as unknown as { statusCode?: number }).statusCode ?? 500;
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        const code =
+          statusCode === 400 ? ErrorCode.VALIDATION_ERROR
+          : statusCode === 404 ? ErrorCode.PROFILE_NOT_FOUND
+          : ErrorCode.UNKNOWN;
+        return reply.status(statusCode).send(createErrorResponse(code, message, buildMeta(request)));
+      }
+    },
+  );
+
+  // Profile CRUD: 恢复 profile 到原始模板
+  app.post<{ Params: { profileId: string } }>(
+    '/god-mode/profiles/:profileId/reset',
+    async (request, reply) => {
+      try {
+        const result = service.resetProfile(request.params.profileId);
+        return createSuccessResponse(result, buildMeta(request));
+      } catch (error) {
+        const statusCode = (error as unknown as { statusCode?: number }).statusCode ?? 500;
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        return reply.status(statusCode).send(
+          createErrorResponse(
+            statusCode === 404 ? ErrorCode.PROFILE_NOT_FOUND : ErrorCode.UNKNOWN,
+            message,
+            buildMeta(request),
+          ),
+        );
+      }
+    },
+  );
 }
