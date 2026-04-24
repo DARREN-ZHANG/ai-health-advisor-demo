@@ -2,6 +2,7 @@
 
 import { Container, Section, Button } from '@health-advisor/ui';
 import { MorningBriefCard } from '@/components/homepage/MorningBriefCard';
+import { ProfileAdminSection } from '@/components/homepage/ProfileAdminSection';
 import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
 import { useProfileStore } from '@/stores/profile.store';
 import { useMorningBrief, useRefetchBrief } from '@/hooks/use-ai-query';
@@ -63,6 +64,9 @@ export default function HomePage() {
           isLoading={isAnyLoading}
         />
       </Section>
+
+      {/* God Mode Profile 管理 */}
+      <ProfileAdminSection />
 
       {/* 趋势数据已迁移至数据分析页 */}
 
