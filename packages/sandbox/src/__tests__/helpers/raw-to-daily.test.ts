@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ActivitySegment, DeviceEvent } from '@health-advisor/shared';
 import { generateEventsForSegment } from '../../helpers/activity-generators';
-import { aggregateDailyRecord, aggregateCurrentDayRecord } from '../../helpers/raw-to-daily';
+import { aggregateDailyRecord, aggregateCurrentDayRecord, mergeIntradayData } from '../../helpers/raw-to-daily';
 
 // ============================================================
 // 测试用辅助函数
@@ -229,6 +229,82 @@ describe('raw-to-daily', () => {
       expect(record.date).toBe('2026-04-16');
       // 只包含 4/16 的事件，步数应只有一次步行
       expect(record.activity).toBeDefined();
+    });
+  });
+
+  describe('mergeIntradayData', () => {
+    /** 创建完整的 12 快照 intraday（模拟历史记录） */
+    function makeCompleteIntraday(): IntradaySnapshot[] {
+      return [
+        { hour: 0, hr: 55, spo2: 96, steps: 0 },
+        { hour: 2, hr: 53, spo2: 95, steps: 0 },
+        { hour: 4, hr: 54, spo2: 96, steps: 0 },
+        { hour: 6, hr: 58, spo2: 97, steps: 10 },
+        { hour: 8, hr: 72, spo2: 98, steps: 800 },
+        { hour: 10, hr: 68, spo2: 97, steps: 1200 },
+        { hour: 12, hr: 75, spo2: 98, steps: 3500 },
+        { hour: 14, hr: 70, spo2: 97, steps: 4200 },
+        { hour: 16, hr: 85, spo2: 97, steps: 6800 },
+        { hour: 18, hr: 78, spo2: 98, steps: 8500 },
+        { hour: 20, hr: 65, spo2: 97, steps: 9200 },
+        { hour: 22, hr: 60, spo2: 96, steps: 9500 },
+      ];
+    }
+
+    it('聚合数据覆盖历史数据，空缺时段保留历史值', () => {
+      // 模拟：聚合 intraday 只有 0-6 点（睡眠）有数据，其余只有 hour
+      const aggregated: IntradaySnapshot[] = [
+        { hour: 0, hr: 56, spo2: 96, steps: 0 },
+        { hour: 2, hr: 55, spo2: 96, steps: 0 },
+        { hour: 4, hr: 54, spo2: 95, steps: 0 },
+        { hour: 6, hr: 57, spo2: 97, steps: 0 },
+        { hour: 8 },
+        { hour: 10 },
+        { hour: 12 },
+        { hour: 14 },
+        { hour: 16 },
+        { hour: 18 },
+        { hour: 20 },
+        { hour: 22 },
+      ];
+      const historical = makeCompleteIntraday();
+
+      const merged = mergeIntradayData(historical, aggregated);
+
+      // 合并后仍是 12 个快照
+      expect(merged).toHaveLength(12);
+      // 索引对应 base 的 hour 顺序：[0, 2, 4, 6, 8, 10, ...]
+      // 索引 0 = hour 0，索引 1 = hour 2：使用聚合数据（实时值）
+      expect(merged[0]!.hr).toBe(56);
+      expect(merged[1]!.hr).toBe(55);
+      // 索引 4 = hour 8，索引 8 = hour 16：使用历史数据（补充）
+      expect(merged[4]!.hr).toBe(72);
+      expect(merged[4]!.steps).toBe(800);
+      expect(merged[8]!.hr).toBe(85);
+      expect(merged[8]!.steps).toBe(6800);
+      expect(merged[10]!.hr).toBe(65);
+    });
+
+    it('无聚合数据时完全使用历史 intraday', () => {
+      const historical = makeCompleteIntraday();
+      const aggregated: IntradaySnapshot[] = [];
+
+      const merged = mergeIntradayData(historical, aggregated);
+
+      expect(merged).toHaveLength(12);
+      expect(merged[0]!.hr).toBe(55);
+      expect(merged[4]!.hr).toBe(72);
+    });
+
+    it('无历史数据时完全使用聚合 intraday', () => {
+      const aggregated: IntradaySnapshot[] = [
+        { hour: 0, hr: 56 },
+        { hour: 2 },
+      ];
+      const merged = mergeIntradayData([], aggregated);
+
+      expect(merged).toHaveLength(2);
+      expect(merged[0]!.hr).toBe(56);
     });
   });
 });

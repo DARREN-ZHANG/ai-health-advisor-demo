@@ -224,6 +224,12 @@ export class GodModeService {
     this.registry.sessionStore.clearAll();
     this.registry.analyticalMemory.clearAll();
 
+    // 6. 对每个 profile 执行初始同步，使 timeline script 中的 baseline 事件变为已同步
+    // 否则日级别查询会因当前日无 synced events 而返回空数据
+    for (const entry of manifest.profiles) {
+      this.registry.overrideStore.performSync(entry.profileId, 'manual_refresh');
+    }
+
     this.invalidateSessionAnalytical(sessionId);
     return this.getState();
   }

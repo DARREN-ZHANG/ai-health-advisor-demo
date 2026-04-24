@@ -77,6 +77,40 @@ export function aggregateCurrentDayRecord(
   return aggregateDailyRecord(syncedEvents, date);
 }
 
+/**
+ * 将聚合 intraday 与历史 intraday 合并
+ * 历史数据作为基础（通常是完整的 24 小时），聚合数据覆盖有数据的时段
+ * 空快照（只有 hour 字段）视为无数据，保留历史值
+ *
+ * @param baseIntraday - 历史记录的 intraday（通常是完整的 24 小时）
+ * @param overlayIntraday - 聚合得到的 intraday（可能只有部分时段有数据）
+ */
+export function mergeIntradayData(
+  baseIntraday: IntradaySnapshot[],
+  overlayIntraday: IntradaySnapshot[],
+): IntradaySnapshot[] {
+  if (baseIntraday.length === 0) return [...overlayIntraday];
+  if (overlayIntraday.length === 0) return [...baseIntraday];
+
+  // 按 hour 索引 overlay 数据
+  const overlayByHour = new Map<number, IntradaySnapshot>();
+  for (const snapshot of overlayIntraday) {
+    overlayByHour.set(snapshot.hour, snapshot);
+  }
+
+  return baseIntraday.map((base) => {
+    const overlay = overlayByHour.get(base.hour);
+    if (!overlay) return base;
+
+    // overlay 只有 hour 字段时视为无数据，保留历史值
+    const hasOverlayData = Object.keys(overlay).length > 1;
+    if (!hasOverlayData) return base;
+
+    // overlay 有实际数据：优先使用聚合值
+    return overlay;
+  });
+}
+
 // ============================================================
 // 心率聚合
 // ============================================================

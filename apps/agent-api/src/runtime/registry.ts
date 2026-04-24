@@ -20,6 +20,7 @@ import {
   recognizeEvents,
   computeDerivedTemporalStates,
   aggregateCurrentDayRecord,
+  mergeIntradayData,
 } from '@health-advisor/sandbox';
 import type { AppConfig } from '../config/env.js';
 import { createSessionStore, type SessionStoreService } from './session-store.js';
@@ -93,6 +94,12 @@ export function createRuntimeRegistry(
     }
 
     const currentDate = clock.currentTime.slice(0, 10);
+
+    // 保留当前活动日的完整历史记录，用于补充聚合数据
+    const historicalCurrentDay = overriddenRecords.find(
+      (r) => r.date === currentDate,
+    );
+
     // 从 records 中排除当前活动日的完整历史记录
     const historicalRecords = overriddenRecords.filter(
       (r) => r.date !== currentDate,
@@ -101,11 +108,21 @@ export function createRuntimeRegistry(
     // 获取已同步事件，聚合当前日记录
     const syncedEvents = overrideStore.getSyncedEvents(profileId);
     if (syncedEvents.length > 0) {
-      const currentDayRecord = aggregateCurrentDayRecord(syncedEvents, clock.currentTime);
+      const aggregatedRecord = aggregateCurrentDayRecord(syncedEvents, clock.currentTime);
+
+      // 用历史记录的 intraday 补充聚合数据的空缺时段
+      const currentDayRecord = historicalCurrentDay?.intraday
+        ? { ...aggregatedRecord, intraday: mergeIntradayData(historicalCurrentDay.intraday, aggregatedRecord.intraday ?? []) }
+        : aggregatedRecord;
+
       return { ...raw, records: [...historicalRecords, currentDayRecord] };
     }
 
-    // 无已同步事件：当前日为空
+    // 无已同步事件但有历史记录：使用历史记录兜底
+    if (historicalCurrentDay) {
+      return { ...raw, records: [...historicalRecords, historicalCurrentDay] };
+    }
+
     return { ...raw, records: historicalRecords };
   }
 
