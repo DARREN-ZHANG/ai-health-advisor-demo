@@ -20,6 +20,7 @@ export const corsPlugin = fp<{
       origin: allowedOrigins.size > 0 ? [...allowedOrigins] : false,
       credentials: true,
       exposedHeaders: ['X-Session-Id'],
+      methods: ['GET', 'PUT', 'POST', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'],
     });
 
     await app.register(helmet, {
