@@ -53,6 +53,20 @@ interface UpdateProfileBody {
     avgSleepMinutes?: number;
     avgSteps?: number;
   };
+  weeklyBaseline?: {
+    restingHr?: number;
+    hrv?: number;
+    spo2?: number;
+    avgSleepMinutes?: number;
+    avgSteps?: number;
+  };
+  dailyBaseline?: {
+    restingHr?: number;
+    hrv?: number;
+    spo2?: number;
+    avgSleepMinutes?: number;
+    avgSteps?: number;
+  };
 }
 
 interface CloneProfileBody {

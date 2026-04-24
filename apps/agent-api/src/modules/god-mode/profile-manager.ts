@@ -2,6 +2,7 @@ import { readFileSync, existsSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   loadManifest,
+  loadHistoryRecords,
   generateHistory,
   generateTimelineScript,
   buildProfileConfig,
@@ -18,6 +19,7 @@ import {
   type SandboxProfile,
   type BaselineMetrics,
 } from '@health-advisor/shared';
+import type { DailyRecord } from '@health-advisor/sandbox';
 
 export interface ProfileManagerDeps {
   dataDir: string;
@@ -65,6 +67,46 @@ export class ProfileManager {
     return { startDate, endDate };
   }
 
+  /** 获取指定天数的历史日期范围 */
+  private getDateRangeForDays(days: number): { startDate: string; endDate: string } {
+    const today = new Date();
+    const endDate = today.toISOString().slice(0, 10);
+    const startDateObj = new Date(today);
+    startDateObj.setDate(startDateObj.getDate() - (days - 1));
+    const startDate = startDateObj.toISOString().slice(0, 10);
+    return { startDate, endDate };
+  }
+
+  /** 检测部分 baseline 字段是否发生变化（用于 weekly/daily baseline） */
+  private hasPartialBaselineChanged(
+    oldBaseline: Partial<BaselineMetrics> | undefined,
+    newBaseline: Partial<BaselineMetrics> | undefined,
+  ): boolean {
+    if (!oldBaseline && !newBaseline) return false;
+    if (!oldBaseline || !newBaseline) return true;
+    const keys: (keyof BaselineMetrics)[] = ['restingHr', 'hrv', 'spo2', 'avgSleepMinutes', 'avgSteps'];
+    return keys.some((key) => oldBaseline[key] !== newBaseline[key]);
+  }
+
+  /** 增量替换 history 记录：用新记录覆盖现有记录中相同日期的条目 */
+  private patchHistoryRecords(
+    existing: DailyRecord[],
+    newRecords: DailyRecord[],
+  ): DailyRecord[] {
+    const newRecordMap = new Map(newRecords.map((r) => [r.date, r]));
+    const merged = existing.map((record) => newRecordMap.get(record.date) ?? record);
+    // 添加 existing 中没有的新日期记录
+    const existingDates = new Set(existing.map((r) => r.date));
+    for (const newRecord of newRecords) {
+      if (!existingDates.has(newRecord.date)) {
+        merged.push(newRecord);
+      }
+    }
+    // 按日期排序
+    merged.sort((a, b) => a.date.localeCompare(b.date));
+    return merged;
+  }
+
   /** 更新 profile 字段（局部更新），返回更新后的 profile 和是否触发了重生成 */
   updateProfile(
     profileId: string,
@@ -75,6 +117,8 @@ export class ProfileManager {
       avatar?: string;
       tags?: string[];
       baseline?: Partial<BaselineMetrics>;
+      weeklyBaseline?: Partial<BaselineMetrics>;
+      dailyBaseline?: Partial<BaselineMetrics>;
     },
   ): { profile: SandboxProfile; regenerated: boolean } {
     const manifest = loadManifest(this.deps.dataDir);
@@ -88,6 +132,12 @@ export class ProfileManager {
     const originalContent = readFileSync(profilePath, 'utf-8');
     const profileFile = JSON.parse(originalContent) as ProfileFileV2;
     const oldBaseline = { ...profileFile.profile.baseline };
+    const oldWeeklyBaseline = profileFile.profile.weeklyBaseline
+      ? { ...profileFile.profile.weeklyBaseline }
+      : undefined;
+    const oldDailyBaseline = profileFile.profile.dailyBaseline
+      ? { ...profileFile.profile.dailyBaseline }
+      : undefined;
 
     // 浅合并 profile 层字段
     if (changes.name !== undefined) profileFile.profile.name = changes.name;
@@ -101,6 +151,18 @@ export class ProfileManager {
         ...changes.baseline,
       };
     }
+    if (changes.weeklyBaseline !== undefined) {
+      profileFile.profile.weeklyBaseline = {
+        ...profileFile.profile.weeklyBaseline,
+        ...changes.weeklyBaseline,
+      };
+    }
+    if (changes.dailyBaseline !== undefined) {
+      profileFile.profile.dailyBaseline = {
+        ...profileFile.profile.dailyBaseline,
+        ...changes.dailyBaseline,
+      };
+    }
 
     // Zod 校验
     const validated = SandboxProfileSchema.safeParse(profileFile.profile);
@@ -111,23 +173,81 @@ export class ProfileManager {
       );
     }
 
-    // 检测 baseline 变化
+    // 检测三种 baseline 变化
     const baselineChanged = this.hasBaselineChanged(oldBaseline, profileFile.profile.baseline);
+    const weeklyBaselineChanged = this.hasPartialBaselineChanged(
+      oldWeeklyBaseline,
+      profileFile.profile.weeklyBaseline,
+    );
+    const dailyBaselineChanged = this.hasPartialBaselineChanged(
+      oldDailyBaseline,
+      profileFile.profile.dailyBaseline,
+    );
+    const anyBaselineChanged = baselineChanged || weeklyBaselineChanged || dailyBaselineChanged;
 
     try {
       // 写回 profile 文件
       writeProfileFile(this.deps.dataDir, entry.file, profileFile);
 
       if (baselineChanged) {
+        // 全局 baseline 变更 → 30 天全量重生成
         const { startDate, endDate } = this.getHistoryDateRange();
-
-        // 重生成 history
         const config = buildProfileConfig(validated.data);
         const history = generateHistory(config, startDate, endDate);
         writeHistoryFile(this.deps.dataDir, profileFile.historyRef.file, history);
 
         // 重生成 timeline script
         const sleepConfig = deriveSleepConfig(validated.data.baseline.avgSleepMinutes);
+        const script = generateTimelineScript(
+          profileId,
+          endDate,
+          profileFile.initialDemoTime,
+          sleepConfig,
+        );
+        writeTimelineScriptFile(this.deps.dataDir, profileFile.timelineScriptRef.file, script);
+      }
+
+      if (weeklyBaselineChanged && !baselineChanged) {
+        // 近一周 baseline 变更 → 只重生成最近 7 天，增量替换
+        const { startDate, endDate } = this.getDateRangeForDays(7);
+        const mergedBaseline = {
+          ...validated.data.baseline,
+          ...validated.data.weeklyBaseline,
+        };
+        const config = buildProfileConfig({ ...validated.data, baseline: mergedBaseline });
+        const newHistory = generateHistory(config, startDate, endDate);
+
+        // 读取现有 history 文件并增量替换
+        const existingHistory = loadHistoryRecords(this.deps.dataDir, profileFile.historyRef);
+        const patchedRecords = this.patchHistoryRecords(existingHistory, newHistory.records);
+        writeHistoryFile(this.deps.dataDir, profileFile.historyRef.file, {
+          profileId,
+          dateRange: { start: patchedRecords[0]!.date, end: patchedRecords[patchedRecords.length - 1]!.date },
+          records: patchedRecords,
+        });
+      }
+
+      if (dailyBaselineChanged && !baselineChanged) {
+        // 近24h baseline 变更 → 只重生成最近 1 天，增量替换 + timeline script
+        const { startDate, endDate } = this.getDateRangeForDays(1);
+        const mergedBaseline = {
+          ...validated.data.baseline,
+          ...validated.data.dailyBaseline,
+        };
+        const config = buildProfileConfig({ ...validated.data, baseline: mergedBaseline });
+        const newHistory = generateHistory(config, startDate, endDate);
+
+        // 读取现有 history 文件并增量替换
+        const existingHistory = loadHistoryRecords(this.deps.dataDir, profileFile.historyRef);
+        const patchedRecords = this.patchHistoryRecords(existingHistory, newHistory.records);
+        writeHistoryFile(this.deps.dataDir, profileFile.historyRef.file, {
+          profileId,
+          dateRange: { start: patchedRecords[0]!.date, end: patchedRecords[patchedRecords.length - 1]!.date },
+          records: patchedRecords,
+        });
+
+        // 重生成 timeline script
+        const sleepConfig = deriveSleepConfig(mergedBaseline.avgSleepMinutes);
         const script = generateTimelineScript(
           profileId,
           endDate,
@@ -145,7 +265,7 @@ export class ProfileManager {
       throw error;
     }
 
-    return { profile: validated.data, regenerated: baselineChanged };
+    return { profile: validated.data, regenerated: anyBaselineChanged };
   }
 
   /** 从现有 profile 克隆创建新 profile */
