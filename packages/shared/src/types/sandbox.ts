@@ -123,6 +123,8 @@ export interface SandboxProfile {
   avatar: string;
   tags: string[];
   baseline: BaselineMetrics;
+  weeklyBaseline?: Partial<BaselineMetrics>;
+  dailyBaseline?: Partial<BaselineMetrics>;
 }
 
 export interface SleepStages {

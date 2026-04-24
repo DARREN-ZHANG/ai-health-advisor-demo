@@ -9,6 +9,8 @@ export interface UpdateProfilePayload {
   avatar?: string;
   tags?: string[];
   baseline?: Partial<BaselineMetrics>;
+  weeklyBaseline?: Partial<BaselineMetrics>;
+  dailyBaseline?: Partial<BaselineMetrics>;
 }
 
 /** 克隆 profile 请求载荷 */

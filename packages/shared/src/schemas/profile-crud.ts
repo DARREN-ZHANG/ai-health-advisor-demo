@@ -9,6 +9,8 @@ export const UpdateProfileRequestSchema = z.object({
   avatar: z.string().min(1).optional(),
   tags: z.array(z.string().min(1)).min(1).optional(),
   baseline: BaselineMetricsSchema.partial().optional(),
+  weeklyBaseline: BaselineMetricsSchema.partial().optional(),
+  dailyBaseline: BaselineMetricsSchema.partial().optional(),
 });
 
 /** POST /god-mode/profiles 请求体 */

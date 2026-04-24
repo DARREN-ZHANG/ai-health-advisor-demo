@@ -115,6 +115,8 @@ export const SandboxProfileSchema = z.object({
   avatar: z.string().min(1),
   tags: z.array(z.string().min(1)).min(1),
   baseline: BaselineMetricsSchema,
+  weeklyBaseline: BaselineMetricsSchema.partial().optional(),
+  dailyBaseline: BaselineMetricsSchema.partial().optional(),
 });
 
 export const SleepStagesSchema = z.object({
