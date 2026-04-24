@@ -52,7 +52,4 @@ export const ResetPayloadSchema = z.object({
   scope: z.enum(['profile', 'events', 'overrides', 'all']),
 });
 
-export const ScenarioPayloadSchema = z.object({
-  scenarioId: z.string().min(1),
-  params: z.record(z.unknown()).optional(),
-});
+

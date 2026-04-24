@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getScenarioIcon, mapActiveSensingToBanner } from './god-mode';
+import { mapActiveSensingToBanner } from './god-mode';
 
 describe('god-mode helpers', () => {
   it('maps active sensing state into banner payload', () => {
@@ -21,8 +21,5 @@ describe('god-mode helpers', () => {
     });
   });
 
-  it('returns a stable icon for each scenario type', () => {
-    expect(getScenarioIcon('demo_script')).toBe('🎬');
-    expect(getScenarioIcon('reset')).toBe('🧪');
-  });
+
 });

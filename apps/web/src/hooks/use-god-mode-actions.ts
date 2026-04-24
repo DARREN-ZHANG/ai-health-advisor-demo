@@ -8,11 +8,8 @@ import { useProfileStore } from '@/stores/profile.store';
 import { useActiveSensingStore } from '@/stores/active-sensing.store';
 import type {
   ActiveSensingState,
-  DemoScriptRunResponse,
   EventInjectPayload,
   GodModeStateResponse,
-  MetricOverridePayload,
-  ResetPayload,
   TimelineAppendPayload,
   ResetProfileTimelinePayload,
 } from '@health-advisor/shared';
@@ -75,79 +72,6 @@ export function useGodModeActions() {
       // 注入事件后，数据通常会发生变化，失效相关查询
       queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
-    },
-  });
-
-  /**
-   * GM-006: Override Metric
-   */
-  const overrideMetricMutation = useMutation({
-    mutationFn: async (payload: MetricOverridePayload & { profileId?: string }) => {
-      return apiClient.post<GodModeStateResponse>('/god-mode/override-metric', payload);
-    },
-    onSuccess: (state) => {
-      setProfileId(state.currentProfileId);
-      syncActiveSensingBanner(state.activeSensing);
-
-      // GM-007: 局部失效策略，这里我们保守点，失效受影响的数据查询
-      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
-    },
-  });
-
-  /**
-   * GM-008: Reset
-   */
-  const resetMutation = useMutation({
-    mutationFn: async (payload: ResetPayload) => {
-      return apiClient.post<GodModeStateResponse>('/god-mode/reset', payload);
-    },
-    onSuccess: (state) => {
-      setProfileId(state.currentProfileId);
-      syncActiveSensingBanner(state.activeSensing);
-
-      // 重置后恢复基础状态，失效所有动态数据
-      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
-    },
-  });
-
-  /**
-   * GM-009: Apply Scenario
-   */
-  const applyScenarioMutation = useMutation({
-    mutationFn: async (scenarioId: string) => {
-      return apiClient.post<GodModeStateResponse>('/god-mode/scenario/apply', { scenarioId });
-    },
-    onSuccess: (state) => {
-      setProfileId(state.currentProfileId);
-      syncActiveSensingBanner(state.activeSensing);
-
-      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.profile.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
-    },
-  });
-
-  /**
-   * GM-010: Run Demo Script
-   */
-  const runDemoScriptMutation = useMutation({
-    mutationFn: async (scenarioId: string) => {
-      return apiClient.post<DemoScriptRunResponse>('/god-mode/demo-script/run', { scenarioId });
-    },
-    onSuccess: (result) => {
-      setProfileId(result.state.currentProfileId);
-      syncActiveSensingBanner(result.state.activeSensing);
-
-      // 执行脚本后，可能涉及 profile 切换或数据变更，全面失效
-      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.profile.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
     },
   });
@@ -236,14 +160,6 @@ export function useGodModeActions() {
     isSwitchingProfile: switchProfileMutation.isPending,
     injectEvent: injectEventMutation.mutateAsync,
     isInjectingEvent: injectEventMutation.isPending,
-    overrideMetric: overrideMetricMutation.mutateAsync,
-    isOverridingMetric: overrideMetricMutation.isPending,
-    reset: resetMutation.mutateAsync,
-    isResetting: resetMutation.isPending,
-    applyScenario: applyScenarioMutation.mutateAsync,
-    isApplyingScenario: applyScenarioMutation.isPending,
-    runDemoScript: runDemoScriptMutation.mutateAsync,
-    isRunningDemoScript: runDemoScriptMutation.isPending,
     appendTimeline: appendTimelineMutation.mutateAsync,
     isAppendingTimeline: appendTimelineMutation.isPending,
     triggerSync: triggerSyncMutation.mutateAsync,

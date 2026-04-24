@@ -30,6 +30,6 @@ export const queryKeys = {
   godMode: {
     all: ['godMode'] as const,
     state: () => [...queryKeys.godMode.all, 'state'] as const,
-    scenarios: () => [...queryKeys.godMode.all, 'scenarios'] as const,
+
   },
 } as const;

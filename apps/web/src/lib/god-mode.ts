@@ -1,17 +1,5 @@
-import type { ActiveSensingState, ScenarioType } from '@health-advisor/shared';
+import type { ActiveSensingState } from '@health-advisor/shared';
 import type { ActiveSensingBanner } from '@/stores/active-sensing.store';
-
-const SCENARIO_ICONS: Record<ScenarioType, string> = {
-  profile_switch: '👤',
-  event_inject: '⚡',
-  metric_override: '📉',
-  reset: '🧪',
-  demo_script: '🎬',
-  timeline_append: '➕',
-  sync_trigger: '🔄',
-  advance_clock: '⏰',
-  reset_profile_timeline: '🗑️',
-};
 
 const EVENT_TRANSLATIONS: Record<string, string> = {
   sport_detected: '您可能在运动',
@@ -48,10 +36,6 @@ function formatSensingDate(dateStr: string): string {
   } catch {
     return dateStr;
   }
-}
-
-export function getScenarioIcon(type: ScenarioType): string {
-  return SCENARIO_ICONS[type];
 }
 
 export function mapActiveSensingToBanner(activeSensing: ActiveSensingState): ActiveSensingBanner {

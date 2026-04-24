@@ -61,37 +61,6 @@ export interface ResetPayload {
   scope: 'profile' | 'events' | 'overrides' | 'all';
 }
 
-export interface ScenarioPayload {
-  scenarioId: string;
-  params?: Record<string, unknown>;
-}
-
-export type ScenarioType =
-  | 'profile_switch'
-  | 'event_inject'
-  | 'metric_override'
-  | 'reset'
-  | 'demo_script'
-  | 'timeline_append'
-  | 'sync_trigger'
-  | 'advance_clock'
-  | 'reset_profile_timeline';
-
-export interface ScenarioStep {
-  label: string;
-  action: Exclude<ScenarioType, 'demo_script'>;
-  payload: Record<string, unknown>;
-}
-
-export interface ScenarioEntry {
-  scenarioId: string;
-  label: string;
-  description: string;
-  type: ScenarioType;
-  payload?: Record<string, unknown>;
-  steps?: ScenarioStep[];
-}
-
 export interface ActiveSensingState {
   visible: boolean;
   priority: 'normal' | 'high';
@@ -116,7 +85,6 @@ export interface GodModeStateResponse {
   currentProfileId: string;
   activeOverrides: GodModeOverrideEntry[];
   injectedEvents: GodModeInjectedEvent[];
-  availableScenarios: ScenarioEntry[];
   activeSensing: ActiveSensingState | null;
   /** 当前演示时间 YYYY-MM-DDTHH:mm */
   currentDemoTime: string | null;
@@ -129,26 +97,11 @@ export interface GodModeStateResponse {
   availableProfiles: Array<{ profileId: string; name: string }>;
 }
 
-export interface DemoScriptStepResult {
-  label: string;
-  action: Exclude<ScenarioType, 'demo_script'>;
-  status: 'success' | 'error';
-  detail?: string;
-}
-
-export interface DemoScriptRunResponse {
-  scenarioId: string;
-  label: string;
-  executedSteps: DemoScriptStepResult[];
-  state: GodModeStateResponse;
-}
-
 export type GodModeAction =
   | { type: 'profile_switch'; payload: ProfileSwitchPayload }
   | { type: 'event_inject'; payload: EventInjectPayload }
   | { type: 'metric_override'; payload: MetricOverridePayload }
   | { type: 'reset'; payload: ResetPayload }
-  | { type: 'scenario'; payload: ScenarioPayload }
   | { type: 'timeline_append'; payload: TimelineAppendPayload }
   | { type: 'sync_trigger'; payload: SyncTriggerPayload }
   | { type: 'advance_clock'; payload: AdvanceClockPayload }

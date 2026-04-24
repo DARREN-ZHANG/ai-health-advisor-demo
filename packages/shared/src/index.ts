@@ -53,16 +53,10 @@ export type {
   EventInjectPayload,
   MetricOverridePayload,
   ResetPayload,
-  ScenarioPayload,
-  ScenarioType,
-  ScenarioStep,
-  ScenarioEntry,
   ActiveSensingState,
   GodModeOverrideEntry,
   GodModeInjectedEvent,
   GodModeStateResponse,
-  DemoScriptStepResult,
-  DemoScriptRunResponse,
   GodModeAction,
 } from './types/god-mode';
 
@@ -140,7 +134,6 @@ export {
   EventInjectPayloadSchema,
   MetricOverridePayloadSchema,
   ResetPayloadSchema,
-  ScenarioPayloadSchema,
 } from './schemas/god-mode';
 
 // Schemas — profile-crud

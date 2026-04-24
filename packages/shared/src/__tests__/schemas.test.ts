@@ -15,7 +15,6 @@ import {
   EventInjectPayloadSchema,
   MetricOverridePayloadSchema,
   ResetPayloadSchema,
-  ScenarioPayloadSchema,
   TimelineAppendPayloadSchema,
   SyncTriggerPayloadSchema,
   AdvanceClockPayloadSchema,
@@ -324,15 +323,6 @@ describe('GodMode Schemas', () => {
     expect(() => ResetPayloadSchema.parse({ scope: 'invalid' })).toThrow();
   });
 
-  it('ScenarioPayloadSchema accepts valid payload', () => {
-    const payload = { scenarioId: 'stress-test' };
-    expect(ScenarioPayloadSchema.parse(payload)).toEqual(payload);
-  });
-
-  it('ScenarioPayloadSchema accepts optional params', () => {
-    const payload = { scenarioId: 'stress-test', params: { intensity: 'high' } };
-    expect(ScenarioPayloadSchema.parse(payload)).toEqual(payload);
-  });
 });
 
 describe('Stress Schemas', () => {
