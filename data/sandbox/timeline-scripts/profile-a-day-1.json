@@ -1,15 +1,15 @@
 {
   "profileId": "profile-a",
   "scriptId": "profile-a-day-1",
-  "initialDemoTime": "2026-04-23T07:05",
+  "initialDemoTime": "2026-04-24T07:05",
   "segments": [
     {
       "segmentId": "seg-baseline-sleep-a",
       "type": "sleep",
-      "start": "2026-04-22T22:45",
-      "end": "2026-04-23T06:30",
+      "start": "2026-04-23T22:30",
+      "end": "2026-04-24T06:00",
       "params": {
-        "durationMinutes": 465
+        "durationMinutes": 450
       },
       "source": "baseline_script"
     }

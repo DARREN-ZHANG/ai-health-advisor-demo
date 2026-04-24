@@ -11,14 +11,14 @@
       "心肺耐力优秀"
     ],
     "baseline": {
-      "restingHr": 58,
+      "restingHr": 60,
       "hrv": 68,
       "spo2": 99,
       "avgSleepMinutes": 465,
       "avgSteps": 9500
     }
   },
-  "initialDemoTime": "2026-04-23T07:05",
+  "initialDemoTime": "2026-04-24T07:05",
   "historyRef": {
     "file": "history/profile-a-daily-records.json"
   },
