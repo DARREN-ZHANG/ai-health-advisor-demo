@@ -17,7 +17,7 @@ export interface ValidationResult {
 /**
  * 校验 dataDir 下所有必需资产
  * - profiles + fallbacks：致命，缺失阻止启动
- * - prompts + scenarios：警告，缺失不阻止启动
+ * - prompts：警告，缺失不阻止启动
  */
 export function validateStartupAssets(dataDir: string): ValidationResult {
   const fatal: string[] = [];
@@ -31,9 +31,6 @@ export function validateStartupAssets(dataDir: string): ValidationResult {
 
   // 3. prompts 校验（非致命）
   validatePrompts(dataDir, warnings);
-
-  // 4. scenarios 校验（致命：createScenarioRegistry 会同步读取该文件）
-  validateScenarios(dataDir, fatal);
 
   return { fatal, warnings };
 }
@@ -114,34 +111,4 @@ function validatePrompts(dataDir: string, warnings: string[]): void {
   }
 }
 
-function validateScenarios(dataDir: string, fatal: string[]): void {
-  const scenarioPath = join(dataDir, 'scenarios', 'manifest.json');
-  if (!existsSync(scenarioPath)) {
-    fatal.push('scenarios/manifest.json not found');
-    return;
-  }
 
-  try {
-    const content = JSON.parse(readFileSync(scenarioPath, 'utf-8')) as {
-      scenarios: Array<{ scenarioId: string; label: string; type: string }>;
-    };
-
-    if (!Array.isArray(content.scenarios) || content.scenarios.length === 0) {
-      fatal.push('scenarios/manifest.json has no scenarios');
-    }
-
-    const validTypes = [
-      'profile_switch', 'event_inject', 'metric_override', 'reset', 'demo_script',
-      'timeline_append', 'sync_trigger', 'advance_clock', 'reset_profile_timeline',
-    ];
-    for (const s of content.scenarios) {
-      if (!s.scenarioId || !s.label || !s.type) {
-        fatal.push(`scenario missing required fields: ${JSON.stringify(s)}`);
-      } else if (!validTypes.includes(s.type)) {
-        fatal.push(`scenario "${s.scenarioId}" has invalid type "${s.type}"`);
-      }
-    }
-  } catch (err) {
-    fatal.push(`scenario validation failed: ${(err as Error).message}`);
-  }
-}

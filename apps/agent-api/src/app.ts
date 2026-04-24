@@ -24,7 +24,7 @@ export async function buildApp() {
     }
     process.exit(1);
   }
-  // 非致命警告：prompts/scenarios 缺失，降级继续
+  // 非致命警告：prompts 缺失，降级继续
   for (const warn of validation.warnings) {
     console.warn(`[startup] WARN: ${warn}`);
   }

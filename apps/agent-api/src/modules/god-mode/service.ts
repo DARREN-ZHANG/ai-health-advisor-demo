@@ -14,14 +14,10 @@ import type {
   ActiveSensingState,
   ActivitySegmentType,
   CloneProfilePayload,
-  DemoScriptRunResponse,
-  DemoScriptStepResult,
   EventInjectPayload,
   GodModeStateResponse,
   MetricOverridePayload,
   ResetPayload,
-  ScenarioEntry,
-  ScenarioStep,
   UpdateProfilePayload,
 } from '@health-advisor/shared';
 
@@ -144,8 +140,7 @@ export class GodModeService {
       currentProfileId,
       activeOverrides: this.registry.overrideStore.getActiveOverrides(profileId),
       injectedEvents: this.registry.overrideStore.getInjectedEvents(profileId),
-      availableScenarios: this.registry.scenarioRegistry.list(),
-      activeSensing: this.deriveActiveSensing(profileId),
+        activeSensing: this.deriveActiveSensing(profileId),
       // 时间轴同步状态字段
       currentDemoTime: clock.currentTime,
       lastSyncTime: syncState.lastSyncedMeasuredAt,
@@ -157,107 +152,6 @@ export class GodModeService {
         name: p.profile.name,
       })),
     };
-  }
-
-  /** BE-025A: 应用单步 scenario */
-  applyScenario(scenarioId: string, sessionId?: string): GodModeStateResponse {
-    const scenario = this.registry.scenarioRegistry.getById(scenarioId);
-    if (!scenario) {
-      throw Object.assign(new Error(`Scenario '${scenarioId}' not found`), { statusCode: 404 });
-    }
-    if (scenario.type === 'demo_script') {
-      throw Object.assign(new Error(`Scenario '${scenarioId}' must be run via demo-script API`), { statusCode: 400 });
-    }
-    if (!scenario.payload) {
-      throw Object.assign(new Error(`Scenario '${scenarioId}' is missing payload`), { statusCode: 500 });
-    }
-
-    this.executeStep(scenario.type, scenario.payload, sessionId);
-    return this.getState();
-  }
-
-  /** BE-025A: 执行 demo-script */
-  runDemoScript(scenarioId: string, sessionId?: string): DemoScriptRunResponse {
-    const scenario = this.registry.scenarioRegistry.getById(scenarioId);
-    if (!scenario) {
-      throw Object.assign(new Error(`Scenario '${scenarioId}' not found`), { statusCode: 404 });
-    }
-    if (scenario.type !== 'demo_script' || !scenario.steps) {
-      throw Object.assign(new Error(`Scenario '${scenarioId}' is not a demo_script`), { statusCode: 400 });
-    }
-
-    const executedSteps: DemoScriptStepResult[] = [];
-
-    for (const step of scenario.steps) {
-      try {
-        this.executeStep(step.action, step.payload, sessionId);
-        executedSteps.push({ label: step.label, action: step.action, status: 'success' });
-      } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error);
-        executedSteps.push({ label: step.label, action: step.action, status: 'error', detail });
-      }
-    }
-
-    return {
-      scenarioId,
-      label: scenario.label,
-      executedSteps,
-      state: this.getState(),
-    };
-  }
-
-  private executeStep(action: ScenarioStep['action'] | ScenarioEntry['type'], payload: Record<string, unknown>, sessionId?: string): void {
-    switch (action) {
-      case 'profile_switch':
-        this.switchProfile(payload.profileId as string, sessionId);
-        break;
-      case 'event_inject':
-        this.injectEvent(this.registry.overrideStore.getCurrentProfileId(), {
-          eventType: payload.eventType as string,
-          data: (payload.data as Record<string, unknown>) ?? {},
-          timestamp: payload.timestamp as string | undefined,
-        }, sessionId);
-        break;
-      case 'metric_override':
-        this.overrideMetric(this.registry.overrideStore.getCurrentProfileId(), {
-          metric: payload.metric as string,
-          value: payload.value,
-          dateRange: payload.dateRange as { start: string; end: string } | undefined,
-        }, sessionId);
-        break;
-      case 'reset':
-        this.reset({ scope: (payload.scope as 'profile' | 'events' | 'overrides' | 'all') }, sessionId);
-        break;
-      case 'timeline_append':
-        this.appendToTimeline(
-          payload.segmentType as ActivitySegmentType,
-          payload.params as Record<string, number | string | boolean> | undefined,
-          payload.offsetMinutes as number | undefined,
-          sessionId,
-          {
-            durationMinutes: payload.durationMinutes as number | undefined,
-            advanceClock: payload.advanceClock as boolean | undefined,
-          },
-        );
-        break;
-      case 'sync_trigger':
-        this.triggerSync(
-          payload.trigger as 'app_open' | 'manual_refresh',
-          sessionId,
-        );
-        break;
-      case 'advance_clock':
-        this.advanceClock(payload.minutes as number);
-        break;
-      case 'reset_profile_timeline':
-        this.resetProfileTimeline(
-          payload.profileId as string,
-          sessionId,
-        );
-        break;
-      default:
-        throw new Error(`Unknown action: ${action}`);
-    }
   }
 
   private deriveActiveSensing(currentProfileId: string): ActiveSensingState | null {

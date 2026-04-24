@@ -24,7 +24,7 @@ import {
 import type { AppConfig } from '../config/env.js';
 import { createSessionStore, type SessionStoreService } from './session-store.js';
 import { createOverrideStore, type OverrideStoreService } from './override-store.js';
-import { createScenarioRegistry, type ScenarioRegistryService } from './scenario-registry.js';
+
 import { ProfileManager } from '../modules/god-mode/profile-manager.js';
 import type { MetricsStore } from '../plugins/metrics.js';
 
@@ -33,7 +33,6 @@ export interface RuntimeRegistry extends AgentRuntimeDeps {
   metrics: MetricsStore;
   sessionStore: SessionStoreService;
   overrideStore: OverrideStoreService;
-  scenarioRegistry: ScenarioRegistryService;
   profiles: Map<string, ProfileData>;
   profileManager: ProfileManager;
   /** 不含 override 的原始 profile 数据 */
@@ -59,10 +58,7 @@ export function createRuntimeRegistry(
     dataDir: config.dataDir,
   });
 
-  // 4. 创建 scenario registry
-  const scenarioRegistry = createScenarioRegistry(config.dataDir);
-
-  // 5. 创建 prompt loader 和 fallback engine
+  // 4. 创建 prompt loader 和 fallback engine
   const promptLoader = createPromptLoader(undefined, join(config.dataDir, 'prompts'));
   const fallbackEngine = createFallbackEngine({}, join(config.dataDir, 'fallbacks'));
 
@@ -169,7 +165,6 @@ export function createRuntimeRegistry(
     metrics,
     sessionStore,
     overrideStore,
-    scenarioRegistry,
     profiles,
     profileManager,
     getRawProfile,

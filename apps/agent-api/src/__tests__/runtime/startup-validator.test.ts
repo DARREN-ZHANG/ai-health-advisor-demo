@@ -10,7 +10,6 @@ function createTestDir(structure: {
   profiles?: Record<string, object>;
   fallbacks?: Record<string, object>;
   prompts?: Record<string, string>;
-  scenarios?: object;
 }) {
   const dir = join(tmpdir(), `startup-validator-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
@@ -45,13 +44,6 @@ function createTestDir(structure: {
     for (const [name, content] of Object.entries(structure.prompts)) {
       writeFileSync(join(promptsDir, name), content);
     }
-  }
-
-  // scenarios
-  if (structure.scenarios) {
-    const scenariosDir = join(dir, 'scenarios');
-    mkdirSync(scenariosDir, { recursive: true });
-    writeFileSync(join(scenariosDir, 'manifest.json'), JSON.stringify(structure.scenarios));
   }
 
   return dir;
@@ -114,10 +106,7 @@ describe('validateStartupAssets', () => {
         'view-summary.md': 'view summary prompt',
         'advisor-chat.md': 'chat prompt',
       },
-      scenarios: {
-        version: '1',
-        scenarios: [{ scenarioId: 's1', label: 'Test', type: 'reset' }],
-      },
+
     }));
 
     const result = validateStartupAssets(dir);
@@ -178,10 +167,6 @@ describe('validateStartupAssets', () => {
         'view-summary': { hrv: validFallbackEntry },
         'advisor-chat': { 'test-profile': validFallbackEntry },
       },
-      scenarios: {
-        version: '1',
-        scenarios: [{ scenarioId: 's1', label: 'Test', type: 'reset' }],
-      },
       // 不提供 prompts
     }));
 
@@ -191,50 +176,5 @@ describe('validateStartupAssets', () => {
     expect(result.warnings.some((w) => w.includes('prompts'))).toBe(true);
   });
 
-  it('scenario manifest 缺失时产生致命错误', () => {
-    const dir = trackDir(createTestDir({
-      manifest: validManifest,
-      profiles: { 'test-profile': validProfile },
-      fallbacks: {
-        homepage: { 'test-profile': validFallbackEntry },
-        'view-summary': { hrv: validFallbackEntry },
-        'advisor-chat': { 'test-profile': validFallbackEntry },
-      },
-      prompts: {
-        'system.md': 'prompt',
-        'homepage.md': 'prompt',
-        'view-summary.md': 'prompt',
-        'advisor-chat.md': 'prompt',
-      },
-      // 不提供 scenarios
-    }));
-
-    const result = validateStartupAssets(dir);
-    expect(result.fatal.some((e) => e.includes('scenarios'))).toBe(true);
-  });
-
-  it('scenario 类型无效时产生致命错误', () => {
-    const dir = trackDir(createTestDir({
-      manifest: validManifest,
-      profiles: { 'test-profile': validProfile },
-      fallbacks: {
-        homepage: { 'test-profile': validFallbackEntry },
-        'view-summary': { hrv: validFallbackEntry },
-        'advisor-chat': { 'test-profile': validFallbackEntry },
-      },
-      prompts: {
-        'system.md': 'prompt',
-        'homepage.md': 'prompt',
-        'view-summary.md': 'prompt',
-        'advisor-chat.md': 'prompt',
-      },
-      scenarios: {
-        version: '1',
-        scenarios: [{ scenarioId: 's1', label: 'Bad', type: 'invalid_type' }],
-      },
-    }));
-
-    const result = validateStartupAssets(dir);
-    expect(result.fatal.some((e) => e.includes('invalid_type'))).toBe(true);
   });
 });

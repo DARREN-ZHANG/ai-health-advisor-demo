@@ -75,11 +75,6 @@ describe('RuntimeRegistry', () => {
     expect(typeof registry.fallbackEngine.getFallback).toBe('function');
   });
 
-  it('scenarioRegistry 可用', () => {
-    expect(registry.scenarioRegistry).toBeDefined();
-    expect(registry.scenarioRegistry.list().length).toBeGreaterThan(0);
-  });
-
   it('overrideStore 可用', () => {
     expect(registry.overrideStore.getCurrentProfileId()).toBeDefined();
   });
