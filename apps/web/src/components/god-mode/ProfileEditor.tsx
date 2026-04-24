@@ -52,6 +52,30 @@ export function ProfileEditor() {
     }
   };
 
+  const handleWeeklyBaselineBlur = async (field: string, value: number) => {
+    if (isBusy) return;
+    try {
+      await updateProfile({
+        profileId: currentProfile.profileId,
+        changes: { weeklyBaseline: { [field]: value } },
+      });
+    } catch (error) {
+      console.error('近一周基线更新失败:', error);
+    }
+  };
+
+  const handleDailyBaselineBlur = async (field: string, value: number) => {
+    if (isBusy) return;
+    try {
+      await updateProfile({
+        profileId: currentProfile.profileId,
+        changes: { dailyBaseline: { [field]: value } },
+      });
+    } catch (error) {
+      console.error('近24h基线更新失败:', error);
+    }
+  };
+
   const handleClone = async () => {
     if (!newProfileId.trim()) return;
     try {
@@ -153,7 +177,7 @@ export function ProfileEditor() {
         </div>
       </div>
 
-      {/* 基线指标 */}
+      {/* 基线指标 — 全局 */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <div className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">基线指标</div>
@@ -216,6 +240,184 @@ export function ProfileEditor() {
                 onBlur={(e) => handleBaselineBlur('avgSteps', Number(e.target.value))}
                 disabled={isBusy}
                 className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:border-amber-500 focus:outline-none disabled:opacity-50"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 基线指标 — 近一周 */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">近一周基线指标</div>
+          <span className="text-[9px] text-blue-500/70">修改将重生成最近 7 天数据</span>
+        </div>
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] text-slate-500">静息心率 (bpm)</label>
+              <input
+                key={currentProfile.profileId + (currentProfile.weeklyBaseline?.restingHr ?? '')}
+                type="number"
+                defaultValue={currentProfile.weeklyBaseline?.restingHr ?? ''}
+                placeholder={String(currentProfile.baseline.restingHr)}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== '') handleWeeklyBaselineBlur('restingHr', Number(val));
+                }}
+                disabled={isBusy}
+                className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:border-blue-500 focus:outline-none disabled:opacity-50 placeholder:text-slate-600"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500">HRV (ms)</label>
+              <input
+                key={currentProfile.profileId + (currentProfile.weeklyBaseline?.hrv ?? '')}
+                type="number"
+                defaultValue={currentProfile.weeklyBaseline?.hrv ?? ''}
+                placeholder={String(currentProfile.baseline.hrv)}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== '') handleWeeklyBaselineBlur('hrv', Number(val));
+                }}
+                disabled={isBusy}
+                className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:border-blue-500 focus:outline-none disabled:opacity-50 placeholder:text-slate-600"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="text-[10px] text-slate-500">血氧 (%)</label>
+              <input
+                key={currentProfile.profileId + (currentProfile.weeklyBaseline?.spo2 ?? '')}
+                type="number"
+                defaultValue={currentProfile.weeklyBaseline?.spo2 ?? ''}
+                placeholder={String(currentProfile.baseline.spo2)}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== '') handleWeeklyBaselineBlur('spo2', Number(val));
+                }}
+                disabled={isBusy}
+                className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:border-blue-500 focus:outline-none disabled:opacity-50 placeholder:text-slate-600"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500">睡眠 (分钟)</label>
+              <input
+                key={currentProfile.profileId + (currentProfile.weeklyBaseline?.avgSleepMinutes ?? '')}
+                type="number"
+                defaultValue={currentProfile.weeklyBaseline?.avgSleepMinutes ?? ''}
+                placeholder={String(currentProfile.baseline.avgSleepMinutes)}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== '') handleWeeklyBaselineBlur('avgSleepMinutes', Number(val));
+                }}
+                disabled={isBusy}
+                className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:border-blue-500 focus:outline-none disabled:opacity-50 placeholder:text-slate-600"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500">步数</label>
+              <input
+                key={currentProfile.profileId + (currentProfile.weeklyBaseline?.avgSteps ?? '')}
+                type="number"
+                defaultValue={currentProfile.weeklyBaseline?.avgSteps ?? ''}
+                placeholder={String(currentProfile.baseline.avgSteps)}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== '') handleWeeklyBaselineBlur('avgSteps', Number(val));
+                }}
+                disabled={isBusy}
+                className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:border-blue-500 focus:outline-none disabled:opacity-50 placeholder:text-slate-600"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 基线指标 — 近24h */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">近24h基线指标</div>
+          <span className="text-[9px] text-emerald-500/70">修改将重生成最近 24h 数据</span>
+        </div>
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] text-slate-500">静息心率 (bpm)</label>
+              <input
+                key={currentProfile.profileId + (currentProfile.dailyBaseline?.restingHr ?? '')}
+                type="number"
+                defaultValue={currentProfile.dailyBaseline?.restingHr ?? ''}
+                placeholder={String(currentProfile.baseline.restingHr)}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== '') handleDailyBaselineBlur('restingHr', Number(val));
+                }}
+                disabled={isBusy}
+                className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:border-emerald-500 focus:outline-none disabled:opacity-50 placeholder:text-slate-600"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500">HRV (ms)</label>
+              <input
+                key={currentProfile.profileId + (currentProfile.dailyBaseline?.hrv ?? '')}
+                type="number"
+                defaultValue={currentProfile.dailyBaseline?.hrv ?? ''}
+                placeholder={String(currentProfile.baseline.hrv)}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== '') handleDailyBaselineBlur('hrv', Number(val));
+                }}
+                disabled={isBusy}
+                className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:border-emerald-500 focus:outline-none disabled:opacity-50 placeholder:text-slate-600"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="text-[10px] text-slate-500">血氧 (%)</label>
+              <input
+                key={currentProfile.profileId + (currentProfile.dailyBaseline?.spo2 ?? '')}
+                type="number"
+                defaultValue={currentProfile.dailyBaseline?.spo2 ?? ''}
+                placeholder={String(currentProfile.baseline.spo2)}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== '') handleDailyBaselineBlur('spo2', Number(val));
+                }}
+                disabled={isBusy}
+                className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:border-emerald-500 focus:outline-none disabled:opacity-50 placeholder:text-slate-600"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500">睡眠 (分钟)</label>
+              <input
+                key={currentProfile.profileId + (currentProfile.dailyBaseline?.avgSleepMinutes ?? '')}
+                type="number"
+                defaultValue={currentProfile.dailyBaseline?.avgSleepMinutes ?? ''}
+                placeholder={String(currentProfile.baseline.avgSleepMinutes)}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== '') handleDailyBaselineBlur('avgSleepMinutes', Number(val));
+                }}
+                disabled={isBusy}
+                className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:border-emerald-500 focus:outline-none disabled:opacity-50 placeholder:text-slate-600"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500">步数</label>
+              <input
+                key={currentProfile.profileId + (currentProfile.dailyBaseline?.avgSteps ?? '')}
+                type="number"
+                defaultValue={currentProfile.dailyBaseline?.avgSteps ?? ''}
+                placeholder={String(currentProfile.baseline.avgSteps)}
+                onBlur={(e) => {
+                  const val = e.target.value;
+                  if (val !== '') handleDailyBaselineBlur('avgSteps', Number(val));
+                }}
+                disabled={isBusy}
+                className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:border-emerald-500 focus:outline-none disabled:opacity-50 placeholder:text-slate-600"
               />
             </div>
           </div>
