@@ -6,6 +6,7 @@ import { getScenarioIcon } from '@/lib/god-mode';
 import { useGodModeStore } from '@/stores/god-mode.store';
 import { useProfileStore } from '@/stores/profile.store';
 import { useGodModeActions, useGodModeState } from '@/hooks/use-god-mode-actions';
+import { ProfileEditor } from './ProfileEditor';
 
 /** 时间轴可追加的活动片段 */
 const TIMELINE_SEGMENTS: { type: TimelineAppendPayload['segmentType']; label: string; icon: string; params?: Record<string, number | string | boolean> }[] = [
@@ -197,22 +198,27 @@ function GodModePanelContent() {
           {/* 身份切换 */}
           <Section title="Profile Switch" className="space-y-4">
             <div className="grid grid-cols-1 gap-2.5">
-              {['profile-a', 'profile-b', 'profile-c'].map((id) => (
+              {(godModeState?.availableProfiles ?? []).map((p) => (
                 <button
-                  key={id}
+                  key={p.profileId}
                   disabled={isSwitchingProfile || isRunningScenario}
-                  onClick={() => handleProfileSwitch(id)}
+                  onClick={() => handleProfileSwitch(p.profileId)}
                   className={`px-5 py-3 rounded-2xl text-sm font-medium text-left transition-all border-2 ${
-                    currentProfileId === id
+                    currentProfileId === p.profileId
                       ? 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-500/20'
                       : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-800/80'
                   } ${isSwitchingProfile || isRunningScenario ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {id === 'profile-a' ? '👨‍💻 用户 A (平衡型)' : id === 'profile-b' ? '🏃 用户 B (运动型)' : '🧘 用户 C (静息型)'}
-                  {isSwitchingProfile && currentProfileId !== id && ' ...'}
+                  {p.name}
+                  {isSwitchingProfile && currentProfileId !== p.profileId && ' ...'}
                 </button>
               ))}
             </div>
+          </Section>
+
+          {/* Profile 编辑器 */}
+          <Section title="Profile Management" className="space-y-4">
+            <ProfileEditor />
           </Section>
 
           {/* 时间轴控制 */}
