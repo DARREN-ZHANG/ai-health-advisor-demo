@@ -8,6 +8,8 @@ import { mentionScorer } from '../../evals/scorers/mention-scorer';
 import { evidenceScorer } from '../../evals/scorers/evidence-scorer';
 import { safetyScorer } from '../../evals/scorers/safety-scorer';
 import { missingDataScorer } from '../../evals/scorers/missing-data-scorer';
+import { memoryScorer } from '../../evals/scorers/memory-scorer';
+import { taskScorer } from '../../evals/scorers/task-scorer';
 import { DEFAULT_SCORERS } from '../../evals/scorers';
 import type { EvalScorerInput } from '../../evals/types';
 import type { AgentRequest } from '../../types/agent-request';
@@ -519,8 +521,8 @@ describe('tokenScorer', () => {
 // ── DEFAULT_SCORERS 测试 ──────────────────────────────────
 
 describe('DEFAULT_SCORERS', () => {
-  it('应包含 8 个 scorer', () => {
-    expect(DEFAULT_SCORERS).toHaveLength(8);
+  it('应包含 10 个 scorer', () => {
+    expect(DEFAULT_SCORERS).toHaveLength(10);
   });
 
   it('每个 scorer 应有 id 和 score 方法', () => {
@@ -1178,6 +1180,584 @@ describe('missingDataScorer', () => {
     const evalCase = createValidCase({ expectations: {} });
     const input = createScorerInput({ evalCase: evalCase as any });
     const results = missingDataScorer.score(input);
+    expect(results).toEqual([]);
+  });
+});
+
+// ── Memory Scorer 测试 ──────────────────────────────────
+
+describe('memoryScorer', () => {
+  it('requiredMemoryPatterns 命中应通过', () => {
+    const envelope = createValidEnvelope({
+      summary: '您上次提到睡眠不好，今天的心率有所改善。',
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        memory: {
+          requiredMemoryPatterns: ['上次提到', '睡眠不好'],
+        },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = memoryScorer.score(input);
+
+    const check = results.find((r) => r.checkId.includes('required_memory_patterns'));
+    expect(check).toBeDefined();
+    expect(check!.passed).toBe(true);
+  });
+
+  it('requiredMemoryPatterns 未命中应失败', () => {
+    const envelope = createValidEnvelope({
+      summary: '您的整体状态良好。',
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        memory: {
+          requiredMemoryPatterns: ['上次提到', '之前讨论过'],
+        },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = memoryScorer.score(input);
+
+    const check = results.find((r) => r.checkId.includes('required_memory_patterns'));
+    expect(check).toBeDefined();
+    expect(check!.passed).toBe(false);
+  });
+
+  it('forbiddenLeakPatterns 未命中应通过', () => {
+    const envelope = createValidEnvelope({
+      summary: '您的整体状态良好。',
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        memory: {
+          forbiddenLeakPatterns: ['张三', '北京市'],
+        },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = memoryScorer.score(input);
+
+    const check = results.find((r) => r.checkId.includes('forbidden_leak_patterns'));
+    expect(check).toBeDefined();
+    expect(check!.passed).toBe(true);
+  });
+
+  it('forbiddenLeakPatterns 命中应失败（profile 泄漏）', () => {
+    const envelope = createValidEnvelope({
+      summary: '张三您好，您在北京市的健康数据一切正常。',
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        memory: {
+          forbiddenLeakPatterns: ['张三', '北京市'],
+        },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = memoryScorer.score(input);
+
+    const check = results.find((r) => r.checkId.includes('forbidden_leak_patterns'));
+    expect(check).toBeDefined();
+    expect(check!.passed).toBe(false);
+  });
+
+  it('mustUsePreviousTurn 命中 memory pattern 应通过', () => {
+    const envelope = createValidEnvelope({
+      summary: '您上次提到睡眠不好，今天有所改善。',
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        memory: {
+          mustUsePreviousTurn: true,
+          requiredMemoryPatterns: ['上次提到', '之前讨论过'],
+        },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = memoryScorer.score(input);
+
+    const check = results.find((r) => r.checkId.includes('must_use_previous_turn'));
+    expect(check).toBeDefined();
+    expect(check!.passed).toBe(true);
+  });
+
+  it('mustUsePreviousTurn 未命中 memory pattern 应失败', () => {
+    const envelope = createValidEnvelope({
+      summary: '您的整体状态良好。',
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        memory: {
+          mustUsePreviousTurn: true,
+          requiredMemoryPatterns: ['上次提到', '之前讨论过'],
+        },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = memoryScorer.score(input);
+
+    const check = results.find((r) => r.checkId.includes('must_use_previous_turn'));
+    expect(check).toBeDefined();
+    expect(check!.passed).toBe(false);
+  });
+
+  it('mustUsePreviousTurn 为 true 但缺少 requiredMemoryPatterns 应失败', () => {
+    const envelope = createValidEnvelope({
+      summary: '您的整体状态良好。',
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        memory: {
+          mustUsePreviousTurn: true,
+        },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = memoryScorer.score(input);
+
+    const check = results.find((r) => r.checkId.includes('must_use_previous_turn'));
+    expect(check).toBeDefined();
+    expect(check!.passed).toBe(false);
+    expect(check!.message).toContain('缺少 requiredMemoryPatterns');
+  });
+
+  it('无 memory 期望时返回空结果', () => {
+    const evalCase = createValidCase({ expectations: {} });
+    const input = createScorerInput({ evalCase: evalCase as any });
+    const results = memoryScorer.score(input);
+    expect(results).toEqual([]);
+  });
+});
+
+// ── Task Scorer 测试 ────────────────────────────────────
+
+describe('taskScorer', () => {
+  // ── Homepage 场景 ────────────────────────────────────
+
+  describe('homepage', () => {
+    it('requireRecentEventFirst 命中应通过', () => {
+      const envelope = createValidEnvelope({
+        summary: '昨天您参加了一场跑步活动，今天的心率数据如下。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            homepage: {
+              requireRecentEventFirst: true,
+              recentEventPatterns: ['跑步活动', '运动事件'],
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('recent_event_first'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(true);
+    });
+
+    it('requireRecentEventFirst 事件在 40 字符之后应失败', () => {
+      // 前 40 字符不包含事件关键词（前 40 字符为纯健康描述，跑步在第 42 字符后）
+      const envelope = createValidEnvelope({
+        summary: '您的整体健康状态非常好，各项指标都在正常范围内。建议继续坚持。昨天您参加了一场跑步活动，表现不错。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            homepage: {
+              requireRecentEventFirst: true,
+              recentEventPatterns: ['跑步活动', '运动事件'],
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('recent_event_first'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(false);
+    });
+
+    it('homepage 没有最近事件应失败', () => {
+      const envelope = createValidEnvelope({
+        summary: '您的整体健康状态良好，各项指标正常。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            homepage: {
+              requireRecentEventFirst: true,
+              recentEventPatterns: ['跑步活动', '运动事件'],
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('recent_event_first'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(false);
+    });
+
+    it('requireRecentEventFirst 缺少 recentEventPatterns 应失败', () => {
+      const envelope = createValidEnvelope({
+        summary: '昨天有运动事件。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            homepage: {
+              requireRecentEventFirst: true,
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('recent_event_first'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(false);
+      expect(check!.message).toContain('缺少 recentEventPatterns');
+    });
+
+    it('require24hCrossAnalysis 同时命中 event 和 metric 应通过', () => {
+      const envelope = createValidEnvelope({
+        summary: '昨晚跑步后心率升高，步数达到了 8000 步。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            homepage: {
+              require24hCrossAnalysis: true,
+              crossAnalysisPatterns: {
+                event: ['跑步', '运动'],
+                metric: ['步数', '心率'],
+              },
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('cross_analysis_24h'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(true);
+    });
+
+    it('require24hCrossAnalysis 只命中 event 未命中 metric 应失败', () => {
+      const envelope = createValidEnvelope({
+        summary: '昨晚跑步后状态不错。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            homepage: {
+              require24hCrossAnalysis: true,
+              crossAnalysisPatterns: {
+                event: ['跑步', '运动'],
+                metric: ['步数', '心率'],
+              },
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('cross_analysis_24h'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(false);
+    });
+
+    it('require24hCrossAnalysis 配置不完整应失败', () => {
+      const envelope = createValidEnvelope({
+        summary: '昨晚跑步后心率升高。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            homepage: {
+              require24hCrossAnalysis: true,
+              crossAnalysisPatterns: {
+                event: ['跑步'],
+              },
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('cross_analysis_24h'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(false);
+      expect(check!.message).toContain('配置不完整');
+    });
+  });
+
+  // ── View Summary 场景 ────────────────────────────────
+
+  describe('viewSummary', () => {
+    it('requiredTab 命中应通过', () => {
+      const envelope = createValidEnvelope({
+        summary: '您的睡眠分析显示深度睡眠时间充足。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            viewSummary: {
+              requiredTab: 'sleep',
+              requiredTabPatterns: ['睡眠分析', '深度睡眠'],
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('required_tab'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(true);
+    });
+
+    it('requiredTab 未命中应失败', () => {
+      const envelope = createValidEnvelope({
+        summary: '您的整体状态良好。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            viewSummary: {
+              requiredTab: 'sleep',
+              requiredTabPatterns: ['睡眠分析', '深度睡眠'],
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('required_tab'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(false);
+    });
+
+    it('view summary 提到无关 tab 应失败', () => {
+      const envelope = createValidEnvelope({
+        summary: '您的睡眠分析显示深度睡眠充足，运动步数也达到了目标。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            viewSummary: {
+              requiredTab: 'sleep',
+              requiredTabPatterns: ['睡眠分析', '深度睡眠'],
+              forbidOtherTabs: ['运动步数', '跑步'],
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('forbid_other_tabs'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(false);
+    });
+
+    it('view summary 未提无关 tab 应通过', () => {
+      const envelope = createValidEnvelope({
+        summary: '您的睡眠分析显示深度睡眠充足。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            viewSummary: {
+              requiredTab: 'sleep',
+              requiredTabPatterns: ['睡眠分析', '深度睡眠'],
+              forbidOtherTabs: ['运动步数', '心率'],
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('forbid_other_tabs'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(true);
+    });
+
+    it('requiredTab 缺少 requiredTabPatterns 应失败', () => {
+      const envelope = createValidEnvelope({
+        summary: '您的睡眠分析显示深度睡眠充足。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            viewSummary: {
+              requiredTab: 'sleep',
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('required_tab'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(false);
+      expect(check!.message).toContain('缺少 requiredTabPatterns');
+    });
+  });
+
+  // ── Advisor Chat 场景 ────────────────────────────────
+
+  describe('advisorChat', () => {
+    it('mustAnswerUserQuestion 命中应通过', () => {
+      const envelope = createValidEnvelope({
+        summary: '您的心率数据在过去一周内保持稳定，平均静息心率为 68 bpm。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            advisorChat: {
+              mustAnswerUserQuestion: true,
+              answerPatterns: ['心率.*稳定', '平均静息心率'],
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('answer_question'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(true);
+    });
+
+    it('mustAnswerUserQuestion 未命中应失败', () => {
+      const envelope = createValidEnvelope({
+        summary: '建议您保持良好的作息习惯。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            advisorChat: {
+              mustAnswerUserQuestion: true,
+              answerPatterns: ['心率.*稳定', '平均静息心率'],
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('answer_question'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(false);
+    });
+
+    it('requiredTimeScope 命中应通过', () => {
+      const envelope = createValidEnvelope({
+        summary: '过去一周的运动数据显示您保持了良好的锻炼频率。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            advisorChat: {
+              requiredTimeScope: 'week',
+              requiredTimeScopePatterns: ['过去一周', '近七天', '最近一周'],
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('time_scope'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(true);
+    });
+
+    it('requiredTimeScope 未命中应失败', () => {
+      const envelope = createValidEnvelope({
+        summary: '您的运动数据表现不错。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            advisorChat: {
+              requiredTimeScope: 'week',
+              requiredTimeScopePatterns: ['过去一周', '近七天'],
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('time_scope'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(false);
+    });
+
+    it('requiredTimeScope 缺少 patterns 应失败', () => {
+      const envelope = createValidEnvelope({
+        summary: '过去一周运动表现不错。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            advisorChat: {
+              requiredTimeScope: 'week',
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('time_scope'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(false);
+      expect(check!.message).toContain('缺少 requiredTimeScopePatterns');
+    });
+
+    it('mustAnswerUserQuestion 缺少 answerPatterns 应失败', () => {
+      const envelope = createValidEnvelope({
+        summary: '建议保持良好习惯。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            advisorChat: {
+              mustAnswerUserQuestion: true,
+            },
+          },
+        },
+      });
+      const input = createScorerInput({ evalCase: evalCase as any, envelope });
+      const results = taskScorer.score(input);
+
+      const check = results.find((r) => r.checkId.includes('answer_question'));
+      expect(check).toBeDefined();
+      expect(check!.passed).toBe(false);
+      expect(check!.message).toContain('缺少 answerPatterns');
+    });
+  });
+
+  it('无 taskSpecific 期望时返回空结果', () => {
+    const evalCase = createValidCase({ expectations: {} });
+    const input = createScorerInput({ evalCase: evalCase as any });
+    const results = taskScorer.score(input);
     expect(results).toEqual([]);
   });
 });
