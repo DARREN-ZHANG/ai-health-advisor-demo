@@ -150,22 +150,22 @@ describe('imu-generator: motion 聚合', () => {
   it('still_upright 模式 → motion ≈ 0', () => {
     const samples = generateImuSamples('still_upright', 0, 10, 42);
     const motion = aggregateMotion(samples);
-    expect(motion).toBeLessThan(0.5);
+    expect(motion).toBeLessThan(1);
   });
 
   it('still_supine 模式 → motion ≈ 0', () => {
     const samples = generateImuSamples('still_supine', 0, 10, 42);
     const motion = aggregateMotion(samples);
-    expect(motion).toBeLessThan(0.5);
+    expect(motion).toBeLessThan(1);
   });
 
-  it('periodic_run 模式 → motion > 0（有明显运动）', () => {
+  it('periodic_run 模式 → motion > 1（有明显运动）', () => {
     const allSamples = [];
     for (let m = 0; m < 5; m++) {
       allSamples.push(...generateImuSamples('periodic_run', m, 10, 42));
     }
     const motion = aggregateMotion(allSamples);
-    expect(motion).toBeGreaterThan(0);
+    expect(motion).toBeGreaterThan(1);
   });
 
   it('聚合值在 0-11 范围内', () => {

@@ -98,8 +98,8 @@ const PATTERN_CONFIGS: Record<MotionPattern, PatternConfig> = {
   intermittent_gesture: {
     baseline: { accX: 0, accY: 0, accZ: 1, gyroX: 0, gyroY: 0, gyroZ: 0 },
     oscillation: null,
-    noise: { acc: 0.02, gyro: 0.02 },
-    burst: { activeRatio: 0.15, avgBurstDuration: 2 },
+    noise: { acc: 0.08, gyro: 0.1 },
+    burst: { activeRatio: 0.3, avgBurstDuration: 3 },
   },
   intermittent_burst: {
     baseline: { accX: 0, accY: 0, accZ: 1, gyroX: 0, gyroY: 0, gyroZ: 0 },
@@ -206,7 +206,7 @@ export function generateImuSamples(
 /**
  * 从 IMU 采样数据聚合为 motion 标量值
  * dynamicAcc = sqrt(accX² + accY² + accZ²) - 1
- * motion = clamp(average(dynamicAcc) * 10, 0, 11)
+ * motion = clamp(average(dynamicAcc) * 300, 0, 11)
  */
 export function aggregateMotion(samples: ImuSample[]): number {
   if (samples.length === 0) return 0;
@@ -217,7 +217,7 @@ export function aggregateMotion(samples: ImuSample[]): number {
   });
 
   const avgDynamicAcc = dynamicAccs.reduce((sum, v) => sum + v, 0) / dynamicAccs.length;
-  return Math.round(clamp(avgDynamicAcc * 10, 0, 11) * 10) / 10;
+  return Math.round(clamp(avgDynamicAcc * 300, 0, 11) * 10) / 10;
 }
 
 // ============================================================
