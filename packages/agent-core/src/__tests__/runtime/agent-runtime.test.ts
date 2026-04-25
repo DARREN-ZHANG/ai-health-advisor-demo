@@ -291,3 +291,153 @@ function makeDepsFromRecords(
     fallbackEngine: mockFallbackEngine,
   };
 }
+
+describe('executeAgent observer', () => {
+  it('成功路径触发 onContextBuilt / onRulesEvaluated / onPromptBuilt / onModelOutput / onParsed', async () => {
+    const onContextBuilt = vi.fn();
+    const onRulesEvaluated = vi.fn();
+    const onPromptBuilt = vi.fn();
+    const onModelOutput = vi.fn();
+    const onParsed = vi.fn();
+    const onFallback = vi.fn();
+
+    await executeAgent(
+      makeRequest(),
+      makeDeps(),
+      undefined,
+      { onContextBuilt, onRulesEvaluated, onPromptBuilt, onModelOutput, onParsed, onFallback },
+    );
+
+    expect(onContextBuilt).toHaveBeenCalledTimes(1);
+    expect(onRulesEvaluated).toHaveBeenCalledTimes(1);
+    expect(onPromptBuilt).toHaveBeenCalledTimes(1);
+    expect(onModelOutput).toHaveBeenCalledTimes(1);
+    expect(onParsed).toHaveBeenCalledTimes(1);
+    expect(onFallback).not.toHaveBeenCalled();
+  });
+
+  it('onParsed 接收到的 envelope 包含正确的 summary', async () => {
+    let parsedEnvelope: any = null;
+    await executeAgent(
+      makeRequest(),
+      makeDeps(),
+      undefined,
+      {
+        onParsed: (envelope) => { parsedEnvelope = envelope; },
+      },
+    );
+
+    expect(parsedEnvelope).toBeTruthy();
+    expect(parsedEnvelope.summary).toBe('整体状态良好。');
+    expect(parsedEnvelope.meta.finishReason).toBe('complete');
+  });
+
+  it('非法 JSON 触发 onFallback("invalid_output")', async () => {
+    const onFallback = vi.fn();
+    const onContextBuilt = vi.fn();
+    const onRulesEvaluated = vi.fn();
+    const onPromptBuilt = vi.fn();
+    const onModelOutput = vi.fn();
+    const onParsed = vi.fn();
+
+    const deps = makeDeps({
+      invoke: async () => ({ content: '这不是 JSON' }),
+    });
+
+    await executeAgent(
+      makeRequest(),
+      deps,
+      undefined,
+      { onContextBuilt, onRulesEvaluated, onPromptBuilt, onModelOutput, onParsed, onFallback },
+    );
+
+    expect(onFallback).toHaveBeenCalledWith('invalid_output');
+    expect(onParsed).not.toHaveBeenCalled();
+    expect(onContextBuilt).toHaveBeenCalledTimes(1);
+    expect(onRulesEvaluated).toHaveBeenCalledTimes(1);
+    expect(onPromptBuilt).toHaveBeenCalledTimes(1);
+    expect(onModelOutput).toHaveBeenCalledTimes(1);
+  });
+
+  it('超时触发 onFallback("timeout")', async () => {
+    const onFallback = vi.fn();
+    const onParsed = vi.fn();
+
+    const deps = makeDeps({
+      invoke: async () => new Promise(() => {}), // 永不返回
+    });
+
+    await executeAgent(
+      makeRequest(),
+      deps,
+      50,
+      { onFallback, onParsed },
+    );
+
+    expect(onFallback).toHaveBeenCalledWith('timeout');
+    expect(onParsed).not.toHaveBeenCalled();
+  });
+
+  it('provider 抛错触发 onFallback("provider_error")', async () => {
+    const onFallback = vi.fn();
+    const onParsed = vi.fn();
+
+    const deps = makeDeps({
+      invoke: async () => { throw new Error('provider error'); },
+    });
+
+    await executeAgent(
+      makeRequest(),
+      deps,
+      undefined,
+      { onFallback, onParsed },
+    );
+
+    expect(onFallback).toHaveBeenCalledWith('provider_error');
+    expect(onParsed).not.toHaveBeenCalled();
+  });
+
+  it('低数据量触发 onFallback("low_data")', async () => {
+    const onFallback = vi.fn();
+    const onRulesEvaluated = vi.fn();
+    const onParsed = vi.fn();
+    const invokeMock = vi.fn(async () => ({
+      content: JSON.stringify({ summary: '不应被调用', chartTokens: [], microTips: [] }),
+    }));
+    // 只有 1 条记录，低于 LOW_DATA_THRESHOLD (3)
+    const fewRecords = [makeRecord('2026-04-18')];
+    const deps = makeDepsFromRecords(fewRecords, { invoke: invokeMock });
+
+    await executeAgent(
+      makeRequest(),
+      deps,
+      undefined,
+      { onFallback, onRulesEvaluated, onParsed },
+    );
+
+    expect(onFallback).toHaveBeenCalledWith('low_data');
+    expect(onRulesEvaluated).not.toHaveBeenCalled();
+    expect(onParsed).not.toHaveBeenCalled();
+  });
+
+  it('observer 抛错不影响生产执行', async () => {
+    const errorObserver = {
+      onContextBuilt: () => { throw new Error('observer error'); },
+      onRulesEvaluated: () => { throw new Error('observer error'); },
+      onPromptBuilt: () => { throw new Error('observer error'); },
+      onModelOutput: () => { throw new Error('observer error'); },
+      onParsed: () => { throw new Error('observer error'); },
+    };
+
+    // 即使所有 observer 都抛错，executeAgent 仍正常返回
+    const result = await executeAgent(
+      makeRequest(),
+      makeDeps(),
+      undefined,
+      errorObserver,
+    );
+
+    expect(result.summary).toBe('整体状态良好。');
+    expect(result.meta.finishReason).toBe('complete');
+  });
+});
