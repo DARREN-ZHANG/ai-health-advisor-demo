@@ -161,6 +161,45 @@ export interface StressData {
 
 export type SleepStageType = 'awake' | 'light' | 'deep' | 'rem';
 
+/** 纯物理运动模式，与场景推断解耦 */
+export type MotionPattern =
+  // ── 静止 ──
+  | 'still_supine'
+  | 'still_upright'
+  | 'still_with_micro'
+  // ── 周期性 ──
+  | 'periodic_stroll'
+  | 'periodic_walk'
+  | 'periodic_brisk'
+  | 'periodic_run'
+  | 'periodic_arm_repeat'
+  // ── 间歇性 ──
+  | 'intermittent_reach'
+  | 'intermittent_gesture'
+  | 'intermittent_burst'
+  // ── 不规则 ──
+  | 'irregular_fidget'
+  | 'irregular_restless'
+  | 'irregular_sudden';
+
+/** 单次 IMU 采样点（每分钟 5 个，每 12s 一个） */
+export interface ImuSample {
+  /** 相对分钟起始的偏移毫秒数：0, 12000, 24000, 36000, 48000 */
+  offsetMs: number;
+  /** 加速度 X 轴（g），设备坐标系 */
+  accX: number;
+  /** 加速度 Y 轴（g），设备坐标系 */
+  accY: number;
+  /** 加速度 Z 轴（g），设备坐标系，包含重力 ~1g */
+  accZ: number;
+  /** 陀螺仪 X 轴（rad/s） */
+  gyroX: number;
+  /** 陀螺仪 Y 轴（rad/s） */
+  gyroY: number;
+  /** 陀螺仪 Z 轴（rad/s） */
+  gyroZ: number;
+}
+
 export interface SensorSample {
   timestamp: string;
   heartRate?: number;
@@ -171,6 +210,7 @@ export interface SensorSample {
   activeMinutesDelta?: number;
   distanceKmDelta?: number;
   sleepStage?: SleepStageType;
+  imuSamples?: ImuSample[];
 }
 
 export interface DeviceSyncSession {
