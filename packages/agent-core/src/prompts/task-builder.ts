@@ -127,8 +127,7 @@ export function buildTaskPrompt(
     sections.push('## 核心指标概览');
 
     // HRV
-    const hrvValues = records.map((r: any) => Array.isArray(r.hr) ? r.hr.filter((v: number) => v > 30 && v < 220) : [])
-      .flat().filter((v: number) => typeof v === 'number');
+    const hrvValues = records.map((r: any) => r.hrv).filter((v: number | undefined) => typeof v === 'number');
     if (hrvValues.length > 0) {
       const hrvAvg = Math.round(hrvValues.reduce((a: number, b: number) => a + b, 0) / hrvValues.length);
       sections.push(`- HRV：近 ${records.length} 天均值 ${hrvAvg} ms`);

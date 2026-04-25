@@ -11,11 +11,8 @@ export function getRecords(ctx: AgentContext): DailyRecord[] {
 }
 
 export function computeHrv(record: DailyRecord): number {
-  if (!record.hr || record.hr.length < 2) return NaN;
-  const values = record.hr;
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const variance = values.reduce((a, v) => a + (v - mean) ** 2, 0) / values.length;
-  return Math.sqrt(variance);
+  if (record.hrv == null) return NaN;
+  return record.hrv;
 }
 
 export function computeTrend(values: number[]): number {
