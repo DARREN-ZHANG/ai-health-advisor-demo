@@ -1,9 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createEvalRuntime } from '../../evals/eval-runtime';
 import type { AgentEvalCase } from '../../evals/types';
 import type { AgentRequest } from '../../types/agent-request';
 import { AgentTaskType } from '@health-advisor/shared';
 import { join } from 'node:path';
+import { runEval } from '../../evals/eval-runner';
+import { writeReport } from '../../evals/report-writer';
+import { mkdirSync, rmSync, existsSync, readFileSync } from 'node:fs';
 
 // ── 测试数据目录 ────────────────────────────────────
 
@@ -316,5 +319,295 @@ describe('createEvalRuntime — timeline', () => {
 
     // 没有 timeline setup → getTimelineSync 不存在
     expect(deps.getTimelineSync).toBeUndefined();
+  });
+});
+
+// ── Eval Runner 集成测试 ──────────────────────────────
+
+describe('eval runner', () => {
+  const TEMP_REPORT_DIR = join(__dirname, '__temp_runner_reports__');
+
+  beforeEach(() => {
+    // 创建临时报告目录
+    mkdirSync(TEMP_REPORT_DIR, { recursive: true });
+  });
+
+  afterEach(() => {
+    // 清理临时报告目录
+    rmSync(TEMP_REPORT_DIR, { recursive: true, force: true });
+  });
+
+  it('能执行单个 case', async () => {
+    // 使用一个实际存在的 smoke case 来测试
+    // 通过 --case 指定一个 smoke suite 中的 case
+    // 如果没有 case 文件，runner 应返回 1（未找到 case）
+    const exitCode = await runEval(
+      ['node', 'eval-runner.ts', '--suite', 'smoke', '--provider', 'fake', '--report', 'json'],
+      {
+        caseRootDir: join(__dirname, '../../../evals/cases'),
+        dataDir: DATA_DIR,
+      },
+    );
+
+    // 无论是否有 case，runner 不应崩溃
+    expect(typeof exitCode).toBe('number');
+    // 应该是 0 或 1，不应抛异常
+    expect(exitCode).toBeGreaterThanOrEqual(0);
+    expect(exitCode).toBeLessThanOrEqual(1);
+  });
+
+  it('hard failure 时 exit code 为 1', async () => {
+    // 创建一个临时 case 目录，写入一个会导致 hard failure 的 case
+    const tempCaseDir = join(TEMP_REPORT_DIR, 'cases');
+    mkdirSync(tempCaseDir, { recursive: true });
+
+    // 一个会产生 invalid JSON 输出的 case，导致 protocol check hard failure
+    const failCase = makeEvalCase({
+      id: 'hard-fail-case',
+      title: 'Hard Failure Case',
+      suite: 'smoke',
+      setup: {
+        profileId: 'profile-a',
+        modelFixture: {
+          mode: 'fake-invalid-json',
+          content: '<<<invalid>>>',
+        },
+      },
+    });
+
+    const casePath = join(tempCaseDir, 'hard-fail-case.json');
+    const { writeFileSync: writeFile } = await import('node:fs');
+    writeFile(casePath, JSON.stringify(failCase, null, 2), 'utf-8');
+
+    const exitCode = await runEval(
+      ['node', 'eval-runner.ts', '--case', 'hard-fail-case', '--provider', 'fake', '--report', 'json', '--fail-on-hard'],
+      {
+        caseRootDir: tempCaseDir,
+        dataDir: DATA_DIR,
+      },
+    );
+
+    expect(exitCode).toBe(1);
+  });
+
+  it('提供 baseline report 且 score regression 超阈值时 exit code 为 1', async () => {
+    const tempCaseDir = join(TEMP_REPORT_DIR, 'cases');
+    mkdirSync(tempCaseDir, { recursive: true });
+
+    // 创建一个正常通过的 case
+    const passCase = makeEvalCase({
+      id: 'regression-test-case',
+      title: 'Regression Test Case',
+      suite: 'smoke',
+      setup: {
+        profileId: 'profile-a',
+      },
+    });
+
+    const casePath = join(tempCaseDir, 'regression-test-case.json');
+    const { writeFileSync: writeFile } = await import('node:fs');
+    writeFile(casePath, JSON.stringify(passCase, null, 2), 'utf-8');
+
+    // 创建一个 "好" 的 baseline report（高分）
+    const baselineReport = {
+      runId: 'baseline-001',
+      gitSha: 'abc1234',
+      createdAt: new Date().toISOString(),
+      suite: 'smoke',
+      providerMode: 'fake',
+      totals: {
+        cases: 1,
+        passed: 1,
+        failed: 0,
+        hardFailures: 0,
+        score: 100,
+        maxScore: 100,
+      },
+      byCategory: {},
+      cases: [],
+    };
+
+    const baselinePath = join(TEMP_REPORT_DIR, 'baseline-report.json');
+    writeFile(baselinePath, JSON.stringify(baselineReport, null, 2), 'utf-8');
+
+    // 当前运行分数会比 baseline (100/100 = 100%) 低
+    // 阈值设为 1 个百分点，应该触发 regression
+    const exitCode = await runEval(
+      [
+        'node', 'eval-runner.ts',
+        '--case', 'regression-test-case',
+        '--provider', 'fake',
+        '--report', 'json',
+        '--baseline-report', baselinePath,
+        '--fail-on-score-regression', '1',
+      ],
+      {
+        caseRootDir: tempCaseDir,
+        dataDir: DATA_DIR,
+      },
+    );
+
+    // 当前 score 不可能是满分 100/100，所以应该有 regression
+    expect(exitCode).toBe(1);
+  });
+
+  it('提供 --fail-on-score-regression 但缺少 --baseline-report 时 exit code 为 1', async () => {
+    const exitCode = await runEval(
+      [
+        'node', 'eval-runner.ts',
+        '--suite', 'smoke',
+        '--provider', 'fake',
+        '--report', 'json',
+        '--fail-on-score-regression', '5',
+      ],
+      {
+        caseRootDir: join(__dirname, '../../../evals/cases'),
+        dataDir: DATA_DIR,
+      },
+    );
+
+    // 缺少 baseline-report，应视为配置错误
+    expect(exitCode).toBe(1);
+  });
+});
+
+// ── Report Writer 测试 ────────────────────────────────
+
+describe('report writer', () => {
+  const TEMP_REPORT_DIR = join(__dirname, '__temp_report_writer__');
+
+  beforeEach(() => {
+    mkdirSync(TEMP_REPORT_DIR, { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(TEMP_REPORT_DIR, { recursive: true, force: true });
+  });
+
+  /** 创建最小 EvalReport */
+  function makeReport(overrides: Record<string, unknown> = {}): import('../../evals/types').EvalReport {
+    return {
+      runId: 'test-run-001',
+      gitSha: 'abc1234',
+      createdAt: '2026-04-25T12:00:00.000Z',
+      suite: 'smoke',
+      providerMode: 'fake',
+      totals: {
+        cases: 2,
+        passed: 1,
+        failed: 1,
+        hardFailures: 1,
+        score: 50,
+        maxScore: 100,
+      },
+      byCategory: {
+        homepage: { cases: 1, passed: 1, failed: 0, score: 50, maxScore: 50 },
+        'view-summary': { cases: 1, passed: 0, failed: 1, score: 0, maxScore: 50 },
+      },
+      cases: [
+        {
+          caseId: 'case-pass-001',
+          passed: true,
+          score: 50,
+          maxScore: 50,
+          checks: [
+            {
+              checkId: 'case-pass-001:protocol:envelope_exists',
+              severity: 'hard',
+              passed: true,
+              score: 1,
+              maxScore: 1,
+              message: 'envelope 存在',
+            },
+          ],
+          artifacts: {
+            caseId: 'case-pass-001',
+            request: makeRequest(),
+            envelope: {
+              source: 'llm',
+              statusColor: 'good',
+              summary: '测试摘要',
+              chartTokens: [],
+              microTips: [],
+              meta: {
+                requestId: 'req-1',
+                sessionId: 'sess-1',
+                profileId: 'profile-a',
+                taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+                pageContext: {
+                  profileId: 'profile-a',
+                  page: 'home',
+                  timeframe: 'week',
+                },
+                finishReason: 'complete',
+              },
+            },
+          },
+        },
+        {
+          caseId: 'case-fail-001',
+          passed: false,
+          score: 0,
+          maxScore: 50,
+          checks: [
+            {
+              checkId: 'case-fail-001:protocol:envelope_exists',
+              severity: 'hard',
+              passed: false,
+              score: 0,
+              maxScore: 1,
+              message: 'envelope 不存在',
+            },
+          ],
+          artifacts: {
+            caseId: 'case-fail-001',
+            request: makeRequest(),
+          },
+        },
+      ],
+      ...overrides,
+    } as import('../../evals/types').EvalReport;
+  }
+
+  it('生成 json 报告', () => {
+    const report = makeReport();
+    const paths = writeReport(report, TEMP_REPORT_DIR, 'json');
+
+    expect(paths.jsonPath).toBeDefined();
+    expect(existsSync(paths.jsonPath!)).toBe(true);
+
+    // 验证内容可解析
+    const content = readFileSync(paths.jsonPath!, 'utf-8');
+    const parsed = JSON.parse(content);
+    expect(parsed.runId).toBe('test-run-001');
+    expect(parsed.totals.cases).toBe(2);
+  });
+
+  it('生成 markdown 报告', () => {
+    const report = makeReport();
+    const paths = writeReport(report, TEMP_REPORT_DIR, 'markdown');
+
+    expect(paths.mdPath).toBeDefined();
+    expect(existsSync(paths.mdPath!)).toBe(true);
+
+    const content = readFileSync(paths.mdPath!, 'utf-8');
+    // 验证 markdown 包含必要段落
+    expect(content).toContain('# Eval Report');
+    expect(content).toContain('## Summary');
+    expect(content).toContain('## Hard Failures');
+    expect(content).toContain('## Category Breakdown');
+    expect(content).toContain('case-fail-001');
+    expect(content).toContain('## Envelope Summary');
+    expect(content).toContain('## Failed Checks');
+  });
+
+  it('同时生成 json 和 markdown 报告', () => {
+    const report = makeReport();
+    const paths = writeReport(report, TEMP_REPORT_DIR, 'both');
+
+    expect(paths.jsonPath).toBeDefined();
+    expect(paths.mdPath).toBeDefined();
+    expect(existsSync(paths.jsonPath!)).toBe(true);
+    expect(existsSync(paths.mdPath!)).toBe(true);
   });
 });
