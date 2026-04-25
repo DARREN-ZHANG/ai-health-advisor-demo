@@ -15,6 +15,12 @@ const TIMELINE_SEGMENTS: { type: TimelineAppendPayload['segmentType']; label: st
   { type: 'intermittent_exercise', label: '间歇运动', icon: '🏋️', params: { rounds: 5 } },
   { type: 'walk', label: '散步', icon: '🚶', params: undefined },
   { type: 'sleep', label: '睡眠', icon: '😴', params: { durationMinutes: 480 } },
+  { type: 'deep_focus', label: '专注', icon: '🧠', params: { intensity: 'high' } },
+  { type: 'anxiety_episode', label: '焦虑', icon: '😰', params: { trigger: 'work' } },
+  { type: 'breathing_pause', label: '呼吸暂停', icon: '🫁', params: { severity: 'moderate' } },
+  { type: 'alcohol_intake', label: '饮酒', icon: '🍺', params: { amount: 'moderate' } },
+  { type: 'nightmare', label: '噩梦', icon: '👻', params: { intensity: 'high' } },
+  { type: 'relaxation', label: '放松', icon: '📖', params: { activity: 'reading' } },
 ];
 
 export function GodModePanel() {
