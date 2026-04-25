@@ -1,0 +1,15 @@
+{
+  "profileId": "profile-d",
+  "scriptId": "profile-d-day-1",
+  "initialDemoTime": "2026-04-24T08:00",
+  "segments": [
+    {
+      "segmentId": "seg-baseline-sleep-d",
+      "type": "sleep",
+      "start": "2026-04-24T01:00",
+      "end": "2026-04-24T08:00",
+      "params": { "durationMinutes": 420, "quality": "fair" },
+      "source": "baseline_script"
+    }
+  ]
+}
