@@ -36,7 +36,7 @@ const tabLabels: Record<string, string> = {
 
 /** 趋势卡片配置（6 项核心指标） */
 const TREND_TOKEN_CONFIGS = [
-  { id: 'hrv', label: 'HRV', tokenId: ChartTokenId.HRV_7DAYS, metricKey: 'hr', formatValue: (v: number) => Math.round(v) },
+  { id: 'hrv', label: 'HRV', tokenId: ChartTokenId.HRV_7DAYS, metricKey: 'hrv', formatValue: (v: number) => Math.round(v) },
   { id: 'sleep', label: '睡眠', tokenId: ChartTokenId.SLEEP_7DAYS, metricKey: 'sleep.totalMinutes', formatValue: (v: number) => (v / 60).toFixed(1) },
   { id: 'resting-hr', label: '静息心率', tokenId: ChartTokenId.RESTING_HR_7DAYS, metricKey: 'hr', formatValue: (v: number) => Math.round(v) },
   { id: 'activity', label: '活动', tokenId: ChartTokenId.ACTIVITY_7DAYS, metricKey: 'activity.steps', formatValue: (v: number) => Math.round(v).toLocaleString() },

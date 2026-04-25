@@ -10,7 +10,7 @@ interface ChartSeriesConfig {
 }
 
 const TOKEN_CONFIG: Record<ChartTokenId, ChartSeriesConfig> = {
-  HRV_7DAYS: { metrics: ['hr'], defaultDays: 7 },
+  HRV_7DAYS: { metrics: ['hrv'], defaultDays: 7 },
   SLEEP_7DAYS: { metrics: ['sleep.totalMinutes', 'sleep.score'], defaultDays: 7 },
   RESTING_HR_7DAYS: { metrics: ['hr'], defaultDays: 7 },
   ACTIVITY_7DAYS: { metrics: ['activity.steps'], defaultDays: 7 },

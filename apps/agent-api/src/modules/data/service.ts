@@ -5,7 +5,7 @@ import type { RuntimeRegistry } from '../../runtime/registry.js';
 
 // tab → 需要提取的 metrics
 const TAB_METRICS: Partial<Record<DataTab, string[]>> = {
-  hrv: ['hr'],
+  hrv: ['hrv'],
   sleep: ['sleep.totalMinutes', 'sleep.score', 'sleep.stages.deep', 'sleep.stages.rem', 'sleep.stages.light'],
   'resting-hr': ['hr'],
   activity: ['activity.steps', 'activity.calories', 'activity.activeMinutes'],
@@ -243,9 +243,9 @@ export class DataService {
  */
 function deriveStressLoadScore(p: TimelinePoint): number {
   // HRV 贡献：HRV 越低压力越大，基准 60ms
-  const hr = p.values['hr'];
-  const hrvContrib = hr != null
-    ? Math.max(0, Math.min(100, 50 + (60 - hr) * 2))
+  const hrv = p.values['hrv'];
+  const hrvContrib = hrv != null
+    ? Math.max(0, Math.min(100, 50 + (60 - hrv) * 2))
     : 50;
 
   // 睡眠贡献：睡眠越少压力越大，基准 480 分钟（8 小时）
@@ -285,7 +285,7 @@ function buildStressTimelineResponse(
     date: p.date,
     stressLoadScore: smoothedLoads[i] ?? rawLoads[i] ?? 0,
     contributors: {
-      hrv: p.values['hr'] ? Math.max(0, 100 - Math.abs(p.values['hr']! - 60)) : 50,
+      hrv: p.values['hrv'] ? Math.max(0, 100 - Math.abs(p.values['hrv']! - 60)) : 50,
       sleep: p.values['sleep.totalMinutes']
         ? Math.min(100, (p.values['sleep.totalMinutes']! / 480) * 100)
         : 50,
