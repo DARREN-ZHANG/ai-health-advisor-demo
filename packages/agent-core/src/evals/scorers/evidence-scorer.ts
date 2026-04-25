@@ -90,7 +90,7 @@ function checkRequiredFact(
     };
   }
 
-  const hit = fact.mentionPatterns.some((pattern) => text.includes(pattern));
+  const hit = fact.mentionPatterns.some((pattern) => new RegExp(pattern).test(text));
   return {
     checkId: `${caseId}:evidence:required_fact:${fact.id}`,
     severity: 'hard',
@@ -115,7 +115,7 @@ function checkForbiddenFact(
     mentionPatterns: string[];
   },
 ): EvalCheckResult {
-  const matched = fact.mentionPatterns.filter((pattern) => text.includes(pattern));
+  const matched = fact.mentionPatterns.filter((pattern) => new RegExp(pattern).test(text));
   const passed = matched.length === 0;
   return {
     checkId: `${caseId}:evidence:forbidden_fact:${fact.id}`,
