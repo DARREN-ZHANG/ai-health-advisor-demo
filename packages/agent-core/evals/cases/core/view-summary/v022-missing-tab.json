@@ -1,0 +1,46 @@
+{
+  "id": "V-022",
+  "title": "视图总结 - 请求缺少 tab 参数应 fallback",
+  "suite": "core",
+  "category": "view-summary",
+  "priority": "P0",
+  "tags": ["view-summary", "fallback", "validation", "missing-tab"],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"fallback\",\"statusColor\":\"good\",\"summary\":\"暂无足够数据生成视图摘要，请选择具体的健康指标标签页查看详细分析。\",\"chartTokens\":[],\"microTips\":[]}"
+    }
+  },
+  "request": {
+    "requestId": "core-v022",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "view_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "data-tab",
+      "timeframe": "week"
+    },
+    "timeframe": "week"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "length": { "min": 10, "max": 150 }
+    },
+    "status": {
+      "allowedStatusColors": ["good"]
+    },
+    "chartTokens": {
+      "maxCount": 0
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    }
+  }
+}

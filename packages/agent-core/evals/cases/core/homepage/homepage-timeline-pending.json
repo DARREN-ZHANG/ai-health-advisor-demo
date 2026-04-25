@@ -1,0 +1,58 @@
+{
+  "id": "H-012",
+  "title": "首页摘要 - timeline pending 未同步事件",
+  "suite": "core",
+  "category": "homepage",
+  "priority": "P1",
+  "tags": ["homepage", "timeline", "pending", "sync", "no-fabrication"],
+  "setup": {
+    "profileId": "profile-a",
+    "timeline": {
+      "appendSegments": [
+        {
+          "segmentType": "running",
+          "params": { "distanceMeters": 5000, "durationMinutes": 30 },
+          "offsetMinutes": -60,
+          "durationMinutes": 30,
+          "advanceClock": true
+        }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周各项健康指标表现正常，心率和活动量处于健康区间。目前有运动数据尚未同步完成，同步后将提供更完整的活动分析。建议保持当前作息规律，待数据同步后可查看更详细的运动评估。\",\"chartTokens\":[],\"microTips\":[\"数据同步后可查看更详细的分析\"]}"
+    }
+  },
+  "request": {
+    "requestId": "core-h012",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustNotMention": ["刚才跑步了", "今日跑步五公里", "三十分钟跑步", "跑步已完成"],
+      "forbiddenPatterns": ["(跑步|跑步五公里|跑了三十分钟|运动完成)"]
+    },
+    "status": {
+      "allowedStatusColors": ["good", "warning"]
+    },
+    "chartTokens": {
+      "maxCount": 2
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    }
+  }
+}

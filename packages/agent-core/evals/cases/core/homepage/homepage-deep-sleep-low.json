@@ -1,0 +1,55 @@
+{
+  "id": "H-003",
+  "title": "首页摘要 - 深睡不足",
+  "suite": "core",
+  "category": "homepage",
+  "priority": "P1",
+  "tags": ["homepage", "sleep", "deep-sleep", "warning"],
+  "setup": {
+    "profileId": "profile-a",
+    "overrides": [
+      {
+        "metric": "sleep.deep",
+        "value": 25,
+        "dateRange": { "start": "2026-04-19", "end": "2026-04-25" }
+      }
+    ],
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"本周深睡时间明显不足，平均深睡仅二十五分钟，远低于基准线的九十分钟。深睡对身体恢复和记忆巩固至关重要，长期不足可能影响白天的精力和注意力。建议调整睡前习惯，避免睡前使用电子设备，保持卧室环境安静黑暗。\",\"chartTokens\":[\"SLEEP_STAGE_LAST_NIGHT\",\"SLEEP_7DAYS\"],\"microTips\":[\"深睡不足时可尝试睡前放松练习\"]}"
+    }
+  },
+  "request": {
+    "requestId": "core-h003",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["深睡"],
+      "length": { "min": 80, "max": 120 }
+    },
+    "status": {
+      "expectedStatusColor": "warning"
+    },
+    "chartTokens": {
+      "requiredAny": [["SLEEP_7DAYS", "SLEEP_STAGE_LAST_NIGHT"]],
+      "maxCount": 2
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    }
+  }
+}

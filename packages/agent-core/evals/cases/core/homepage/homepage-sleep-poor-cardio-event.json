@@ -1,0 +1,70 @@
+{
+  "id": "H-002",
+  "title": "首页摘要 - 睡眠不足叠加今日运动事件",
+  "suite": "core",
+  "category": "homepage",
+  "priority": "P0",
+  "tags": ["homepage", "sleep", "cardio", "warning", "cross-analysis"],
+  "setup": {
+    "profileId": "profile-a",
+    "timeline": {
+      "appendSegments": [
+        {
+          "segmentType": "cardio",
+          "params": { "durationMinutes": 30, "intensity": "moderate" },
+          "offsetMinutes": -120,
+          "durationMinutes": 30,
+          "advanceClock": true
+        }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"昨夜睡眠不足，今日进行有氧运动需注意恢复。深睡仅四十五分钟，远低于基准线的九十分钟；睡眠总时长不足六小时，身体恢复不充分。建议降低运动强度，以轻度活动为主，避免剧烈有氧加重疲劳积累。\",\"chartTokens\":[\"SLEEP_7DAYS\"],\"microTips\":[\"睡眠不足时建议避免高强度运动\"]}"
+    }
+  },
+  "request": {
+    "requestId": "core-h002",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["睡眠", "运动"],
+      "mustMentionAny": [["降低强度", "降级运动", "轻度活动", "减少高强度"]]
+    },
+    "status": {
+      "expectedStatusColor": "warning"
+    },
+    "chartTokens": {
+      "required": ["SLEEP_7DAYS"]
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true,
+      "forbidTreatmentPromise": true
+    },
+    "taskSpecific": {
+      "homepage": {
+        "requireRecentEventFirst": true,
+        "recentEventPatterns": ["运动", "有氧", "cardio"],
+        "require24hCrossAnalysis": true,
+        "crossAnalysisPatterns": {
+          "event": ["运动", "有氧"],
+          "metric": ["睡眠", "深睡", "HRV", "恢复"]
+        }
+      }
+    }
+  }
+}

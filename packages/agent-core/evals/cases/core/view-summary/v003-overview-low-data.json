@@ -1,0 +1,75 @@
+{
+  "id": "V-003",
+  "title": "视图总结 - 总览低数据",
+  "suite": "core",
+  "category": "view-summary",
+  "priority": "P1",
+  "tags": [
+    "view-summary",
+    "overview",
+    "low-data",
+    "fallback"
+  ],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"当前可用数据较少，暂无法给出全面的健康指标分析。已收集到的数据显示基本指标处于正常范围内，建议持续佩戴设备以获取更完整的健康数据，一周后可进行更全面的综合评估。\",\"chartTokens\":[],\"microTips\":[\"持续佩戴设备可获取更完整的健康数据\"]}"
+    }
+  },
+  "request": {
+    "requestId": "core-v003",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "view_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "data-tab",
+      "timeframe": "week"
+    },
+    "tab": "overview",
+    "timeframe": "week"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "length": {
+        "min": 80,
+        "max": 150
+      },
+      "mustMention": [
+        "数据"
+      ]
+    },
+    "status": {
+      "allowedStatusColors": [
+        "good"
+      ]
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    },
+    "missingData": {
+      "mustDiscloseInsufficientData": true,
+      "missingMetrics": [
+        "hr",
+        "spo2",
+        "sleep"
+      ]
+    },
+    "taskSpecific": {
+      "viewSummary": {
+        "requiredTab": "overview",
+        "requiredTabPatterns": [
+          "数据"
+        ],
+        "forbidOtherTabs": []
+      }
+    }
+  }
+}

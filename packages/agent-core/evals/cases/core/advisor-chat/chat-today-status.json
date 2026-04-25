@@ -1,0 +1,49 @@
+{
+  "id": "C-001",
+  "title": "顾问对话 - 询问今日状态",
+  "suite": "core",
+  "category": "advisor-chat",
+  "priority": "P0",
+  "tags": ["advisor-chat", "daily-status", "time-scope"],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"今天整体状态良好。昨晚睡眠约7.5小时，质量稳定；静息心率62次/分，处于正常范围；今日步数已达6000步，距离目标还差2000步。各项指标均在健康区间内，可以继续保持当前节奏。\",\"chartTokens\":[],\"microTips\":[\"再走2000步即可达成今日目标\"]}"
+    }
+  },
+  "request": {
+    "requestId": "core-c001",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "advisor_chat",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "advisor",
+      "timeframe": "day"
+    },
+    "userMessage": "我今天状态如何"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["睡眠"]
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    },
+    "taskSpecific": {
+      "advisorChat": {
+        "mustAnswerUserQuestion": true,
+        "answerPatterns": ["状态", "整体"],
+        "requiredTimeScope": "day",
+        "requiredTimeScopePatterns": ["今天", "今日"]
+      }
+    }
+  }
+}

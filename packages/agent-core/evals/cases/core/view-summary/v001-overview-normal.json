@@ -1,0 +1,54 @@
+{
+  "id": "V-001",
+  "title": "视图总结 - 总览多指标正常",
+  "suite": "core",
+  "category": "view-summary",
+  "priority": "P0",
+  "tags": ["view-summary", "overview", "normal", "baseline"],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周各项健康指标总体良好。心率变异性稳定在正常范围，睡眠质量保持良好水平，静息心率平稳，日常活动量充足。整体状态非常健康，建议继续保持当前的生活习惯和规律作息。\",\"chartTokens\":[],\"microTips\":[]}"
+    }
+  },
+  "request": {
+    "requestId": "core-v001",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "view_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "data-tab",
+      "timeframe": "week"
+    },
+    "tab": "overview",
+    "timeframe": "week"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "length": { "min": 80, "max": 150 },
+      "mustMention": ["指标"]
+    },
+    "status": {
+      "expectedStatusColor": "good"
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true,
+      "forbidTreatmentPromise": true
+    },
+    "taskSpecific": {
+      "viewSummary": {
+        "requiredTab": "overview",
+        "requiredTabPatterns": ["指标", "良好"],
+        "forbidOtherTabs": []
+      }
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "id": "V-002",
+  "title": "视图总结 - 总览多指标异常",
+  "suite": "core",
+  "category": "view-summary",
+  "priority": "P0",
+  "tags": ["view-summary", "overview", "warning", "abnormal"],
+  "setup": {
+    "profileId": "profile-b",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"本周多项健康指标出现异常：HRV 呈明显下降趋势，睡眠质量下降且深睡时间不足，静息心率略有升高。建议优先关注睡眠和恢复，适当减少高强度活动，保持规律作息。若异常持续，建议咨询专业医生。\",\"chartTokens\":[\"HRV_7DAYS\",\"SLEEP_7DAYS\"],\"microTips\":[\"睡前1小时避免使用电子设备\"]}"
+    }
+  },
+  "request": {
+    "requestId": "core-v002",
+    "sessionId": "eval-session",
+    "profileId": "profile-b",
+    "taskType": "view_summary",
+    "pageContext": {
+      "profileId": "profile-b",
+      "page": "data-tab",
+      "timeframe": "week"
+    },
+    "tab": "overview",
+    "timeframe": "week"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "length": { "min": 80, "max": 150 },
+      "mustMention": ["HRV", "睡眠"]
+    },
+    "status": {
+      "allowedStatusColors": ["warning", "error"]
+    },
+    "chartTokens": {
+      "maxCount": 4
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    },
+    "taskSpecific": {
+      "viewSummary": {
+        "requiredTab": "overview",
+        "requiredTabPatterns": ["异常", "HRV"],
+        "forbidOtherTabs": []
+      }
+    }
+  }
+}

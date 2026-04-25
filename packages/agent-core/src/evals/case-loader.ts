@@ -45,16 +45,7 @@ export function loadEvalCases(options: LoadEvalCasesOptions): AgentEvalCase[] {
     // 使用 Zod schema 校验，断言为 AgentEvalCase 以桥接 schema 推断与手写类型
     const evalCase = AgentEvalCaseSchema.parse(parsed) as AgentEvalCase;
 
-    // 检查 case id 唯一性
-    const existingFile = seenIds.get(evalCase.id);
-    if (existingFile) {
-      throw new Error(
-        `case id 重复: "${evalCase.id}" 同时出现在 ${existingFile} 和 ${filePath}`,
-      );
-    }
-    seenIds.set(evalCase.id, filePath);
-
-    // 按 suite 过滤
+    // 按 suite 过滤（在 ID 唯一性检查之前，避免跨 suite ID 冲突）
     if (suite !== undefined && evalCase.suite !== suite) {
       continue;
     }
@@ -63,6 +54,15 @@ export function loadEvalCases(options: LoadEvalCasesOptions): AgentEvalCase[] {
     if (caseId !== undefined && evalCase.id !== caseId) {
       continue;
     }
+
+    // 检查 case id 唯一性（仅在被选中的 case 之间检查）
+    const existingFile = seenIds.get(evalCase.id);
+    if (existingFile) {
+      throw new Error(
+        `case id 重复: "${evalCase.id}" 同时出现在 ${existingFile} 和 ${filePath}`,
+      );
+    }
+    seenIds.set(evalCase.id, filePath);
 
     cases.push(evalCase);
   }
