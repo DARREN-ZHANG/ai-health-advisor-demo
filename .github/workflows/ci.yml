@@ -34,3 +34,6 @@ jobs:
       - run: pnpm test
 
       - run: pnpm build
+
+      - name: Agent Smoke Eval
+        run: pnpm --filter @health-advisor/agent-core eval:agent:smoke
