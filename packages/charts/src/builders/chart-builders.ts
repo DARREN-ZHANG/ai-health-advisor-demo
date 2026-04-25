@@ -66,6 +66,7 @@ export function buildActivity7Days(data: StandardTimeSeries): EChartsOption {
 
   return {
     ...DARK_THEME_BASE,
+    grid: { ...DARK_THEME_BASE.grid, left: 70 },
     title: { text: meta.label, textStyle: { color: '#f8fafc', fontSize: 14 } },
     xAxis: { type: 'category', data: data.dates, axisLabel: { color: '#64748b' } },
     yAxis: { type: 'value', axisLabel: { color: '#64748b', formatter: `{value}${meta.unit}` } },
