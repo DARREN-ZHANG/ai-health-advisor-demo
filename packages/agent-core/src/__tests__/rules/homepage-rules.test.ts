@@ -60,10 +60,10 @@ describe('homepageRules', () => {
   });
 
   it('HRV 下降趋势产生 warning 信号', () => {
-    // HRV 由单条记录中 HR 数组的标准差近似。前半段方差大，后半段方差小 -> 下降趋势
+    // HRV 由 record.hrv 直接读取。前半段高，后半段低 -> 下降趋势
     const records: DailyRecord[] = Array.from({ length: 7 }, (_, i) => ({
       date: `2026-04-${String(4 + i).padStart(2, '0')}`,
-      hr: i < 3 ? [50, 80] : [59, 63], // 前半段 HRV 高，后半段 HRV 低
+      hrv: i < 3 ? 55 : 18, // 前半段 HRV 高，后半段 HRV 低
       spo2: 98,
     }));
 

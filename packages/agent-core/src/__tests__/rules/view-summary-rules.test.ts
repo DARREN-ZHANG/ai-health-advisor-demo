@@ -52,7 +52,7 @@ describe('viewSummaryRules', () => {
   it('HRV tab 检测到下降趋势', () => {
     const records: DailyRecord[] = Array.from({ length: 7 }, (_, i) => ({
       date: `2026-04-${String(4 + i).padStart(2, '0')}`,
-      hr: i < 3 ? [50, 80] : [59, 63],
+      hrv: i < 3 ? 55 : 18,
     }));
 
     const result = engine.evaluate(makeContext('hrv', records));

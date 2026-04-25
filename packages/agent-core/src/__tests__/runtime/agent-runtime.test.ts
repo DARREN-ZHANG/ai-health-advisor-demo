@@ -14,6 +14,7 @@ function makeRecord(date: string, overrides: Partial<DailyRecord> = {}): DailyRe
   return {
     date,
     hr: [60, 62],
+    hrv: 58,
     sleep: { totalMinutes: 420, startTime: '23:00', endTime: '06:00', stages: { deep: 90, light: 180, rem: 120, awake: 30 }, score: 85 },
     activity: { steps: 8000, calories: 2200, activeMinutes: 45, distanceKm: 5.5 },
     spo2: 98,
@@ -33,7 +34,7 @@ function makeProfileData(records?: DailyRecord[]): ProfileData {
       tags: ['test'],
       baseline: { restingHr: 62, hrv: 58, spo2: 98, avgSleepMinutes: 420, avgSteps: 8500 },
     },
-    records: records ?? Array.from({ length: 7 }, (_, i) => makeRecord(`2026-04-${String(4 + i).padStart(2, '0')}`)),
+    records: records ?? Array.from({ length: 7 }, (_, i) => makeRecord(`2026-04-${String(18 + i).padStart(2, '0')}`)),
   };
 }
 
@@ -213,7 +214,7 @@ describe('executeAgent', () => {
       content: JSON.stringify({ summary: '不应被调用', chartTokens: [], microTips: [] }),
     }));
     // 只有 1 条记录，低于 LOW_DATA_THRESHOLD (3)
-    const fewRecords = [makeRecord('2026-04-10')];
+    const fewRecords = [makeRecord('2026-04-18')];
     const deps = makeDepsFromRecords(fewRecords, { invoke: invokeMock });
 
     const result = await executeAgent(makeRequest(), deps);

@@ -11,8 +11,8 @@ describe('loadHistoryArchive', () => {
     });
 
     expect(records).toHaveLength(31);
-    expect(records[0]!.date).toBe('2026-03-24');
-    expect(records[records.length - 1]!.date).toBe('2026-04-23');
+    expect(records[0]!.date).toBe('2026-03-25');
+    expect(records[records.length - 1]!.date).toBe('2026-04-24');
   });
 
   it('should load and return records for profile-b', () => {
@@ -21,7 +21,7 @@ describe('loadHistoryArchive', () => {
     });
 
     expect(records).toHaveLength(31);
-    expect(records[0]!.date).toBe('2026-03-24');
+    expect(records[0]!.date).toBe('2026-03-25');
   });
 
   it('should load and return records for profile-c', () => {
@@ -48,6 +48,8 @@ describe('loadHistoryArchive', () => {
       // hr 数组应该存在且有 5 个值
       expect(record.hr).toBeDefined();
       expect(record.hr!.length).toBe(5);
+      // hrv 字段应该存在
+      expect(record.hrv).toBeDefined();
     }
   });
 });

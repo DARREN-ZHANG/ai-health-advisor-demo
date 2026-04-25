@@ -13,7 +13,7 @@ describe('loadTimelineScriptFile', () => {
 
     expect(script.profileId).toBe('profile-a');
     expect(script.scriptId).toBe('profile-a-day-1');
-    expect(script.initialDemoTime).toBe('2026-04-23T07:05');
+    expect(script.initialDemoTime).toBe('2026-04-24T07:05');
     expect(script.segments).toHaveLength(1);
     expect(script.segments[0]!.segmentId).toBe('seg-baseline-sleep-a');
     expect(script.segments[0]!.type).toBe('sleep');
@@ -25,7 +25,7 @@ describe('loadTimelineScriptFile', () => {
     });
 
     expect(script.profileId).toBe('profile-b');
-    expect(script.initialDemoTime).toBe('2026-04-23T07:30');
+    expect(script.initialDemoTime).toBe('2026-04-24T08:00');
     expect(script.segments).toHaveLength(1);
     expect(script.segments[0]!.type).toBe('sleep');
   });
@@ -36,7 +36,7 @@ describe('loadTimelineScriptFile', () => {
     });
 
     expect(script.profileId).toBe('profile-c');
-    expect(script.initialDemoTime).toBe('2026-04-23T06:45');
+    expect(script.initialDemoTime).toBe('2026-04-24T06:00');
     expect(script.segments).toHaveLength(1);
   });
 

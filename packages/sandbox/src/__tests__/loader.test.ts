@@ -9,7 +9,7 @@ describe('loadManifest', () => {
     const manifest = loadManifest(DATA_DIR);
 
     expect(manifest.version).toBe('1.0.0');
-    expect(manifest.profiles).toHaveLength(3);
+    expect(manifest.profiles).toHaveLength(4);
   });
 
   it('should contain expected profile entries', () => {
@@ -19,6 +19,7 @@ describe('loadManifest', () => {
     expect(ids).toContain('profile-a');
     expect(ids).toContain('profile-b');
     expect(ids).toContain('profile-c');
+    expect(ids).toContain('profile-d');
   });
 });
 
@@ -27,8 +28,8 @@ describe('loadProfile', () => {
     const profile = loadProfile(DATA_DIR, 'profiles/profile-a.json');
 
     expect(profile.profile.profileId).toBe('profile-a');
-    expect(profile.profile.name).toBe('张健康');
-    expect(profile.profile.age).toBe(32);
+    expect(profile.profile.name).toBe('林巅峰');
+    expect(profile.profile.age).toBe(28);
     expect(profile.profile.gender).toBe('male');
     // 新版结构从 historyRef 加载 records
     expect(profile.records).toHaveLength(31);
@@ -40,7 +41,7 @@ describe('loadProfile', () => {
     const profile = loadProfile(DATA_DIR, 'profiles/profile-b.json');
 
     expect(profile.profile.profileId).toBe('profile-b');
-    expect(profile.profile.gender).toBe('female');
+    expect(profile.profile.gender).toBe('male');
     expect(profile.records).toHaveLength(31);
   });
 
@@ -48,7 +49,7 @@ describe('loadProfile', () => {
     const profile = loadProfile(DATA_DIR, 'profiles/profile-c.json');
 
     expect(profile.profile.profileId).toBe('profile-c');
-    expect(profile.profile.age).toBe(28);
+    expect(profile.profile.age).toBe(26);
     expect(profile.records).toHaveLength(31);
   });
 
@@ -69,7 +70,7 @@ describe('loadAllProfiles', () => {
   it('should load all profiles into a Map', () => {
     const profiles = loadAllProfiles(DATA_DIR);
 
-    expect(profiles.size).toBe(3);
+    expect(profiles.size).toBe(4);
     expect(profiles.has('profile-a')).toBe(true);
     expect(profiles.has('profile-b')).toBe(true);
     expect(profiles.has('profile-c')).toBe(true);
@@ -97,7 +98,7 @@ describe('buildInitialProfileState', () => {
 
     // DemoClock
     expect(state.demoClock.profileId).toBe('profile-a');
-    expect(state.demoClock.currentTime).toBe('2026-04-23T07:05');
+    expect(state.demoClock.currentTime).toBe('2026-04-24T07:05');
     expect(state.demoClock.timezone).toBe('Asia/Shanghai');
 
     // Segments
@@ -117,7 +118,7 @@ describe('buildInitialProfileState', () => {
     const state = buildInitialProfileState(DATA_DIR, 'profile-b');
 
     expect(state.profileData.profile.profileId).toBe('profile-b');
-    expect(state.demoClock.currentTime).toBe('2026-04-23T07:30');
+    expect(state.demoClock.currentTime).toBe('2026-04-24T08:00');
     expect(state.segments.length).toBeGreaterThan(0);
     expect(state.deviceBuffer.lastSyncedMeasuredAt).toBeNull();
   });
@@ -126,7 +127,7 @@ describe('buildInitialProfileState', () => {
     const state = buildInitialProfileState(DATA_DIR, 'profile-c');
 
     expect(state.profileData.profile.profileId).toBe('profile-c');
-    expect(state.demoClock.currentTime).toBe('2026-04-23T06:45');
+    expect(state.demoClock.currentTime).toBe('2026-04-24T06:00');
     expect(state.deviceBuffer.lastSyncedMeasuredAt).toBeNull();
   });
 
