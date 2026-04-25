@@ -32,6 +32,8 @@ import {
   RecognizedEventSchema,
   DerivedTemporalStateTypeSchema,
   DerivedTemporalStateSchema,
+  ImuSampleSchema,
+  MotionPatternSchema,
 } from '../schemas/sandbox';
 import {
   StressTimelinePointSchema,
@@ -706,5 +708,76 @@ describe('ResetProfileTimelinePayloadSchema', () => {
 
   it('rejects empty profileId', () => {
     expect(() => ResetProfileTimelinePayloadSchema.parse({ profileId: '' })).toThrow();
+  });
+});
+
+describe('MotionPatternSchema', () => {
+  it('accepts all 14 valid motion patterns', () => {
+    const patterns = [
+      'still_supine', 'still_upright', 'still_with_micro',
+      'periodic_stroll', 'periodic_walk', 'periodic_brisk', 'periodic_run', 'periodic_arm_repeat',
+      'intermittent_reach', 'intermittent_gesture', 'intermittent_burst',
+      'irregular_fidget', 'irregular_restless', 'irregular_sudden',
+    ];
+    patterns.forEach((p) => {
+      expect(MotionPatternSchema.parse(p)).toBe(p);
+    });
+  });
+
+  it('rejects invalid pattern', () => {
+    expect(() => MotionPatternSchema.parse('invalid_motion')).toThrow();
+  });
+});
+
+describe('ImuSampleSchema', () => {
+  const validSample = {
+    offsetMs: 0,
+    accX: 0.01,
+    accY: 0.02,
+    accZ: 0.98,
+    gyroX: 0.01,
+    gyroY: 0.005,
+    gyroZ: -0.01,
+  };
+
+  it('accepts valid IMU sample', () => {
+    expect(ImuSampleSchema.parse(validSample)).toEqual(validSample);
+  });
+
+  it('accepts all valid offsetMs values (0, 12000, 24000, 36000, 48000)', () => {
+    [0, 12000, 24000, 36000, 48000].forEach((offset) => {
+      expect(ImuSampleSchema.parse({ ...validSample, offsetMs: offset })).toEqual({
+        ...validSample,
+        offsetMs: offset,
+      });
+    });
+  });
+
+  it('rejects negative offsetMs', () => {
+    expect(() => ImuSampleSchema.parse({ ...validSample, offsetMs: -1 })).toThrow();
+  });
+
+  it('rejects offsetMs > 48000', () => {
+    expect(() => ImuSampleSchema.parse({ ...validSample, offsetMs: 49000 })).toThrow();
+  });
+
+  it('rejects accX > 4g', () => {
+    expect(() => ImuSampleSchema.parse({ ...validSample, accX: 5.0 })).toThrow();
+  });
+
+  it('rejects accX < -4g', () => {
+    expect(() => ImuSampleSchema.parse({ ...validSample, accX: -5.0 })).toThrow();
+  });
+
+  it('rejects gyroX > 10 rad/s', () => {
+    expect(() => ImuSampleSchema.parse({ ...validSample, gyroX: 11.0 })).toThrow();
+  });
+
+  it('rejects missing required fields', () => {
+    expect(() => ImuSampleSchema.parse({ offsetMs: 0 })).toThrow();
+  });
+
+  it('rejects non-integer offsetMs', () => {
+    expect(() => ImuSampleSchema.parse({ ...validSample, offsetMs: 0.5 })).toThrow();
   });
 });
