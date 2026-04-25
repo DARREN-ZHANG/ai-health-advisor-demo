@@ -7,7 +7,7 @@ import { join } from 'node:path';
 
 // ── 测试数据目录 ────────────────────────────────────
 
-const DATA_DIR = join(process.cwd(), 'data', 'sandbox');
+const DATA_DIR = join(__dirname, '../../../../../data/sandbox');
 
 // ── 辅助函数 ────────────────────────────────────────
 
