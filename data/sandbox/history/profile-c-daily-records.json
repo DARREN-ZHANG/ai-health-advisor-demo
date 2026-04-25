@@ -8,2549 +8,1136 @@
     {
       "date": "2026-03-25",
       "hr": [
-        82,
-        96,
-        86,
-        85,
-        77
+        65,
+        77,
+        87,
+        147,
+        80
       ],
+      "hrv": 14,
       "sleep": {
-        "totalMinutes": 313,
-        "startTime": "23:31",
-        "endTime": "04:44",
+        "totalMinutes": 349,
+        "startTime": "00:20",
+        "endTime": "06:09",
         "stages": {
-          "deep": 36,
-          "light": 154,
-          "rem": 44,
-          "awake": 79
+          "deep": 69,
+          "light": 172,
+          "rem": 83,
+          "awake": 25
         },
-        "score": 32
+        "score": 66
       },
       "activity": {
-        "steps": 4846,
-        "calories": 2241,
-        "activeMinutes": 32,
-        "distanceKm": 3.6
+        "steps": 3382,
+        "calories": 1813,
+        "activeMinutes": 18,
+        "distanceKm": 2.6
       },
-      "spo2": 98,
+      "spo2": 99,
       "stress": {
-        "load": 64
+        "load": 78
       },
       "intraday": [
         {
           "hour": 0,
           "hr": 80,
-          "spo2": 96,
+          "spo2": 99,
           "steps": 0,
-          "stressLoad": 64
+          "sleepMinutes": 100,
+          "stressLoad": 78
         },
         {
           "hour": 2,
-          "hr": 75,
-          "spo2": 99,
-          "steps": 24,
-          "stressLoad": 64
+          "hr": 77,
+          "spo2": 98,
+          "steps": 23,
+          "sleepMinutes": 120,
+          "stressLoad": 78
         },
         {
           "hour": 4,
-          "hr": 74,
-          "spo2": 98,
-          "steps": 121,
-          "stressLoad": 64
+          "hr": 68,
+          "spo2": 100,
+          "steps": 94,
+          "sleepMinutes": 120,
+          "stressLoad": 78
         },
         {
           "hour": 6,
-          "hr": 105,
-          "spo2": 98,
-          "steps": 363,
-          "stressLoad": 64
+          "hr": 89,
+          "spo2": 99,
+          "steps": 211,
+          "sleepMinutes": 9,
+          "stressLoad": 78
         },
         {
           "hour": 8,
-          "hr": 109,
-          "spo2": 97,
-          "steps": 848,
-          "stressLoad": 64
+          "hr": 95,
+          "spo2": 100,
+          "steps": 376,
+          "stressLoad": 78
         },
         {
           "hour": 10,
-          "hr": 99,
-          "spo2": 96,
-          "steps": 1575,
-          "stressLoad": 64
+          "hr": 102,
+          "spo2": 98,
+          "steps": 587,
+          "stressLoad": 78
         },
         {
           "hour": 12,
-          "hr": 91,
-          "spo2": 98,
-          "steps": 2399,
-          "stressLoad": 64
+          "hr": 88,
+          "spo2": 100,
+          "steps": 846,
+          "stressLoad": 78
         },
         {
           "hour": 14,
-          "hr": 90,
+          "hr": 99,
           "spo2": 99,
-          "steps": 3126,
-          "stressLoad": 64
+          "steps": 1151,
+          "stressLoad": 78
         },
         {
           "hour": 16,
-          "hr": 94,
+          "hr": 88,
           "spo2": 99,
-          "steps": 3756,
-          "stressLoad": 64
+          "steps": 1503,
+          "stressLoad": 78
         },
         {
           "hour": 18,
-          "hr": 91,
+          "hr": 103,
           "spo2": 99,
-          "steps": 4241,
-          "stressLoad": 64
+          "steps": 1902,
+          "stressLoad": 78
         },
         {
           "hour": 20,
-          "hr": 101,
-          "spo2": 99,
-          "steps": 4580,
-          "stressLoad": 64,
-          "sleepMinutes": 34
+          "hr": 97,
+          "spo2": 98,
+          "steps": 2349,
+          "stressLoad": 78
         },
         {
           "hour": 22,
-          "hr": 78,
+          "hr": 67,
           "spo2": 98,
-          "steps": 4846,
-          "stressLoad": 64,
-          "sleepMinutes": 100
+          "steps": 2842,
+          "stressLoad": 78
         }
       ]
     },
     {
       "date": "2026-03-26",
       "hr": [
-        77,
-        86,
-        83,
-        96,
-        76
+        71,
+        78,
+        90,
+        137,
+        81
       ],
+      "hrv": 15,
       "sleep": {
-        "totalMinutes": 288,
-        "startTime": "23:25",
-        "endTime": "04:13",
+        "totalMinutes": 319,
+        "startTime": "00:44",
+        "endTime": "06:03",
         "stages": {
-          "deep": 38,
-          "light": 102,
-          "rem": 53,
-          "awake": 95
+          "deep": 63,
+          "light": 158,
+          "rem": 75,
+          "awake": 23
         },
-        "score": 46
+        "score": 56
       },
       "activity": {
-        "steps": 3618,
-        "calories": 2284,
-        "activeMinutes": 21,
-        "distanceKm": 4
+        "steps": 3642,
+        "calories": 1928,
+        "activeMinutes": 22,
+        "distanceKm": 2.9
       },
-      "spo2": 97,
+      "spo2": 99,
       "stress": {
-        "load": 71
+        "load": 70
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 78,
+          "hr": 77,
           "spo2": 99,
           "steps": 0,
-          "stressLoad": 71
+          "sleepMinutes": 76,
+          "stressLoad": 70
         },
         {
           "hour": 2,
-          "hr": 75,
-          "spo2": 99,
-          "steps": 18,
-          "stressLoad": 71
+          "hr": 80,
+          "spo2": 100,
+          "steps": 25,
+          "sleepMinutes": 120,
+          "stressLoad": 70
         },
         {
           "hour": 4,
-          "hr": 77,
-          "spo2": 97,
-          "steps": 90,
-          "stressLoad": 71
+          "hr": 80,
+          "spo2": 98,
+          "steps": 101,
+          "sleepMinutes": 120,
+          "stressLoad": 70
         },
         {
           "hour": 6,
-          "hr": 106,
-          "spo2": 96,
-          "steps": 271,
-          "stressLoad": 71
+          "hr": 99,
+          "spo2": 98,
+          "steps": 228,
+          "sleepMinutes": 3,
+          "stressLoad": 70
         },
         {
           "hour": 8,
-          "hr": 93,
+          "hr": 90,
           "spo2": 98,
-          "steps": 633,
-          "stressLoad": 71
+          "steps": 405,
+          "stressLoad": 70
         },
         {
           "hour": 10,
-          "hr": 101,
-          "spo2": 96,
-          "steps": 1176,
-          "stressLoad": 71
+          "hr": 92,
+          "spo2": 99,
+          "steps": 632,
+          "stressLoad": 70
         },
         {
           "hour": 12,
-          "hr": 103,
-          "spo2": 97,
-          "steps": 1791,
-          "stressLoad": 71
+          "hr": 93,
+          "spo2": 100,
+          "steps": 911,
+          "stressLoad": 70
         },
         {
           "hour": 14,
-          "hr": 105,
-          "spo2": 99,
-          "steps": 2334,
-          "stressLoad": 71
+          "hr": 86,
+          "spo2": 98,
+          "steps": 1239,
+          "stressLoad": 70
         },
         {
           "hour": 16,
-          "hr": 94,
-          "spo2": 96,
-          "steps": 2804,
-          "stressLoad": 71
+          "hr": 101,
+          "spo2": 99,
+          "steps": 1619,
+          "stressLoad": 70
         },
         {
           "hour": 18,
-          "hr": 106,
-          "spo2": 97,
-          "steps": 3166,
-          "stressLoad": 71
+          "hr": 93,
+          "spo2": 100,
+          "steps": 2049,
+          "stressLoad": 70
         },
         {
           "hour": 20,
-          "hr": 93,
+          "hr": 98,
           "spo2": 98,
-          "steps": 3419,
-          "stressLoad": 71,
-          "sleepMinutes": 34
+          "steps": 2529,
+          "stressLoad": 70
         },
         {
           "hour": 22,
-          "hr": 76,
-          "spo2": 96,
-          "steps": 3618,
-          "stressLoad": 71,
-          "sleepMinutes": 65
+          "hr": 75,
+          "spo2": 99,
+          "steps": 3060,
+          "stressLoad": 70
         }
       ]
     },
     {
       "date": "2026-03-27",
       "hr": [
-        82,
+        69,
+        79,
         91,
-        99,
-        104,
-        80
+        144,
+        81
       ],
+      "hrv": 17,
       "sleep": {
-        "totalMinutes": 305,
-        "startTime": "22:36",
-        "endTime": "03:41",
+        "totalMinutes": 290,
+        "startTime": "01:15",
+        "endTime": "06:05",
         "stages": {
-          "deep": 25,
-          "light": 171,
-          "rem": 54,
-          "awake": 55
+          "deep": 68,
+          "light": 137,
+          "rem": 63,
+          "awake": 22
         },
-        "score": 44
+        "score": 58
       },
       "activity": {
-        "steps": 3266,
-        "calories": 2038,
-        "activeMinutes": 15,
-        "distanceKm": 3.9
+        "steps": 3812,
+        "calories": 1873,
+        "activeMinutes": 22,
+        "distanceKm": 2.8
       },
-      "spo2": 97,
+      "spo2": 95,
       "stress": {
-        "load": 73
+        "load": 76
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 78,
-          "spo2": 97,
+          "hr": 76,
+          "spo2": 96,
           "steps": 0,
-          "stressLoad": 73
+          "sleepMinutes": 45,
+          "stressLoad": 76
         },
         {
           "hour": 2,
-          "hr": 72,
-          "spo2": 96,
-          "steps": 16,
-          "stressLoad": 73
+          "hr": 81,
+          "spo2": 95,
+          "steps": 26,
+          "sleepMinutes": 120,
+          "stressLoad": 76
         },
         {
           "hour": 4,
           "hr": 79,
-          "spo2": 96,
-          "steps": 81,
-          "stressLoad": 73
+          "spo2": 95,
+          "steps": 106,
+          "sleepMinutes": 120,
+          "stressLoad": 76
         },
         {
           "hour": 6,
-          "hr": 96,
-          "spo2": 99,
-          "steps": 244,
-          "stressLoad": 73
+          "hr": 85,
+          "spo2": 95,
+          "steps": 238,
+          "sleepMinutes": 5,
+          "stressLoad": 76
         },
         {
           "hour": 8,
-          "hr": 95,
-          "spo2": 96,
-          "steps": 571,
-          "stressLoad": 73
+          "hr": 98,
+          "spo2": 95,
+          "steps": 424,
+          "stressLoad": 76
         },
         {
           "hour": 10,
-          "hr": 110,
-          "spo2": 98,
-          "steps": 1061,
-          "stressLoad": 73
+          "hr": 88,
+          "spo2": 94,
+          "steps": 662,
+          "stressLoad": 76
         },
         {
           "hour": 12,
-          "hr": 110,
-          "spo2": 96,
-          "steps": 1616,
-          "stressLoad": 73
+          "hr": 87,
+          "spo2": 94,
+          "steps": 953,
+          "stressLoad": 76
         },
         {
           "hour": 14,
-          "hr": 106,
-          "spo2": 99,
-          "steps": 2106,
-          "stressLoad": 73
+          "hr": 105,
+          "spo2": 96,
+          "steps": 1297,
+          "stressLoad": 76
         },
         {
           "hour": 16,
-          "hr": 99,
+          "hr": 107,
           "spo2": 96,
-          "steps": 2531,
-          "stressLoad": 73
+          "steps": 1694,
+          "stressLoad": 76
         },
         {
           "hour": 18,
-          "hr": 87,
-          "spo2": 97,
-          "steps": 2858,
-          "stressLoad": 73
+          "hr": 92,
+          "spo2": 94,
+          "steps": 2144,
+          "stressLoad": 76
         },
         {
           "hour": 20,
-          "hr": 102,
-          "spo2": 98,
-          "steps": 3087,
-          "stressLoad": 73,
-          "sleepMinutes": 51
+          "hr": 90,
+          "spo2": 95,
+          "steps": 2647,
+          "stressLoad": 76
         },
         {
           "hour": 22,
           "hr": 75,
-          "spo2": 98,
-          "steps": 3266,
-          "stressLoad": 73,
-          "sleepMinutes": 72
+          "spo2": 94,
+          "steps": 3203,
+          "stressLoad": 76
         }
       ]
     },
     {
       "date": "2026-03-28",
       "hr": [
-        81,
-        87,
+        69,
         79,
-        103,
-        70
+        87,
+        120,
+        88
       ],
+      "hrv": 19,
       "sleep": {
-        "totalMinutes": 343,
-        "startTime": "22:19",
-        "endTime": "04:02",
+        "totalMinutes": 287,
+        "startTime": "01:21",
+        "endTime": "06:08",
         "stages": {
-          "deep": 36,
-          "light": 154,
-          "rem": 57,
-          "awake": 96
+          "deep": 54,
+          "light": 136,
+          "rem": 67,
+          "awake": 30
         },
-        "score": 42
+        "score": 53
       },
       "activity": {
-        "steps": 2658,
-        "calories": 2282,
-        "activeMinutes": 32,
-        "distanceKm": 3
+        "steps": 4785,
+        "calories": 2003,
+        "activeMinutes": 25,
+        "distanceKm": 3.6
       },
-      "spo2": 96,
+      "spo2": 97,
       "stress": {
-        "load": 77
+        "load": 74
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 77,
-          "spo2": 98,
+          "hr": 71,
+          "spo2": 96,
           "steps": 0,
-          "stressLoad": 77
+          "sleepMinutes": 39,
+          "stressLoad": 74
         },
         {
           "hour": 2,
-          "hr": 74,
-          "spo2": 99,
-          "steps": 13,
-          "stressLoad": 77
+          "hr": 66,
+          "spo2": 97,
+          "steps": 33,
+          "sleepMinutes": 120,
+          "stressLoad": 74
         },
         {
           "hour": 4,
-          "hr": 76,
+          "hr": 81,
           "spo2": 97,
-          "steps": 66,
-          "stressLoad": 77
+          "steps": 133,
+          "sleepMinutes": 120,
+          "stressLoad": 74
         },
         {
           "hour": 6,
-          "hr": 91,
-          "spo2": 98,
-          "steps": 199,
-          "stressLoad": 77
+          "hr": 92,
+          "spo2": 97,
+          "steps": 299,
+          "sleepMinutes": 8,
+          "stressLoad": 74
         },
         {
           "hour": 8,
           "hr": 89,
           "spo2": 98,
-          "steps": 465,
-          "stressLoad": 77
+          "steps": 532,
+          "stressLoad": 74
         },
         {
           "hour": 10,
-          "hr": 91,
+          "hr": 95,
           "spo2": 96,
-          "steps": 864,
-          "stressLoad": 77
+          "steps": 831,
+          "stressLoad": 74
         },
         {
           "hour": 12,
-          "hr": 102,
-          "spo2": 96,
-          "steps": 1316,
-          "stressLoad": 77
+          "hr": 99,
+          "spo2": 97,
+          "steps": 1196,
+          "stressLoad": 74
         },
         {
           "hour": 14,
-          "hr": 91,
-          "spo2": 96,
-          "steps": 1715,
-          "stressLoad": 77
+          "hr": 92,
+          "spo2": 98,
+          "steps": 1628,
+          "stressLoad": 74
         },
         {
           "hour": 16,
-          "hr": 91,
-          "spo2": 97,
-          "steps": 2061,
-          "stressLoad": 77
+          "hr": 88,
+          "spo2": 98,
+          "steps": 2127,
+          "stressLoad": 74
         },
         {
           "hour": 18,
-          "hr": 91,
-          "spo2": 98,
-          "steps": 2327,
-          "stressLoad": 77
+          "hr": 79,
+          "spo2": 97,
+          "steps": 2692,
+          "stressLoad": 74
         },
         {
           "hour": 20,
           "hr": 92,
-          "spo2": 97,
-          "steps": 2513,
-          "stressLoad": 77,
-          "sleepMinutes": 39
+          "spo2": 98,
+          "steps": 3323,
+          "stressLoad": 74
         },
         {
           "hour": 22,
-          "hr": 73,
+          "hr": 76,
           "spo2": 97,
-          "steps": 2658,
-          "stressLoad": 77,
-          "sleepMinutes": 72
+          "steps": 4021,
+          "stressLoad": 74
         }
       ]
     },
     {
       "date": "2026-03-29",
       "hr": [
-        85,
-        101,
-        104,
-        84,
-        76
+        67,
+        78,
+        92,
+        140,
+        86
       ],
+      "hrv": 19,
       "sleep": {
-        "totalMinutes": 354,
-        "startTime": "22:28",
-        "endTime": "04:22",
+        "totalMinutes": 305,
+        "startTime": "00:55",
+        "endTime": "06:00",
         "stages": {
-          "deep": 27,
-          "light": 188,
-          "rem": 52,
-          "awake": 87
+          "deep": 64,
+          "light": 150,
+          "rem": 64,
+          "awake": 27
         },
-        "score": 52
+        "score": 53
       },
       "activity": {
-        "steps": 2565,
-        "calories": 2062,
-        "activeMinutes": 33,
-        "distanceKm": 2.1
+        "steps": 4532,
+        "calories": 1967,
+        "activeMinutes": 26,
+        "distanceKm": 3.3
       },
-      "spo2": 99,
+      "spo2": 98,
       "stress": {
-        "load": 85
+        "load": 80
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 74,
-          "spo2": 97,
+          "hr": 65,
+          "spo2": 99,
           "steps": 0,
-          "stressLoad": 85
+          "sleepMinutes": 65,
+          "stressLoad": 80
         },
         {
           "hour": 2,
-          "hr": 75,
-          "spo2": 99,
-          "steps": 13,
-          "stressLoad": 85
+          "hr": 77,
+          "spo2": 97,
+          "steps": 31,
+          "sleepMinutes": 120,
+          "stressLoad": 80
         },
         {
           "hour": 4,
-          "hr": 74,
-          "spo2": 96,
-          "steps": 64,
-          "stressLoad": 85
+          "hr": 71,
+          "spo2": 97,
+          "steps": 126,
+          "sleepMinutes": 120,
+          "stressLoad": 80
         },
         {
           "hour": 6,
-          "hr": 97,
-          "spo2": 96,
-          "steps": 192,
-          "stressLoad": 85
+          "hr": 89,
+          "spo2": 99,
+          "steps": 283,
+          "stressLoad": 80
         },
         {
           "hour": 8,
-          "hr": 93,
-          "spo2": 97,
-          "steps": 449,
-          "stressLoad": 85
+          "hr": 87,
+          "spo2": 98,
+          "steps": 504,
+          "stressLoad": 80
         },
         {
           "hour": 10,
-          "hr": 107,
-          "spo2": 96,
-          "steps": 834,
-          "stressLoad": 85
+          "hr": 88,
+          "spo2": 99,
+          "steps": 787,
+          "stressLoad": 80
         },
         {
           "hour": 12,
-          "hr": 85,
+          "hr": 92,
           "spo2": 97,
-          "steps": 1270,
-          "stressLoad": 85
+          "steps": 1133,
+          "stressLoad": 80
         },
         {
           "hour": 14,
-          "hr": 104,
-          "spo2": 96,
-          "steps": 1655,
-          "stressLoad": 85
+          "hr": 101,
+          "spo2": 99,
+          "steps": 1542,
+          "stressLoad": 80
         },
         {
           "hour": 16,
-          "hr": 85,
+          "hr": 97,
           "spo2": 98,
-          "steps": 1988,
-          "stressLoad": 85
+          "steps": 2014,
+          "stressLoad": 80
         },
         {
           "hour": 18,
-          "hr": 96,
+          "hr": 84,
           "spo2": 99,
-          "steps": 2245,
-          "stressLoad": 85
+          "steps": 2549,
+          "stressLoad": 80
         },
         {
           "hour": 20,
-          "hr": 89,
-          "spo2": 99,
-          "steps": 2425,
-          "stressLoad": 85,
-          "sleepMinutes": 34
+          "hr": 95,
+          "spo2": 98,
+          "steps": 3147,
+          "stressLoad": 80
         },
         {
           "hour": 22,
-          "hr": 74,
-          "spo2": 96,
-          "steps": 2565,
-          "stressLoad": 85,
-          "sleepMinutes": 70
+          "hr": 69,
+          "spo2": 97,
+          "steps": 3808,
+          "stressLoad": 80
         }
       ]
     },
     {
       "date": "2026-03-30",
       "hr": [
-        78,
-        108,
-        98,
-        98,
-        76
+        71,
+        80,
+        87,
+        122,
+        88
       ],
+      "hrv": 16,
       "sleep": {
-        "totalMinutes": 374,
-        "startTime": "22:13",
-        "endTime": "04:27",
+        "totalMinutes": 289,
+        "startTime": "01:17",
+        "endTime": "06:06",
         "stages": {
-          "deep": 50,
-          "light": 174,
-          "rem": 62,
-          "awake": 88
+          "deep": 67,
+          "light": 131,
+          "rem": 66,
+          "awake": 25
         },
-        "score": 46
+        "score": 57
       },
       "activity": {
-        "steps": 3281,
-        "calories": 2338,
-        "activeMinutes": 34,
-        "distanceKm": 2.5
+        "steps": 4306,
+        "calories": 1977,
+        "activeMinutes": 26,
+        "distanceKm": 3.3
       },
       "spo2": 99,
       "stress": {
-        "load": 74
+        "load": 86
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 77,
+          "hr": 66,
           "spo2": 99,
           "steps": 0,
-          "stressLoad": 74
+          "sleepMinutes": 43,
+          "stressLoad": 86
         },
         {
           "hour": 2,
-          "hr": 78,
-          "spo2": 97,
-          "steps": 16,
-          "stressLoad": 74
+          "hr": 79,
+          "spo2": 99,
+          "steps": 30,
+          "sleepMinutes": 120,
+          "stressLoad": 86
         },
         {
           "hour": 4,
-          "hr": 79,
-          "spo2": 99,
-          "steps": 82,
-          "stressLoad": 74
+          "hr": 68,
+          "spo2": 100,
+          "steps": 120,
+          "sleepMinutes": 120,
+          "stressLoad": 86
         },
         {
           "hour": 6,
-          "hr": 91,
-          "spo2": 98,
-          "steps": 246,
-          "stressLoad": 74
+          "hr": 108,
+          "spo2": 100,
+          "steps": 269,
+          "sleepMinutes": 6,
+          "stressLoad": 86
         },
         {
           "hour": 8,
-          "hr": 102,
-          "spo2": 98,
-          "steps": 574,
-          "stressLoad": 74
+          "hr": 84,
+          "spo2": 100,
+          "steps": 478,
+          "stressLoad": 86
         },
         {
           "hour": 10,
-          "hr": 106,
+          "hr": 107,
           "spo2": 98,
-          "steps": 1066,
-          "stressLoad": 74
+          "steps": 748,
+          "stressLoad": 86
         },
         {
           "hour": 12,
-          "hr": 94,
-          "spo2": 96,
-          "steps": 1624,
-          "stressLoad": 74
+          "hr": 107,
+          "spo2": 98,
+          "steps": 1077,
+          "stressLoad": 86
         },
         {
           "hour": 14,
-          "hr": 103,
-          "spo2": 99,
-          "steps": 2116,
-          "stressLoad": 74
+          "hr": 107,
+          "spo2": 98,
+          "steps": 1465,
+          "stressLoad": 86
         },
         {
           "hour": 16,
-          "hr": 91,
-          "spo2": 97,
-          "steps": 2543,
-          "stressLoad": 74
+          "hr": 88,
+          "spo2": 100,
+          "steps": 1914,
+          "stressLoad": 86
         },
         {
           "hour": 18,
-          "hr": 87,
+          "hr": 110,
           "spo2": 99,
-          "steps": 2871,
-          "stressLoad": 74
+          "steps": 2422,
+          "stressLoad": 86
         },
         {
           "hour": 20,
-          "hr": 88,
+          "hr": 100,
           "spo2": 99,
-          "steps": 3101,
-          "stressLoad": 74,
-          "sleepMinutes": 46
+          "steps": 2990,
+          "stressLoad": 86
         },
         {
           "hour": 22,
-          "hr": 79,
+          "hr": 75,
           "spo2": 98,
-          "steps": 3281,
-          "stressLoad": 74,
-          "sleepMinutes": 106
+          "steps": 3618,
+          "stressLoad": 86
         }
       ]
     },
     {
       "date": "2026-03-31",
       "hr": [
+        71,
+        78,
         83,
-        98,
-        102,
-        104,
-        70
+        151,
+        85
       ],
+      "hrv": 21,
       "sleep": {
-        "totalMinutes": 281,
-        "startTime": "22:35",
-        "endTime": "03:16",
+        "totalMinutes": 313,
+        "startTime": "00:54",
+        "endTime": "06:07",
         "stages": {
-          "deep": 42,
-          "light": 89,
-          "rem": 63,
-          "awake": 87
+          "deep": 59,
+          "light": 157,
+          "rem": 70,
+          "awake": 27
         },
-        "score": 44
+        "score": 58
       },
       "activity": {
-        "steps": 2548,
-        "calories": 2281,
-        "activeMinutes": 18,
-        "distanceKm": 2.3
+        "steps": 4234,
+        "calories": 1927,
+        "activeMinutes": 24,
+        "distanceKm": 3.4
       },
-      "spo2": 98,
+      "spo2": 95,
       "stress": {
-        "load": 64
+        "load": 75
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 74,
-          "spo2": 96,
+          "hr": 71,
+          "spo2": 95,
           "steps": 0,
-          "stressLoad": 64
+          "sleepMinutes": 66,
+          "stressLoad": 75
         },
         {
           "hour": 2,
-          "hr": 79,
-          "spo2": 99,
-          "steps": 13,
-          "stressLoad": 64
+          "hr": 81,
+          "spo2": 96,
+          "steps": 29,
+          "sleepMinutes": 120,
+          "stressLoad": 75
         },
         {
           "hour": 4,
-          "hr": 78,
-          "spo2": 98,
-          "steps": 64,
-          "stressLoad": 64
+          "hr": 66,
+          "spo2": 96,
+          "steps": 118,
+          "sleepMinutes": 120,
+          "stressLoad": 75
         },
         {
           "hour": 6,
           "hr": 91,
-          "spo2": 96,
-          "steps": 191,
-          "stressLoad": 64
+          "spo2": 95,
+          "steps": 265,
+          "sleepMinutes": 7,
+          "stressLoad": 75
         },
         {
           "hour": 8,
-          "hr": 95,
-          "spo2": 96,
-          "steps": 446,
-          "stressLoad": 64
+          "hr": 104,
+          "spo2": 94,
+          "steps": 470,
+          "stressLoad": 75
         },
         {
           "hour": 10,
-          "hr": 95,
-          "spo2": 98,
-          "steps": 828,
-          "stressLoad": 64
+          "hr": 96,
+          "spo2": 95,
+          "steps": 735,
+          "stressLoad": 75
         },
         {
           "hour": 12,
-          "hr": 99,
-          "spo2": 98,
-          "steps": 1261,
-          "stressLoad": 64
+          "hr": 107,
+          "spo2": 96,
+          "steps": 1059,
+          "stressLoad": 75
         },
         {
           "hour": 14,
-          "hr": 109,
+          "hr": 93,
           "spo2": 96,
-          "steps": 1643,
-          "stressLoad": 64
+          "steps": 1441,
+          "stressLoad": 75
         },
         {
           "hour": 16,
-          "hr": 100,
-          "spo2": 98,
-          "steps": 1974,
-          "stressLoad": 64
+          "hr": 94,
+          "spo2": 96,
+          "steps": 1882,
+          "stressLoad": 75
         },
         {
           "hour": 18,
-          "hr": 86,
+          "hr": 88,
           "spo2": 96,
-          "steps": 2229,
-          "stressLoad": 64
+          "steps": 2382,
+          "stressLoad": 75
         },
         {
           "hour": 20,
-          "hr": 91,
-          "spo2": 96,
-          "steps": 2407,
-          "stressLoad": 64,
-          "sleepMinutes": 32
+          "hr": 93,
+          "spo2": 95,
+          "steps": 2940,
+          "stressLoad": 75
         },
         {
           "hour": 22,
-          "hr": 75,
-          "spo2": 98,
-          "steps": 2547,
-          "stressLoad": 64,
-          "sleepMinutes": 88
+          "hr": 80,
+          "spo2": 96,
+          "steps": 3558,
+          "stressLoad": 75
         }
       ]
     },
     {
       "date": "2026-04-01",
       "hr": [
-        74,
-        94,
-        89,
-        101,
-        81
+        79,
+        85,
+        100,
+        162,
+        89
       ],
+      "hrv": 16,
       "sleep": {
-        "totalMinutes": 295,
-        "startTime": "23:11",
-        "endTime": "04:06",
+        "totalMinutes": 323,
+        "startTime": "00:46",
+        "endTime": "06:09",
         "stages": {
-          "deep": 46,
-          "light": 142,
-          "rem": 45,
-          "awake": 62
+          "deep": 68,
+          "light": 139,
+          "rem": 77,
+          "awake": 39
         },
-        "score": 33
+        "score": 59
       },
       "activity": {
-        "steps": 4838,
-        "calories": 2117,
-        "activeMinutes": 30,
-        "distanceKm": 2.5
+        "steps": 4518,
+        "calories": 2022,
+        "activeMinutes": 24,
+        "distanceKm": 3.2
       },
-      "spo2": 99,
+      "spo2": 97,
       "stress": {
-        "load": 80
+        "load": 88
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 73,
-          "spo2": 96,
+          "hr": 80,
+          "spo2": 97,
           "steps": 0,
-          "stressLoad": 80
+          "sleepMinutes": 74,
+          "stressLoad": 88
         },
         {
           "hour": 2,
-          "hr": 78,
+          "hr": 77,
           "spo2": 98,
-          "steps": 24,
-          "stressLoad": 80
+          "steps": 31,
+          "sleepMinutes": 120,
+          "stressLoad": 88
         },
         {
           "hour": 4,
-          "hr": 79,
-          "spo2": 98,
-          "steps": 121,
-          "stressLoad": 80
+          "hr": 72,
+          "spo2": 97,
+          "steps": 126,
+          "sleepMinutes": 120,
+          "stressLoad": 88
         },
         {
           "hour": 6,
-          "hr": 104,
+          "hr": 87,
           "spo2": 96,
-          "steps": 363,
-          "stressLoad": 80
+          "steps": 282,
+          "sleepMinutes": 9,
+          "stressLoad": 88
         },
         {
           "hour": 8,
-          "hr": 103,
-          "spo2": 98,
-          "steps": 847,
-          "stressLoad": 80
+          "hr": 107,
+          "spo2": 96,
+          "steps": 502,
+          "stressLoad": 88
         },
         {
           "hour": 10,
-          "hr": 91,
+          "hr": 96,
           "spo2": 98,
-          "steps": 1573,
-          "stressLoad": 80
+          "steps": 784,
+          "stressLoad": 88
         },
         {
           "hour": 12,
-          "hr": 104,
+          "hr": 101,
           "spo2": 98,
-          "steps": 2395,
-          "stressLoad": 80
+          "steps": 1130,
+          "stressLoad": 88
         },
         {
           "hour": 14,
-          "hr": 86,
+          "hr": 102,
           "spo2": 97,
-          "steps": 3121,
-          "stressLoad": 80
+          "steps": 1537,
+          "stressLoad": 88
         },
         {
           "hour": 16,
           "hr": 94,
-          "spo2": 97,
-          "steps": 3750,
-          "stressLoad": 80
+          "spo2": 96,
+          "steps": 2008,
+          "stressLoad": 88
         },
         {
           "hour": 18,
-          "hr": 104,
-          "spo2": 98,
-          "steps": 4234,
-          "stressLoad": 80
+          "hr": 99,
+          "spo2": 97,
+          "steps": 2541,
+          "stressLoad": 88
         },
         {
           "hour": 20,
-          "hr": 103,
-          "spo2": 97,
-          "steps": 4573,
-          "stressLoad": 80,
-          "sleepMinutes": 31
+          "hr": 93,
+          "spo2": 98,
+          "steps": 3138,
+          "stressLoad": 88
         },
         {
           "hour": 22,
-          "hr": 79,
-          "spo2": 98,
-          "steps": 4838,
-          "stressLoad": 80,
-          "sleepMinutes": 94
+          "hr": 74,
+          "spo2": 97,
+          "steps": 3796,
+          "stressLoad": 88
         }
       ]
     },
     {
       "date": "2026-04-02",
       "hr": [
-        82,
-        107,
-        84,
-        94,
-        78
-      ],
-      "sleep": {
-        "totalMinutes": 345,
-        "startTime": "22:19",
-        "endTime": "04:04",
-        "stages": {
-          "deep": 24,
-          "light": 195,
-          "rem": 65,
-          "awake": 61
-        },
-        "score": 34
-      },
-      "activity": {
-        "steps": 3069,
-        "calories": 2312,
-        "activeMinutes": 24,
-        "distanceKm": 2.2
-      },
-      "spo2": 99,
-      "stress": {
-        "load": 62
-      },
-      "intraday": [
-        {
-          "hour": 0,
-          "hr": 79,
-          "spo2": 98,
-          "steps": 0,
-          "stressLoad": 62
-        },
-        {
-          "hour": 2,
-          "hr": 79,
-          "spo2": 99,
-          "steps": 15,
-          "stressLoad": 62
-        },
-        {
-          "hour": 4,
-          "hr": 80,
-          "spo2": 96,
-          "steps": 76,
-          "stressLoad": 62
-        },
-        {
-          "hour": 6,
-          "hr": 88,
-          "spo2": 99,
-          "steps": 229,
-          "stressLoad": 62
-        },
-        {
-          "hour": 8,
-          "hr": 92,
-          "spo2": 99,
-          "steps": 536,
-          "stressLoad": 62
-        },
-        {
-          "hour": 10,
-          "hr": 97,
-          "spo2": 97,
-          "steps": 996,
-          "stressLoad": 62
-        },
-        {
-          "hour": 12,
-          "hr": 99,
-          "spo2": 98,
-          "steps": 1518,
-          "stressLoad": 62
-        },
-        {
-          "hour": 14,
-          "hr": 98,
-          "spo2": 98,
-          "steps": 1978,
-          "stressLoad": 62
-        },
-        {
-          "hour": 16,
-          "hr": 107,
-          "spo2": 97,
-          "steps": 2377,
-          "stressLoad": 62
-        },
-        {
-          "hour": 18,
-          "hr": 97,
-          "spo2": 99,
-          "steps": 2684,
-          "stressLoad": 62
-        },
-        {
-          "hour": 20,
-          "hr": 109,
-          "spo2": 98,
-          "steps": 2899,
-          "stressLoad": 62,
-          "sleepMinutes": 43
-        },
-        {
-          "hour": 22,
-          "hr": 74,
-          "spo2": 96,
-          "steps": 3068,
-          "stressLoad": 62,
-          "sleepMinutes": 92
-        }
-      ]
-    },
-    {
-      "date": "2026-04-03",
-      "hr": [
+        73,
         81,
-        112,
-        80,
-        99,
-        70
+        88,
+        154,
+        91
       ],
+      "hrv": 21,
       "sleep": {
-        "totalMinutes": 344,
-        "startTime": "23:05",
-        "endTime": "04:49",
+        "totalMinutes": 299,
+        "startTime": "01:08",
+        "endTime": "06:07",
         "stages": {
-          "deep": 30,
-          "light": 191,
-          "rem": 50,
-          "awake": 73
+          "deep": 59,
+          "light": 157,
+          "rem": 65,
+          "awake": 18
         },
-        "score": 55
+        "score": 57
       },
       "activity": {
-        "steps": 3420,
-        "calories": 2267,
-        "activeMinutes": 33,
-        "distanceKm": 3
+        "steps": 4110,
+        "calories": 1980,
+        "activeMinutes": 25,
+        "distanceKm": 3.4
       },
-      "spo2": 98,
+      "spo2": 96,
       "stress": {
         "load": 85
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 76,
-          "spo2": 99,
+          "hr": 72,
+          "spo2": 97,
           "steps": 0,
+          "sleepMinutes": 52,
           "stressLoad": 85
         },
         {
           "hour": 2,
-          "hr": 72,
+          "hr": 67,
           "spo2": 96,
-          "steps": 17,
+          "steps": 29,
+          "sleepMinutes": 120,
           "stressLoad": 85
         },
         {
           "hour": 4,
-          "hr": 74,
-          "spo2": 97,
-          "steps": 85,
-          "stressLoad": 85
-        },
-        {
-          "hour": 6,
-          "hr": 91,
-          "spo2": 96,
-          "steps": 256,
-          "stressLoad": 85
-        },
-        {
-          "hour": 8,
-          "hr": 86,
-          "spo2": 99,
-          "steps": 598,
-          "stressLoad": 85
-        },
-        {
-          "hour": 10,
-          "hr": 106,
-          "spo2": 96,
-          "steps": 1111,
-          "stressLoad": 85
-        },
-        {
-          "hour": 12,
-          "hr": 103,
-          "spo2": 97,
-          "steps": 1692,
-          "stressLoad": 85
-        },
-        {
-          "hour": 14,
-          "hr": 86,
-          "spo2": 97,
-          "steps": 2205,
-          "stressLoad": 85
-        },
-        {
-          "hour": 16,
-          "hr": 96,
-          "spo2": 97,
-          "steps": 2650,
-          "stressLoad": 85
-        },
-        {
-          "hour": 18,
-          "hr": 99,
-          "spo2": 97,
-          "steps": 2992,
-          "stressLoad": 85
-        },
-        {
-          "hour": 20,
-          "hr": 100,
-          "spo2": 99,
-          "steps": 3231,
-          "stressLoad": 85,
-          "sleepMinutes": 47
-        },
-        {
-          "hour": 22,
-          "hr": 72,
-          "spo2": 99,
-          "steps": 3419,
-          "stressLoad": 85,
-          "sleepMinutes": 66
-        }
-      ]
-    },
-    {
-      "date": "2026-04-04",
-      "hr": [
-        73,
-        98,
-        98,
-        103,
-        74
-      ],
-      "sleep": {
-        "totalMinutes": 362,
-        "startTime": "22:14",
-        "endTime": "04:16",
-        "stages": {
-          "deep": 48,
-          "light": 115,
-          "rem": 105,
-          "awake": 94
-        },
-        "score": 36
-      },
-      "activity": {
-        "steps": 3919,
-        "calories": 2164,
-        "activeMinutes": 26,
-        "distanceKm": 3.6
-      },
-      "spo2": 98,
-      "stress": {
-        "load": 71
-      },
-      "intraday": [
-        {
-          "hour": 0,
           "hr": 79,
-          "spo2": 97,
-          "steps": 0,
-          "stressLoad": 71
-        },
-        {
-          "hour": 2,
-          "hr": 80,
-          "spo2": 98,
-          "steps": 20,
-          "stressLoad": 71
-        },
-        {
-          "hour": 4,
-          "hr": 74,
-          "spo2": 98,
-          "steps": 98,
-          "stressLoad": 71
+          "spo2": 96,
+          "steps": 114,
+          "sleepMinutes": 120,
+          "stressLoad": 85
         },
         {
           "hour": 6,
-          "hr": 86,
-          "spo2": 98,
-          "steps": 294,
-          "stressLoad": 71
-        },
-        {
-          "hour": 8,
-          "hr": 99,
-          "spo2": 97,
-          "steps": 686,
-          "stressLoad": 71
-        },
-        {
-          "hour": 10,
-          "hr": 85,
-          "spo2": 96,
-          "steps": 1274,
-          "stressLoad": 71
-        },
-        {
-          "hour": 12,
-          "hr": 86,
-          "spo2": 98,
-          "steps": 1940,
-          "stressLoad": 71
-        },
-        {
-          "hour": 14,
-          "hr": 107,
-          "spo2": 97,
-          "steps": 2528,
-          "stressLoad": 71
-        },
-        {
-          "hour": 16,
-          "hr": 102,
-          "spo2": 97,
-          "steps": 3037,
-          "stressLoad": 71
-        },
-        {
-          "hour": 18,
-          "hr": 103,
-          "spo2": 96,
-          "steps": 3429,
-          "stressLoad": 71
-        },
-        {
-          "hour": 20,
-          "hr": 87,
-          "spo2": 99,
-          "steps": 3703,
-          "stressLoad": 71,
-          "sleepMinutes": 43
-        },
-        {
-          "hour": 22,
-          "hr": 78,
-          "spo2": 98,
-          "steps": 3919,
-          "stressLoad": 71,
-          "sleepMinutes": 86
-        }
-      ]
-    },
-    {
-      "date": "2026-04-05",
-      "hr": [
-        80,
-        99,
-        104,
-        86,
-        79
-      ],
-      "sleep": {
-        "totalMinutes": 284,
-        "startTime": "23:46",
-        "endTime": "04:30",
-        "stages": {
-          "deep": 43,
-          "light": 112,
-          "rem": 56,
-          "awake": 73
-        },
-        "score": 35
-      },
-      "activity": {
-        "steps": 3680,
-        "calories": 2233,
-        "activeMinutes": 22,
-        "distanceKm": 3.4
-      },
-      "spo2": 99,
-      "stress": {
-        "load": 61
-      },
-      "intraday": [
-        {
-          "hour": 0,
-          "hr": 72,
-          "spo2": 96,
-          "steps": 0,
-          "stressLoad": 61
-        },
-        {
-          "hour": 2,
-          "hr": 79,
-          "spo2": 98,
-          "steps": 18,
-          "stressLoad": 61
-        },
-        {
-          "hour": 4,
-          "hr": 72,
-          "spo2": 96,
-          "steps": 92,
-          "stressLoad": 61
-        },
-        {
-          "hour": 6,
-          "hr": 105,
-          "spo2": 98,
-          "steps": 276,
-          "stressLoad": 61
-        },
-        {
-          "hour": 8,
-          "hr": 91,
-          "spo2": 96,
-          "steps": 644,
-          "stressLoad": 61
-        },
-        {
-          "hour": 10,
-          "hr": 91,
-          "spo2": 97,
-          "steps": 1196,
-          "stressLoad": 61
-        },
-        {
-          "hour": 12,
-          "hr": 86,
-          "spo2": 99,
-          "steps": 1822,
-          "stressLoad": 61
-        },
-        {
-          "hour": 14,
-          "hr": 91,
-          "spo2": 98,
-          "steps": 2374,
-          "stressLoad": 61
-        },
-        {
-          "hour": 16,
-          "hr": 101,
-          "spo2": 96,
-          "steps": 2852,
-          "stressLoad": 61
-        },
-        {
-          "hour": 18,
-          "hr": 91,
-          "spo2": 99,
-          "steps": 3220,
-          "stressLoad": 61
-        },
-        {
-          "hour": 20,
-          "hr": 103,
-          "spo2": 99,
-          "steps": 3478,
-          "stressLoad": 61,
-          "sleepMinutes": 50
-        },
-        {
-          "hour": 22,
-          "hr": 77,
-          "spo2": 97,
-          "steps": 3680,
-          "stressLoad": 61,
-          "sleepMinutes": 98
-        }
-      ]
-    },
-    {
-      "date": "2026-04-06",
-      "hr": [
-        73,
-        86,
-        97,
-        102,
-        76
-      ],
-      "sleep": {
-        "totalMinutes": 367,
-        "startTime": "23:55",
-        "endTime": "06:02",
-        "stages": {
-          "deep": 22,
-          "light": 180,
-          "rem": 106,
-          "awake": 59
-        },
-        "score": 52
-      },
-      "activity": {
-        "steps": 4742,
-        "calories": 2265,
-        "activeMinutes": 15,
-        "distanceKm": 3.6
-      },
-      "spo2": 96,
-      "stress": {
-        "load": 75
-      },
-      "intraday": [
-        {
-          "hour": 0,
-          "hr": 76,
-          "spo2": 96,
-          "steps": 0,
-          "stressLoad": 75
-        },
-        {
-          "hour": 2,
-          "hr": 78,
-          "spo2": 97,
-          "steps": 24,
-          "stressLoad": 75
-        },
-        {
-          "hour": 4,
-          "hr": 73,
-          "spo2": 99,
-          "steps": 119,
-          "stressLoad": 75
-        },
-        {
-          "hour": 6,
-          "hr": 100,
-          "spo2": 99,
-          "steps": 356,
-          "stressLoad": 75
-        },
-        {
-          "hour": 8,
-          "hr": 86,
-          "spo2": 98,
-          "steps": 830,
-          "stressLoad": 75
-        },
-        {
-          "hour": 10,
-          "hr": 95,
-          "spo2": 99,
-          "steps": 1541,
-          "stressLoad": 75
-        },
-        {
-          "hour": 12,
-          "hr": 93,
-          "spo2": 97,
-          "steps": 2347,
-          "stressLoad": 75
-        },
-        {
-          "hour": 14,
           "hr": 88,
-          "spo2": 96,
-          "steps": 3058,
-          "stressLoad": 75
-        },
-        {
-          "hour": 16,
-          "hr": 97,
-          "spo2": 98,
-          "steps": 3674,
-          "stressLoad": 75
-        },
-        {
-          "hour": 18,
-          "hr": 98,
-          "spo2": 97,
-          "steps": 4148,
-          "stressLoad": 75
-        },
-        {
-          "hour": 20,
-          "hr": 110,
-          "spo2": 97,
-          "steps": 4480,
-          "stressLoad": 75,
-          "sleepMinutes": 50
-        },
-        {
-          "hour": 22,
-          "hr": 76,
-          "spo2": 98,
-          "steps": 4741,
-          "stressLoad": 75,
-          "sleepMinutes": 69
-        }
-      ]
-    },
-    {
-      "date": "2026-04-07",
-      "hr": [
-        85,
-        115,
-        97,
-        100,
-        75
-      ],
-      "sleep": {
-        "totalMinutes": 349,
-        "startTime": "22:46",
-        "endTime": "04:35",
-        "stages": {
-          "deep": 23,
-          "light": 182,
-          "rem": 68,
-          "awake": 76
-        },
-        "score": 41
-      },
-      "activity": {
-        "steps": 2729,
-        "calories": 2365,
-        "activeMinutes": 29,
-        "distanceKm": 2.1
-      },
-      "spo2": 99,
-      "stress": {
-        "load": 64
-      },
-      "intraday": [
-        {
-          "hour": 0,
-          "hr": 79,
-          "spo2": 96,
-          "steps": 0,
-          "stressLoad": 64
-        },
-        {
-          "hour": 2,
-          "hr": 74,
-          "spo2": 97,
-          "steps": 14,
-          "stressLoad": 64
-        },
-        {
-          "hour": 4,
-          "hr": 75,
-          "spo2": 98,
-          "steps": 69,
-          "stressLoad": 64
-        },
-        {
-          "hour": 6,
-          "hr": 108,
-          "spo2": 99,
-          "steps": 205,
-          "stressLoad": 64
+          "spo2": 95,
+          "steps": 257,
+          "sleepMinutes": 7,
+          "stressLoad": 85
         },
         {
           "hour": 8,
           "hr": 94,
-          "spo2": 97,
-          "steps": 478,
-          "stressLoad": 64
+          "spo2": 95,
+          "steps": 457,
+          "stressLoad": 85
         },
         {
           "hour": 10,
-          "hr": 97,
+          "hr": 89,
           "spo2": 96,
-          "steps": 887,
-          "stressLoad": 64
+          "steps": 714,
+          "stressLoad": 85
         },
         {
           "hour": 12,
-          "hr": 98,
-          "spo2": 96,
-          "steps": 1351,
-          "stressLoad": 64
+          "hr": 97,
+          "spo2": 95,
+          "steps": 1028,
+          "stressLoad": 85
         },
         {
           "hour": 14,
-          "hr": 108,
+          "hr": 102,
           "spo2": 97,
-          "steps": 1760,
-          "stressLoad": 64
+          "steps": 1399,
+          "stressLoad": 85
         },
         {
           "hour": 16,
-          "hr": 109,
-          "spo2": 98,
-          "steps": 2115,
-          "stressLoad": 64
+          "hr": 103,
+          "spo2": 95,
+          "steps": 1827,
+          "stressLoad": 85
         },
         {
           "hour": 18,
-          "hr": 91,
-          "spo2": 97,
-          "steps": 2388,
-          "stressLoad": 64
-        },
-        {
-          "hour": 20,
           "hr": 94,
           "spo2": 97,
-          "steps": 2579,
-          "stressLoad": 64,
-          "sleepMinutes": 36
-        },
-        {
-          "hour": 22,
-          "hr": 77,
-          "spo2": 98,
-          "steps": 2729,
-          "stressLoad": 64,
-          "sleepMinutes": 60
-        }
-      ]
-    },
-    {
-      "date": "2026-04-08",
-      "hr": [
-        84,
-        94,
-        94,
-        95,
-        70
-      ],
-      "sleep": {
-        "totalMinutes": 325,
-        "startTime": "22:11",
-        "endTime": "03:36",
-        "stages": {
-          "deep": 43,
-          "light": 141,
-          "rem": 79,
-          "awake": 62
-        },
-        "score": 30
-      },
-      "activity": {
-        "steps": 3334,
-        "calories": 2045,
-        "activeMinutes": 33,
-        "distanceKm": 3.8
-      },
-      "spo2": 99,
-      "stress": {
-        "load": 68
-      },
-      "intraday": [
-        {
-          "hour": 0,
-          "hr": 74,
-          "spo2": 97,
-          "steps": 0,
-          "stressLoad": 68
-        },
-        {
-          "hour": 2,
-          "hr": 76,
-          "spo2": 96,
-          "steps": 17,
-          "stressLoad": 68
-        },
-        {
-          "hour": 4,
-          "hr": 77,
-          "spo2": 98,
-          "steps": 84,
-          "stressLoad": 68
-        },
-        {
-          "hour": 6,
-          "hr": 101,
-          "spo2": 97,
-          "steps": 251,
-          "stressLoad": 68
-        },
-        {
-          "hour": 8,
-          "hr": 99,
-          "spo2": 99,
-          "steps": 584,
-          "stressLoad": 68
-        },
-        {
-          "hour": 10,
-          "hr": 107,
-          "spo2": 96,
-          "steps": 1084,
-          "stressLoad": 68
-        },
-        {
-          "hour": 12,
-          "hr": 90,
-          "spo2": 97,
-          "steps": 1651,
-          "stressLoad": 68
-        },
-        {
-          "hour": 14,
-          "hr": 110,
-          "spo2": 99,
-          "steps": 2151,
-          "stressLoad": 68
-        },
-        {
-          "hour": 16,
-          "hr": 86,
-          "spo2": 99,
-          "steps": 2584,
-          "stressLoad": 68
-        },
-        {
-          "hour": 18,
-          "hr": 110,
-          "spo2": 96,
-          "steps": 2917,
-          "stressLoad": 68
+          "steps": 2312,
+          "stressLoad": 85
         },
         {
           "hour": 20,
-          "hr": 108,
-          "spo2": 99,
-          "steps": 3150,
-          "stressLoad": 68,
-          "sleepMinutes": 51
+          "hr": 93,
+          "spo2": 96,
+          "steps": 2854,
+          "stressLoad": 85
         },
         {
           "hour": 22,
-          "hr": 77,
-          "spo2": 96,
-          "steps": 3333,
-          "stressLoad": 68,
-          "sleepMinutes": 62
-        }
-      ]
-    },
-    {
-      "date": "2026-04-09",
-      "hr": [
-        81,
-        112,
-        80,
-        103,
-        75
-      ],
-      "sleep": {
-        "totalMinutes": 357,
-        "startTime": "22:14",
-        "endTime": "04:11",
-        "stages": {
-          "deep": 50,
-          "light": 163,
-          "rem": 61,
-          "awake": 83
-        },
-        "score": 35
-      },
-      "activity": {
-        "steps": 3948,
-        "calories": 2030,
-        "activeMinutes": 15,
-        "distanceKm": 3.3
-      },
-      "spo2": 98,
-      "stress": {
-        "load": 78
-      },
-      "intraday": [
-        {
-          "hour": 0,
-          "hr": 78,
-          "spo2": 99,
-          "steps": 0,
-          "stressLoad": 78
-        },
-        {
-          "hour": 2,
-          "hr": 77,
-          "spo2": 99,
-          "steps": 20,
-          "stressLoad": 78
-        },
-        {
-          "hour": 4,
-          "hr": 72,
-          "spo2": 96,
-          "steps": 99,
-          "stressLoad": 78
-        },
-        {
-          "hour": 6,
-          "hr": 101,
-          "spo2": 98,
-          "steps": 296,
-          "stressLoad": 78
-        },
-        {
-          "hour": 8,
-          "hr": 102,
-          "spo2": 96,
-          "steps": 691,
-          "stressLoad": 78
-        },
-        {
-          "hour": 10,
-          "hr": 88,
-          "spo2": 97,
-          "steps": 1283,
-          "stressLoad": 78
-        },
-        {
-          "hour": 12,
-          "hr": 93,
-          "spo2": 98,
-          "steps": 1954,
-          "stressLoad": 78
-        },
-        {
-          "hour": 14,
-          "hr": 108,
-          "spo2": 98,
-          "steps": 2546,
-          "stressLoad": 78
-        },
-        {
-          "hour": 16,
-          "hr": 107,
-          "spo2": 99,
-          "steps": 3059,
-          "stressLoad": 78
-        },
-        {
-          "hour": 18,
-          "hr": 109,
-          "spo2": 98,
+          "hr": 71,
+          "spo2": 95,
           "steps": 3454,
-          "stressLoad": 78
-        },
-        {
-          "hour": 20,
-          "hr": 95,
-          "spo2": 96,
-          "steps": 3730,
-          "stressLoad": 78,
-          "sleepMinutes": 36
-        },
-        {
-          "hour": 22,
-          "hr": 74,
-          "spo2": 97,
-          "steps": 3947,
-          "stressLoad": 78,
-          "sleepMinutes": 60
+          "stressLoad": 85
         }
       ]
     },
     {
-      "date": "2026-04-10",
+      "date": "2026-04-03",
       "hr": [
-        72,
-        102,
-        91,
-        106,
-        80
+        74,
+        82,
+        90,
+        153,
+        84
       ],
+      "hrv": 23,
       "sleep": {
-        "totalMinutes": 322,
-        "startTime": "22:26",
-        "endTime": "03:48",
-        "stages": {
-          "deep": 39,
-          "light": 102,
-          "rem": 89,
-          "awake": 92
-        },
-        "score": 42
-      },
-      "activity": {
-        "steps": 3976,
-        "calories": 2107,
-        "activeMinutes": 29,
-        "distanceKm": 3.8
-      },
-      "spo2": 98,
-      "stress": {
-        "load": 61
-      },
-      "intraday": [
-        {
-          "hour": 0,
-          "hr": 77,
-          "spo2": 98,
-          "steps": 0,
-          "stressLoad": 61
-        },
-        {
-          "hour": 2,
-          "hr": 78,
-          "spo2": 97,
-          "steps": 20,
-          "stressLoad": 61
-        },
-        {
-          "hour": 4,
-          "hr": 77,
-          "spo2": 97,
-          "steps": 100,
-          "stressLoad": 61
-        },
-        {
-          "hour": 6,
-          "hr": 94,
-          "spo2": 97,
-          "steps": 299,
-          "stressLoad": 61
-        },
-        {
-          "hour": 8,
-          "hr": 87,
-          "spo2": 97,
-          "steps": 697,
-          "stressLoad": 61
-        },
-        {
-          "hour": 10,
-          "hr": 108,
-          "spo2": 99,
-          "steps": 1293,
-          "stressLoad": 61
-        },
-        {
-          "hour": 12,
-          "hr": 86,
-          "spo2": 99,
-          "steps": 1969,
-          "stressLoad": 61
-        },
-        {
-          "hour": 14,
-          "hr": 90,
-          "spo2": 98,
-          "steps": 2565,
-          "stressLoad": 61
-        },
-        {
-          "hour": 16,
-          "hr": 92,
-          "spo2": 99,
-          "steps": 3082,
-          "stressLoad": 61
-        },
-        {
-          "hour": 18,
-          "hr": 89,
-          "spo2": 97,
-          "steps": 3480,
-          "stressLoad": 61
-        },
-        {
-          "hour": 20,
-          "hr": 99,
-          "spo2": 99,
-          "steps": 3758,
-          "stressLoad": 61,
-          "sleepMinutes": 49
-        },
-        {
-          "hour": 22,
-          "hr": 79,
-          "spo2": 98,
-          "steps": 3976,
-          "stressLoad": 61,
-          "sleepMinutes": 73
-        }
-      ]
-    },
-    {
-      "date": "2026-04-11",
-      "hr": [
-        84,
-        107,
-        104,
-        101,
-        81
-      ],
-      "sleep": {
-        "totalMinutes": 322,
-        "startTime": "23:37",
-        "endTime": "04:59",
-        "stages": {
-          "deep": 30,
-          "light": 118,
-          "rem": 90,
-          "awake": 84
-        },
-        "score": 53
-      },
-      "activity": {
-        "steps": 4628,
-        "calories": 2113,
-        "activeMinutes": 30,
-        "distanceKm": 2
-      },
-      "spo2": 96,
-      "stress": {
-        "load": 75
-      },
-      "intraday": [
-        {
-          "hour": 0,
-          "hr": 74,
-          "spo2": 98,
-          "steps": 0,
-          "stressLoad": 75
-        },
-        {
-          "hour": 2,
-          "hr": 80,
-          "spo2": 98,
-          "steps": 23,
-          "stressLoad": 75
-        },
-        {
-          "hour": 4,
-          "hr": 79,
-          "spo2": 96,
-          "steps": 116,
-          "stressLoad": 75
-        },
-        {
-          "hour": 6,
-          "hr": 102,
-          "spo2": 98,
-          "steps": 347,
-          "stressLoad": 75
-        },
-        {
-          "hour": 8,
-          "hr": 97,
-          "spo2": 99,
-          "steps": 810,
-          "stressLoad": 75
-        },
-        {
-          "hour": 10,
-          "hr": 98,
-          "spo2": 98,
-          "steps": 1504,
-          "stressLoad": 75
-        },
-        {
-          "hour": 12,
-          "hr": 100,
-          "spo2": 98,
-          "steps": 2291,
-          "stressLoad": 75
-        },
-        {
-          "hour": 14,
-          "hr": 89,
-          "spo2": 96,
-          "steps": 2985,
-          "stressLoad": 75
-        },
-        {
-          "hour": 16,
-          "hr": 85,
-          "spo2": 97,
-          "steps": 3587,
-          "stressLoad": 75
-        },
-        {
-          "hour": 18,
-          "hr": 91,
-          "spo2": 99,
-          "steps": 4050,
-          "stressLoad": 75
-        },
-        {
-          "hour": 20,
-          "hr": 92,
-          "spo2": 97,
-          "steps": 4374,
-          "stressLoad": 75,
-          "sleepMinutes": 36
-        },
-        {
-          "hour": 22,
-          "hr": 78,
-          "spo2": 96,
-          "steps": 4628,
-          "stressLoad": 75,
-          "sleepMinutes": 89
-        }
-      ]
-    },
-    {
-      "date": "2026-04-12",
-      "hr": [
-        84,
-        97,
-        102,
-        86,
-        77
-      ],
-      "sleep": {
-        "totalMinutes": 371,
-        "startTime": "23:33",
-        "endTime": "05:44",
-        "stages": {
-          "deep": 37,
-          "light": 191,
-          "rem": 60,
-          "awake": 83
-        },
-        "score": 44
-      },
-      "activity": {
-        "steps": 4486,
-        "calories": 2261,
-        "activeMinutes": 20,
-        "distanceKm": 3.6
-      },
-      "spo2": 96,
-      "stress": {
-        "load": 70
-      },
-      "intraday": [
-        {
-          "hour": 0,
-          "hr": 79,
-          "spo2": 98,
-          "steps": 0,
-          "stressLoad": 70
-        },
-        {
-          "hour": 2,
-          "hr": 74,
-          "spo2": 96,
-          "steps": 22,
-          "stressLoad": 70
-        },
-        {
-          "hour": 4,
-          "hr": 72,
-          "spo2": 97,
-          "steps": 112,
-          "stressLoad": 70
-        },
-        {
-          "hour": 6,
-          "hr": 92,
-          "spo2": 99,
-          "steps": 336,
-          "stressLoad": 70
-        },
-        {
-          "hour": 8,
-          "hr": 101,
-          "spo2": 99,
-          "steps": 785,
-          "stressLoad": 70
-        },
-        {
-          "hour": 10,
-          "hr": 108,
-          "spo2": 99,
-          "steps": 1458,
-          "stressLoad": 70
-        },
-        {
-          "hour": 12,
-          "hr": 108,
-          "spo2": 96,
-          "steps": 2221,
-          "stressLoad": 70
-        },
-        {
-          "hour": 14,
-          "hr": 94,
-          "spo2": 99,
-          "steps": 2894,
-          "stressLoad": 70
-        },
-        {
-          "hour": 16,
-          "hr": 99,
-          "spo2": 98,
-          "steps": 3477,
-          "stressLoad": 70
-        },
-        {
-          "hour": 18,
-          "hr": 102,
-          "spo2": 96,
-          "steps": 3926,
-          "stressLoad": 70
-        },
-        {
-          "hour": 20,
-          "hr": 101,
-          "spo2": 98,
-          "steps": 4240,
-          "stressLoad": 70,
-          "sleepMinutes": 35
-        },
-        {
-          "hour": 22,
-          "hr": 76,
-          "spo2": 98,
-          "steps": 4486,
-          "stressLoad": 70,
-          "sleepMinutes": 83
-        }
-      ]
-    },
-    {
-      "date": "2026-04-13",
-      "hr": [
-        73,
-        87,
-        78,
-        86,
-        70
-      ],
-      "sleep": {
-        "totalMinutes": 301,
-        "startTime": "23:22",
-        "endTime": "04:23",
-        "stages": {
-          "deep": 25,
-          "light": 159,
-          "rem": 48,
-          "awake": 69
-        },
-        "score": 40
-      },
-      "activity": {
-        "steps": 4603,
-        "calories": 2091,
-        "activeMinutes": 31,
-        "distanceKm": 2.7
-      },
-      "spo2": 99,
-      "stress": {
-        "load": 78
-      },
-      "intraday": [
-        {
-          "hour": 0,
-          "hr": 77,
-          "spo2": 96,
-          "steps": 0,
-          "stressLoad": 78
-        },
-        {
-          "hour": 2,
-          "hr": 77,
-          "spo2": 96,
-          "steps": 23,
-          "stressLoad": 78
-        },
-        {
-          "hour": 4,
-          "hr": 75,
-          "spo2": 99,
-          "steps": 115,
-          "stressLoad": 78
-        },
-        {
-          "hour": 6,
-          "hr": 106,
-          "spo2": 98,
-          "steps": 345,
-          "stressLoad": 78
-        },
-        {
-          "hour": 8,
-          "hr": 104,
-          "spo2": 97,
-          "steps": 805,
-          "stressLoad": 78
-        },
-        {
-          "hour": 10,
-          "hr": 99,
-          "spo2": 99,
-          "steps": 1495,
-          "stressLoad": 78
-        },
-        {
-          "hour": 12,
-          "hr": 106,
-          "spo2": 97,
-          "steps": 2278,
-          "stressLoad": 78
-        },
-        {
-          "hour": 14,
-          "hr": 103,
-          "spo2": 97,
-          "steps": 2968,
-          "stressLoad": 78
-        },
-        {
-          "hour": 16,
-          "hr": 96,
-          "spo2": 99,
-          "steps": 3566,
-          "stressLoad": 78
-        },
-        {
-          "hour": 18,
-          "hr": 92,
-          "spo2": 99,
-          "steps": 4026,
-          "stressLoad": 78
-        },
-        {
-          "hour": 20,
-          "hr": 100,
-          "spo2": 99,
-          "steps": 4348,
-          "stressLoad": 78,
-          "sleepMinutes": 58
-        },
-        {
-          "hour": 22,
-          "hr": 72,
-          "spo2": 98,
-          "steps": 4601,
-          "stressLoad": 78,
-          "sleepMinutes": 66
-        }
-      ]
-    },
-    {
-      "date": "2026-04-14",
-      "hr": [
-        75,
-        93,
-        92,
-        99,
-        75
-      ],
-      "sleep": {
-        "totalMinutes": 302,
-        "startTime": "22:44",
-        "endTime": "03:46",
+        "totalMinutes": 275,
+        "startTime": "01:31",
+        "endTime": "06:06",
         "stages": {
           "deep": 50,
-          "light": 116,
-          "rem": 59,
-          "awake": 77
+          "light": 146,
+          "rem": 55,
+          "awake": 24
         },
-        "score": 36
+        "score": 57
       },
       "activity": {
-        "steps": 2666,
-        "calories": 2016,
-        "activeMinutes": 17,
-        "distanceKm": 3.7
-      },
-      "spo2": 97,
-      "stress": {
-        "load": 67
-      },
-      "intraday": [
-        {
-          "hour": 0,
-          "hr": 75,
-          "spo2": 97,
-          "steps": 0,
-          "stressLoad": 67
-        },
-        {
-          "hour": 2,
-          "hr": 79,
-          "spo2": 99,
-          "steps": 13,
-          "stressLoad": 67
-        },
-        {
-          "hour": 4,
-          "hr": 75,
-          "spo2": 98,
-          "steps": 66,
-          "stressLoad": 67
-        },
-        {
-          "hour": 6,
-          "hr": 89,
-          "spo2": 96,
-          "steps": 199,
-          "stressLoad": 67
-        },
-        {
-          "hour": 8,
-          "hr": 109,
-          "spo2": 96,
-          "steps": 466,
-          "stressLoad": 67
-        },
-        {
-          "hour": 10,
-          "hr": 99,
-          "spo2": 98,
-          "steps": 866,
-          "stressLoad": 67
-        },
-        {
-          "hour": 12,
-          "hr": 94,
-          "spo2": 99,
-          "steps": 1319,
-          "stressLoad": 67
-        },
-        {
-          "hour": 14,
-          "hr": 110,
-          "spo2": 97,
-          "steps": 1719,
-          "stressLoad": 67
-        },
-        {
-          "hour": 16,
-          "hr": 86,
-          "spo2": 96,
-          "steps": 2066,
-          "stressLoad": 67
-        },
-        {
-          "hour": 18,
-          "hr": 101,
-          "spo2": 96,
-          "steps": 2333,
-          "stressLoad": 67
-        },
-        {
-          "hour": 20,
-          "hr": 104,
-          "spo2": 96,
-          "steps": 2520,
-          "stressLoad": 67,
-          "sleepMinutes": 33
-        },
-        {
-          "hour": 22,
-          "hr": 77,
-          "spo2": 99,
-          "steps": 2666,
-          "stressLoad": 67,
-          "sleepMinutes": 96
-        }
-      ]
-    },
-    {
-      "date": "2026-04-15",
-      "hr": [
-        80,
-        110,
-        94,
-        94,
-        70
-      ],
-      "sleep": {
-        "totalMinutes": 305,
-        "startTime": "22:29",
-        "endTime": "03:34",
-        "stages": {
-          "deep": 38,
-          "light": 101,
-          "rem": 82,
-          "awake": 84
-        },
-        "score": 54
-      },
-      "activity": {
-        "steps": 4948,
-        "calories": 2002,
-        "activeMinutes": 29,
-        "distanceKm": 2.4
+        "steps": 3809,
+        "calories": 1902,
+        "activeMinutes": 21,
+        "distanceKm": 3
       },
       "spo2": 98,
       "stress": {
@@ -2559,242 +1146,1474 @@
       "intraday": [
         {
           "hour": 0,
-          "hr": 72,
-          "spo2": 96,
+          "hr": 67,
+          "spo2": 97,
           "steps": 0,
+          "sleepMinutes": 29,
           "stressLoad": 80
         },
         {
           "hour": 2,
-          "hr": 80,
-          "spo2": 96,
-          "steps": 25,
+          "hr": 81,
+          "spo2": 99,
+          "steps": 26,
+          "sleepMinutes": 120,
           "stressLoad": 80
         },
         {
           "hour": 4,
-          "hr": 79,
-          "spo2": 96,
-          "steps": 124,
+          "hr": 72,
+          "spo2": 99,
+          "steps": 106,
+          "sleepMinutes": 120,
           "stressLoad": 80
         },
         {
           "hour": 6,
-          "hr": 93,
-          "spo2": 96,
-          "steps": 371,
+          "hr": 87,
+          "spo2": 97,
+          "steps": 238,
+          "sleepMinutes": 6,
           "stressLoad": 80
         },
         {
           "hour": 8,
-          "hr": 87,
-          "spo2": 97,
-          "steps": 866,
+          "hr": 78,
+          "spo2": 99,
+          "steps": 423,
           "stressLoad": 80
         },
         {
           "hour": 10,
-          "hr": 89,
-          "spo2": 99,
-          "steps": 1608,
+          "hr": 76,
+          "spo2": 97,
+          "steps": 661,
           "stressLoad": 80
         },
         {
           "hour": 12,
-          "hr": 86,
-          "spo2": 97,
-          "steps": 2449,
+          "hr": 100,
+          "spo2": 98,
+          "steps": 952,
           "stressLoad": 80
         },
         {
           "hour": 14,
           "hr": 96,
-          "spo2": 96,
-          "steps": 3191,
+          "spo2": 99,
+          "steps": 1296,
           "stressLoad": 80
         },
         {
           "hour": 16,
-          "hr": 89,
-          "spo2": 98,
-          "steps": 3834,
+          "hr": 90,
+          "spo2": 97,
+          "steps": 1693,
           "stressLoad": 80
         },
         {
           "hour": 18,
-          "hr": 99,
-          "spo2": 97,
-          "steps": 4329,
+          "hr": 109,
+          "spo2": 99,
+          "steps": 2143,
           "stressLoad": 80
         },
         {
           "hour": 20,
-          "hr": 106,
-          "spo2": 96,
-          "steps": 4675,
-          "stressLoad": 80,
-          "sleepMinutes": 51
+          "hr": 91,
+          "spo2": 98,
+          "steps": 2645,
+          "stressLoad": 80
         },
         {
           "hour": 22,
-          "hr": 74,
+          "hr": 66,
           "spo2": 97,
-          "steps": 4947,
-          "stressLoad": 80,
-          "sleepMinutes": 109
+          "steps": 3201,
+          "stressLoad": 80
         }
       ]
     },
     {
-      "date": "2026-04-16",
+      "date": "2026-04-04",
       "hr": [
-        82,
-        111,
-        102,
+        77,
+        84,
         92,
-        81
+        144,
+        91
       ],
+      "hrv": 22,
       "sleep": {
-        "totalMinutes": 357,
-        "startTime": "23:09",
-        "endTime": "05:06",
+        "totalMinutes": 300,
+        "startTime": "01:04",
+        "endTime": "06:04",
         "stages": {
-          "deep": 29,
-          "light": 140,
-          "rem": 88,
-          "awake": 100
+          "deep": 63,
+          "light": 135,
+          "rem": 66,
+          "awake": 36
         },
         "score": 52
       },
       "activity": {
-        "steps": 4407,
-        "calories": 2256,
-        "activeMinutes": 16,
-        "distanceKm": 2.3
+        "steps": 3456,
+        "calories": 1900,
+        "activeMinutes": 21,
+        "distanceKm": 2.9
       },
-      "spo2": 96,
+      "spo2": 97,
       "stress": {
-        "load": 70
+        "load": 88
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 73,
-          "spo2": 99,
+          "hr": 71,
+          "spo2": 96,
           "steps": 0,
-          "stressLoad": 70
+          "sleepMinutes": 56,
+          "stressLoad": 88
         },
         {
           "hour": 2,
-          "hr": 77,
-          "spo2": 99,
-          "steps": 22,
-          "stressLoad": 70
+          "hr": 74,
+          "spo2": 97,
+          "steps": 24,
+          "sleepMinutes": 120,
+          "stressLoad": 88
         },
         {
           "hour": 4,
-          "hr": 80,
-          "spo2": 96,
-          "steps": 110,
-          "stressLoad": 70
+          "hr": 81,
+          "spo2": 98,
+          "steps": 96,
+          "sleepMinutes": 120,
+          "stressLoad": 88
         },
         {
           "hour": 6,
-          "hr": 108,
-          "spo2": 98,
-          "steps": 330,
-          "stressLoad": 70
+          "hr": 100,
+          "spo2": 96,
+          "steps": 216,
+          "sleepMinutes": 4,
+          "stressLoad": 88
         },
         {
           "hour": 8,
-          "hr": 88,
-          "spo2": 99,
-          "steps": 771,
-          "stressLoad": 70
+          "hr": 84,
+          "spo2": 97,
+          "steps": 384,
+          "stressLoad": 88
         },
         {
           "hour": 10,
-          "hr": 97,
+          "hr": 83,
           "spo2": 96,
-          "steps": 1432,
-          "stressLoad": 70
+          "steps": 600,
+          "stressLoad": 88
         },
         {
           "hour": 12,
-          "hr": 93,
-          "spo2": 99,
-          "steps": 2181,
-          "stressLoad": 70
+          "hr": 99,
+          "spo2": 97,
+          "steps": 864,
+          "stressLoad": 88
         },
         {
           "hour": 14,
-          "hr": 105,
-          "spo2": 97,
-          "steps": 2842,
-          "stressLoad": 70
+          "hr": 99,
+          "spo2": 96,
+          "steps": 1176,
+          "stressLoad": 88
         },
         {
           "hour": 16,
-          "hr": 103,
-          "spo2": 98,
-          "steps": 3415,
-          "stressLoad": 70
+          "hr": 96,
+          "spo2": 97,
+          "steps": 1536,
+          "stressLoad": 88
         },
         {
           "hour": 18,
-          "hr": 100,
-          "spo2": 98,
-          "steps": 3856,
-          "stressLoad": 70
+          "hr": 99,
+          "spo2": 97,
+          "steps": 1944,
+          "stressLoad": 88
         },
         {
           "hour": 20,
           "hr": 99,
-          "spo2": 99,
-          "steps": 4164,
-          "stressLoad": 70,
-          "sleepMinutes": 39
+          "spo2": 97,
+          "steps": 2400,
+          "stressLoad": 88
         },
         {
           "hour": 22,
-          "hr": 76,
-          "spo2": 99,
-          "steps": 4406,
-          "stressLoad": 70,
-          "sleepMinutes": 102
+          "hr": 80,
+          "spo2": 96,
+          "steps": 2904,
+          "stressLoad": 88
         }
       ]
     },
     {
-      "date": "2026-04-17",
+      "date": "2026-04-05",
       "hr": [
-        80,
-        115,
-        79,
-        101,
-        76
+        73,
+        81,
+        90,
+        123,
+        84
       ],
+      "hrv": 23,
       "sleep": {
-        "totalMinutes": 344,
-        "startTime": "23:19",
-        "endTime": "05:03",
+        "totalMinutes": 248,
+        "startTime": "01:54",
+        "endTime": "06:02",
         "stages": {
-          "deep": 21,
-          "light": 146,
-          "rem": 105,
-          "awake": 72
+          "deep": 57,
+          "light": 103,
+          "rem": 60,
+          "awake": 28
         },
-        "score": 47
+        "score": 46
       },
       "activity": {
-        "steps": 3281,
-        "calories": 2337,
-        "activeMinutes": 23,
+        "steps": 3867,
+        "calories": 1934,
+        "activeMinutes": 20,
+        "distanceKm": 3.1
+      },
+      "spo2": 95,
+      "stress": {
+        "load": 91
+      },
+      "intraday": [
+        {
+          "hour": 0,
+          "hr": 68,
+          "spo2": 94,
+          "steps": 0,
+          "sleepMinutes": 6,
+          "stressLoad": 91
+        },
+        {
+          "hour": 2,
+          "hr": 68,
+          "spo2": 95,
+          "steps": 27,
+          "sleepMinutes": 120,
+          "stressLoad": 91
+        },
+        {
+          "hour": 4,
+          "hr": 71,
+          "spo2": 96,
+          "steps": 107,
+          "sleepMinutes": 120,
+          "stressLoad": 91
+        },
+        {
+          "hour": 6,
+          "hr": 93,
+          "spo2": 95,
+          "steps": 242,
+          "sleepMinutes": 2,
+          "stressLoad": 91
+        },
+        {
+          "hour": 8,
+          "hr": 95,
+          "spo2": 95,
+          "steps": 430,
+          "stressLoad": 91
+        },
+        {
+          "hour": 10,
+          "hr": 83,
+          "spo2": 95,
+          "steps": 671,
+          "stressLoad": 91
+        },
+        {
+          "hour": 12,
+          "hr": 91,
+          "spo2": 94,
+          "steps": 967,
+          "stressLoad": 91
+        },
+        {
+          "hour": 14,
+          "hr": 81,
+          "spo2": 94,
+          "steps": 1316,
+          "stressLoad": 91
+        },
+        {
+          "hour": 16,
+          "hr": 104,
+          "spo2": 94,
+          "steps": 1719,
+          "stressLoad": 91
+        },
+        {
+          "hour": 18,
+          "hr": 108,
+          "spo2": 96,
+          "steps": 2175,
+          "stressLoad": 91
+        },
+        {
+          "hour": 20,
+          "hr": 84,
+          "spo2": 96,
+          "steps": 2685,
+          "stressLoad": 91
+        },
+        {
+          "hour": 22,
+          "hr": 77,
+          "spo2": 95,
+          "steps": 3249,
+          "stressLoad": 91
+        }
+      ]
+    },
+    {
+      "date": "2026-04-06",
+      "hr": [
+        77,
+        86,
+        91,
+        140,
+        88
+      ],
+      "hrv": 22,
+      "sleep": {
+        "totalMinutes": 282,
+        "startTime": "01:26",
+        "endTime": "06:08",
+        "stages": {
+          "deep": 63,
+          "light": 135,
+          "rem": 59,
+          "awake": 25
+        },
+        "score": 50
+      },
+      "activity": {
+        "steps": 3243,
+        "calories": 1886,
+        "activeMinutes": 19,
+        "distanceKm": 2.5
+      },
+      "spo2": 95,
+      "stress": {
+        "load": 93
+      },
+      "intraday": [
+        {
+          "hour": 0,
+          "hr": 76,
+          "spo2": 94,
+          "steps": 0,
+          "sleepMinutes": 34,
+          "stressLoad": 93
+        },
+        {
+          "hour": 2,
+          "hr": 66,
+          "spo2": 96,
+          "steps": 23,
+          "sleepMinutes": 120,
+          "stressLoad": 93
+        },
+        {
+          "hour": 4,
+          "hr": 65,
+          "spo2": 95,
+          "steps": 90,
+          "sleepMinutes": 120,
+          "stressLoad": 93
+        },
+        {
+          "hour": 6,
+          "hr": 87,
+          "spo2": 96,
+          "steps": 203,
+          "sleepMinutes": 8,
+          "stressLoad": 93
+        },
+        {
+          "hour": 8,
+          "hr": 103,
+          "spo2": 96,
+          "steps": 360,
+          "stressLoad": 93
+        },
+        {
+          "hour": 10,
+          "hr": 81,
+          "spo2": 94,
+          "steps": 563,
+          "stressLoad": 93
+        },
+        {
+          "hour": 12,
+          "hr": 108,
+          "spo2": 96,
+          "steps": 811,
+          "stressLoad": 93
+        },
+        {
+          "hour": 14,
+          "hr": 86,
+          "spo2": 96,
+          "steps": 1104,
+          "stressLoad": 93
+        },
+        {
+          "hour": 16,
+          "hr": 94,
+          "spo2": 94,
+          "steps": 1441,
+          "stressLoad": 93
+        },
+        {
+          "hour": 18,
+          "hr": 94,
+          "spo2": 96,
+          "steps": 1824,
+          "stressLoad": 93
+        },
+        {
+          "hour": 20,
+          "hr": 90,
+          "spo2": 96,
+          "steps": 2252,
+          "stressLoad": 93
+        },
+        {
+          "hour": 22,
+          "hr": 77,
+          "spo2": 95,
+          "steps": 2725,
+          "stressLoad": 93
+        }
+      ]
+    },
+    {
+      "date": "2026-04-07",
+      "hr": [
+        79,
+        86,
+        99,
+        156,
+        95
+      ],
+      "hrv": 21,
+      "sleep": {
+        "totalMinutes": 276,
+        "startTime": "01:31",
+        "endTime": "06:07",
+        "stages": {
+          "deep": 62,
+          "light": 122,
+          "rem": 67,
+          "awake": 25
+        },
+        "score": 54
+      },
+      "activity": {
+        "steps": 3977,
+        "calories": 1916,
+        "activeMinutes": 25,
         "distanceKm": 2.9
       },
-      "spo2": 99,
+      "spo2": 97,
       "stress": {
-        "load": 74
+        "load": 98
+      },
+      "intraday": [
+        {
+          "hour": 0,
+          "hr": 79,
+          "spo2": 96,
+          "steps": 0,
+          "sleepMinutes": 29,
+          "stressLoad": 98
+        },
+        {
+          "hour": 2,
+          "hr": 74,
+          "spo2": 96,
+          "steps": 28,
+          "sleepMinutes": 120,
+          "stressLoad": 98
+        },
+        {
+          "hour": 4,
+          "hr": 67,
+          "spo2": 96,
+          "steps": 110,
+          "sleepMinutes": 120,
+          "stressLoad": 98
+        },
+        {
+          "hour": 6,
+          "hr": 91,
+          "spo2": 96,
+          "steps": 249,
+          "sleepMinutes": 7,
+          "stressLoad": 98
+        },
+        {
+          "hour": 8,
+          "hr": 99,
+          "spo2": 96,
+          "steps": 442,
+          "stressLoad": 98
+        },
+        {
+          "hour": 10,
+          "hr": 94,
+          "spo2": 98,
+          "steps": 690,
+          "stressLoad": 98
+        },
+        {
+          "hour": 12,
+          "hr": 88,
+          "spo2": 96,
+          "steps": 994,
+          "stressLoad": 98
+        },
+        {
+          "hour": 14,
+          "hr": 97,
+          "spo2": 96,
+          "steps": 1353,
+          "stressLoad": 98
+        },
+        {
+          "hour": 16,
+          "hr": 97,
+          "spo2": 97,
+          "steps": 1768,
+          "stressLoad": 98
+        },
+        {
+          "hour": 18,
+          "hr": 100,
+          "spo2": 96,
+          "steps": 2237,
+          "stressLoad": 98
+        },
+        {
+          "hour": 20,
+          "hr": 97,
+          "spo2": 96,
+          "steps": 2762,
+          "stressLoad": 98
+        },
+        {
+          "hour": 22,
+          "hr": 78,
+          "spo2": 96,
+          "steps": 3342,
+          "stressLoad": 98
+        }
+      ]
+    },
+    {
+      "date": "2026-04-08",
+      "hr": [
+        75,
+        85,
+        91,
+        141,
+        87
+      ],
+      "hrv": 24,
+      "sleep": {
+        "totalMinutes": 253,
+        "startTime": "01:48",
+        "endTime": "06:01",
+        "stages": {
+          "deep": 46,
+          "light": 118,
+          "rem": 61,
+          "awake": 28
+        },
+        "score": 51
+      },
+      "activity": {
+        "steps": 4161,
+        "calories": 1986,
+        "activeMinutes": 25,
+        "distanceKm": 3.1
+      },
+      "spo2": 96,
+      "stress": {
+        "load": 85
+      },
+      "intraday": [
+        {
+          "hour": 0,
+          "hr": 67,
+          "spo2": 97,
+          "steps": 0,
+          "sleepMinutes": 12,
+          "stressLoad": 85
+        },
+        {
+          "hour": 2,
+          "hr": 78,
+          "spo2": 96,
+          "steps": 29,
+          "sleepMinutes": 120,
+          "stressLoad": 85
+        },
+        {
+          "hour": 4,
+          "hr": 74,
+          "spo2": 95,
+          "steps": 116,
+          "sleepMinutes": 120,
+          "stressLoad": 85
+        },
+        {
+          "hour": 6,
+          "hr": 92,
+          "spo2": 95,
+          "steps": 260,
+          "sleepMinutes": 1,
+          "stressLoad": 85
+        },
+        {
+          "hour": 8,
+          "hr": 87,
+          "spo2": 97,
+          "steps": 462,
+          "stressLoad": 85
+        },
+        {
+          "hour": 10,
+          "hr": 106,
+          "spo2": 95,
+          "steps": 722,
+          "stressLoad": 85
+        },
+        {
+          "hour": 12,
+          "hr": 91,
+          "spo2": 97,
+          "steps": 1040,
+          "stressLoad": 85
+        },
+        {
+          "hour": 14,
+          "hr": 88,
+          "spo2": 97,
+          "steps": 1416,
+          "stressLoad": 85
+        },
+        {
+          "hour": 16,
+          "hr": 92,
+          "spo2": 95,
+          "steps": 1849,
+          "stressLoad": 85
+        },
+        {
+          "hour": 18,
+          "hr": 87,
+          "spo2": 97,
+          "steps": 2341,
+          "stressLoad": 85
+        },
+        {
+          "hour": 20,
+          "hr": 109,
+          "spo2": 97,
+          "steps": 2890,
+          "stressLoad": 85
+        },
+        {
+          "hour": 22,
+          "hr": 80,
+          "spo2": 96,
+          "steps": 3496,
+          "stressLoad": 85
+        }
+      ]
+    },
+    {
+      "date": "2026-04-09",
+      "hr": [
+        78,
+        87,
+        96,
+        155,
+        92
+      ],
+      "hrv": 22,
+      "sleep": {
+        "totalMinutes": 255,
+        "startTime": "01:55",
+        "endTime": "06:10",
+        "stages": {
+          "deep": 55,
+          "light": 116,
+          "rem": 61,
+          "awake": 23
+        },
+        "score": 46
+      },
+      "activity": {
+        "steps": 3293,
+        "calories": 1796,
+        "activeMinutes": 18,
+        "distanceKm": 2.6
+      },
+      "spo2": 95,
+      "stress": {
+        "load": 93
+      },
+      "intraday": [
+        {
+          "hour": 0,
+          "hr": 66,
+          "spo2": 94,
+          "steps": 0,
+          "sleepMinutes": 5,
+          "stressLoad": 93
+        },
+        {
+          "hour": 2,
+          "hr": 76,
+          "spo2": 95,
+          "steps": 23,
+          "sleepMinutes": 120,
+          "stressLoad": 93
+        },
+        {
+          "hour": 4,
+          "hr": 71,
+          "spo2": 95,
+          "steps": 91,
+          "sleepMinutes": 120,
+          "stressLoad": 93
+        },
+        {
+          "hour": 6,
+          "hr": 103,
+          "spo2": 94,
+          "steps": 206,
+          "sleepMinutes": 10,
+          "stressLoad": 93
+        },
+        {
+          "hour": 8,
+          "hr": 94,
+          "spo2": 95,
+          "steps": 366,
+          "stressLoad": 93
+        },
+        {
+          "hour": 10,
+          "hr": 105,
+          "spo2": 94,
+          "steps": 572,
+          "stressLoad": 93
+        },
+        {
+          "hour": 12,
+          "hr": 83,
+          "spo2": 95,
+          "steps": 823,
+          "stressLoad": 93
+        },
+        {
+          "hour": 14,
+          "hr": 88,
+          "spo2": 96,
+          "steps": 1121,
+          "stressLoad": 93
+        },
+        {
+          "hour": 16,
+          "hr": 93,
+          "spo2": 96,
+          "steps": 1464,
+          "stressLoad": 93
+        },
+        {
+          "hour": 18,
+          "hr": 88,
+          "spo2": 96,
+          "steps": 1852,
+          "stressLoad": 93
+        },
+        {
+          "hour": 20,
+          "hr": 100,
+          "spo2": 94,
+          "steps": 2287,
+          "stressLoad": 93
+        },
+        {
+          "hour": 22,
+          "hr": 70,
+          "spo2": 96,
+          "steps": 2767,
+          "stressLoad": 93
+        }
+      ]
+    },
+    {
+      "date": "2026-04-10",
+      "hr": [
+        73,
+        84,
+        97,
+        131,
+        89
+      ],
+      "hrv": 22,
+      "sleep": {
+        "totalMinutes": 236,
+        "startTime": "02:11",
+        "endTime": "06:07",
+        "stages": {
+          "deep": 53,
+          "light": 105,
+          "rem": 58,
+          "awake": 20
+        },
+        "score": 39
+      },
+      "activity": {
+        "steps": 3382,
+        "calories": 1824,
+        "activeMinutes": 21,
+        "distanceKm": 2.5
+      },
+      "spo2": 98,
+      "stress": {
+        "load": 87
+      },
+      "intraday": [
+        {
+          "hour": 0,
+          "hr": 74,
+          "spo2": 98,
+          "steps": 0,
+          "stressLoad": 87
+        },
+        {
+          "hour": 2,
+          "hr": 71,
+          "spo2": 99,
+          "steps": 23,
+          "sleepMinutes": 109,
+          "stressLoad": 87
+        },
+        {
+          "hour": 4,
+          "hr": 73,
+          "spo2": 98,
+          "steps": 94,
+          "sleepMinutes": 120,
+          "stressLoad": 87
+        },
+        {
+          "hour": 6,
+          "hr": 92,
+          "spo2": 97,
+          "steps": 211,
+          "sleepMinutes": 7,
+          "stressLoad": 87
+        },
+        {
+          "hour": 8,
+          "hr": 94,
+          "spo2": 97,
+          "steps": 376,
+          "stressLoad": 87
+        },
+        {
+          "hour": 10,
+          "hr": 103,
+          "spo2": 97,
+          "steps": 587,
+          "stressLoad": 87
+        },
+        {
+          "hour": 12,
+          "hr": 105,
+          "spo2": 98,
+          "steps": 846,
+          "stressLoad": 87
+        },
+        {
+          "hour": 14,
+          "hr": 92,
+          "spo2": 97,
+          "steps": 1151,
+          "stressLoad": 87
+        },
+        {
+          "hour": 16,
+          "hr": 82,
+          "spo2": 98,
+          "steps": 1503,
+          "stressLoad": 87
+        },
+        {
+          "hour": 18,
+          "hr": 83,
+          "spo2": 97,
+          "steps": 1902,
+          "stressLoad": 87
+        },
+        {
+          "hour": 20,
+          "hr": 78,
+          "spo2": 98,
+          "steps": 2349,
+          "stressLoad": 87
+        },
+        {
+          "hour": 22,
+          "hr": 65,
+          "spo2": 97,
+          "steps": 2842,
+          "stressLoad": 87
+        }
+      ]
+    },
+    {
+      "date": "2026-04-11",
+      "hr": [
+        74,
+        85,
+        93,
+        131,
+        89
+      ],
+      "hrv": 27,
+      "sleep": {
+        "totalMinutes": 236,
+        "startTime": "02:13",
+        "endTime": "06:09",
+        "stages": {
+          "deep": 47,
+          "light": 111,
+          "rem": 58,
+          "awake": 20
+        },
+        "score": 43
+      },
+      "activity": {
+        "steps": 4602,
+        "calories": 1953,
+        "activeMinutes": 23,
+        "distanceKm": 3.5
+      },
+      "spo2": 98,
+      "stress": {
+        "load": 93
+      },
+      "intraday": [
+        {
+          "hour": 0,
+          "hr": 78,
+          "spo2": 97,
+          "steps": 0,
+          "stressLoad": 93
+        },
+        {
+          "hour": 2,
+          "hr": 67,
+          "spo2": 97,
+          "steps": 32,
+          "sleepMinutes": 107,
+          "stressLoad": 93
+        },
+        {
+          "hour": 4,
+          "hr": 70,
+          "spo2": 99,
+          "steps": 128,
+          "sleepMinutes": 120,
+          "stressLoad": 93
+        },
+        {
+          "hour": 6,
+          "hr": 77,
+          "spo2": 99,
+          "steps": 288,
+          "sleepMinutes": 9,
+          "stressLoad": 93
+        },
+        {
+          "hour": 8,
+          "hr": 99,
+          "spo2": 97,
+          "steps": 511,
+          "stressLoad": 93
+        },
+        {
+          "hour": 10,
+          "hr": 81,
+          "spo2": 98,
+          "steps": 799,
+          "stressLoad": 93
+        },
+        {
+          "hour": 12,
+          "hr": 100,
+          "spo2": 98,
+          "steps": 1151,
+          "stressLoad": 93
+        },
+        {
+          "hour": 14,
+          "hr": 100,
+          "spo2": 99,
+          "steps": 1566,
+          "stressLoad": 93
+        },
+        {
+          "hour": 16,
+          "hr": 97,
+          "spo2": 97,
+          "steps": 2045,
+          "stressLoad": 93
+        },
+        {
+          "hour": 18,
+          "hr": 101,
+          "spo2": 97,
+          "steps": 2589,
+          "stressLoad": 93
+        },
+        {
+          "hour": 20,
+          "hr": 88,
+          "spo2": 98,
+          "steps": 3196,
+          "stressLoad": 93
+        },
+        {
+          "hour": 22,
+          "hr": 65,
+          "spo2": 99,
+          "steps": 3867,
+          "stressLoad": 93
+        }
+      ]
+    },
+    {
+      "date": "2026-04-12",
+      "hr": [
+        78,
+        86,
+        93,
+        161,
+        93
+      ],
+      "hrv": 21,
+      "sleep": {
+        "totalMinutes": 269,
+        "startTime": "01:41",
+        "endTime": "06:10",
+        "stages": {
+          "deep": 54,
+          "light": 131,
+          "rem": 60,
+          "awake": 24
+        },
+        "score": 55
+      },
+      "activity": {
+        "steps": 3940,
+        "calories": 1876,
+        "activeMinutes": 22,
+        "distanceKm": 3.1
+      },
+      "spo2": 97,
+      "stress": {
+        "load": 99
+      },
+      "intraday": [
+        {
+          "hour": 0,
+          "hr": 66,
+          "spo2": 96,
+          "steps": 0,
+          "sleepMinutes": 19,
+          "stressLoad": 99
+        },
+        {
+          "hour": 2,
+          "hr": 70,
+          "spo2": 96,
+          "steps": 27,
+          "sleepMinutes": 120,
+          "stressLoad": 99
+        },
+        {
+          "hour": 4,
+          "hr": 80,
+          "spo2": 97,
+          "steps": 109,
+          "sleepMinutes": 120,
+          "stressLoad": 99
+        },
+        {
+          "hour": 6,
+          "hr": 101,
+          "spo2": 97,
+          "steps": 246,
+          "sleepMinutes": 10,
+          "stressLoad": 99
+        },
+        {
+          "hour": 8,
+          "hr": 103,
+          "spo2": 97,
+          "steps": 438,
+          "stressLoad": 99
+        },
+        {
+          "hour": 10,
+          "hr": 107,
+          "spo2": 96,
+          "steps": 684,
+          "stressLoad": 99
+        },
+        {
+          "hour": 12,
+          "hr": 78,
+          "spo2": 97,
+          "steps": 985,
+          "stressLoad": 99
+        },
+        {
+          "hour": 14,
+          "hr": 91,
+          "spo2": 96,
+          "steps": 1341,
+          "stressLoad": 99
+        },
+        {
+          "hour": 16,
+          "hr": 80,
+          "spo2": 96,
+          "steps": 1751,
+          "stressLoad": 99
+        },
+        {
+          "hour": 18,
+          "hr": 83,
+          "spo2": 96,
+          "steps": 2216,
+          "stressLoad": 99
+        },
+        {
+          "hour": 20,
+          "hr": 96,
+          "spo2": 96,
+          "steps": 2736,
+          "stressLoad": 99
+        },
+        {
+          "hour": 22,
+          "hr": 69,
+          "spo2": 98,
+          "steps": 3311,
+          "stressLoad": 99
+        }
+      ]
+    },
+    {
+      "date": "2026-04-13",
+      "hr": [
+        82,
+        89,
+        104,
+        144,
+        99
+      ],
+      "hrv": 22,
+      "sleep": {
+        "totalMinutes": 240,
+        "startTime": "02:01",
+        "endTime": "06:01",
+        "stages": {
+          "deep": 53,
+          "light": 102,
+          "rem": 58,
+          "awake": 27
+        },
+        "score": 45
+      },
+      "activity": {
+        "steps": 4159,
+        "calories": 1950,
+        "activeMinutes": 22,
+        "distanceKm": 3.1
+      },
+      "spo2": 96,
+      "stress": {
+        "load": 98
+      },
+      "intraday": [
+        {
+          "hour": 0,
+          "hr": 81,
+          "spo2": 95,
+          "steps": 0,
+          "stressLoad": 98
+        },
+        {
+          "hour": 2,
+          "hr": 81,
+          "spo2": 96,
+          "steps": 29,
+          "sleepMinutes": 119,
+          "stressLoad": 98
+        },
+        {
+          "hour": 4,
+          "hr": 72,
+          "spo2": 97,
+          "steps": 116,
+          "sleepMinutes": 120,
+          "stressLoad": 98
+        },
+        {
+          "hour": 6,
+          "hr": 93,
+          "spo2": 96,
+          "steps": 260,
+          "sleepMinutes": 1,
+          "stressLoad": 98
+        },
+        {
+          "hour": 8,
+          "hr": 90,
+          "spo2": 97,
+          "steps": 462,
+          "stressLoad": 98
+        },
+        {
+          "hour": 10,
+          "hr": 86,
+          "spo2": 96,
+          "steps": 722,
+          "stressLoad": 98
+        },
+        {
+          "hour": 12,
+          "hr": 98,
+          "spo2": 97,
+          "steps": 1040,
+          "stressLoad": 98
+        },
+        {
+          "hour": 14,
+          "hr": 107,
+          "spo2": 95,
+          "steps": 1415,
+          "stressLoad": 98
+        },
+        {
+          "hour": 16,
+          "hr": 99,
+          "spo2": 97,
+          "steps": 1848,
+          "stressLoad": 98
+        },
+        {
+          "hour": 18,
+          "hr": 100,
+          "spo2": 96,
+          "steps": 2339,
+          "stressLoad": 98
+        },
+        {
+          "hour": 20,
+          "hr": 98,
+          "spo2": 95,
+          "steps": 2888,
+          "stressLoad": 98
+        },
+        {
+          "hour": 22,
+          "hr": 74,
+          "spo2": 95,
+          "steps": 3495,
+          "stressLoad": 98
+        }
+      ]
+    },
+    {
+      "date": "2026-04-14",
+      "hr": [
+        79,
+        91,
+        106,
+        160,
+        97
+      ],
+      "hrv": 27,
+      "sleep": {
+        "totalMinutes": 213,
+        "startTime": "02:29",
+        "endTime": "06:02",
+        "stages": {
+          "deep": 44,
+          "light": 105,
+          "rem": 46,
+          "awake": 18
+        },
+        "score": 38
+      },
+      "activity": {
+        "steps": 4407,
+        "calories": 1950,
+        "activeMinutes": 26,
+        "distanceKm": 3.2
+      },
+      "spo2": 98,
+      "stress": {
+        "load": 99
+      },
+      "intraday": [
+        {
+          "hour": 0,
+          "hr": 67,
+          "spo2": 98,
+          "steps": 0,
+          "stressLoad": 99
+        },
+        {
+          "hour": 2,
+          "hr": 78,
+          "spo2": 98,
+          "steps": 31,
+          "sleepMinutes": 91,
+          "stressLoad": 99
+        },
+        {
+          "hour": 4,
+          "hr": 81,
+          "spo2": 99,
+          "steps": 122,
+          "sleepMinutes": 120,
+          "stressLoad": 99
+        },
+        {
+          "hour": 6,
+          "hr": 92,
+          "spo2": 98,
+          "steps": 275,
+          "sleepMinutes": 2,
+          "stressLoad": 99
+        },
+        {
+          "hour": 8,
+          "hr": 89,
+          "spo2": 97,
+          "steps": 490,
+          "stressLoad": 99
+        },
+        {
+          "hour": 10,
+          "hr": 102,
+          "spo2": 98,
+          "steps": 765,
+          "stressLoad": 99
+        },
+        {
+          "hour": 12,
+          "hr": 98,
+          "spo2": 98,
+          "steps": 1102,
+          "stressLoad": 99
+        },
+        {
+          "hour": 14,
+          "hr": 87,
+          "spo2": 97,
+          "steps": 1500,
+          "stressLoad": 99
+        },
+        {
+          "hour": 16,
+          "hr": 99,
+          "spo2": 99,
+          "steps": 1959,
+          "stressLoad": 99
+        },
+        {
+          "hour": 18,
+          "hr": 84,
+          "spo2": 99,
+          "steps": 2479,
+          "stressLoad": 99
+        },
+        {
+          "hour": 20,
+          "hr": 79,
+          "spo2": 97,
+          "steps": 3060,
+          "stressLoad": 99
+        },
+        {
+          "hour": 22,
+          "hr": 80,
+          "spo2": 97,
+          "steps": 3703,
+          "stressLoad": 99
+        }
+      ]
+    },
+    {
+      "date": "2026-04-15",
+      "hr": [
+        84,
+        91,
+        104,
+        135,
+        99
+      ],
+      "hrv": 26,
+      "sleep": {
+        "totalMinutes": 229,
+        "startTime": "02:16",
+        "endTime": "06:05",
+        "stages": {
+          "deep": 53,
+          "light": 107,
+          "rem": 52,
+          "awake": 17
+        },
+        "score": 48
+      },
+      "activity": {
+        "steps": 3297,
+        "calories": 1869,
+        "activeMinutes": 18,
+        "distanceKm": 2.5
+      },
+      "spo2": 97,
+      "stress": {
+        "load": 99
       },
       "intraday": [
         {
@@ -2802,86 +2621,331 @@
           "hr": 78,
           "spo2": 96,
           "steps": 0,
-          "stressLoad": 74
+          "stressLoad": 99
         },
         {
           "hour": 2,
-          "hr": 79,
-          "spo2": 99,
-          "steps": 16,
-          "stressLoad": 74
+          "hr": 70,
+          "spo2": 98,
+          "steps": 23,
+          "sleepMinutes": 104,
+          "stressLoad": 99
         },
         {
           "hour": 4,
           "hr": 77,
           "spo2": 97,
-          "steps": 82,
-          "stressLoad": 74
+          "steps": 92,
+          "sleepMinutes": 120,
+          "stressLoad": 99
         },
         {
           "hour": 6,
-          "hr": 90,
+          "hr": 94,
           "spo2": 98,
-          "steps": 246,
-          "stressLoad": 74
+          "steps": 206,
+          "sleepMinutes": 5,
+          "stressLoad": 99
         },
         {
           "hour": 8,
-          "hr": 106,
-          "spo2": 97,
-          "steps": 574,
-          "stressLoad": 74
+          "hr": 91,
+          "spo2": 98,
+          "steps": 366,
+          "stressLoad": 99
         },
         {
           "hour": 10,
-          "hr": 95,
+          "hr": 88,
           "spo2": 96,
-          "steps": 1066,
-          "stressLoad": 74
+          "steps": 572,
+          "stressLoad": 99
         },
         {
           "hour": 12,
-          "hr": 89,
-          "spo2": 99,
-          "steps": 1624,
-          "stressLoad": 74
+          "hr": 95,
+          "spo2": 98,
+          "steps": 824,
+          "stressLoad": 99
         },
         {
           "hour": 14,
-          "hr": 109,
-          "spo2": 97,
-          "steps": 2116,
-          "stressLoad": 74
+          "hr": 85,
+          "spo2": 98,
+          "steps": 1122,
+          "stressLoad": 99
         },
         {
           "hour": 16,
-          "hr": 95,
+          "hr": 96,
           "spo2": 97,
-          "steps": 2543,
-          "stressLoad": 74
+          "steps": 1465,
+          "stressLoad": 99
+        },
+        {
+          "hour": 18,
+          "hr": 96,
+          "spo2": 97,
+          "steps": 1855,
+          "stressLoad": 99
+        },
+        {
+          "hour": 20,
+          "hr": 93,
+          "spo2": 98,
+          "steps": 2290,
+          "stressLoad": 99
+        },
+        {
+          "hour": 22,
+          "hr": 70,
+          "spo2": 98,
+          "steps": 2770,
+          "stressLoad": 99
+        }
+      ]
+    },
+    {
+      "date": "2026-04-16",
+      "hr": [
+        81,
+        92,
+        105,
+        145,
+        100
+      ],
+      "hrv": 23,
+      "sleep": {
+        "totalMinutes": 229,
+        "startTime": "02:17",
+        "endTime": "06:06",
+        "stages": {
+          "deep": 43,
+          "light": 107,
+          "rem": 52,
+          "awake": 27
+        },
+        "score": 42
+      },
+      "activity": {
+        "steps": 4210,
+        "calories": 1976,
+        "activeMinutes": 22,
+        "distanceKm": 3
+      },
+      "spo2": 99,
+      "stress": {
+        "load": 99
+      },
+      "intraday": [
+        {
+          "hour": 0,
+          "hr": 80,
+          "spo2": 98,
+          "steps": 0,
+          "stressLoad": 99
+        },
+        {
+          "hour": 2,
+          "hr": 79,
+          "spo2": 99,
+          "steps": 29,
+          "sleepMinutes": 103,
+          "stressLoad": 99
+        },
+        {
+          "hour": 4,
+          "hr": 65,
+          "spo2": 100,
+          "steps": 117,
+          "sleepMinutes": 120,
+          "stressLoad": 99
+        },
+        {
+          "hour": 6,
+          "hr": 86,
+          "spo2": 98,
+          "steps": 263,
+          "sleepMinutes": 6,
+          "stressLoad": 99
+        },
+        {
+          "hour": 8,
+          "hr": 98,
+          "spo2": 99,
+          "steps": 468,
+          "stressLoad": 99
+        },
+        {
+          "hour": 10,
+          "hr": 102,
+          "spo2": 100,
+          "steps": 731,
+          "stressLoad": 99
+        },
+        {
+          "hour": 12,
+          "hr": 87,
+          "spo2": 100,
+          "steps": 1053,
+          "stressLoad": 99
+        },
+        {
+          "hour": 14,
+          "hr": 88,
+          "spo2": 98,
+          "steps": 1433,
+          "stressLoad": 99
+        },
+        {
+          "hour": 16,
+          "hr": 99,
+          "spo2": 99,
+          "steps": 1871,
+          "stressLoad": 99
+        },
+        {
+          "hour": 18,
+          "hr": 85,
+          "spo2": 99,
+          "steps": 2368,
+          "stressLoad": 99
+        },
+        {
+          "hour": 20,
+          "hr": 101,
+          "spo2": 99,
+          "steps": 2924,
+          "stressLoad": 99
+        },
+        {
+          "hour": 22,
+          "hr": 79,
+          "spo2": 98,
+          "steps": 3538,
+          "stressLoad": 99
+        }
+      ]
+    },
+    {
+      "date": "2026-04-17",
+      "hr": [
+        86,
+        90,
+        101,
+        164,
+        100
+      ],
+      "hrv": 27,
+      "sleep": {
+        "totalMinutes": 188,
+        "startTime": "03:01",
+        "endTime": "06:09",
+        "stages": {
+          "deep": 38,
+          "light": 97,
+          "rem": 41,
+          "awake": 12
+        },
+        "score": 40
+      },
+      "activity": {
+        "steps": 3763,
+        "calories": 1890,
+        "activeMinutes": 22,
+        "distanceKm": 2.8
+      },
+      "spo2": 95,
+      "stress": {
+        "load": 99
+      },
+      "intraday": [
+        {
+          "hour": 0,
+          "hr": 66,
+          "spo2": 96,
+          "steps": 0,
+          "stressLoad": 99
+        },
+        {
+          "hour": 2,
+          "hr": 69,
+          "spo2": 94,
+          "steps": 26,
+          "sleepMinutes": 59,
+          "stressLoad": 99
+        },
+        {
+          "hour": 4,
+          "hr": 73,
+          "spo2": 95,
+          "steps": 105,
+          "sleepMinutes": 120,
+          "stressLoad": 99
+        },
+        {
+          "hour": 6,
+          "hr": 94,
+          "spo2": 96,
+          "steps": 235,
+          "sleepMinutes": 9,
+          "stressLoad": 99
+        },
+        {
+          "hour": 8,
+          "hr": 82,
+          "spo2": 95,
+          "steps": 418,
+          "stressLoad": 99
+        },
+        {
+          "hour": 10,
+          "hr": 103,
+          "spo2": 94,
+          "steps": 653,
+          "stressLoad": 99
+        },
+        {
+          "hour": 12,
+          "hr": 87,
+          "spo2": 96,
+          "steps": 941,
+          "stressLoad": 99
+        },
+        {
+          "hour": 14,
+          "hr": 106,
+          "spo2": 95,
+          "steps": 1280,
+          "stressLoad": 99
+        },
+        {
+          "hour": 16,
+          "hr": 104,
+          "spo2": 96,
+          "steps": 1672,
+          "stressLoad": 99
         },
         {
           "hour": 18,
           "hr": 102,
           "spo2": 96,
-          "steps": 2871,
-          "stressLoad": 74
+          "steps": 2117,
+          "stressLoad": 99
         },
         {
           "hour": 20,
-          "hr": 99,
-          "spo2": 99,
-          "steps": 3101,
-          "stressLoad": 74,
-          "sleepMinutes": 43
+          "hr": 96,
+          "spo2": 96,
+          "steps": 2613,
+          "stressLoad": 99
         },
         {
           "hour": 22,
-          "hr": 75,
-          "spo2": 96,
-          "steps": 3281,
-          "stressLoad": 74,
-          "sleepMinutes": 77
+          "hr": 80,
+          "spo2": 95,
+          "steps": 3162,
+          "stressLoad": 99
         }
       ]
     },
@@ -2889,119 +2953,121 @@
       "date": "2026-04-18",
       "hr": [
         82,
-        105,
-        82,
-        106,
-        75
+        88,
+        95,
+        132,
+        96
       ],
+      "hrv": 28,
       "sleep": {
-        "totalMinutes": 311,
-        "startTime": "23:28",
-        "endTime": "04:39",
+        "totalMinutes": 235,
+        "startTime": "02:10",
+        "endTime": "06:05",
         "stages": {
-          "deep": 24,
-          "light": 171,
-          "rem": 45,
-          "awake": 71
+          "deep": 56,
+          "light": 95,
+          "rem": 56,
+          "awake": 28
         },
-        "score": 47
+        "score": 40
       },
       "activity": {
-        "steps": 3759,
-        "calories": 2238,
-        "activeMinutes": 23,
-        "distanceKm": 2
+        "steps": 3698,
+        "calories": 1913,
+        "activeMinutes": 20,
+        "distanceKm": 2.6
       },
       "spo2": 98,
       "stress": {
-        "load": 61
+        "load": 99
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 78,
-          "spo2": 98,
+          "hr": 76,
+          "spo2": 97,
           "steps": 0,
-          "stressLoad": 61
+          "stressLoad": 99
         },
         {
           "hour": 2,
-          "hr": 77,
-          "spo2": 96,
-          "steps": 19,
-          "stressLoad": 61
+          "hr": 70,
+          "spo2": 99,
+          "steps": 26,
+          "sleepMinutes": 110,
+          "stressLoad": 99
         },
         {
           "hour": 4,
-          "hr": 72,
+          "hr": 71,
           "spo2": 98,
-          "steps": 94,
-          "stressLoad": 61
+          "steps": 103,
+          "sleepMinutes": 120,
+          "stressLoad": 99
         },
         {
           "hour": 6,
-          "hr": 107,
-          "spo2": 96,
-          "steps": 282,
-          "stressLoad": 61
+          "hr": 102,
+          "spo2": 99,
+          "steps": 231,
+          "sleepMinutes": 5,
+          "stressLoad": 99
         },
         {
           "hour": 8,
-          "hr": 108,
+          "hr": 96,
           "spo2": 99,
-          "steps": 658,
-          "stressLoad": 61
+          "steps": 411,
+          "stressLoad": 99
         },
         {
           "hour": 10,
-          "hr": 96,
-          "spo2": 98,
-          "steps": 1222,
-          "stressLoad": 61
+          "hr": 84,
+          "spo2": 97,
+          "steps": 642,
+          "stressLoad": 99
         },
         {
           "hour": 12,
-          "hr": 90,
-          "spo2": 97,
-          "steps": 1861,
-          "stressLoad": 61
+          "hr": 93,
+          "spo2": 98,
+          "steps": 925,
+          "stressLoad": 99
         },
         {
           "hour": 14,
-          "hr": 107,
-          "spo2": 96,
-          "steps": 2425,
-          "stressLoad": 61
+          "hr": 96,
+          "spo2": 99,
+          "steps": 1258,
+          "stressLoad": 99
         },
         {
           "hour": 16,
-          "hr": 104,
-          "spo2": 98,
-          "steps": 2914,
-          "stressLoad": 61
+          "hr": 90,
+          "spo2": 97,
+          "steps": 1644,
+          "stressLoad": 99
         },
         {
           "hour": 18,
-          "hr": 105,
-          "spo2": 99,
-          "steps": 3290,
-          "stressLoad": 61
+          "hr": 96,
+          "spo2": 98,
+          "steps": 2080,
+          "stressLoad": 99
         },
         {
           "hour": 20,
-          "hr": 108,
+          "hr": 85,
           "spo2": 97,
-          "steps": 3553,
-          "stressLoad": 61,
-          "sleepMinutes": 53
+          "steps": 2568,
+          "stressLoad": 99
         },
         {
           "hour": 22,
-          "hr": 77,
-          "spo2": 96,
-          "steps": 3759,
-          "stressLoad": 61,
-          "sleepMinutes": 91
+          "hr": 69,
+          "spo2": 99,
+          "steps": 3107,
+          "stressLoad": 99
         }
       ]
     },
@@ -3010,718 +3076,730 @@
       "hr": [
         83,
         91,
-        80,
         103,
-        72
+        139,
+        99
       ],
+      "hrv": 30,
       "sleep": {
-        "totalMinutes": 296,
-        "startTime": "22:13",
-        "endTime": "03:09",
+        "totalMinutes": 228,
+        "startTime": "02:17",
+        "endTime": "06:05",
         "stages": {
-          "deep": 42,
-          "light": 132,
-          "rem": 47,
-          "awake": 75
+          "deep": 46,
+          "light": 101,
+          "rem": 55,
+          "awake": 26
         },
-        "score": 53
+        "score": 39
       },
       "activity": {
-        "steps": 2982,
-        "calories": 2354,
-        "activeMinutes": 31,
-        "distanceKm": 2.6
+        "steps": 4692,
+        "calories": 2031,
+        "activeMinutes": 27,
+        "distanceKm": 3.4
       },
       "spo2": 99,
       "stress": {
-        "load": 64
+        "load": 99
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 73,
-          "spo2": 96,
+          "hr": 79,
+          "spo2": 100,
           "steps": 0,
-          "stressLoad": 64
+          "stressLoad": 99
         },
         {
           "hour": 2,
-          "hr": 73,
+          "hr": 72,
           "spo2": 98,
-          "steps": 15,
-          "stressLoad": 64
+          "steps": 33,
+          "sleepMinutes": 103,
+          "stressLoad": 99
         },
         {
           "hour": 4,
-          "hr": 79,
-          "spo2": 97,
-          "steps": 75,
-          "stressLoad": 64
+          "hr": 67,
+          "spo2": 99,
+          "steps": 130,
+          "sleepMinutes": 120,
+          "stressLoad": 99
         },
         {
           "hour": 6,
-          "hr": 97,
-          "spo2": 96,
-          "steps": 224,
-          "stressLoad": 64
+          "hr": 79,
+          "spo2": 98,
+          "steps": 293,
+          "sleepMinutes": 5,
+          "stressLoad": 99
         },
         {
           "hour": 8,
-          "hr": 104,
-          "spo2": 96,
-          "steps": 522,
-          "stressLoad": 64
+          "hr": 99,
+          "spo2": 98,
+          "steps": 521,
+          "stressLoad": 99
         },
         {
           "hour": 10,
-          "hr": 101,
-          "spo2": 96,
-          "steps": 969,
-          "stressLoad": 64
+          "hr": 100,
+          "spo2": 99,
+          "steps": 815,
+          "stressLoad": 99
         },
         {
           "hour": 12,
-          "hr": 106,
-          "spo2": 96,
-          "steps": 1476,
-          "stressLoad": 64
+          "hr": 93,
+          "spo2": 98,
+          "steps": 1173,
+          "stressLoad": 99
         },
         {
           "hour": 14,
-          "hr": 97,
-          "spo2": 98,
-          "steps": 1923,
-          "stressLoad": 64
+          "hr": 86,
+          "spo2": 99,
+          "steps": 1597,
+          "stressLoad": 99
         },
         {
           "hour": 16,
-          "hr": 103,
-          "spo2": 96,
-          "steps": 2311,
-          "stressLoad": 64
+          "hr": 95,
+          "spo2": 99,
+          "steps": 2085,
+          "stressLoad": 99
         },
         {
           "hour": 18,
-          "hr": 94,
-          "spo2": 99,
-          "steps": 2609,
-          "stressLoad": 64
+          "hr": 93,
+          "spo2": 98,
+          "steps": 2639,
+          "stressLoad": 99
         },
         {
           "hour": 20,
-          "hr": 101,
-          "spo2": 97,
-          "steps": 2818,
-          "stressLoad": 64,
-          "sleepMinutes": 41
+          "hr": 98,
+          "spo2": 100,
+          "steps": 3258,
+          "stressLoad": 99
         },
         {
           "hour": 22,
-          "hr": 79,
-          "spo2": 96,
-          "steps": 2982,
-          "stressLoad": 64,
-          "sleepMinutes": 75
+          "hr": 74,
+          "spo2": 100,
+          "steps": 3943,
+          "stressLoad": 99
         }
       ]
     },
     {
       "date": "2026-04-20",
       "hr": [
-        79,
-        108,
-        82,
-        107,
-        78
+        77,
+        89,
+        94,
+        157,
+        95
       ],
+      "hrv": 30,
       "sleep": {
-        "totalMinutes": 327,
-        "startTime": "22:27",
-        "endTime": "03:54",
+        "totalMinutes": 217,
+        "startTime": "02:30",
+        "endTime": "06:07",
         "stages": {
-          "deep": 48,
-          "light": 175,
-          "rem": 50,
-          "awake": 54
+          "deep": 50,
+          "light": 101,
+          "rem": 48,
+          "awake": 18
         },
-        "score": 45
+        "score": 40
       },
       "activity": {
-        "steps": 4255,
-        "calories": 2044,
-        "activeMinutes": 32,
-        "distanceKm": 2.3
+        "steps": 4322,
+        "calories": 1994,
+        "activeMinutes": 25,
+        "distanceKm": 3.4
       },
       "spo2": 98,
       "stress": {
-        "load": 82
+        "load": 99
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 74,
-          "spo2": 96,
+          "hr": 76,
+          "spo2": 98,
           "steps": 0,
-          "stressLoad": 82
+          "stressLoad": 99
         },
         {
           "hour": 2,
-          "hr": 80,
+          "hr": 69,
           "spo2": 98,
-          "steps": 21,
-          "stressLoad": 82
+          "steps": 30,
+          "sleepMinutes": 90,
+          "stressLoad": 99
         },
         {
           "hour": 4,
-          "hr": 73,
-          "spo2": 96,
-          "steps": 106,
-          "stressLoad": 82
+          "hr": 81,
+          "spo2": 98,
+          "steps": 120,
+          "sleepMinutes": 120,
+          "stressLoad": 99
         },
         {
           "hour": 6,
-          "hr": 88,
-          "spo2": 97,
-          "steps": 319,
-          "stressLoad": 82
+          "hr": 101,
+          "spo2": 99,
+          "steps": 270,
+          "sleepMinutes": 7,
+          "stressLoad": 99
         },
         {
           "hour": 8,
-          "hr": 105,
-          "spo2": 97,
-          "steps": 745,
-          "stressLoad": 82
+          "hr": 93,
+          "spo2": 99,
+          "steps": 480,
+          "stressLoad": 99
         },
         {
           "hour": 10,
-          "hr": 102,
-          "spo2": 99,
-          "steps": 1383,
-          "stressLoad": 82
+          "hr": 91,
+          "spo2": 97,
+          "steps": 750,
+          "stressLoad": 99
         },
         {
           "hour": 12,
-          "hr": 101,
-          "spo2": 99,
-          "steps": 2106,
-          "stressLoad": 82
+          "hr": 90,
+          "spo2": 98,
+          "steps": 1081,
+          "stressLoad": 99
         },
         {
           "hour": 14,
-          "hr": 104,
-          "spo2": 96,
-          "steps": 2744,
-          "stressLoad": 82
+          "hr": 95,
+          "spo2": 97,
+          "steps": 1471,
+          "stressLoad": 99
         },
         {
           "hour": 16,
-          "hr": 92,
-          "spo2": 96,
-          "steps": 3297,
-          "stressLoad": 82
+          "hr": 86,
+          "spo2": 97,
+          "steps": 1921,
+          "stressLoad": 99
         },
         {
           "hour": 18,
           "hr": 104,
-          "spo2": 97,
-          "steps": 3723,
-          "stressLoad": 82
+          "spo2": 98,
+          "steps": 2431,
+          "stressLoad": 99
         },
         {
           "hour": 20,
-          "hr": 102,
-          "spo2": 97,
-          "steps": 4021,
-          "stressLoad": 82,
-          "sleepMinutes": 53
+          "hr": 94,
+          "spo2": 99,
+          "steps": 3001,
+          "stressLoad": 99
         },
         {
           "hour": 22,
-          "hr": 73,
-          "spo2": 98,
-          "steps": 4255,
-          "stressLoad": 82,
-          "sleepMinutes": 78
+          "hr": 72,
+          "spo2": 97,
+          "steps": 3632,
+          "stressLoad": 99
         }
       ]
     },
     {
       "date": "2026-04-21",
       "hr": [
-        79,
-        89,
-        85,
-        94,
-        76
+        86,
+        95,
+        107,
+        148,
+        100
       ],
+      "hrv": 26,
       "sleep": {
-        "totalMinutes": 357,
-        "startTime": "22:06",
-        "endTime": "04:03",
+        "totalMinutes": 208,
+        "startTime": "02:35",
+        "endTime": "06:03",
         "stages": {
-          "deep": 22,
-          "light": 165,
-          "rem": 88,
-          "awake": 82
+          "deep": 45,
+          "light": 97,
+          "rem": 45,
+          "awake": 21
         },
-        "score": 41
+        "score": 40
       },
       "activity": {
-        "steps": 4559,
-        "calories": 2397,
-        "activeMinutes": 35,
-        "distanceKm": 4
+        "steps": 3209,
+        "calories": 1859,
+        "activeMinutes": 17,
+        "distanceKm": 2.7
       },
-      "spo2": 98,
+      "spo2": 99,
       "stress": {
-        "load": 60
+        "load": 99
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 74,
-          "spo2": 99,
+          "hr": 69,
+          "spo2": 100,
           "steps": 0,
-          "stressLoad": 60
+          "stressLoad": 99
         },
         {
           "hour": 2,
-          "hr": 79,
+          "hr": 67,
           "spo2": 99,
-          "steps": 23,
-          "stressLoad": 60
+          "steps": 22,
+          "sleepMinutes": 85,
+          "stressLoad": 99
         },
         {
           "hour": 4,
-          "hr": 74,
-          "spo2": 99,
-          "steps": 114,
-          "stressLoad": 60
+          "hr": 67,
+          "spo2": 100,
+          "steps": 89,
+          "sleepMinutes": 120,
+          "stressLoad": 99
         },
         {
           "hour": 6,
-          "hr": 96,
-          "spo2": 97,
-          "steps": 342,
-          "stressLoad": 60
+          "hr": 81,
+          "spo2": 98,
+          "steps": 201,
+          "sleepMinutes": 3,
+          "stressLoad": 99
         },
         {
           "hour": 8,
-          "hr": 85,
-          "spo2": 97,
-          "steps": 798,
-          "stressLoad": 60
+          "hr": 84,
+          "spo2": 100,
+          "steps": 357,
+          "stressLoad": 99
         },
         {
           "hour": 10,
-          "hr": 109,
-          "spo2": 98,
-          "steps": 1482,
-          "stressLoad": 60
+          "hr": 84,
+          "spo2": 99,
+          "steps": 557,
+          "stressLoad": 99
         },
         {
           "hour": 12,
-          "hr": 100,
-          "spo2": 98,
-          "steps": 2257,
-          "stressLoad": 60
+          "hr": 81,
+          "spo2": 99,
+          "steps": 802,
+          "stressLoad": 99
         },
         {
           "hour": 14,
-          "hr": 107,
+          "hr": 83,
           "spo2": 99,
-          "steps": 2941,
-          "stressLoad": 60
+          "steps": 1092,
+          "stressLoad": 99
         },
         {
           "hour": 16,
-          "hr": 88,
-          "spo2": 96,
-          "steps": 3534,
-          "stressLoad": 60
+          "hr": 91,
+          "spo2": 100,
+          "steps": 1426,
+          "stressLoad": 99
         },
         {
           "hour": 18,
-          "hr": 97,
-          "spo2": 99,
-          "steps": 3990,
-          "stressLoad": 60
+          "hr": 91,
+          "spo2": 100,
+          "steps": 1805,
+          "stressLoad": 99
         },
         {
           "hour": 20,
-          "hr": 100,
-          "spo2": 99,
-          "steps": 4309,
-          "stressLoad": 60,
-          "sleepMinutes": 46
+          "hr": 93,
+          "spo2": 98,
+          "steps": 2228,
+          "stressLoad": 99
         },
         {
           "hour": 22,
-          "hr": 75,
-          "spo2": 99,
-          "steps": 4559,
-          "stressLoad": 60,
-          "sleepMinutes": 96
+          "hr": 76,
+          "spo2": 98,
+          "steps": 2696,
+          "stressLoad": 99
         }
       ]
     },
     {
       "date": "2026-04-22",
       "hr": [
-        79,
-        105,
-        104,
-        101,
-        70
+        86,
+        92,
+        107,
+        145,
+        95
       ],
+      "hrv": 32,
       "sleep": {
-        "totalMinutes": 315,
-        "startTime": "23:59",
-        "endTime": "05:14",
+        "totalMinutes": 196,
+        "startTime": "02:45",
+        "endTime": "06:01",
         "stages": {
-          "deep": 41,
-          "light": 99,
-          "rem": 85,
-          "awake": 90
+          "deep": 45,
+          "light": 88,
+          "rem": 44,
+          "awake": 19
         },
-        "score": 36
+        "score": 39
       },
       "activity": {
-        "steps": 2926,
-        "calories": 2349,
-        "activeMinutes": 16,
-        "distanceKm": 3.6
+        "steps": 3772,
+        "calories": 1942,
+        "activeMinutes": 20,
+        "distanceKm": 2.9
       },
-      "spo2": 99,
+      "spo2": 98,
       "stress": {
-        "load": 79
+        "load": 99
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 80,
-          "spo2": 97,
+          "hr": 78,
+          "spo2": 99,
           "steps": 0,
-          "stressLoad": 79
+          "stressLoad": 99
         },
         {
           "hour": 2,
-          "hr": 72,
-          "spo2": 98,
-          "steps": 15,
-          "stressLoad": 79
+          "hr": 77,
+          "spo2": 99,
+          "steps": 26,
+          "sleepMinutes": 75,
+          "stressLoad": 99
         },
         {
           "hour": 4,
-          "hr": 73,
-          "spo2": 98,
-          "steps": 74,
-          "stressLoad": 79
+          "hr": 70,
+          "spo2": 99,
+          "steps": 105,
+          "sleepMinutes": 120,
+          "stressLoad": 99
         },
         {
           "hour": 6,
-          "hr": 100,
+          "hr": 93,
           "spo2": 98,
-          "steps": 220,
-          "stressLoad": 79
+          "steps": 236,
+          "sleepMinutes": 1,
+          "stressLoad": 99
         },
         {
           "hour": 8,
-          "hr": 109,
-          "spo2": 96,
-          "steps": 513,
-          "stressLoad": 79
+          "hr": 102,
+          "spo2": 99,
+          "steps": 419,
+          "stressLoad": 99
         },
         {
           "hour": 10,
-          "hr": 109,
-          "spo2": 96,
-          "steps": 952,
-          "stressLoad": 79
+          "hr": 101,
+          "spo2": 99,
+          "steps": 655,
+          "stressLoad": 99
         },
         {
           "hour": 12,
-          "hr": 92,
-          "spo2": 97,
-          "steps": 1449,
-          "stressLoad": 79
+          "hr": 91,
+          "spo2": 98,
+          "steps": 943,
+          "stressLoad": 99
         },
         {
           "hour": 14,
-          "hr": 106,
-          "spo2": 96,
-          "steps": 1888,
-          "stressLoad": 79
+          "hr": 86,
+          "spo2": 98,
+          "steps": 1284,
+          "stressLoad": 99
         },
         {
           "hour": 16,
-          "hr": 107,
-          "spo2": 99,
-          "steps": 2268,
-          "stressLoad": 79
+          "hr": 93,
+          "spo2": 97,
+          "steps": 1676,
+          "stressLoad": 99
         },
         {
           "hour": 18,
-          "hr": 110,
-          "spo2": 97,
-          "steps": 2561,
-          "stressLoad": 79
+          "hr": 105,
+          "spo2": 98,
+          "steps": 2122,
+          "stressLoad": 99
         },
         {
           "hour": 20,
-          "hr": 108,
-          "spo2": 96,
-          "steps": 2766,
-          "stressLoad": 79,
-          "sleepMinutes": 36
+          "hr": 96,
+          "spo2": 99,
+          "steps": 2619,
+          "stressLoad": 99
         },
         {
           "hour": 22,
-          "hr": 74,
-          "spo2": 97,
-          "steps": 2926,
-          "stressLoad": 79,
-          "sleepMinutes": 63
+          "hr": 67,
+          "spo2": 98,
+          "steps": 3170,
+          "stressLoad": 99
         }
       ]
     },
     {
       "date": "2026-04-23",
       "hr": [
-        85,
-        102,
-        95,
-        94,
-        78
+        82,
+        90,
+        105,
+        138,
+        100
       ],
+      "hrv": 33,
       "sleep": {
-        "totalMinutes": 309,
-        "startTime": "22:26",
-        "endTime": "03:35",
+        "totalMinutes": 189,
+        "startTime": "02:54",
+        "endTime": "06:03",
         "stages": {
-          "deep": 28,
-          "light": 124,
-          "rem": 72,
-          "awake": 85
+          "deep": 40,
+          "light": 97,
+          "rem": 40,
+          "awake": 12
         },
-        "score": 30
+        "score": 33
       },
       "activity": {
-        "steps": 4140,
-        "calories": 2048,
-        "activeMinutes": 16,
-        "distanceKm": 2.2
+        "steps": 4281,
+        "calories": 1962,
+        "activeMinutes": 23,
+        "distanceKm": 3.1
       },
       "spo2": 98,
       "stress": {
-        "load": 69
+        "load": 99
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 80,
-          "spo2": 97,
+          "hr": 65,
+          "spo2": 98,
           "steps": 0,
-          "stressLoad": 69
+          "stressLoad": 99
         },
         {
           "hour": 2,
-          "hr": 72,
-          "spo2": 98,
-          "steps": 21,
-          "stressLoad": 69
+          "hr": 66,
+          "spo2": 97,
+          "steps": 30,
+          "sleepMinutes": 66,
+          "stressLoad": 99
         },
         {
           "hour": 4,
-          "hr": 75,
-          "spo2": 98,
-          "steps": 104,
-          "stressLoad": 69
+          "hr": 73,
+          "spo2": 97,
+          "steps": 119,
+          "sleepMinutes": 120,
+          "stressLoad": 99
         },
         {
           "hour": 6,
-          "hr": 90,
-          "spo2": 98,
-          "steps": 311,
-          "stressLoad": 69
+          "hr": 100,
+          "spo2": 99,
+          "steps": 268,
+          "sleepMinutes": 3,
+          "stressLoad": 99
         },
         {
           "hour": 8,
-          "hr": 107,
-          "spo2": 96,
-          "steps": 725,
-          "stressLoad": 69
+          "hr": 103,
+          "spo2": 98,
+          "steps": 476,
+          "stressLoad": 99
         },
         {
           "hour": 10,
-          "hr": 85,
-          "spo2": 96,
-          "steps": 1346,
-          "stressLoad": 69
+          "hr": 91,
+          "spo2": 97,
+          "steps": 743,
+          "stressLoad": 99
         },
         {
           "hour": 12,
-          "hr": 108,
-          "spo2": 97,
-          "steps": 2050,
-          "stressLoad": 69
+          "hr": 96,
+          "spo2": 99,
+          "steps": 1070,
+          "stressLoad": 99
         },
         {
           "hour": 14,
-          "hr": 95,
+          "hr": 101,
           "spo2": 99,
-          "steps": 2671,
-          "stressLoad": 69
+          "steps": 1457,
+          "stressLoad": 99
         },
         {
           "hour": 16,
-          "hr": 102,
-          "spo2": 96,
-          "steps": 3209,
-          "stressLoad": 69
+          "hr": 78,
+          "spo2": 99,
+          "steps": 1903,
+          "stressLoad": 99
         },
         {
           "hour": 18,
-          "hr": 87,
-          "spo2": 96,
-          "steps": 3623,
-          "stressLoad": 69
+          "hr": 85,
+          "spo2": 97,
+          "steps": 2408,
+          "stressLoad": 99
         },
         {
           "hour": 20,
-          "hr": 95,
+          "hr": 92,
           "spo2": 99,
-          "steps": 3913,
-          "stressLoad": 69,
-          "sleepMinutes": 58
+          "steps": 2973,
+          "stressLoad": 99
         },
         {
           "hour": 22,
-          "hr": 76,
-          "spo2": 97,
-          "steps": 4140,
-          "stressLoad": 69,
-          "sleepMinutes": 80
+          "hr": 70,
+          "spo2": 99,
+          "steps": 3597,
+          "stressLoad": 99
         }
       ]
     },
     {
       "date": "2026-04-24",
       "hr": [
-        76,
-        115,
-        85,
-        89,
-        75
+        84,
+        91,
+        105,
+        162,
+        100
       ],
+      "hrv": 33,
       "sleep": {
-        "totalMinutes": 321,
-        "startTime": "22:06",
-        "endTime": "03:27",
+        "totalMinutes": 173,
+        "startTime": "03:12",
+        "endTime": "06:05",
         "stages": {
-          "deep": 23,
-          "light": 129,
-          "rem": 80,
-          "awake": 89
+          "deep": 40,
+          "light": 83,
+          "rem": 39,
+          "awake": 11
         },
-        "score": 35
+        "score": 31
       },
       "activity": {
-        "steps": 4155,
-        "calories": 2006,
-        "activeMinutes": 32,
-        "distanceKm": 3.4
+        "steps": 4236,
+        "calories": 1960,
+        "activeMinutes": 24,
+        "distanceKm": 3.3
       },
-      "spo2": 99,
+      "spo2": 95,
       "stress": {
-        "load": 71
+        "load": 99
       },
       "intraday": [
         {
           "hour": 0,
-          "hr": 75,
-          "spo2": 98,
+          "hr": 74,
+          "spo2": 95,
           "steps": 0,
-          "stressLoad": 71
+          "stressLoad": 99
         },
         {
           "hour": 2,
-          "hr": 73,
-          "spo2": 99,
-          "steps": 21,
-          "stressLoad": 71
+          "hr": 79,
+          "spo2": 94,
+          "steps": 29,
+          "sleepMinutes": 48,
+          "stressLoad": 99
         },
         {
           "hour": 4,
-          "hr": 77,
-          "spo2": 96,
-          "steps": 104,
-          "stressLoad": 71
+          "hr": 70,
+          "spo2": 95,
+          "steps": 118,
+          "sleepMinutes": 120,
+          "stressLoad": 99
         },
         {
           "hour": 6,
-          "hr": 94,
-          "spo2": 99,
-          "steps": 312,
-          "stressLoad": 71
+          "hr": 75,
+          "spo2": 94,
+          "steps": 265,
+          "sleepMinutes": 5,
+          "stressLoad": 99
         },
         {
           "hour": 8,
-          "hr": 101,
-          "spo2": 98,
-          "steps": 728,
-          "stressLoad": 71
+          "hr": 75,
+          "spo2": 96,
+          "steps": 471,
+          "stressLoad": 99
         },
         {
           "hour": 10,
-          "hr": 87,
-          "spo2": 99,
-          "steps": 1351,
-          "stressLoad": 71
+          "hr": 89,
+          "spo2": 94,
+          "steps": 735,
+          "stressLoad": 99
         },
         {
           "hour": 12,
-          "hr": 95,
-          "spo2": 98,
-          "steps": 2057,
-          "stressLoad": 71
+          "hr": 86,
+          "spo2": 96,
+          "steps": 1059,
+          "stressLoad": 99
         },
         {
           "hour": 14,
-          "hr": 96,
-          "spo2": 96,
-          "steps": 2680,
-          "stressLoad": 71
+          "hr": 94,
+          "spo2": 95,
+          "steps": 1441,
+          "stressLoad": 99
         },
         {
           "hour": 16,
-          "hr": 90,
-          "spo2": 98,
-          "steps": 3220,
-          "stressLoad": 71
+          "hr": 97,
+          "spo2": 94,
+          "steps": 1883,
+          "stressLoad": 99
         },
         {
           "hour": 18,
-          "hr": 87,
-          "spo2": 99,
-          "steps": 3636,
-          "stressLoad": 71
+          "hr": 88,
+          "spo2": 94,
+          "steps": 2383,
+          "stressLoad": 99
         },
         {
           "hour": 20,
-          "hr": 95,
-          "spo2": 98,
-          "steps": 3927,
-          "stressLoad": 71,
-          "sleepMinutes": 47
+          "hr": 108,
+          "spo2": 96,
+          "steps": 2942,
+          "stressLoad": 99
         },
         {
           "hour": 22,
-          "hr": 72,
-          "spo2": 96,
-          "steps": 4155,
-          "stressLoad": 71,
-          "sleepMinutes": 88
+          "hr": 79,
+          "spo2": 95,
+          "steps": 3559,
+          "stressLoad": 99
         }
       ]
     }

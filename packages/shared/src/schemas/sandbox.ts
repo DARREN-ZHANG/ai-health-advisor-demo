@@ -186,6 +186,7 @@ export const IntradaySnapshotSchema = z.object({
 export const DailyRecordSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   hr: z.array(z.number().min(30).max(220)).optional(),
+  hrv: z.number().min(0).max(200).optional(),
   sleep: SleepDataSchema.optional(),
   activity: ActivityDataSchema.optional(),
   spo2: z.number().min(80).max(100).optional(),

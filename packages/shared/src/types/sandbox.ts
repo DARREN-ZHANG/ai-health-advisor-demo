@@ -200,6 +200,7 @@ export interface IntradaySnapshot {
 export interface DailyRecord {
   date: string;
   hr?: number[];
+  hrv?: number;
   sleep?: SleepData;
   activity?: ActivityData;
   spo2?: number;

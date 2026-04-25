@@ -43,6 +43,7 @@ interface IntradaySnapshot {
 export interface DailyRecord {
   date: string;
   hr?: number[];
+  hrv?: number;
   sleep?: SleepData;
   activity?: ActivityData;
   spo2?: number;
@@ -121,23 +122,30 @@ export const PROFILE_CONFIGS: Record<string, ProfileConfig> = {
   'profile-a': {
     profileId: 'profile-a',
     seed: 42,
-    baseline: { restingHr: 58, hrv: 68, spo2: 99, avgSleepMinutes: 465, avgSteps: 9500 },
+    baseline: { restingHr: 48, hrv: 95, spo2: 99, avgSleepMinutes: 465, avgSteps: 12000 },
     missingRate: { hr: 0, activity: 0, spo2: 0 },
     trend: { stressDirection: 0, sleepDirection: 0, hrDirection: 0 },
   },
   'profile-b': {
     profileId: 'profile-b',
     seed: 137,
-    baseline: { restingHr: 74, hrv: 38, spo2: 96, avgSleepMinutes: 330, avgSteps: 4800 },
+    baseline: { restingHr: 72, hrv: 22, spo2: 94, avgSleepMinutes: 480, avgSteps: 3000 },
     missingRate: { hr: 0.15, activity: 0.15, spo2: 0.1 },
     trend: { stressDirection: 0.5, sleepDirection: -1.5, hrDirection: 0 },
   },
   'profile-c': {
     profileId: 'profile-c',
     seed: 256,
-    baseline: { restingHr: 82, hrv: 25, spo2: 94, avgSleepMinutes: 210, avgSteps: 2200 },
+    baseline: { restingHr: 78, hrv: 15, spo2: 97, avgSleepMinutes: 330, avgSteps: 4000 },
     missingRate: { hr: 0, activity: 0, spo2: 0 },
     trend: { stressDirection: 1.5, sleepDirection: -5, hrDirection: 0.5 },
+  },
+  'profile-d': {
+    profileId: 'profile-d',
+    seed: 314,
+    baseline: { restingHr: 58, hrv: 55, spo2: 98, avgSleepMinutes: 420, avgSteps: 10000 },
+    missingRate: { hr: 0, activity: 0, spo2: 0 },
+    trend: { stressDirection: 0.3, sleepDirection: -0.5, hrDirection: 0 },
   },
 };
 
@@ -151,6 +159,13 @@ function generateHr(rng: () => number, baseline: ProfileBaseline, dayIndex: numb
   const peak = resting + randInt(rng, 40, 80);
   const recovery = resting + randInt(rng, 2, 10);
   return [lowest, resting, avg, peak, recovery];
+}
+
+function generateHrv(rng: () => number, baseline: ProfileBaseline, dayIndex: number, trend: number): number {
+  const trendOffset = Math.round(dayIndex * trend);
+  const hrvBase = baseline.hrv + trendOffset;
+  const jitterRange = Math.max(3, Math.round(hrvBase * 0.12));
+  return Math.max(5, Math.round(jittered(rng, hrvBase, jitterRange)));
 }
 
 function generateSleep(rng: () => number, baseline: ProfileBaseline, dayIndex: number, trend: number): SleepData {
@@ -277,6 +292,7 @@ export function generateHistory(config: ProfileConfig, startDate: string, endDat
 
     if (rng() >= config.missingRate.hr) {
       record.hr = generateHr(rng, config.baseline, dayIndex, config.trend.hrDirection);
+      record.hrv = generateHrv(rng, config.baseline, dayIndex, config.trend.hrDirection);
     }
 
     record.sleep = generateSleep(rng, config.baseline, dayIndex, config.trend.sleepDirection);
