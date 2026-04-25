@@ -1,0 +1,54 @@
+{
+  "id": "V-activity",
+  "title": "视图总结 - 活动量不足",
+  "suite": "smoke",
+  "category": "view-summary",
+  "priority": "P0",
+  "tags": ["view-summary", "activity", "warning"],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"本周活动量明显不足，日均步数远低于推荐的8000步。久坐时间过长可能影响心血管健康，建议逐步增加日常步行量，每天至少活动30分钟。\",\"chartTokens\":[\"ACTIVITY_7DAYS\"],\"microTips\":[\"每小时起身活动5分钟有助于健康\"]}"
+    }
+  },
+  "request": {
+    "requestId": "eval-V-activity",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "view_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "view-summary",
+      "dataTab": "activity",
+      "timeframe": "week"
+    },
+    "tab": "activity"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["活动"]
+    },
+    "status": {
+      "expectedStatusColor": "warning"
+    },
+    "chartTokens": {
+      "maxCount": 2
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    },
+    "taskSpecific": {
+      "viewSummary": {
+        "requiredTab": "activity",
+        "requiredTabPatterns": ["活动"]
+      }
+    }
+  }
+}

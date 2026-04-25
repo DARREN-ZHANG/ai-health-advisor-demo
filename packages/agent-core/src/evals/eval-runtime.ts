@@ -33,9 +33,10 @@ import {
 } from '@health-advisor/sandbox';
 
 // agent-core 内部模块
+import { join } from 'node:path';
 import { InMemorySessionMemoryStore } from '../memory/session-memory-store';
 import { InMemoryAnalyticalMemoryStore } from '../memory/analytical-memory-store';
-import { createPromptLoader, type PromptName } from '../prompts/prompt-loader';
+import { createPromptLoader, type PromptLoader, type PromptName } from '../prompts/prompt-loader';
 import { createFallbackEngine } from '../fallback/fallback-engine';
 import { createHealthAgent } from '../executor/create-agent';
 import { FakeChatModel } from '../provider/fake-chat-model';
@@ -297,29 +298,47 @@ function resolveModelResponse(
   }
 }
 
-/** 创建带 fallback 的 prompt loader */
-function createPromptLoaderWithFallback(dataDir?: string) {
-  // 尝试使用 dataDir 的 prompts，失败时用 mock
-  try {
-    if (dataDir) {
-      return createPromptLoader(undefined, undefined);
-    }
-  } catch {
-    // ignore
-  }
+/** mock prompt loader 的默认模板 */
+const MOCK_PROMPT_TEMPLATES: Record<string, string> = {
+  system: '你是一位专业健康顾问。',
+  homepage: '请生成首页摘要。',
+  'view-summary': '请生成视图总结。',
+  'advisor-chat': '请进行健康对话。',
+};
 
-  // mock prompt loader
-  const templates: Record<string, string> = {
-    system: '你是一位专业健康顾问。',
-    homepage: '请生成首页摘要。',
-    'view-summary': '请生成视图总结。',
-    'advisor-chat': '请进行健康对话。',
-  };
-
+/** 创建 mock prompt loader */
+function createMockPromptLoader(): PromptLoader {
   return {
-    load: (name: PromptName) => templates[name] ?? '',
+    load: (name: PromptName) => MOCK_PROMPT_TEMPLATES[name] ?? '',
     listAvailable: (): PromptName[] => ['system', 'homepage', 'view-summary', 'advisor-chat'],
   };
+}
+
+/**
+ * 创建带 fallback 的 prompt loader。
+ *
+ * 尝试使用 dataDir 下的 prompts 目录加载模板文件。
+ * 由于 PromptLoader 是延迟读取（load 时才读文件），
+ * 需要在创建时主动探测文件可用性，失败则回退到 mock loader。
+ */
+function createPromptLoaderWithFallback(dataDir?: string): PromptLoader {
+  if (!dataDir) {
+    return createMockPromptLoader();
+  }
+
+  // 尝试基于 dataDir 构造 prompts 路径
+  const promptsDir = join(dataDir, 'prompts');
+
+  // 主动探测：尝试加载 system.md，成功则使用真实 loader
+  try {
+    const realLoader = createPromptLoader(undefined, promptsDir);
+    // 探测 system prompt 是否可读
+    realLoader.load('system');
+    return realLoader;
+  } catch {
+    // prompts 目录不存在或文件不可读，使用 mock
+    return createMockPromptLoader();
+  }
 }
 
 // ── Timeline 状态管理 ───────────────────────────────
