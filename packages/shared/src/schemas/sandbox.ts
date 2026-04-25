@@ -147,6 +147,23 @@ export const StressDataSchema = z.object({
 
 export const SleepStageTypeSchema = z.enum(['awake', 'light', 'deep', 'rem']);
 
+export const MotionPatternSchema = z.enum([
+  'still_supine', 'still_upright', 'still_with_micro',
+  'periodic_stroll', 'periodic_walk', 'periodic_brisk', 'periodic_run', 'periodic_arm_repeat',
+  'intermittent_reach', 'intermittent_gesture', 'intermittent_burst',
+  'irregular_fidget', 'irregular_restless', 'irregular_sudden',
+]);
+
+export const ImuSampleSchema = z.object({
+  offsetMs: z.number().int().min(0).max(48000),
+  accX: z.number().min(-4).max(4),
+  accY: z.number().min(-4).max(4),
+  accZ: z.number().min(-4).max(4),
+  gyroX: z.number().min(-10).max(10),
+  gyroY: z.number().min(-10).max(10),
+  gyroZ: z.number().min(-10).max(10),
+});
+
 export const SensorSampleSchema = z.object({
   timestamp: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
   heartRate: z.number().min(30).max(220).optional(),
@@ -157,6 +174,7 @@ export const SensorSampleSchema = z.object({
   activeMinutesDelta: z.number().min(0).optional(),
   distanceKmDelta: z.number().min(0).optional(),
   sleepStage: SleepStageTypeSchema.optional(),
+  imuSamples: z.array(ImuSampleSchema).optional(),
 });
 
 export const DeviceSyncSessionSchema = z.object({
