@@ -1,8 +1,9 @@
 {
   "version": "1.0.0",
   "profiles": [
-    { "profileId": "profile-a", "name": "张健康", "file": "profiles/profile-a.json" },
-    { "profileId": "profile-b", "name": "李普通", "file": "profiles/profile-b.json" },
-    { "profileId": "profile-c", "name": "王压力", "file": "profiles/profile-c.json" }
+    { "profileId": "profile-a", "name": "林巅峰", "file": "profiles/profile-a.json" },
+    { "profileId": "profile-b", "name": "赵沉睡", "file": "profiles/profile-b.json" },
+    { "profileId": "profile-c", "name": "孙焦虑", "file": "profiles/profile-c.json" },
+    { "profileId": "profile-d", "name": "周社交", "file": "profiles/profile-d.json" }
   ]
 }

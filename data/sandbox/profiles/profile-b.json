@@ -1,24 +1,20 @@
 {
   "profile": {
     "profileId": "profile-b",
-    "name": "李普通",
-    "age": 45,
-    "gender": "female",
-    "avatar": "avatar-b.png",
-    "tags": [
-      "睡眠债累积",
-      "恢复偏慢",
-      "压力波动偏高"
-    ],
+    "name": "赵沉睡",
+    "age": 42,
+    "gender": "male",
+    "avatar": "avatar-d.png",
+    "tags": ["偏胖", "睡眠呼吸暂停", "慢性疲劳"],
     "baseline": {
-      "restingHr": 74,
-      "hrv": 38,
-      "spo2": 96,
-      "avgSleepMinutes": 330,
-      "avgSteps": 4800
+      "restingHr": 72,
+      "hrv": 22,
+      "spo2": 94,
+      "avgSleepMinutes": 480,
+      "avgSteps": 3000
     }
   },
-  "initialDemoTime": "2026-04-24T07:30",
+  "initialDemoTime": "2026-04-24T08:00",
   "historyRef": {
     "file": "history/profile-b-daily-records.json"
   },

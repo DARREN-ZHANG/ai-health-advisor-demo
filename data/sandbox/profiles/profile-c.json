@@ -1,24 +1,20 @@
 {
   "profile": {
     "profileId": "profile-c",
-    "name": "王压力",
-    "age": 28,
-    "gender": "male",
-    "avatar": "avatar-c.png",
-    "tags": [
-      "高压负荷",
-      "重度睡眠不足",
-      "低活动恢复差"
-    ],
+    "name": "孙焦虑",
+    "age": 26,
+    "gender": "female",
+    "avatar": "avatar-e.png",
+    "tags": ["偏瘦", "短睡眠", "高压力"],
     "baseline": {
-      "restingHr": 82,
-      "hrv": 25,
-      "spo2": 94,
-      "avgSleepMinutes": 210,
-      "avgSteps": 2200
+      "restingHr": 78,
+      "hrv": 15,
+      "spo2": 97,
+      "avgSleepMinutes": 330,
+      "avgSteps": 4000
     }
   },
-  "initialDemoTime": "2026-04-24T06:45",
+  "initialDemoTime": "2026-04-24T06:00",
   "historyRef": {
     "file": "history/profile-c-daily-records.json"
   },

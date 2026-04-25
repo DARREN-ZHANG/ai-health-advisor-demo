@@ -1,21 +1,17 @@
 {
   "profile": {
     "profileId": "profile-a",
-    "name": "张健康",
-    "age": 32,
+    "name": "林巅峰",
+    "age": 28,
     "gender": "male",
     "avatar": "avatar-a.png",
-    "tags": [
-      "精力充沛",
-      "睡眠质量优",
-      "心肺耐力优秀"
-    ],
+    "tags": ["规律健身", "长睡眠", "HRV优秀"],
     "baseline": {
-      "restingHr": 60,
-      "hrv": 68,
+      "restingHr": 48,
+      "hrv": 95,
       "spo2": 99,
       "avgSleepMinutes": 465,
-      "avgSteps": 9500
+      "avgSteps": 12000
     }
   },
   "initialDemoTime": "2026-04-24T07:05",
