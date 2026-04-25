@@ -989,6 +989,7 @@ git commit -m "test(agent): add core deterministic eval cases"
 
 - Add: `packages/agent-core/evals/README.md`
 - Modify: `docs/INDEX.md` 或相关索引文档
+- Reference: `docs/ops/agent-eval-baseline-runbook.md`
 
 ### Step 1: README 内容
 
@@ -1001,6 +1002,7 @@ git commit -m "test(agent): add core deterministic eval cases"
 - 如何查看 report。
 - 如何添加新 case。
 - 真实 provider eval 为什么不进默认 CI。
+- 指向 `docs/ops/agent-eval-baseline-runbook.md`，说明 baseline 建立、对比、更新和 regression 沉淀流程。
 
 ### Step 2: 更新 docs 索引
 
@@ -1009,6 +1011,7 @@ git commit -m "test(agent): add core deterministic eval cases"
 - `packages/agent-core/src/evals/`
 - `packages/agent-core/evals/cases/`
 - `packages/agent-core/evals/reports/`
+- `docs/ops/agent-eval-baseline-runbook.md`
 
 ### Step 3: 验证
 
