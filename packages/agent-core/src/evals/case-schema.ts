@@ -2,8 +2,6 @@ import { z } from 'zod';
 import {
   AgentTaskTypeSchema,
   PageContextSchema,
-  DataTabSchema,
-  TimeframeSchema,
 } from '@health-advisor/shared';
 import { AgentRequestSchema } from '../types/agent-request';
 
@@ -234,7 +232,7 @@ const ViewSummaryTaskExpectationSchema = z
       (data.requiredTabPatterns !== undefined && data.requiredTabPatterns.length > 0),
     {
       message:
-        'requiredTab 存在时，必须提供非空的 requiredTabPatterns 或通过 chart token expectations 表达当前 tab',
+        'requiredTab 存在时，必须提供非空的 requiredTabPatterns',
     },
   );
 
@@ -280,7 +278,7 @@ const AgentEvalExpectationsSchema = z.object({
   chartTokens: ChartTokensExpectationSchema.optional(),
   microTips: MicroTipsExpectationSchema.optional(),
   missingData: MissingDataExpectationSchema.optional(),
-  evidence: EvidenceExpectationSchema,
+  evidence: EvidenceExpectationSchema.optional(),
   safety: SafetyExpectationSchema.optional(),
   memory: MemoryExpectationSchema.optional(),
   taskSpecific: TaskSpecificExpectationSchema.optional(),
