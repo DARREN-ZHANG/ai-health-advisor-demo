@@ -4,6 +4,7 @@ import type {
   DeviceEvent,
   DeviceMetric,
 } from '@health-advisor/shared';
+import { generateImuSamples, aggregateMotion, MOTION_PATTERN_MAP } from './imu-generator';
 
 // ============================================================
 // 内部工具函数
@@ -92,8 +93,9 @@ function generateMealIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
     const stepsCumulative = Math.round(deterministic(2, m) * 5) > 3 ? 1 : 0;
     events.push(makeEvent(segment, m, 'steps', stepsCumulative, idx++));
 
-    // motion: 每分钟，腕到嘴动作模式 2-5 次/分钟
-    const motion = rangeValue(4, 4, m, 3);
+    // motion: 每分钟，基于 IMU 采样聚合
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
     // spo2: 每5分钟
@@ -138,8 +140,9 @@ function generateSteadyCardioEvents(segment: ActivitySegment): DeviceEvent[] {
     cumulativeSteps += Math.round(stepsPerMin * (0.9 + deterministic(11, m) * 0.2));
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    // motion: 高运动强度
-    const motion = rangeValue(8, 3, m, 12);
+    // motion: 高运动强度，基于 IMU 采样聚合
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
     // spo2: 每5分钟
@@ -174,8 +177,10 @@ function generateProlongedSedentaryEvents(segment: ActivitySegment): DeviceEvent
     // steps: 累积，几乎为零
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    // motion: 无运动
-    events.push(makeEvent(segment, m, 'motion', 0, idx++));
+    // motion: 基于 IMU 采样聚合（静止状态）
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
     // spo2: 每5分钟
     if (m % 5 === 0) {
@@ -226,8 +231,9 @@ function generateIntermittentExerciseEvents(segment: ActivitySegment): DeviceEve
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    // motion: 活跃期高，休息期低
-    const motion = isActive ? rangeValue(8, 3, m, 33) : rangeValue(2, 3, m, 34);
+    // motion: 基于 IMU 采样聚合（间歇爆发模式内部处理活跃/休息）
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
     // spo2: 每5分钟
@@ -273,8 +279,9 @@ function generateWalkEvents(segment: ActivitySegment): DeviceEvent[] {
     cumulativeSteps += delta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    // motion: 中等强度
-    const motion = rangeValue(5, 3, m, 42);
+    // motion: 中等强度，基于 IMU 采样聚合
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
     // spo2: 每5分钟
@@ -372,8 +379,9 @@ function generateSleepEvents(segment: ActivitySegment): DeviceEvent[] {
     // steps: 无
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    // motion: 几乎无（睡眠时 motion 接近 0，偶尔翻身）
-    const motion = deterministic(52, m) > 0.95 ? 1 : 0;
+    // motion: 几乎无，基于 IMU 采样聚合（仰卧静止模式）
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
     // spo2: 每5分钟
@@ -403,7 +411,8 @@ function generateDeepFocusEvents(segment: ActivitySegment): DeviceEvent[] {
     const hr = rangeValue(58, 8, m, 60);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
-    const motion = rangeValue(1, 2, m, 61);
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
     if (m % 5 === 0) {
       const spo2 = rangeValue(99, 2, m, 62);
@@ -437,7 +446,8 @@ function generateAnxietyEpisodeEvents(segment: ActivitySegment): DeviceEvent[] {
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
     const steps = deterministic(71, m) > 0.7 ? Math.round(deterministic(72, m) * 5) : 0;
     events.push(makeEvent(segment, m, 'steps', steps, idx++));
-    const motion = rangeValue(3, 6, m, 73);
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
     if (m % 5 === 0) {
       const spo2 = rangeValue(97, 2, m, 74);
@@ -472,7 +482,8 @@ function generateBreathingPauseEvents(segment: ActivitySegment): DeviceEvent[] {
     const hr = rangeValue(Math.round(hrBase + (progress > 0.6 ? 10 : 0)), 12, m, 80);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
-    const motion = progress > 0.5 ? rangeValue(6, 5, m, 81) : rangeValue(1, 2, m, 82);
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
     events.push(makeEvent(segment, m, 'spo2', Math.max(82, currentSpo2), idx++));
   }
@@ -505,7 +516,8 @@ function generateAlcoholIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
     const stepsDelta = Math.round(deterministic(91, m) * 20);
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
-    const motion = rangeValue(4, 6, m, 92);
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
     if (m % 5 === 0) {
       const spo2 = rangeValue(96, 4, m, 93);
@@ -534,7 +546,8 @@ function generateNightmareEvents(segment: ActivitySegment): DeviceEvent[] {
     const hr = rangeValue(Math.round(85 + intensity * 10), 10, m, 100);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
-    const motion = intensity > 0.5 ? rangeValue(5, 4, m, 101) : rangeValue(1, 2, m, 102);
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
     if (m % 5 === 0) {
       const spo2 = rangeValue(96, 2, m, 103);
@@ -561,7 +574,9 @@ function generateRelaxationEvents(segment: ActivitySegment): DeviceEvent[] {
     const hr = rangeValue(52, 5, m, 110);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
-    events.push(makeEvent(segment, m, 'motion', 0, idx++));
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
     if (m % 5 === 0) {
       const spo2 = rangeValue(99, 2, m, 112);
       events.push(makeEvent(segment, m, 'spo2', spo2, idx++));

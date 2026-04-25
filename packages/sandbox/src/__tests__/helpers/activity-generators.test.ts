@@ -142,8 +142,8 @@ describe('activity-generators', () => {
       const motionEvents = events.filter((e) => e.metric === 'motion');
       const avgMotion =
         motionEvents.reduce((sum, e) => sum + (e.value as number), 0) / motionEvents.length;
-      // 有氧运动时 motion 平均应该 > 5
-      expect(avgMotion).toBeGreaterThan(5);
+      // 有氧运动时 IMU 衍生 motion 平均应该 > 0.1
+      expect(avgMotion).toBeGreaterThan(0.1);
     });
   });
 
@@ -177,11 +177,11 @@ describe('activity-generators', () => {
       }
     });
 
-    it('should produce zero motion', () => {
+    it('should produce near-zero motion', () => {
       const events = generateProlongedSedentaryEvents(segment);
       const motionEvents = events.filter((e) => e.metric === 'motion');
       for (const e of motionEvents) {
-        expect(e.value).toBe(0);
+        expect(e.value as number).toBeLessThanOrEqual(1);
       }
     });
   });
@@ -258,7 +258,8 @@ describe('activity-generators', () => {
       const motionEvents = events.filter((e) => e.metric === 'motion');
       const avgMotion =
         motionEvents.reduce((sum, e) => sum + (e.value as number), 0) / motionEvents.length;
-      expect(avgMotion).toBeGreaterThan(3);
+      // 步行时 IMU 衍生 motion 平均应该 > 0.05
+      expect(avgMotion).toBeGreaterThan(0.05);
     });
   });
 
