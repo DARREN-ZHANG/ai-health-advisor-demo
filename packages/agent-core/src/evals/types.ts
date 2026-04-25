@@ -205,6 +205,14 @@ export interface EvalCaseResult {
   artifacts: EvalArtifacts;
 }
 
+// ── Scorer 输入 ──────────────────────────────────────────
+
+export interface EvalScorerInput {
+  evalCase: AgentEvalCase;
+  envelope?: AgentResponseEnvelope;
+  artifacts: EvalArtifacts;
+}
+
 // ── 评测报告 ──────────────────────────────────────────
 
 export interface EvalReport {
