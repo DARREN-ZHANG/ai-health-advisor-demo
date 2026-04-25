@@ -387,6 +387,190 @@ function generateSleepEvents(segment: ActivitySegment): DeviceEvent[] {
 }
 
 // ============================================================
+// 生成器: deep_focus（深度专注）
+// ============================================================
+
+/** 深度专注事件生成 */
+function generateDeepFocusEvents(segment: ActivitySegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  let idx = 0;
+
+  events.push(makeEvent(segment, 0, 'wearState', true, idx++));
+  events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const hr = rangeValue(58, 8, m, 60);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+    const motion = rangeValue(1, 2, m, 61);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+    if (m % 5 === 0) {
+      const spo2 = rangeValue(99, 2, m, 62);
+      events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
+    }
+  }
+  return events;
+}
+
+// ============================================================
+// 生成器: anxiety_episode（焦虑发作）
+// ============================================================
+
+/** 焦虑发作事件生成 */
+function generateAnxietyEpisodeEvents(segment: ActivitySegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const params = segment.params ?? {};
+  const triggerRaw = params.trigger;
+  const trigger = typeof triggerRaw === 'string' ? triggerRaw : 'work';
+  const hrBase = trigger === 'social' ? 90 : trigger === 'panic' ? 100 : 95;
+  let idx = 0;
+
+  events.push(makeEvent(segment, 0, 'wearState', true, idx++));
+  events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / totalMin;
+    const hrSpike = Math.sin(progress * Math.PI) * 12;
+    const hr = rangeValue(Math.round(hrBase + hrSpike), 15, m, 70);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+    const steps = deterministic(71, m) > 0.7 ? Math.round(deterministic(72, m) * 5) : 0;
+    events.push(makeEvent(segment, m, 'steps', steps, idx++));
+    const motion = rangeValue(3, 6, m, 73);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+    if (m % 5 === 0) {
+      const spo2 = rangeValue(97, 2, m, 74);
+      events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
+    }
+  }
+  return events;
+}
+
+// ============================================================
+// 生成器: breathing_pause（呼吸暂停）
+// ============================================================
+
+/** 呼吸暂停事件生成 */
+function generateBreathingPauseEvents(segment: ActivitySegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const params = segment.params ?? {};
+  const severityRaw = params.severity;
+  const severity = severityRaw === 'mild' || severityRaw === 'severe' ? severityRaw : 'moderate';
+  const spo2Base = severity === 'severe' ? 86 : severity === 'mild' ? 91 : 89;
+  let idx = 0;
+
+  events.push(makeEvent(segment, 0, 'wearState', true, idx++));
+  events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / totalMin;
+    const spo2Drop = Math.sin(progress * Math.PI) * 8;
+    const currentSpo2 = Math.round(spo2Base + 6 - spo2Drop);
+    const hrBase = progress < 0.6 ? 65 : 90;
+    const hr = rangeValue(Math.round(hrBase + (progress > 0.6 ? 10 : 0)), 12, m, 80);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+    const motion = progress > 0.5 ? rangeValue(6, 5, m, 81) : rangeValue(1, 2, m, 82);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+    events.push(makeEvent(segment, m, 'spo2', Math.max(82, currentSpo2), idx++));
+  }
+  return events;
+}
+
+// ============================================================
+// 生成器: alcohol_intake（饮酒）
+// ============================================================
+
+/** 饮酒事件生成 */
+function generateAlcoholIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const params = segment.params ?? {};
+  const amountRaw = params.amount;
+  const amount = amountRaw === 'light' || amountRaw === 'heavy' ? amountRaw : 'moderate';
+  const hrBase = amount === 'heavy' ? 95 : amount === 'light' ? 82 : 90;
+  let idx = 0;
+  let cumulativeSteps = 0;
+
+  events.push(makeEvent(segment, 0, 'wearState', true, idx++));
+  events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / totalMin;
+    const hrElevation = progress * 8;
+    const hr = rangeValue(Math.round(hrBase + hrElevation), 10, m, 90);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+    const stepsDelta = Math.round(deterministic(91, m) * 20);
+    cumulativeSteps += stepsDelta;
+    events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
+    const motion = rangeValue(4, 6, m, 92);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+    if (m % 5 === 0) {
+      const spo2 = rangeValue(96, 4, m, 93);
+      events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
+    }
+  }
+  return events;
+}
+
+// ============================================================
+// 生成器: nightmare（噩梦）
+// ============================================================
+
+/** 噩梦事件生成 */
+function generateNightmareEvents(segment: ActivitySegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  let idx = 0;
+
+  events.push(makeEvent(segment, 0, 'wearState', true, idx++));
+  events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / totalMin;
+    const intensity = Math.sin(progress * Math.PI);
+    const hr = rangeValue(Math.round(85 + intensity * 10), 10, m, 100);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+    const motion = intensity > 0.5 ? rangeValue(5, 4, m, 101) : rangeValue(1, 2, m, 102);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+    if (m % 5 === 0) {
+      const spo2 = rangeValue(96, 2, m, 103);
+      events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
+    }
+  }
+  return events;
+}
+
+// ============================================================
+// 生成器: relaxation（放松）
+// ============================================================
+
+/** 放松事件生成 */
+function generateRelaxationEvents(segment: ActivitySegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  let idx = 0;
+
+  events.push(makeEvent(segment, 0, 'wearState', true, idx++));
+  events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const hr = rangeValue(52, 5, m, 110);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+    events.push(makeEvent(segment, m, 'motion', 0, idx++));
+    if (m % 5 === 0) {
+      const spo2 = rangeValue(99, 2, m, 112);
+      events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
+    }
+  }
+  return events;
+}
+
+// ============================================================
 // 公共调度函数
 // ============================================================
 
@@ -398,6 +582,12 @@ const GENERATOR_MAP: Record<ActivitySegmentType, (segment: ActivitySegment) => D
   intermittent_exercise: generateIntermittentExerciseEvents,
   walk: generateWalkEvents,
   sleep: generateSleepEvents,
+  deep_focus: generateDeepFocusEvents,
+  anxiety_episode: generateAnxietyEpisodeEvents,
+  breathing_pause: generateBreathingPauseEvents,
+  alcohol_intake: generateAlcoholIntakeEvents,
+  nightmare: generateNightmareEvents,
+  relaxation: generateRelaxationEvents,
 };
 
 /**
@@ -420,4 +610,10 @@ export {
   generateIntermittentExerciseEvents,
   generateWalkEvents,
   generateSleepEvents,
+  generateDeepFocusEvents,
+  generateAnxietyEpisodeEvents,
+  generateBreathingPauseEvents,
+  generateAlcoholIntakeEvents,
+  generateNightmareEvents,
+  generateRelaxationEvents,
 };
