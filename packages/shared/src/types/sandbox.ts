@@ -9,7 +9,13 @@ export type ActivitySegmentType =
   | 'prolonged_sedentary'
   | 'intermittent_exercise'
   | 'walk'
-  | 'sleep';
+  | 'sleep'
+  | 'deep_focus'
+  | 'anxiety_episode'
+  | 'breathing_pause'
+  | 'alcohol_intake'
+  | 'nightmare'
+  | 'relaxation';
 
 /** profile 当前演示时刻 */
 export interface DemoClock {
