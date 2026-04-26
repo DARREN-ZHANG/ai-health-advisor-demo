@@ -67,7 +67,7 @@ export interface AgentEvalSetup {
 
   referenceDate?: string;
   modelFixture?: {
-    mode: 'fake-json' | 'fake-invalid-json' | 'real-provider';
+    mode: 'fake-json' | 'fake-invalid-json' | 'fake-invalid-output' | 'fake-timeout' | 'real-provider';
     content?: string;
   };
 }
@@ -78,7 +78,7 @@ export interface AgentEvalExpectations {
   protocol?: {
     requireValidEnvelope?: boolean;
     expectedSource?: 'llm' | 'fallback' | 'rule';
-    expectedFinishReason?: 'complete' | 'fallback' | 'timeout' | 'cached';
+    expectedFinishReason?: 'complete' | 'fallback' | 'timeout';
   };
 
   summary?: {

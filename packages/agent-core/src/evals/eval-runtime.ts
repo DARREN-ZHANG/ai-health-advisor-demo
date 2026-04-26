@@ -41,7 +41,7 @@ import { InMemoryAnalyticalMemoryStore } from '../memory/analytical-memory-store
 import { createPromptLoader, type PromptLoader, type PromptName } from '../prompts/prompt-loader';
 import { createFallbackEngine, type FallbackEngine } from '../fallback/fallback-engine';
 import { createHealthAgent } from '../executor/create-agent';
-import { FakeChatModel } from '../provider/fake-chat-model';
+import { FakeChatModel, ThrowingFakeModel } from '../provider/fake-chat-model';
 
 // ── 默认 fake LLM 输出 ──────────────────────────────
 
@@ -49,6 +49,15 @@ const DEFAULT_FAKE_OUTPUT = JSON.stringify({
   source: 'llm',
   statusColor: 'good',
   summary: '整体状态稳定，当前数据未显示明显异常，建议维持现有作息并继续观察趋势。',
+  chartTokens: [],
+  microTips: [],
+});
+
+/** fake-invalid-output 模式的默认输出：JSON 可解析但 statusColor 类型错误 */
+const DEFAULT_INVALID_OUTPUT = JSON.stringify({
+  source: 'llm',
+  statusColor: 123,
+  summary: '测试摘要',
   chartTokens: [],
   microTips: [],
 });
@@ -272,7 +281,7 @@ function seedMemory(
   }
 }
 
-/** 创建 eval agent：fake 模式用 FakeChatModel，real 模式用真实 provider */
+/** 创建 eval agent：fake 模式根据 fixture mode 选择不同模拟策略 */
 function createEvalAgent(
   fixture: AgentEvalCase['setup']['modelFixture'],
   providerMode: EvalProviderMode,
@@ -281,6 +290,21 @@ function createEvalAgent(
     const chatModel = createRealChatModel();
     return createHealthAgent({ chatModel });
   }
+
+  // fake-timeout：抛异常模拟 LLM 调用失败，触发 fallback 路径
+  if (fixture?.mode === 'fake-timeout') {
+    const throwingModel = new ThrowingFakeModel();
+    return createHealthAgent({ chatModel: throwingModel });
+  }
+
+  // fake-invalid-output：返回可解析但 schema 不合法的 JSON，触发 parser fallback
+  if (fixture?.mode === 'fake-invalid-output') {
+    const content = fixture.content ?? DEFAULT_INVALID_OUTPUT;
+    const fakeModel = new FakeChatModel(content);
+    return createHealthAgent({ chatModel: fakeModel });
+  }
+
+  // 其他 fake 模式：返回预设的正常或无效 JSON
   const modelResponse = resolveFakeModelResponse(fixture);
   const fakeModel = new FakeChatModel(modelResponse);
   return createHealthAgent({ chatModel: fakeModel });

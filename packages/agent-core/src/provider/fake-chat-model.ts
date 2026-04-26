@@ -36,3 +36,28 @@ export class FakeChatModel extends BaseChatModel {
     return 'fake';
   }
 }
+
+/**
+ * 用于测试的抛异常 Chat Model，模拟 LLM 调用失败（如超时、网络错误）。
+ * agent-runtime 会 catch 该错误并走 fallback 路径。
+ */
+export class ThrowingFakeModel extends BaseChatModel {
+  static lc_name(): string {
+    return 'ThrowingFakeModel';
+  }
+
+  lc_serializable = false;
+
+  constructor() {
+    super({});
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async _generate(_messages: unknown[], _options?: unknown): Promise<ChatResult> {
+    throw new Error('模拟 LLM 调用失败');
+  }
+
+  _llmType(): string {
+    return 'fake-throwing';
+  }
+}

@@ -8,8 +8,7 @@
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
-      "mode": "fake-json",
-      "content": "{\"source\":\"fallback\",\"statusColor\":\"good\",\"summary\":\"由于响应超时，暂时无法提供详细分析。您的健康数据将在下次刷新后更新。\",\"chartTokens\":[],\"microTips\":[]}"
+      "mode": "fake-timeout"
     }
   },
   "request": {

@@ -83,7 +83,7 @@ const AgentEvalSetupSchema = z.object({
 
   modelFixture: z
     .object({
-      mode: z.enum(['fake-json', 'fake-invalid-json', 'real-provider']),
+      mode: z.enum(['fake-json', 'fake-invalid-json', 'fake-invalid-output', 'fake-timeout', 'real-provider']),
       content: z.string().optional(),
     })
     .optional(),
@@ -94,7 +94,7 @@ const AgentEvalSetupSchema = z.object({
 const ProtocolExpectationSchema = z.object({
   requireValidEnvelope: z.boolean().optional(),
   expectedSource: z.enum(['llm', 'fallback', 'rule']).optional(),
-  expectedFinishReason: z.enum(['complete', 'fallback', 'timeout', 'cached']).optional(),
+  expectedFinishReason: z.enum(['complete', 'fallback', 'timeout']).optional(),
 });
 
 const SummaryExpectationSchema = z.object({

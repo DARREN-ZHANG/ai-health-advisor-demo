@@ -76,6 +76,19 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
     : [];
   const tips = rawTips.slice(0, MAX_MICRO_TIPS);
 
+  // statusColor 严格类型检查：非字符串值不静默降级，触发 parse 失败走 fallback
+  const statusColor = parseStatusColor(obj.statusColor, meta.defaultStatusColor);
+  if (
+    obj.statusColor !== undefined &&
+    obj.statusColor !== statusColor
+  ) {
+    return {
+      success: false,
+      error: `statusColor 类型错误: 期望 'good'|'warning'|'error'，收到 ${JSON.stringify(obj.statusColor)}`,
+      raw,
+    };
+  }
+
   // summary 必须存在
   const summary = typeof obj.summary === 'string' ? obj.summary : '';
   if (!summary) {
@@ -89,7 +102,7 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
   const envelope: AgentResponseEnvelope = {
     summary,
     source: typeof obj.source === 'string' && obj.source.length > 0 ? obj.source : 'llm',
-    statusColor: parseStatusColor(obj.statusColor, meta.defaultStatusColor),
+    statusColor,
     chartTokens: validTokens,
     microTips: tips,
     meta: {

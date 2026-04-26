@@ -165,12 +165,12 @@ describe('protocolScorer', () => {
   });
 
   it('非法 finishReason 应导致 schema 校验失败', () => {
-    // 构造一个 finishReason='cached' 的 envelope
-    // Zod schema 不包含 'cached'，所以 schema 校验会失败
+    // 构造一个 finishReason 为非法值的 envelope
+    // Zod schema 只允许 'complete' | 'fallback' | 'timeout'
     const envelope = createValidEnvelope({
       meta: {
         ...createValidEnvelope().meta,
-        finishReason: 'cached' as any,
+        finishReason: 'invalid_reason' as any,
       },
     });
     const input = createScorerInput({ envelope });
@@ -178,7 +178,7 @@ describe('protocolScorer', () => {
 
     const schemaCheck = results.find((r) => r.checkId.includes('schema_valid'));
     expect(schemaCheck).toBeDefined();
-    // Zod schema 不包含 'cached'，所以 schema 校验应失败
+    // Zod schema 不包含非法值，所以 schema 校验应失败
     expect(schemaCheck!.passed).toBe(false);
   });
 

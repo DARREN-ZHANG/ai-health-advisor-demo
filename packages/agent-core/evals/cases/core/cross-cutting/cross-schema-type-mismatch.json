@@ -8,8 +8,7 @@
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
-      "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":123,\"summary\":\"本周表现良好。\",\"chartTokens\":[],\"microTips\":[]}"
+      "mode": "fake-invalid-output"
     }
   },
   "request": {
