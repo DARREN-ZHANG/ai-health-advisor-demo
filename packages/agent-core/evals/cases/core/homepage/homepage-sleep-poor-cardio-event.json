@@ -10,9 +10,9 @@
     "timeline": {
       "appendSegments": [
         {
-          "segmentType": "cardio",
+          "segmentType": "steady_cardio",
           "params": { "durationMinutes": 30, "intensity": "moderate" },
-          "offsetMinutes": -120,
+          "offsetMinutes": 0,
           "durationMinutes": 30,
           "advanceClock": true
         }

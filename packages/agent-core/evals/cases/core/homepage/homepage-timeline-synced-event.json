@@ -11,9 +11,9 @@
       "performSync": "app_open",
       "appendSegments": [
         {
-          "segmentType": "running",
+          "segmentType": "steady_cardio",
           "params": { "distanceMeters": 5000, "durationMinutes": 30 },
-          "offsetMinutes": -60,
+          "offsetMinutes": 0,
           "durationMinutes": 30,
           "advanceClock": true
         }
