@@ -833,6 +833,174 @@ describe('createEvalRuntime — strictAssets', () => {
   });
 });
 
+// ── 真实 Fallback Assets 测试 ──────────────────────────────
+
+describe('createEvalRuntime — 真实 fallback assets', () => {
+  it('有 dataDir 时 fallback engine 加载真实 assets', () => {
+    const evalCase = makeEvalCase({
+      setup: { profileId: 'profile-a' },
+    });
+
+    const deps = createEvalRuntime({
+      evalCase,
+      dataDir: DATA_DIR,
+      providerMode: 'fake',
+    });
+
+    // 通过 getFallback 验证 homepage fallback 包含真实内容
+    const fallback = deps.fallbackEngine.getFallback(
+      AgentTaskType.HOMEPAGE_SUMMARY,
+      { profileId: 'profile-a', pageContext: { profileId: 'profile-a', page: 'home', timeframe: 'week' } },
+    );
+
+    // 真实 homepage.json 中 profile-a 的 summary 包含 "HRV" 关键词
+    expect(fallback.source).toBe('fallback');
+    expect(fallback.summary).toContain('HRV');
+    expect(fallback.chartTokens.length).toBeGreaterThan(0);
+  });
+
+  it('view-summary fallback 使用真实 assets', () => {
+    const evalCase = makeEvalCase({
+      setup: { profileId: 'profile-a' },
+    });
+
+    const deps = createEvalRuntime({
+      evalCase,
+      dataDir: DATA_DIR,
+      providerMode: 'fake',
+    });
+
+    // view-summary 按 tab 查找，hrv tab 在真实 assets 中
+    const fallback = deps.fallbackEngine.getFallback(
+      AgentTaskType.VIEW_SUMMARY,
+      {
+        profileId: 'profile-a',
+        pageContext: { profileId: 'profile-a', page: 'data', timeframe: 'week' },
+        tab: 'hrv',
+      },
+    );
+
+    // 真实 view-summary.json 中 hrv 的 summary 包含 "HRV"
+    expect(fallback.source).toBe('fallback');
+    expect(fallback.summary).toContain('HRV');
+    expect(fallback.chartTokens).toContain('HRV_7DAYS');
+  });
+
+  it('advisor-chat fallback 使用真实 assets', () => {
+    const evalCase = makeEvalCase({
+      setup: { profileId: 'profile-a' },
+    });
+
+    const deps = createEvalRuntime({
+      evalCase,
+      dataDir: DATA_DIR,
+      providerMode: 'fake',
+    });
+
+    const fallback = deps.fallbackEngine.getFallback(
+      AgentTaskType.ADVISOR_CHAT,
+      {
+        profileId: 'profile-a',
+        pageContext: { profileId: 'profile-a', page: 'advisor', timeframe: 'week' },
+      },
+    );
+
+    // 真实 advisor-chat.json 中 profile-a 的 summary 包含 "数据"
+    expect(fallback.source).toBe('fallback');
+    expect(fallback.summary).toContain('数据');
+    expect(fallback.microTips.length).toBeGreaterThan(0);
+  });
+
+  it('无 dataDir 时 fallback engine 返回最小内容', () => {
+    const evalCase = makeEvalCase({
+      setup: { profileId: 'profile-a' },
+    });
+
+    const deps = createEvalRuntime({
+      evalCase,
+      providerMode: 'fake',
+      // 不传 dataDir
+    });
+
+    const fallback = deps.fallbackEngine.getFallback(
+      AgentTaskType.HOMEPAGE_SUMMARY,
+      { profileId: 'profile-a', pageContext: { profileId: 'profile-a', page: 'home', timeframe: 'week' } },
+    );
+
+    // MINIMAL_FALLBACK_ASSETS 为空对象，所以 lookupEntry 返回 GENERIC_FALLBACK
+    expect(fallback.source).toBe('fallback');
+    expect(fallback.summary).toContain('正在分析');
+  });
+
+  it('strictAssets=true 且 fallbacks 目录无效时抛异常', () => {
+    const evalCase = makeEvalCase({
+      setup: { profileId: 'profile-a' },
+    });
+
+    // 传入不存在的 dataDir，strict 模式下应抛异常
+    expect(() => createEvalRuntime({
+      evalCase,
+      dataDir: '/nonexistent/path/invalid',
+      providerMode: 'fake',
+      strictAssets: true,
+    })).toThrow();
+  });
+
+  it('strictAssets=true 时有效 fallback assets 正常加载', () => {
+    const evalCase = makeEvalCase({
+      setup: { profileId: 'profile-a' },
+    });
+
+    const deps = createEvalRuntime({
+      evalCase,
+      dataDir: DATA_DIR,
+      providerMode: 'fake',
+      strictAssets: true,
+    });
+
+    const fallback = deps.fallbackEngine.getFallback(
+      AgentTaskType.HOMEPAGE_SUMMARY,
+      { profileId: 'profile-a', pageContext: { profileId: 'profile-a', page: 'home', timeframe: 'week' } },
+    );
+
+    // strict 模式下也能加载真实 fallback 内容
+    expect(fallback.summary).toContain('HRV');
+  });
+
+  it('fake-invalid-json 触发 fallback 后返回真实内容', async () => {
+    const evalCase = makeEvalCase({
+      setup: {
+        profileId: 'profile-a',
+        modelFixture: {
+          mode: 'fake-invalid-json',
+          content: '<<<invalid>>>',
+        },
+      },
+    });
+
+    const deps = createEvalRuntime({
+      evalCase,
+      dataDir: DATA_DIR,
+      providerMode: 'fake',
+    });
+
+    // agent 返回 invalid JSON
+    const result = await deps.agent.invoke({
+      systemPrompt: 'test',
+      userPrompt: 'test',
+    });
+    expect(result.content).toBe('<<<invalid>>>');
+
+    // fallback engine 应持有真实数据
+    const fallback = deps.fallbackEngine.getFallback(
+      AgentTaskType.HOMEPAGE_SUMMARY,
+      { profileId: 'profile-a', pageContext: { profileId: 'profile-a', page: 'home', timeframe: 'week' } },
+    );
+    expect(fallback.summary).toContain('HRV');
+    expect(fallback.microTips.some((t) => t.includes('睡眠') || t.includes('HRV'))).toBe(true);
+  });
+});
+
 // ── Provider 模式测试 ──────────────────────────────────
 
 describe('eval runner — provider 模式', () => {
