@@ -190,6 +190,7 @@ export class GodModeService {
       'profile-a': { hour: 7, min: 5 },
       'profile-b': { hour: 7, min: 30 },
       'profile-c': { hour: 6, min: 45 },
+      'profile-d': { hour: 7, min: 15 },
     };
 
     for (const entry of manifest.profiles) {
