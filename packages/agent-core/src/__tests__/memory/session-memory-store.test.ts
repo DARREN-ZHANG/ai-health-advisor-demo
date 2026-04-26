@@ -12,6 +12,7 @@ describe('InMemorySessionMemoryStore', () => {
     const store = new InMemorySessionMemoryStore();
     expect(store.get('sess-1')).toBeUndefined();
     expect(store.getRecentMessages('sess-1')).toEqual([]);
+    expect(store.getRecentMessagesForProfile('sess-1', 'profile-a')).toEqual([]);
   });
 
   it('appends messages and updates timestamp', () => {
@@ -35,7 +36,6 @@ describe('InMemorySessionMemoryStore', () => {
 
     const memory = store.get('sess-1');
     expect(memory?.messages).toHaveLength(MAX_TURNS * 2);
-    // 保留最后 MAX_TURNS * 2 条
     expect(memory?.messages[0]?.text).toBe('msg-4');
   });
 
@@ -43,11 +43,40 @@ describe('InMemorySessionMemoryStore', () => {
     const store = new InMemorySessionMemoryStore();
     store.appendMessage('sess-1', 'profile-a', makeMessage('user', '旧消息'));
 
-    // 不同 profile 写入同一 session → 自动清除
     const result = store.appendMessage('sess-1', 'profile-b', makeMessage('user', '新消息'));
     expect(result.profileId).toBe('profile-b');
     expect(result.messages).toHaveLength(1);
     expect(result.messages[0]?.text).toBe('新消息');
+  });
+
+  it('getRecentMessagesForProfile returns empty for mismatched profile', () => {
+    const store = new InMemorySessionMemoryStore();
+    store.appendMessage('sess-1', 'profile-a', makeMessage('user', 'msg-a'));
+
+    const result = store.getRecentMessagesForProfile('sess-1', 'profile-b');
+    expect(result).toEqual([]);
+  });
+
+  it('getRecentMessagesForProfile returns messages for matched profile', () => {
+    const store = new InMemorySessionMemoryStore();
+    store.appendMessage('sess-1', 'profile-a', makeMessage('user', 'msg-1'));
+    store.appendMessage('sess-1', 'profile-a', makeMessage('assistant', 'msg-2'));
+
+    const result = store.getRecentMessagesForProfile('sess-1', 'profile-a');
+    expect(result).toHaveLength(2);
+    expect(result[0]?.text).toBe('msg-1');
+    expect(result[1]?.text).toBe('msg-2');
+  });
+
+  it('getRecentMessagesForProfile respects maxTurns', () => {
+    const store = new InMemorySessionMemoryStore();
+    for (let i = 0; i < 10; i++) {
+      const role = i % 2 === 0 ? 'user' as const : 'assistant' as const;
+      store.appendMessage('sess-1', 'profile-a', makeMessage(role, `msg-${i}`));
+    }
+
+    const recent = store.getRecentMessagesForProfile('sess-1', 'profile-a', 2);
+    expect(recent).toHaveLength(4);
   });
 
   it('clearOnProfileSwitch deletes entry', () => {
@@ -76,14 +105,13 @@ describe('InMemorySessionMemoryStore', () => {
     }
 
     const recent = store.getRecentMessages('sess-1', 2);
-    expect(recent).toHaveLength(4); // 2 turns * 2 messages
+    expect(recent).toHaveLength(4);
   });
 
   it('evictExpired removes stale sessions', () => {
     const store = new InMemorySessionMemoryStore();
     store.appendMessage('sess-1', 'profile-a', makeMessage('user', 'old'));
 
-    // 手动将 updatedAt 设为过期
     const memory = store.get('sess-1')!;
     memory.updatedAt = Date.now() - SESSION_TTL_MS - 1000;
 

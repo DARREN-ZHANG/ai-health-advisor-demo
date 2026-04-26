@@ -43,6 +43,57 @@ export type { ContextBuilderDeps } from './context/context-types';
 export { selectWindowByTask } from './context/window-selector';
 export { detectMissingFields } from './context/missing-fields';
 
+// Context Packet (new)
+export type {
+  TaskContextPacket,
+  TaskPacket,
+  UserContextPacket,
+  DataWindowPacket,
+  EvidenceFact,
+  EvidenceSource,
+  MissingDataItem,
+  MissingDataScope,
+  MetricSummary,
+  MetricValue,
+  MetricName,
+  MissingDataCoverage,
+  MetricAnomalyPoint,
+  VisibleChartPacket,
+  HomepageContextPacket,
+  ViewSummaryContextPacket,
+  AdvisorChatContextPacket,
+  QuestionIntentPacket,
+  CurrentPagePacket,
+  RelevantFactPacket,
+  ConversationPacket,
+  AdvisorConstraintPacket,
+  Latest24hPacket,
+  Latest24hMetric,
+  RecentEventPacket,
+  RuleInsightPacket,
+} from './context/context-packet';
+export { buildTaskContextPacket } from './context/context-packet-builder';
+export { createEvidenceCollector } from './context/evidence-packet';
+export type { EvidenceCollector } from './context/evidence-packet';
+export {
+  buildMetricSummary,
+  buildMetricSummaries,
+  getMetricValue,
+  getMetricUnit,
+  getRestingHR,
+} from './context/metric-summary';
+export {
+  buildMissingDataPacket,
+  buildMissingDataForScope,
+  findLastAvailableDate,
+} from './context/missing-data-packet';
+export {
+  buildVisibleChartPackets,
+  getChartTokenForTab,
+  getMetricForTab,
+} from './context/visible-chart-packet';
+export { parseQuestionIntent } from './context/advisor-intent';
+
 // Constants
 export {
   MAX_TURNS,
@@ -75,6 +126,7 @@ export { createPromptLoader } from './prompts/prompt-loader';
 export type { PromptLoader, PromptName } from './prompts/prompt-loader';
 export { buildSystemPrompt } from './prompts/system-builder';
 export { buildTaskPrompt } from './prompts/task-builder';
+export { renderTaskContextPacket } from './prompts/context-packet-renderer';
 
 // Output (AGT-015 ~ AGT-017)
 export { parseAgentResponse } from './output/response-parser';

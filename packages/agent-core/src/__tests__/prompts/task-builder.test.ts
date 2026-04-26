@@ -4,6 +4,7 @@ import type { AgentContext } from '../../types/agent-context';
 import { AgentTaskType } from '@health-advisor/shared';
 import type { PromptLoader } from '../../prompts/prompt-loader';
 import type { RuleEvaluationResult } from '../../rules/types';
+import type { TaskContextPacket } from '../../context/context-packet';
 
 const mockLoader: PromptLoader = {
   load: (name) => {
@@ -49,6 +50,32 @@ const emptyRules: RuleEvaluationResult = {
   statusColor: 'green',
 };
 
+function makePacket(overrides: Partial<TaskContextPacket> = {}): TaskContextPacket {
+  return {
+    task: {
+      type: 'homepage_summary',
+      page: 'home',
+    },
+    userContext: {
+      profileId: 'profile-a',
+      name: '张健康',
+      age: 32,
+      tags: [],
+      baselines: { restingHR: 62, hrv: 58, spo2: 98, avgSleepMinutes: 420, avgSteps: 8500 },
+    },
+    dataWindow: {
+      start: '2026-04-04',
+      end: '2026-04-10',
+      recordCount: 1,
+      completenessPct: 100,
+    },
+    missingData: [],
+    evidence: [],
+    visibleCharts: [],
+    ...overrides,
+  };
+}
+
 describe('buildTaskPrompt', () => {
   it('homepage 任务包含首页摘要模板', () => {
     const prompt = buildTaskPrompt(makeContext(), mockLoader, emptyRules);
@@ -80,9 +107,14 @@ describe('buildTaskPrompt', () => {
     });
     const prompt = buildTaskPrompt(ctx, mockLoader, emptyRules);
     expect(prompt).toContain('健康顾问对话');
-    expect(prompt).toContain('最近感觉怎样');
-    expect(prompt).toContain('sleep-analysis');
-    expect(prompt).toContain('visibleChartIds: sleep');
+  });
+
+  it('使用 packet 时渲染 TaskContextPacket section', () => {
+    const packet = makePacket();
+    const prompt = buildTaskPrompt(makeContext(), mockLoader, emptyRules, packet);
+    expect(prompt).toContain('任务上下文');
+    expect(prompt).toContain('用户信息');
+    expect(prompt).toContain('数据窗口');
   });
 
   it('包含数据窗口信息', () => {

@@ -2,6 +2,7 @@ import type { AgentRequest } from '../types/agent-request';
 import type { AgentResponseEnvelope } from '@health-advisor/shared';
 import type { AgentContext } from '../types/agent-context';
 import type { RuleEvaluationResult } from '../rules/types';
+import type { TaskContextPacket } from '../context/context-packet';
 
 // ── 枚举类型 ──────────────────────────────────────────
 
@@ -188,6 +189,11 @@ export interface EvalArtifacts {
   request: AgentRequest;
   context?: AgentContext;
   rulesResult?: RuleEvaluationResult;
+  contextPacket?: TaskContextPacket;
+  evidence?: TaskContextPacket['evidence'];
+  missingData?: TaskContextPacket['missingData'];
+  visibleCharts?: TaskContextPacket['visibleCharts'];
+  memoryScope?: { sessionId: string; profileId: string; messageCount: number };
   systemPrompt?: string;
   taskPrompt?: string;
   rawOutput?: string;

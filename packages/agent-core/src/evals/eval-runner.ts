@@ -21,6 +21,7 @@ import type {
   EvalReport,
   EvalSuite,
 } from './types';
+import type { TaskContextPacket } from '../context/context-packet';
 import type { AgentResponseEnvelope } from '@health-advisor/shared';
 
 // ── CLI 参数解析 ────────────────────────────────────────
@@ -104,12 +105,21 @@ function createArtifactObserver(evalCase: AgentEvalCase): {
     request: evalCase.request,
   };
 
+  let capturedPacket: TaskContextPacket | undefined;
+
   const observer: AgentRuntimeObserver = {
     onContextBuilt(ctx) {
       artifacts.context = ctx;
     },
     onRulesEvaluated(rules) {
       artifacts.rulesResult = rules;
+    },
+    onPacketBuilt(packet) {
+      capturedPacket = packet;
+      artifacts.contextPacket = packet;
+      artifacts.evidence = packet.evidence;
+      artifacts.missingData = packet.missingData;
+      artifacts.visibleCharts = packet.visibleCharts;
     },
     onPromptBuilt(input) {
       artifacts.systemPrompt = input.systemPrompt;
@@ -128,7 +138,18 @@ function createArtifactObserver(evalCase: AgentEvalCase): {
 
   return {
     observer,
-    getArtifacts: () => artifacts as EvalArtifacts,
+    getArtifacts: () => {
+      const result = artifacts as EvalArtifacts;
+      // memoryScope: 从 request 和 context 中推导
+      if (artifacts.context) {
+        result.memoryScope = {
+          sessionId: evalCase.request.sessionId,
+          profileId: evalCase.request.profileId,
+          messageCount: artifacts.context.memory.recentMessages.length,
+        };
+      }
+      return result;
+    },
   };
 }
 

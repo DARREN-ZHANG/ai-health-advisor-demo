@@ -146,7 +146,6 @@ describe('buildAgentContext', () => {
     ] as DailyRecord[];
     const data = makeProfileData(records);
     const ctx = buildAgentContext(makeRequest(), makeDeps(data), '2026-04-10');
-    // sleep, activity, spo2, stress 缺失在大多数记录中
     expect(ctx.dataWindow.missingFields.length).toBeGreaterThan(0);
   });
 
@@ -162,5 +161,42 @@ describe('buildAgentContext', () => {
     expect(ctx.task.userMessage).toBe('最近感觉怎样');
     expect(ctx.task.smartPromptId).toBe('sleep-analysis');
     expect(ctx.task.visibleChartIds).toEqual(['sleep']);
+  });
+
+  // ── Memory Isolation Tests ──
+
+  it('does not include memory from different profile', () => {
+    const deps = makeDeps();
+    deps.sessionMemory.appendMessage('sess-1', 'profile-a', {
+      role: 'user',
+      text: 'profile-a-msg',
+      createdAt: Date.now(),
+    });
+
+    const request = makeRequest({ profileId: 'profile-b' });
+    const ctx = buildAgentContext(request, deps, '2026-04-10');
+    expect(ctx.memory.recentMessages).toHaveLength(0);
+  });
+
+  it('does not include analytical memory from different profile', () => {
+    const deps = makeDeps();
+    deps.analyticalMemory.setHomepageBrief('sess-1', 'profile-a', 'profile-a-brief');
+
+    const request = makeRequest({ profileId: 'profile-b' });
+    const ctx = buildAgentContext(request, deps, '2026-04-10');
+    expect(ctx.memory.latestHomepageBrief).toBeUndefined();
+  });
+
+  it('includes memory when profile matches', () => {
+    const deps = makeDeps();
+    deps.sessionMemory.appendMessage('sess-1', 'profile-a', {
+      role: 'user',
+      text: 'profile-a-msg',
+      createdAt: Date.now(),
+    });
+
+    const ctx = buildAgentContext(makeRequest(), deps, '2026-04-10');
+    expect(ctx.memory.recentMessages).toHaveLength(1);
+    expect(ctx.memory.recentMessages[0]?.text).toBe('profile-a-msg');
   });
 });

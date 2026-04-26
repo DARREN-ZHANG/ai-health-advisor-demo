@@ -13,6 +13,7 @@ export interface SessionMemoryStore {
     message: ConversationMessage,
   ): SessionConversationMemory;
   getRecentMessages(sessionId: string, maxTurns?: number): ConversationMessage[];
+  getRecentMessagesForProfile(sessionId: string, profileId: string, maxTurns?: number): ConversationMessage[];
   clearOnProfileSwitch(sessionId: string): void;
   clearAll(): void;
   evictExpired(): void;
@@ -55,6 +56,18 @@ export class InMemorySessionMemoryStore implements SessionMemoryStore {
   getRecentMessages(sessionId: string, maxTurns: number = MAX_TURNS): ConversationMessage[] {
     const memory = this.store.get(sessionId);
     if (!memory) return [];
+    const maxMessages = maxTurns * 2;
+    if (memory.messages.length <= maxMessages) return [...memory.messages];
+    return memory.messages.slice(-maxMessages);
+  }
+
+  getRecentMessagesForProfile(
+    sessionId: string,
+    profileId: string,
+    maxTurns: number = MAX_TURNS,
+  ): ConversationMessage[] {
+    const memory = this.store.get(sessionId);
+    if (!memory || memory.profileId !== profileId) return [];
     const maxMessages = maxTurns * 2;
     if (memory.messages.length <= maxMessages) return [...memory.messages];
     return memory.messages.slice(-maxMessages);

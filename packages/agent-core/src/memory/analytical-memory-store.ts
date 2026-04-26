@@ -2,6 +2,7 @@ import type { AnalyticalMemory } from '../types/memory';
 
 export interface AnalyticalMemoryStore {
   get(sessionId: string): AnalyticalMemory | undefined;
+  getForProfile(sessionId: string, profileId: string): AnalyticalMemory | undefined;
   setHomepageBrief(sessionId: string, profileId: string, brief: string): void;
   setViewSummary(sessionId: string, profileId: string, scope: string, summary: string): void;
   setRuleSummary(sessionId: string, profileId: string, summary: string): void;
@@ -15,6 +16,12 @@ export class InMemoryAnalyticalMemoryStore implements AnalyticalMemoryStore {
 
   get(sessionId: string): AnalyticalMemory | undefined {
     return this.store.get(sessionId);
+  }
+
+  getForProfile(sessionId: string, profileId: string): AnalyticalMemory | undefined {
+    const memory = this.store.get(sessionId);
+    if (!memory || memory.profileId !== profileId) return undefined;
+    return memory;
   }
 
   private getOrCreate(sessionId: string, profileId: string): AnalyticalMemory {

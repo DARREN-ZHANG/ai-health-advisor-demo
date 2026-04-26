@@ -5,6 +5,7 @@ describe('InMemoryAnalyticalMemoryStore', () => {
   it('returns undefined for non-existent session', () => {
     const store = new InMemoryAnalyticalMemoryStore();
     expect(store.get('sess-1')).toBeUndefined();
+    expect(store.getForProfile('sess-1', 'profile-a')).toBeUndefined();
   });
 
   it('stores homepage brief', () => {
@@ -37,6 +38,19 @@ describe('InMemoryAnalyticalMemoryStore', () => {
     const memory = store.get('sess-1')!;
     expect(memory.profileId).toBe('profile-b');
     expect(memory.latestHomepageBrief).toBe('新摘要');
+  });
+
+  it('getForProfile returns undefined for mismatched profile', () => {
+    const store = new InMemoryAnalyticalMemoryStore();
+    store.setHomepageBrief('sess-1', 'profile-a', '摘要');
+    expect(store.getForProfile('sess-1', 'profile-b')).toBeUndefined();
+  });
+
+  it('getForProfile returns memory for matched profile', () => {
+    const store = new InMemoryAnalyticalMemoryStore();
+    store.setHomepageBrief('sess-1', 'profile-a', '摘要');
+    const memory = store.getForProfile('sess-1', 'profile-a');
+    expect(memory?.latestHomepageBrief).toBe('摘要');
   });
 
   it('invalidateOnProfileSwitch deletes all', () => {

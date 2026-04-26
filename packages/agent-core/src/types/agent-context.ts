@@ -43,6 +43,8 @@ export interface AgentContext {
     start: string;
     end: string;
     records: unknown[];
+    /** 全量记录（含窗口外），用于缺失数据分析如 lastAvailableDate */
+    allRecords?: unknown[];
     missingFields: string[];
   };
   signals: {

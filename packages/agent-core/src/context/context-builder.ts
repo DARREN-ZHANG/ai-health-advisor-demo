@@ -20,7 +20,6 @@ export function buildAgentContext(
   // 2. 获取 overrides 和 events
   const overrides = deps.getActiveOverrides(request.profileId);
   const injectedEvents = deps.getInjectedEvents(request.profileId);
-  // 基础记录中提取 base events（从 profile records 推导的事件列表）
   const baseEvents = extractBaseEvents(profileData.records);
   const mergedEvents = deps.mergeEvents(baseEvents, injectedEvents);
 
@@ -43,7 +42,7 @@ export function buildAgentContext(
   // 6. 检测缺失字段
   const missingFields = detectMissingFields(windowedRecords, DATA_METRICS);
 
-  // 7. 计算 signals（stub — 规则引擎 Wave 2.2 补齐）
+  // 7. 计算 signals
   const lowData = windowedRecords.length < LOW_DATA_THRESHOLD;
   const signals: AgentContext['signals'] = {
     overallStatus: computeDefaultStatus(lowData, missingFields),
@@ -53,12 +52,12 @@ export function buildAgentContext(
     lowData,
   };
 
-  // 8. 加载 memory
+  // 8. 加载 memory（带 profile 校验）
   const recentMessages = deps.sessionMemory
-    .getRecentMessages(request.sessionId)
+    .getRecentMessagesForProfile(request.sessionId, request.profileId)
     .map((m) => ({ role: m.role, text: m.text }));
 
-  const analytical = deps.analyticalMemory.get(request.sessionId);
+  const analytical = deps.analyticalMemory.getForProfile(request.sessionId, request.profileId);
   const effectiveTab = request.tab ?? ('dataTab' in request.pageContext ? (request.pageContext as { dataTab?: string }).dataTab : undefined);
   const effectiveTimeframe = request.timeframe ?? request.pageContext.timeframe;
   const scope = effectiveTab && effectiveTimeframe ? `${effectiveTab}:${effectiveTimeframe}` : undefined;
@@ -94,6 +93,7 @@ export function buildAgentContext(
       start: windowRange.start,
       end: windowRange.end,
       records: windowedRecords,
+      allRecords: overriddenRecords,
       missingFields,
     },
     signals,
@@ -115,10 +115,7 @@ function computeDefaultStatus(lowData: boolean, missingFields: string[]): AgentS
 
 /**
  * 从 profile records 推导基础事件列表。
- * 当前 sandbox 数据模型中 records 本身不携带事件类型，
- * 此函数预留为后续接入真实事件系统时的桥接点。
  */
-function extractBaseEvents(_records: unknown[]): DatedEvent[] { // eslint-disable-line @typescript-eslint/no-unused-vars
-  // sandbox 阶段暂无 base events，返回空数组
+function extractBaseEvents(_records: unknown[]): DatedEvent[] {
   return [];
 }

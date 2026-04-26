@@ -17,6 +17,8 @@ import { validateChartTokens } from '../output/token-validator';
 import { cleanSafetyIssues } from '../output/safety-cleaner';
 import { withTimeout, TimeoutError } from './timeout-controller';
 import { AGENT_SLA_TIMEOUT_MS } from '../constants/limits';
+import { buildTaskContextPacket } from '../context/context-packet-builder';
+import type { TaskContextPacket } from '../context/context-packet';
 
 export interface AgentRuntimeDeps extends ContextBuilderDeps {
   agent: HealthAgent;
@@ -31,6 +33,7 @@ export interface AgentRuntimeDeps extends ContextBuilderDeps {
 export interface AgentRuntimeObserver {
   onContextBuilt?(context: AgentContext): void;
   onRulesEvaluated?(rules: RuleEvaluationResult): void;
+  onPacketBuilt?(packet: TaskContextPacket): void;
   onPromptBuilt?(input: { systemPrompt: string; taskPrompt: string }): void;
   onModelOutput?(raw: string): void;
   onParsed?(envelope: AgentResponseEnvelope): void;
@@ -80,19 +83,23 @@ export async function executeAgent(
     const rulesResult = evaluateRules(context);
     tryNotify(() => observer?.onRulesEvaluated?.(rulesResult));
 
-    // 4. 构建 prompts
-    const systemPrompt = buildSystemPrompt(context, deps.promptLoader);
-    const taskPrompt = buildTaskPrompt(context, deps.promptLoader, rulesResult);
+    // 4. 构建 TaskContextPacket
+    const packet = buildTaskContextPacket(context, rulesResult);
+    tryNotify(() => observer?.onPacketBuilt?.(packet));
+
+    // 5. 构建 prompts（传入 packet）
+    const systemPrompt = buildSystemPrompt(context, deps.promptLoader, packet.missingData);
+    const taskPrompt = buildTaskPrompt(context, deps.promptLoader, rulesResult, packet);
     tryNotify(() => observer?.onPromptBuilt?.({ systemPrompt, taskPrompt }));
 
-    // 5. 带超时调用 LLM，超时时通过 AbortSignal 真正中断底层调用
+    // 6. 带超时调用 LLM，超时时通过 AbortSignal 真正中断底层调用
     const raw = await withTimeout(
       (signal) => deps.agent.invoke({ systemPrompt, userPrompt: taskPrompt, signal }),
       timeoutMs,
     );
     tryNotify(() => observer?.onModelOutput?.(raw.content));
 
-    // 6. 解析结构化输出
+    // 7. 解析结构化输出
     const parseResult = parseAgentResponse(raw.content, {
       taskType: request.taskType,
       pageContext: request.pageContext,
@@ -104,14 +111,22 @@ export async function executeAgent(
       return toFallback(deps.fallbackEngine, request.taskType, fallbackKey);
     }
 
-    // 7. 校验 chart tokens
-    const tokenResult = validateChartTokens(parseResult.envelope.chartTokens);
+    // 8. 校验 chart tokens（只能来自 visibleCharts 或 suggestedChartTokens）
+    const allowedTokens = new Set([
+      ...packet.visibleCharts.map((vc) => vc.chartToken),
+      ...(packet.homepage?.suggestedChartTokens ?? []),
+      ...(packet.viewSummary?.suggestedChartTokens ?? []),
+    ]);
+    const tokenResult = validateChartTokens(
+      parseResult.envelope.chartTokens,
+      Array.from(allowedTokens),
+    );
     const safeEnvelope: AgentResponseEnvelope = {
       ...parseResult.envelope,
       chartTokens: tokenResult.valid,
     };
 
-    // 8. Safety clean
+    // 9. Safety clean
     const cleaned = cleanSafetyIssues(
       safeEnvelope.summary,
       context.dataWindow.missingFields,
@@ -128,10 +143,10 @@ export async function executeAgent(
       },
     };
 
-    // 9. 写回 session memory
+    // 10. 写回 session memory
     writeSessionMemory(deps, request, result.summary);
 
-    // 10. 写回 analytical memory
+    // 11. 写回 analytical memory
     writeAnalyticalMemory(deps, request, context, result.summary, rulesResult);
 
     tryNotify(() => observer?.onParsed?.(result));
