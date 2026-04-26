@@ -5,7 +5,7 @@ import type { RuleEvaluationResult } from '../rules/types';
 
 // ── 枚举类型 ──────────────────────────────────────────
 
-export type EvalSuite = 'smoke' | 'core' | 'regression';
+export type EvalSuite = 'smoke' | 'core' | 'quality' | 'regression';
 export type EvalCategory = 'homepage' | 'view-summary' | 'advisor-chat' | 'cross-cutting';
 export type EvalPriority = 'P0' | 'P1' | 'P2';
 export type EvalProviderMode = 'fake' | 'real';

@@ -1,0 +1,59 @@
+{
+  "id": "QH-002",
+  "title": "首页摘要质量 - 睡眠不足叠加运动",
+  "suite": "quality",
+  "category": "homepage",
+  "priority": "P0",
+  "tags": ["quality", "homepage", "sleep", "cardio", "warning"],
+  "setup": {
+    "profileId": "profile-a",
+    "timeline": {
+      "appendSegments": [
+        {
+          "segmentType": "steady_cardio",
+          "durationMinutes": 30,
+          "advanceClock": true
+        }
+      ]
+    },
+    "modelFixture": {
+      "mode": "real-provider"
+    }
+  },
+  "request": {
+    "requestId": "quality-QH002",
+    "sessionId": "quality-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["睡眠", "运动"],
+      "mustMentionAny": [["降低强度", "轻度", "恢复"]]
+    },
+    "status": {
+      "expectedStatusColor": "warning"
+    },
+    "taskSpecific": {
+      "homepage": {
+        "requireRecentEventFirst": true,
+        "recentEventPatterns": ["运动", "有氧"],
+        "require24hCrossAnalysis": true,
+        "crossAnalysisPatterns": {
+          "event": ["运动", "有氧"],
+          "metric": ["睡眠", "恢复"]
+        }
+      }
+    }
+  }
+}

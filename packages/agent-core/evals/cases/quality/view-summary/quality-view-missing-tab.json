@@ -1,0 +1,43 @@
+{
+  "id": "QV-005",
+  "title": "视图总结质量 - 缺失 tab 数据",
+  "suite": "quality",
+  "category": "view-summary",
+  "priority": "P0",
+  "tags": ["quality", "view-summary", "spo2", "normal"],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "real-provider"
+    }
+  },
+  "request": {
+    "requestId": "quality-QV005",
+    "sessionId": "quality-session",
+    "profileId": "profile-a",
+    "taskType": "view_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "view-summary",
+      "dataTab": "spo2",
+      "timeframe": "week"
+    },
+    "tab": "spo2"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedFinishReason": "complete"
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    },
+    "taskSpecific": {
+      "viewSummary": {
+        "requiredTab": "spo2",
+        "requiredTabPatterns": ["血氧", "SpO2"]
+      }
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "id": "QV-004",
+  "title": "视图总结质量 - 活动量不足",
+  "suite": "quality",
+  "category": "view-summary",
+  "priority": "P0",
+  "tags": ["quality", "view-summary", "activity", "warning"],
+  "setup": {
+    "profileId": "profile-a",
+    "overrides": [
+      { "metric": "activity.steps", "value": 2000, "dateRange": { "start": "2026-04-23", "end": "2026-04-25" } }
+    ],
+    "modelFixture": {
+      "mode": "real-provider"
+    }
+  },
+  "request": {
+    "requestId": "quality-QV004",
+    "sessionId": "quality-session",
+    "profileId": "profile-a",
+    "taskType": "view_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "view-summary",
+      "dataTab": "activity",
+      "timeframe": "week"
+    },
+    "tab": "activity"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMentionAny": [["步数", "活动", "运动"]]
+    },
+    "status": {
+      "allowedStatusColors": ["warning", "good"]
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    },
+    "taskSpecific": {
+      "viewSummary": {
+        "requiredTab": "activity",
+        "requiredTabPatterns": ["活动", "步数", "运动"]
+      }
+    }
+  }
+}

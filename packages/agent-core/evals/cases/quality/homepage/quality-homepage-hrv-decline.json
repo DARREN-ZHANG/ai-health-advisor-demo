@@ -1,0 +1,49 @@
+{
+  "id": "QH-003",
+  "title": "首页摘要质量 - HRV 连续下降",
+  "suite": "quality",
+  "category": "homepage",
+  "priority": "P0",
+  "tags": ["quality", "homepage", "hrv", "warning"],
+  "setup": {
+    "profileId": "profile-a",
+    "overrides": [
+      { "metric": "hrv", "value": 35, "dateRange": { "start": "2026-04-23", "end": "2026-04-25" } }
+    ],
+    "modelFixture": {
+      "mode": "real-provider"
+    }
+  },
+  "request": {
+    "requestId": "quality-QH003",
+    "sessionId": "quality-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["HRV"],
+      "mustMentionAny": [["恢复", "休息", "减少训练"]]
+    },
+    "status": {
+      "expectedStatusColor": "warning"
+    },
+    "chartTokens": {
+      "required": ["HRV_7DAYS"]
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    }
+  }
+}

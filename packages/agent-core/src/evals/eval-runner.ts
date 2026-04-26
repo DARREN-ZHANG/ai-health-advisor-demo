@@ -420,6 +420,17 @@ export async function runEval(
 
   console.log(`加载了 ${cases.length} 个评测 case`);
 
+  // --disallow-fixtures 执行：禁止 case 包含 modelFixture.content
+  const disallowFixtures = args.disallowFixtures || args.suite === 'quality';
+  if (disallowFixtures) {
+    for (const evalCase of cases) {
+      if (evalCase.setup.modelFixture?.content) {
+        console.error(`错误: case ${evalCase.id} 包含 modelFixture.content，与 --disallow-fixtures 冲突`);
+        return 1;
+      }
+    }
+  }
+
   // 2. 逐个执行
   const caseResults: EvalCaseResult[] = [];
   const caseCategories = new Map<string, string>();

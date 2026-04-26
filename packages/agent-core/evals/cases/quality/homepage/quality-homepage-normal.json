@@ -1,0 +1,45 @@
+{
+  "id": "QH-001",
+  "title": "首页摘要质量 - 正常状态",
+  "suite": "quality",
+  "category": "homepage",
+  "priority": "P0",
+  "tags": ["quality", "homepage", "normal", "baseline"],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "real-provider"
+    }
+  },
+  "request": {
+    "requestId": "quality-QH001",
+    "sessionId": "quality-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "length": { "min": 80, "max": 150 }
+    },
+    "status": {
+      "expectedStatusColor": "good"
+    },
+    "chartTokens": {
+      "maxCount": 2
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    }
+  }
+}

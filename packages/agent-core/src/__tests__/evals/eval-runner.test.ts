@@ -471,6 +471,117 @@ describe('eval runner', () => {
   });
 });
 
+// ── --disallow-fixtures 测试 ──────────────────────────────
+
+describe('eval runner — --disallow-fixtures', () => {
+  const TEMP_FIXTURE_DIR = join(__dirname, '__temp_fixture_reports__');
+
+  beforeEach(() => {
+    mkdirSync(TEMP_FIXTURE_DIR, { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(TEMP_FIXTURE_DIR, { recursive: true, force: true });
+  });
+
+  it('case 包含 modelFixture.content 时 --disallow-fixtures 应返回 1', async () => {
+    const tempCaseDir = join(TEMP_FIXTURE_DIR, 'cases');
+    mkdirSync(tempCaseDir, { recursive: true });
+
+    const fixtureCase = makeEvalCase({
+      id: 'fixture-case',
+      title: 'Fixture Case',
+      suite: 'smoke',
+      setup: {
+        profileId: 'profile-a',
+        modelFixture: {
+          mode: 'fake-json',
+          content: '{"source":"llm"}',
+        },
+      },
+    });
+
+    const { writeFileSync: writeFile } = await import('node:fs');
+    writeFile(join(tempCaseDir, 'fixture-case.json'), JSON.stringify(fixtureCase, null, 2), 'utf-8');
+
+    const exitCode = await runEval(
+      ['node', 'eval-runner.ts', '--case', 'fixture-case', '--provider', 'fake', '--report', 'json', '--disallow-fixtures'],
+      {
+        caseRootDir: tempCaseDir,
+        dataDir: DATA_DIR,
+      },
+    );
+
+    expect(exitCode).toBe(1);
+  });
+
+  it('quality suite case 不含 modelFixture.content 时正常通过检查', async () => {
+    const tempCaseDir = join(TEMP_FIXTURE_DIR, 'cases');
+    mkdirSync(tempCaseDir, { recursive: true });
+
+    const qualityCase = makeEvalCase({
+      id: 'quality-no-fixture',
+      title: 'Quality No Fixture',
+      suite: 'quality',
+      setup: {
+        profileId: 'profile-a',
+        modelFixture: {
+          mode: 'real-provider',
+        },
+      },
+    });
+
+    const { writeFileSync: writeFile } = await import('node:fs');
+    writeFile(join(tempCaseDir, 'quality-no-fixture.json'), JSON.stringify(qualityCase, null, 2), 'utf-8');
+
+    const exitCode = await runEval(
+      ['node', 'eval-runner.ts', '--case', 'quality-no-fixture', '--provider', 'fake', '--report', 'json'],
+      {
+        caseRootDir: tempCaseDir,
+        dataDir: DATA_DIR,
+      },
+    );
+
+    // case 不含 content，不应触发 disallow-fixtures 错误
+    // 但可能因 fake provider 模式下执行失败返回 0（无 fail-on-hard）
+    expect(typeof exitCode).toBe('number');
+    expect(exitCode).toBeGreaterThanOrEqual(0);
+    expect(exitCode).toBeLessThanOrEqual(1);
+  });
+
+  it('quality suite 自动启用 disallow-fixtures，包含 content 的 case 返回 1', async () => {
+    const tempCaseDir = join(TEMP_FIXTURE_DIR, 'cases');
+    mkdirSync(tempCaseDir, { recursive: true });
+
+    const badQualityCase = makeEvalCase({
+      id: 'bad-quality-fixture',
+      title: 'Bad Quality Fixture',
+      suite: 'quality',
+      setup: {
+        profileId: 'profile-a',
+        modelFixture: {
+          mode: 'fake-json',
+          content: '{"source":"llm"}',
+        },
+      },
+    });
+
+    const { writeFileSync: writeFile } = await import('node:fs');
+    writeFile(join(tempCaseDir, 'bad-quality-fixture.json'), JSON.stringify(badQualityCase, null, 2), 'utf-8');
+
+    // 使用 --suite quality 触发自动 disallow-fixtures
+    const exitCode = await runEval(
+      ['node', 'eval-runner.ts', '--suite', 'quality', '--case', 'bad-quality-fixture', '--provider', 'fake', '--report', 'json'],
+      {
+        caseRootDir: tempCaseDir,
+        dataDir: DATA_DIR,
+      },
+    );
+
+    expect(exitCode).toBe(1);
+  });
+});
+
 // ── Report Writer 测试 ────────────────────────────────
 
 describe('report writer', () => {

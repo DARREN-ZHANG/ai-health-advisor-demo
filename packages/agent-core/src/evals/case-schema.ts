@@ -7,7 +7,7 @@ import { AgentRequestSchema } from '../types/agent-request';
 
 // ── 基础枚举 Schema ──────────────────────────────────
 
-const EvalSuiteSchema = z.enum(['smoke', 'core', 'regression']);
+const EvalSuiteSchema = z.enum(['smoke', 'core', 'quality', 'regression']);
 const EvalCategorySchema = z.enum(['homepage', 'view-summary', 'advisor-chat', 'cross-cutting']);
 const EvalPrioritySchema = z.enum(['P0', 'P1', 'P2']);
 

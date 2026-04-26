@@ -113,6 +113,12 @@ describe('AgentEvalCaseSchema', () => {
     expect(() => parseAgentEvalCase(input)).toThrow();
   });
 
+  it('suite=quality 应通过校验', () => {
+    const input = createValidCase({ suite: 'quality' });
+    const result = parseAgentEvalCase(input);
+    expect(result.suite).toBe('quality');
+  });
+
   it('非法 category 应失败', () => {
     const input = createValidCase({ category: 'invalid' });
     expect(() => parseAgentEvalCase(input)).toThrow();

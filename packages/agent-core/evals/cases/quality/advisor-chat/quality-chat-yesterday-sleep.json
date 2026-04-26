@@ -1,0 +1,54 @@
+{
+  "id": "QC-002",
+  "title": "顾问对话质量 - 昨晚睡眠",
+  "suite": "quality",
+  "category": "advisor-chat",
+  "priority": "P0",
+  "tags": ["quality", "advisor-chat", "sleep", "time-scope"],
+  "setup": {
+    "profileId": "profile-b",
+    "modelFixture": {
+      "mode": "real-provider"
+    }
+  },
+  "request": {
+    "requestId": "quality-QC002",
+    "sessionId": "quality-session",
+    "profileId": "profile-b",
+    "taskType": "advisor_chat",
+    "pageContext": {
+      "profileId": "profile-b",
+      "page": "advisor",
+      "timeframe": "day"
+    },
+    "userMessage": "昨天睡得怎么样"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["睡眠"]
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    },
+    "evidence": {
+      "requiredFacts": [
+        { "id": "sleep-duration", "metric": "sleep", "mentionPatterns": ["小时", "睡眠时间"] },
+        { "id": "deep-sleep", "metric": "sleep", "mentionPatterns": ["深睡", "深度睡眠"] }
+      ]
+    },
+    "taskSpecific": {
+      "advisorChat": {
+        "requiredTimeScope": "day",
+        "requiredTimeScopePatterns": ["昨晚", "昨天"],
+        "mustAnswerUserQuestion": true,
+        "answerPatterns": ["睡眠", "深睡"]
+      }
+    }
+  }
+}

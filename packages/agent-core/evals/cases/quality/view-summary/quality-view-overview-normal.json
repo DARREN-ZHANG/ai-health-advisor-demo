@@ -1,0 +1,51 @@
+{
+  "id": "QV-001",
+  "title": "视图总结质量 - 总览正常",
+  "suite": "quality",
+  "category": "view-summary",
+  "priority": "P0",
+  "tags": ["quality", "view-summary", "overview", "normal"],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "real-provider"
+    }
+  },
+  "request": {
+    "requestId": "quality-QV001",
+    "sessionId": "quality-session",
+    "profileId": "profile-a",
+    "taskType": "view_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "view-summary",
+      "dataTab": "overview",
+      "timeframe": "week"
+    },
+    "tab": "overview"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "length": { "min": 80, "max": 150 },
+      "mustMention": ["指标"]
+    },
+    "status": {
+      "expectedStatusColor": "good"
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    },
+    "taskSpecific": {
+      "viewSummary": {
+        "requiredTab": "overview",
+        "requiredTabPatterns": ["总体", "指标", "概览"]
+      }
+    }
+  }
+}

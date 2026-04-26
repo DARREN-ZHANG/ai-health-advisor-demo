@@ -1,0 +1,50 @@
+{
+  "id": "QV-002",
+  "title": "视图总结质量 - HRV 下降",
+  "suite": "quality",
+  "category": "view-summary",
+  "priority": "P0",
+  "tags": ["quality", "view-summary", "hrv", "warning"],
+  "setup": {
+    "profileId": "profile-b",
+    "modelFixture": {
+      "mode": "real-provider"
+    }
+  },
+  "request": {
+    "requestId": "quality-QV002",
+    "sessionId": "quality-session",
+    "profileId": "profile-b",
+    "taskType": "view_summary",
+    "pageContext": {
+      "profileId": "profile-b",
+      "page": "view-summary",
+      "dataTab": "hrv",
+      "timeframe": "week"
+    },
+    "tab": "hrv"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["HRV", "下降"]
+    },
+    "status": {
+      "expectedStatusColor": "warning"
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    },
+    "taskSpecific": {
+      "viewSummary": {
+        "requiredTab": "hrv",
+        "requiredTabPatterns": ["HRV", "心率变异"]
+      }
+    }
+  }
+}
