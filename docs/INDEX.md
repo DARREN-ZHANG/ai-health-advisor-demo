@@ -69,6 +69,7 @@ health-advisor/
 | Eval Cases | `packages/agent-core/evals/cases/` | Smoke/Core/Regression 评测样本 |
 | Eval 使用手册 | `docs/ops/agent-eval-baseline-runbook.md` | Baseline 建立、对比、更新和 regression 沉淀流程 |
 | Eval 硬化计划 | `docs/superpowers/plans/2026-04-26-agent-eval-quality-baseline-hardening.md` | 将 fake fixture 评测升级为真实 Agent quality baseline 的实施任务 |
+| Agent 优化指南 | `docs/detailed-tech-design/agent-optimization-guidelines.md` | 建立质量基线后的 Agent 优化方向、优先级与决策门槛 |
 | Prompt 数据 | `data/sandbox/prompts/` | 系统 prompt 与任务 prompt 模板文件 |
 | Fallback 数据 | `data/sandbox/fallbacks/` | 预构建的降级响应 |
 | 测试 | `packages/agent-core/src/__tests__/` | Agent 核心单元测试 |
