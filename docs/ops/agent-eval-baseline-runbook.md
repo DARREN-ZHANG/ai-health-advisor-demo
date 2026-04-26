@@ -2,6 +2,8 @@
 
 > 本文档说明工程师完成 Agent 质量评估体系实施后，团队如何建立、使用、更新和维护评测基线。
 
+> 注意：如果当前 Core Eval 使用 `provider=fake` 且 case 内含 `modelFixture.content`，该结果只能作为 framework sanity baseline，不能作为 Agent quality baseline。真实质量基线硬化任务见 `docs/superpowers/plans/2026-04-26-agent-eval-quality-baseline-hardening.md`。
+
 ## 1. 核心用途
 
 Agent eval baseline 用来回答三个问题：
