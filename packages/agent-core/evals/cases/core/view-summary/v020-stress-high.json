@@ -1,0 +1,57 @@
+{
+  "id": "V-020",
+  "title": "视图总结 - 压力偏高",
+  "suite": "core",
+  "category": "view-summary",
+  "priority": "P0",
+  "tags": ["view-summary", "stress", "warning", "no-diagnosis"],
+  "setup": {
+    "profileId": "profile-c",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"本周压力负荷偏高，多日出现高压状态，身体恢复时间不足。长期高压可能影响睡眠质量和免疫功能，建议适当调整工作和生活节奏，增加放松和休息时间。可尝试冥想、深呼吸或轻度运动来缓解压力。若压力持续偏高，建议寻求专业心理咨询。\",\"chartTokens\":[\"STRESS_LOAD_7DAYS\"],\"microTips\":[\"每天15分钟正念冥想可有效缓解压力\"]}"
+    }
+  },
+  "request": {
+    "requestId": "core-v020",
+    "sessionId": "eval-session",
+    "profileId": "profile-c",
+    "taskType": "view_summary",
+    "pageContext": {
+      "profileId": "profile-c",
+      "page": "data-tab",
+      "timeframe": "week"
+    },
+    "tab": "stress",
+    "timeframe": "week"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "length": { "min": 80, "max": 150 },
+      "mustMention": ["压力"]
+    },
+    "status": {
+      "expectedStatusColor": "warning"
+    },
+    "chartTokens": {
+      "maxCount": 2
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true,
+      "forbidTreatmentPromise": true
+    },
+    "taskSpecific": {
+      "viewSummary": {
+        "requiredTab": "stress",
+        "requiredTabPatterns": ["压力"],
+        "forbidOtherTabs": ["HRV", "sleep", "步数"]
+      }
+    }
+  }
+}

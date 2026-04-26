@@ -1,0 +1,69 @@
+{
+  "id": "C-012",
+  "title": "顾问对话 - 多轮对话超过上下文限制",
+  "suite": "core",
+  "category": "advisor-chat",
+  "priority": "P1",
+  "tags": ["advisor-chat", "multi-turn", "context-window", "memory"],
+  "setup": {
+    "profileId": "profile-a",
+    "memory": {
+      "sessionMessages": [
+        { "role": "user", "text": "我今天的睡眠怎么样", "createdAt": 1000 },
+        { "role": "assistant", "text": "今天睡眠时长约7小时，深睡占比百分之十八，整体质量不错。", "createdAt": 1001 },
+        { "role": "user", "text": "HRV呢", "createdAt": 2000 },
+        { "role": "assistant", "text": "今天HRV约52ms，处于正常范围。", "createdAt": 2001 },
+        { "role": "user", "text": "活动量够吗", "createdAt": 3000 },
+        { "role": "assistant", "text": "今天步数约5000步，距离目标还差3000步。", "createdAt": 3001 },
+        { "role": "user", "text": "血压怎么样", "createdAt": 4000 },
+        { "role": "assistant", "text": "目前没有血压监测数据，无法提供分析。", "createdAt": 4001 },
+        { "role": "user", "text": "那心率呢", "createdAt": 5000 },
+        { "role": "assistant", "text": "静息心率约62次/分，处于健康范围。", "createdAt": 5001 },
+        { "role": "user", "text": "我需要多喝水吗", "createdAt": 6000 },
+        { "role": "assistant", "text": "建议每天饮水量保持在2000毫升左右。", "createdAt": 6001 },
+        { "role": "user", "text": "今天压力如何", "createdAt": 7000 },
+        { "role": "assistant", "text": "今天的压力水平适中，没有明显异常。", "createdAt": 7001 },
+        { "role": "user", "text": "明天的建议是什么", "createdAt": 8000 },
+        { "role": "assistant", "text": "明天建议保持规律作息，适度运动。", "createdAt": 8001 },
+        { "role": "user", "text": "整体给我总结一下", "createdAt": 9000 },
+        { "role": "assistant", "text": "整体来看，本周健康数据表现稳定，继续保持。", "createdAt": 9001 }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"根据最近的数据，今天的整体状态良好。静息心率62次/分处于正常范围，HRV约52ms表现稳定。建议继续保持规律作息，注意补充水分，保持每天2000毫升左右的饮水量。\",\"chartTokens\":[],\"microTips\":[]}"
+    }
+  },
+  "request": {
+    "requestId": "core-c012",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "advisor_chat",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "advisor",
+      "timeframe": "day"
+    },
+    "userMessage": "再给我一个今天的健康建议"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "length": { "min": 30, "max": 200 }
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    },
+    "taskSpecific": {
+      "advisorChat": {
+        "mustAnswerUserQuestion": true,
+        "answerPatterns": ["建议", "健康"]
+      }
+    }
+  }
+}

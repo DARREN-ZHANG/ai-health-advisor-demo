@@ -1,0 +1,46 @@
+{
+  "id": "H-002",
+  "title": "首页摘要 - 睡眠不足叠加有氧运动风险",
+  "suite": "smoke",
+  "category": "homepage",
+  "priority": "P0",
+  "tags": ["homepage", "sleep", "cardio", "warning"],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"昨夜睡眠不足，今日进行有氧运动需注意恢复。深睡仅四十五分钟，远低于基准线的九十分钟；睡眠总时长不足六小时，身体恢复不充分。建议降低运动强度，以轻度活动为主，避免剧烈有氧加重疲劳积累。\",\"chartTokens\":[\"SLEEP_7DAYS\"],\"microTips\":[\"睡眠不足时建议避免高强度运动\"]}"
+    }
+  },
+  "request": {
+    "requestId": "eval-H002",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["睡眠", "运动"]
+    },
+    "status": {
+      "expectedStatusColor": "warning"
+    },
+    "chartTokens": {
+      "required": ["SLEEP_7DAYS"]
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    }
+  }
+}

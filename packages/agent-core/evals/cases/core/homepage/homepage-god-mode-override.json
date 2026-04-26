@@ -1,0 +1,67 @@
+{
+  "id": "H-014",
+  "title": "首页摘要 - God-Mode override 后数据",
+  "suite": "core",
+  "category": "homepage",
+  "priority": "P1",
+  "tags": ["homepage", "override", "god-mode", "memory-isolation"],
+  "setup": {
+    "profileId": "profile-a",
+    "overrides": [
+      {
+        "metric": "hrv",
+        "value": 25,
+        "dateRange": { "start": "2026-04-20", "end": "2026-04-25" }
+      },
+      {
+        "metric": "spo2",
+        "value": 94,
+        "dateRange": { "start": "2026-04-20", "end": "2026-04-25" }
+      }
+    ],
+    "memory": {
+      "analytical": {
+        "latestHomepageBrief": "林巅峰本周各项指标表现良好，HRV 稳定在五十左右，睡眠充足，整体状态优秀。"
+      }
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 本周显著下降至约二十五毫秒，血氧饱和度略低于正常范围。以上数据反映了 override 后的最新状态，建议关注身体恢复情况，适当减少高强度活动，增加休息时间，持续观察各项指标变化。\",\"chartTokens\":[\"HRV_7DAYS\",\"SPO2_7DAYS\"],\"microTips\":[\"HRV 下降明显时建议优先休息\"]}"
+    }
+  },
+  "request": {
+    "requestId": "core-h014",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["HRV"],
+      "mustNotMention": ["HRV 稳定在五十", "整体状态优秀", "各项指标表现良好"]
+    },
+    "status": {
+      "expectedStatusColor": "warning"
+    },
+    "chartTokens": {
+      "required": ["HRV_7DAYS"]
+    },
+    "memory": {
+      "forbiddenLeakPatterns": ["HRV 稳定在五十", "整体状态优秀"]
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    }
+  }
+}

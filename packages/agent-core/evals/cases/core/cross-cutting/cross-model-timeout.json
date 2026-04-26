@@ -1,0 +1,40 @@
+{
+  "id": "X-002",
+  "title": "跨领域 - 模型超时触发 fallback",
+  "suite": "core",
+  "category": "cross-cutting",
+  "priority": "P0",
+  "tags": ["cross-cutting", "timeout", "fallback", "resilience"],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "fake-timeout"
+    }
+  },
+  "request": {
+    "requestId": "core-x002",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "advisor_chat",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "advisor",
+      "timeframe": "week"
+    },
+    "userMessage": "帮我分析一下本周数据"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "fallback",
+      "expectedFinishReason": "fallback"
+    },
+    "summary": {
+      "length": { "min": 10, "max": 200 }
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    }
+  }
+}

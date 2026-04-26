@@ -1,0 +1,41 @@
+{
+  "id": "V-missing",
+  "title": "视图总结 - 缺少 tab 参数的 fallback",
+  "suite": "smoke",
+  "category": "view-summary",
+  "priority": "P0",
+  "tags": ["view-summary", "fallback", "validation"],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"fallback\",\"statusColor\":\"good\",\"summary\":\"暂无足够数据生成视图摘要，请稍后再试。\",\"chartTokens\":[],\"microTips\":[]}"
+    }
+  },
+  "request": {
+    "requestId": "eval-V-missing",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "view_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "view-summary",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "length": { "min": 10, "max": 200 }
+    },
+    "status": {
+      "allowedStatusColors": ["good"]
+    },
+    "chartTokens": {
+      "maxCount": 0
+    }
+  }
+}

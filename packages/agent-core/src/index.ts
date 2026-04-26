@@ -92,4 +92,4 @@ export type { FallbackEngine, FallbackAssets, FallbackEntry, FallbackLookupKey }
 export { withTimeout, TimeoutError } from './runtime/timeout-controller';
 export type { TimeoutController } from './runtime/timeout-controller';
 export { executeAgent } from './runtime/agent-runtime';
-export type { AgentRuntimeDeps } from './runtime/agent-runtime';
+export type { AgentRuntimeDeps, AgentRuntimeObserver } from './runtime/agent-runtime';

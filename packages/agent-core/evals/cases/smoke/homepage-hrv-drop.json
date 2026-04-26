@@ -1,0 +1,46 @@
+{
+  "id": "H-003",
+  "title": "首页摘要 - HRV 下降趋势",
+  "suite": "smoke",
+  "category": "homepage",
+  "priority": "P0",
+  "tags": ["homepage", "hrv", "warning", "recovery"],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 本周呈明显下降趋势，较上周下降约百分之十五，可能提示身体恢复不足或压力增加。自主神经系统调节能力减弱，建议关注睡眠质量并适当减少高强度训练，增加恢复时间，保持规律作息以促进身体恢复。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"HRV 下降时建议减少高强度训练\"]}"
+    }
+  },
+  "request": {
+    "requestId": "eval-H003",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["HRV"]
+    },
+    "status": {
+      "expectedStatusColor": "warning"
+    },
+    "chartTokens": {
+      "required": ["HRV_7DAYS"]
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    }
+  }
+}

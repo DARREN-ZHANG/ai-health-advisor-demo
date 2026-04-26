@@ -25,6 +25,31 @@ export interface AgentRuntimeDeps extends ContextBuilderDeps {
 }
 
 /**
+ * Runtime observer 回调接口，用于测试/eval 追踪。
+ * 所有回调均为可选，observer 抛错不得影响生产执行。
+ */
+export interface AgentRuntimeObserver {
+  onContextBuilt?(context: AgentContext): void;
+  onRulesEvaluated?(rules: RuleEvaluationResult): void;
+  onPromptBuilt?(input: { systemPrompt: string; taskPrompt: string }): void;
+  onModelOutput?(raw: string): void;
+  onParsed?(envelope: AgentResponseEnvelope): void;
+  onFallback?(reason: 'low_data' | 'invalid_output' | 'timeout' | 'provider_error'): void;
+}
+
+/**
+ * 安全执行 observer 回调，observer 抛错不影响生产流程。
+ */
+function tryNotify(fn: (() => void) | undefined): void {
+  if (!fn) return;
+  try {
+    fn();
+  } catch {
+    // observer 抛错不得影响生产执行
+  }
+}
+
+/**
  * Agent Runtime 总入口。
  * backend 通过 executeAgent(request, runtimeDeps) 单一调用即可完成 AI 分析。
  */
@@ -32,6 +57,7 @@ export async function executeAgent(
   request: AgentRequest,
   deps: AgentRuntimeDeps,
   timeoutMs: number = AGENT_SLA_TIMEOUT_MS,
+  observer?: AgentRuntimeObserver,
 ): Promise<AgentResponseEnvelope> {
   const fallbackKey: FallbackLookupKey = {
     profileId: request.profileId,
@@ -42,24 +68,29 @@ export async function executeAgent(
   try {
     // 1. 构建 Agent 上下文
     const context = buildAgentContext(request, deps);
+    tryNotify(() => observer?.onContextBuilt?.(context));
 
     // 2. low-data 快速 fallback：数据不足时跳过 LLM 调用
     if (context.signals.lowData) {
+      tryNotify(() => observer?.onFallback?.('low_data'));
       return toLowDataFallback(deps.fallbackEngine, request.taskType, fallbackKey);
     }
 
     // 3. 执行规则引擎
     const rulesResult = evaluateRules(context);
+    tryNotify(() => observer?.onRulesEvaluated?.(rulesResult));
 
     // 4. 构建 prompts
     const systemPrompt = buildSystemPrompt(context, deps.promptLoader);
     const taskPrompt = buildTaskPrompt(context, deps.promptLoader, rulesResult);
+    tryNotify(() => observer?.onPromptBuilt?.({ systemPrompt, taskPrompt }));
 
     // 5. 带超时调用 LLM，超时时通过 AbortSignal 真正中断底层调用
     const raw = await withTimeout(
       (signal) => deps.agent.invoke({ systemPrompt, userPrompt: taskPrompt, signal }),
       timeoutMs,
     );
+    tryNotify(() => observer?.onModelOutput?.(raw.content));
 
     // 6. 解析结构化输出
     const parseResult = parseAgentResponse(raw.content, {
@@ -69,6 +100,7 @@ export async function executeAgent(
     });
 
     if (!parseResult.success) {
+      tryNotify(() => observer?.onFallback?.('invalid_output'));
       return toFallback(deps.fallbackEngine, request.taskType, fallbackKey);
     }
 
@@ -102,11 +134,15 @@ export async function executeAgent(
     // 10. 写回 analytical memory
     writeAnalyticalMemory(deps, request, context, result.summary, rulesResult);
 
+    tryNotify(() => observer?.onParsed?.(result));
+
     return result;
   } catch (error) {
     if (error instanceof TimeoutError) {
+      tryNotify(() => observer?.onFallback?.('timeout'));
       return toTimeoutFallback(deps.fallbackEngine, request.taskType, fallbackKey);
     }
+    tryNotify(() => observer?.onFallback?.('provider_error'));
     return toFallback(deps.fallbackEngine, request.taskType, fallbackKey);
   }
 }

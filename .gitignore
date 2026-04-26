@@ -10,3 +10,5 @@ test-results
 playwright-report
 .worktrees
 .omx
+.claude
+.kimi

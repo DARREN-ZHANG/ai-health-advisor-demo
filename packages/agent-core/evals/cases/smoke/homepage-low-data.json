@@ -1,0 +1,41 @@
+{
+  "id": "H-005",
+  "title": "首页摘要 - 数据不足触发 fallback",
+  "suite": "smoke",
+  "category": "homepage",
+  "priority": "P0",
+  "tags": ["homepage", "low-data", "fallback"],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"fallback\",\"statusColor\":\"good\",\"summary\":\"当前数据量不足以进行全面分析，请继续佩戴设备以获取更多健康数据。\",\"chartTokens\":[],\"microTips\":[]}"
+    }
+  },
+  "request": {
+    "requestId": "eval-H005",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "length": { "min": 20, "max": 200 }
+    },
+    "status": {
+      "allowedStatusColors": ["good"]
+    },
+    "chartTokens": {
+      "maxCount": 0
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "id": "X-invalid",
+  "title": "跨领域 - 无效 JSON 触发 fallback",
+  "suite": "smoke",
+  "category": "cross-cutting",
+  "priority": "P0",
+  "tags": ["cross-cutting", "invalid-json", "fallback", "resilience"],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "fake-invalid-json",
+      "content": "这不是JSON"
+    }
+  },
+  "request": {
+    "requestId": "eval-X-invalid",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedFinishReason": "fallback"
+    },
+    "summary": {
+      "length": { "min": 10, "max": 200 }
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    }
+  }
+}

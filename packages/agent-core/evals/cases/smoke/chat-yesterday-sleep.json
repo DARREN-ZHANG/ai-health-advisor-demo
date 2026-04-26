@@ -1,0 +1,49 @@
+{
+  "id": "C-sleep",
+  "title": "顾问对话 - 询问昨晚睡眠",
+  "suite": "smoke",
+  "category": "advisor-chat",
+  "priority": "P0",
+  "tags": ["advisor-chat", "sleep", "time-scope"],
+  "setup": {
+    "profileId": "profile-b",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"昨晚睡眠质量一般。总睡眠时间约5.5小时，低于推荐的7-8小时。深睡占比偏低，入睡时间较晚。建议今晚提前30分钟上床，避免睡前使用电子设备。\",\"chartTokens\":[\"SLEEP_7DAYS\"],\"microTips\":[\"睡前1小时避免使用手机等电子设备\"]}"
+    }
+  },
+  "request": {
+    "requestId": "eval-C-sleep",
+    "sessionId": "eval-session",
+    "profileId": "profile-b",
+    "taskType": "advisor_chat",
+    "pageContext": {
+      "profileId": "profile-b",
+      "page": "advisor",
+      "timeframe": "day"
+    },
+    "userMessage": "昨晚睡得怎么样？"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["睡眠"]
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    },
+    "taskSpecific": {
+      "advisorChat": {
+        "requiredTimeScope": "day",
+        "requiredTimeScopePatterns": ["昨晚", "昨晚"],
+        "mustAnswerUserQuestion": true,
+        "answerPatterns": ["睡眠", "深睡"]
+      }
+    }
+  }
+}

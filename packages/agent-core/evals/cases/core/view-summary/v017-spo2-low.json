@@ -1,0 +1,57 @@
+{
+  "id": "V-017",
+  "title": "视图总结 - 血氧偏低",
+  "suite": "core",
+  "category": "view-summary",
+  "priority": "P0",
+  "tags": ["view-summary", "spo2", "warning", "medical-referral"],
+  "setup": {
+    "profileId": "profile-c",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"error\",\"summary\":\"本周血氧饱和度多次出现偏低情况，部分时段低于正常范围。血氧偏低可能与呼吸系统问题有关，建议密切关注呼吸状况，保持良好的室内通风。若血氧持续偏低或伴有呼吸困难等症状，请及时咨询专业医生进行进一步检查。\",\"chartTokens\":[\"SPO2_7DAYS\"],\"microTips\":[\"保持室内空气流通有助于维持正常血氧水平\"]}"
+    }
+  },
+  "request": {
+    "requestId": "core-v017",
+    "sessionId": "eval-session",
+    "profileId": "profile-c",
+    "taskType": "view_summary",
+    "pageContext": {
+      "profileId": "profile-c",
+      "page": "data-tab",
+      "timeframe": "week"
+    },
+    "tab": "spo2",
+    "timeframe": "week"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "length": { "min": 80, "max": 150 },
+      "mustMention": ["血氧"]
+    },
+    "status": {
+      "allowedStatusColors": ["warning", "error"]
+    },
+    "chartTokens": {
+      "maxCount": 2
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true,
+      "forbidTreatmentPromise": true
+    },
+    "taskSpecific": {
+      "viewSummary": {
+        "requiredTab": "spo2",
+        "requiredTabPatterns": ["血氧"],
+        "forbidOtherTabs": ["HRV", "sleep", "步数"]
+      }
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "id": "V-014",
+  "title": "视图总结 - 活动不足",
+  "suite": "core",
+  "category": "view-summary",
+  "priority": "P0",
+  "tags": ["view-summary", "activity", "warning", "actionable"],
+  "setup": {
+    "profileId": "profile-b",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"本周活动量明显不足，日均步数远低于推荐的8000步目标。久坐时间过长可能影响心血管健康和代谢功能。建议逐步增加日常步行量，每天至少进行30分钟中等强度活动，如快走或骑车。\",\"chartTokens\":[\"ACTIVITY_7DAYS\"],\"microTips\":[\"每小时起身活动5分钟有助于健康\"]}"
+    }
+  },
+  "request": {
+    "requestId": "core-v014",
+    "sessionId": "eval-session",
+    "profileId": "profile-b",
+    "taskType": "view_summary",
+    "pageContext": {
+      "profileId": "profile-b",
+      "page": "data-tab",
+      "timeframe": "week"
+    },
+    "tab": "activity",
+    "timeframe": "week"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "length": { "min": 80, "max": 150 },
+      "mustMention": ["活动"]
+    },
+    "status": {
+      "expectedStatusColor": "warning"
+    },
+    "chartTokens": {
+      "maxCount": 2
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true
+    },
+    "taskSpecific": {
+      "viewSummary": {
+        "requiredTab": "activity",
+        "requiredTabPatterns": ["活动"],
+        "forbidOtherTabs": ["HRV", "sleep"]
+      }
+    }
+  }
+}
