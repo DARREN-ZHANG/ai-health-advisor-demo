@@ -386,7 +386,12 @@ describe('ErrorCodeSchema', () => {
 
 describe('ActivitySegmentTypeSchema', () => {
   it('accepts all valid segment types', () => {
-    const types = ['meal_intake', 'steady_cardio', 'prolonged_sedentary', 'intermittent_exercise', 'walk', 'sleep'];
+    const types = [
+      'meal_intake', 'steady_cardio', 'prolonged_sedentary',
+      'intermittent_exercise', 'walk', 'sleep',
+      'deep_focus', 'anxiety_episode', 'breathing_pause',
+      'alcohol_intake', 'nightmare', 'relaxation',
+    ];
     types.forEach((t) => {
       expect(ActivitySegmentTypeSchema.parse(t)).toBe(t);
     });
@@ -557,7 +562,12 @@ describe('SyncSessionSchema', () => {
 
 describe('RecognizedEventTypeSchema', () => {
   it('accepts same values as ActivitySegmentType', () => {
-    const types = ['meal_intake', 'steady_cardio', 'prolonged_sedentary', 'intermittent_exercise', 'walk', 'sleep'];
+    const types = [
+      'meal_intake', 'steady_cardio', 'prolonged_sedentary',
+      'intermittent_exercise', 'walk', 'sleep',
+      'deep_focus', 'anxiety_episode', 'breathing_pause',
+      'alcohol_intake', 'nightmare', 'relaxation',
+    ];
     types.forEach((t) => {
       expect(RecognizedEventTypeSchema.parse(t)).toBe(t);
     });

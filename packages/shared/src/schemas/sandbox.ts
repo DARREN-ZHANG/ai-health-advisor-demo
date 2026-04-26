@@ -14,6 +14,12 @@ export const ActivitySegmentTypeSchema = z.enum([
   'intermittent_exercise',
   'walk',
   'sleep',
+  'deep_focus',
+  'anxiety_episode',
+  'breathing_pause',
+  'alcohol_intake',
+  'nightmare',
+  'relaxation',
 ]);
 
 export const DemoClockSchema = z.object({
