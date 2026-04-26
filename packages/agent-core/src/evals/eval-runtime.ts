@@ -13,6 +13,7 @@ import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
 import type { SyncState } from '@health-advisor/sandbox';
 import type { ProfileData, DailyRecord, DeviceEvent } from '@health-advisor/shared';
 import type { FallbackAssets } from '../fallback/fallback-engine';
+import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 
 // sandbox 模块
 import {
@@ -34,10 +35,11 @@ import {
 
 // agent-core 内部模块
 import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { InMemorySessionMemoryStore } from '../memory/session-memory-store';
 import { InMemoryAnalyticalMemoryStore } from '../memory/analytical-memory-store';
 import { createPromptLoader, type PromptLoader, type PromptName } from '../prompts/prompt-loader';
-import { createFallbackEngine } from '../fallback/fallback-engine';
+import { createFallbackEngine, type FallbackEngine } from '../fallback/fallback-engine';
 import { createHealthAgent } from '../executor/create-agent';
 import { FakeChatModel } from '../provider/fake-chat-model';
 
@@ -51,7 +53,7 @@ const DEFAULT_FAKE_OUTPUT = JSON.stringify({
   microTips: [],
 });
 
-// ── 最小 FallbackAssets（测试不需要真实文件） ─────────
+// ── 最小 FallbackAssets（无 dataDir 时的降级） ─────────
 
 const MINIMAL_FALLBACK_ASSETS: FallbackAssets = {
   homepage: {},
@@ -154,13 +156,11 @@ export function createEvalRuntime(
   const timelineState = buildTimelineState(dataDir, profileId, setup.timeline);
 
   // ── 6. 创建 agent ───────────────────────────────
-  const modelResponse = resolveModelResponse(setup.modelFixture, providerMode);
-  const fakeModel = new FakeChatModel(modelResponse);
-  const agent = createHealthAgent({ chatModel: fakeModel });
+  const agent = createEvalAgent(setup.modelFixture, providerMode);
 
   // ── 7. 创建 prompt loader 和 fallback engine ────
   const promptLoader = createPromptLoaderWithFallback(dataDir);
-  const fallbackEngine = createFallbackEngine(MINIMAL_FALLBACK_ASSETS);
+  const fallbackEngine = createFallbackEngineForEval(dataDir);
 
   // ── 8. 组装 deps ─────────────────────────────────
   const deps: AgentRuntimeDeps = {
@@ -272,17 +272,52 @@ function seedMemory(
   }
 }
 
-/** 决定 fake model 的响应内容 */
-function resolveModelResponse(
+/** 创建 eval agent：fake 模式用 FakeChatModel，real 模式用真实 provider */
+function createEvalAgent(
   fixture: AgentEvalCase['setup']['modelFixture'],
   providerMode: EvalProviderMode,
-): string {
-  // real 模式暂不实现，回退到 fake
+): import('../executor/create-agent').HealthAgent {
   if (providerMode === 'real') {
-    return fixture?.content ?? DEFAULT_FAKE_OUTPUT;
+    const chatModel = createRealChatModel();
+    return createHealthAgent({ chatModel });
   }
+  const modelResponse = resolveFakeModelResponse(fixture);
+  const fakeModel = new FakeChatModel(modelResponse);
+  return createHealthAgent({ chatModel: fakeModel });
+}
 
-  // fake 模式
+/** 创建真实 provider chat model，从环境变量读取配置 */
+function createRealChatModel(): BaseChatModel {
+  const { resolveProviderConfig } = require('../provider/provider-config') as typeof import('../provider/provider-config');
+  const { createChatModel } = require('../provider/model-factory') as typeof import('../provider/model-factory');
+  const config = resolveProviderConfig(process.env as Record<string, string | undefined>);
+  if (!config.apiKey) {
+    throw new Error(
+      '真实 provider 模式需要配置 LLM_API_KEY 环境变量。' +
+      '请设置 LLM_API_KEY、LLM_PROVIDER（可选）后重试，或使用 --provider fake。',
+    );
+  }
+  return createChatModel(config);
+}
+
+/** 创建 fallback engine：有 dataDir 时尝试加载真实 fallback assets，否则使用最小降级 */
+function createFallbackEngineForEval(dataDir: string | undefined): FallbackEngine {
+  if (!dataDir) {
+    return createFallbackEngine(MINIMAL_FALLBACK_ASSETS);
+  }
+  const fallbacksDir = join(dataDir, 'fallbacks');
+  try {
+    return createFallbackEngine({ readFile: (path, enc) => readFileSync(path, (enc ?? 'utf-8') as BufferEncoding) as string }, fallbacksDir);
+  } catch {
+    // 加载失败时降级到最小 assets
+    return createFallbackEngine(MINIMAL_FALLBACK_ASSETS);
+  }
+}
+
+/** 决定 fake model 的响应内容 */
+function resolveFakeModelResponse(
+  fixture: AgentEvalCase['setup']['modelFixture'],
+): string {
   if (!fixture) return DEFAULT_FAKE_OUTPUT;
 
   switch (fixture.mode) {
@@ -291,7 +326,7 @@ function resolveModelResponse(
     case 'fake-json':
       return fixture.content ?? DEFAULT_FAKE_OUTPUT;
     case 'real-provider':
-      // real-provider 在 fake 模式下回退到默认
+      // real-provider fixture 在 fake 模式下回退到默认
       return DEFAULT_FAKE_OUTPUT;
     default:
       return DEFAULT_FAKE_OUTPUT;

@@ -243,6 +243,7 @@ function aggregateReport(
   caseResults: EvalCaseResult[],
   suite: string,
   providerMode: EvalProviderMode,
+  caseCategories?: Map<string, string>,
 ): EvalReport {
   // 汇总 by category
   const byCategory: EvalReport['byCategory'] = {};
@@ -250,10 +251,7 @@ function aggregateReport(
   let totalMaxScore = 0;
 
   for (const result of caseResults) {
-    // 从 caseId 中提取 category（暂用默认 homepage）
-    // 实际 category 从原始 case 获取，这里从 artifacts 中无法直接取到
-    // 暂时归入 'uncategorized'
-    const category = 'uncategorized';
+    const category = caseCategories?.get(result.caseId) ?? 'uncategorized';
 
     if (!byCategory[category]) {
       byCategory[category] = { cases: 0, passed: 0, failed: 0, score: 0, maxScore: 0 };
@@ -374,7 +372,8 @@ export async function runEval(
   const args = parseArgs(argv);
   const packageRoot = resolve(__dirname, '../..');
   const caseRootDir = options?.caseRootDir ?? join(packageRoot, 'evals', 'cases');
-  const dataDir = options?.dataDir ?? resolve(process.cwd(), 'data', 'sandbox');
+  // 从 packageRoot 上溯到 repo 根（包含 data/sandbox 的目录）
+  const dataDir = options?.dataDir ?? resolve(packageRoot, '../../data/sandbox');
 
   // 参数校验：提供了 --fail-on-score-regression 但缺少 --baseline-report
   if (args.failOnScoreRegression !== undefined && !args.baselineReport) {
@@ -398,10 +397,12 @@ export async function runEval(
 
   // 2. 逐个执行
   const caseResults: EvalCaseResult[] = [];
+  const caseCategories = new Map<string, string>();
   for (const evalCase of cases) {
     console.log(`执行 case: ${evalCase.id} (${evalCase.title})`);
     const result = await runSingleCase(evalCase, args.provider, dataDir);
     caseResults.push(result);
+    caseCategories.set(evalCase.id, evalCase.category);
 
     const status = result.passed ? 'PASS' : 'FAIL';
     console.log(`  [${status}] score: ${result.score}/${result.maxScore}`);
@@ -409,7 +410,7 @@ export async function runEval(
 
   // 3. 聚合报告
   const suiteName = args.suite ?? (args.caseId ? 'single' : 'all');
-  const report = aggregateReport(caseResults, suiteName, args.provider);
+  const report = aggregateReport(caseResults, suiteName, args.provider, caseCategories);
 
   // 4. 写报告
   const outputDir = args.output ?? join(packageRoot, 'evals', 'reports', formatTimestamp());
