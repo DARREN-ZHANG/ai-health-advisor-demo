@@ -87,6 +87,14 @@ pnpm --filter @health-advisor/agent-core eval:agent:quality
 
 > Quality Suite 使用 real provider 调用真实 LLM，启用 `--disallow-fixtures` 确保 case 不包含 `modelFixture.content`。适合 prompt 大幅重构后做端到端验证、版本发布前的全量质量确认、建立/更新 quality baseline。
 
+### 关于 Fake 100 分的说明
+
+> **重要：fake fixture 的 100 分不代表 Agent 质量优秀。**
+>
+> Core Fixture Suite（`eval:agent:core:fixture`）使用 fake provider + fixture answer，满分 100 只表示 eval 框架自检通过。这验证的是 scorer / runner / schema 没有回归，与 Agent 的真实建议质量无关。
+>
+> 真正能评估和指导 Agent 优化的基线，必须使用 Quality Suite（`eval:agent:quality`），它调用真实 LLM，不使用 fixture。新团队请务必区分两者。
+
 ### 运行单个 Case
 
 ```bash

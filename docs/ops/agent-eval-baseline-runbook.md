@@ -27,14 +27,31 @@ Agent eval baseline 用来回答三个问题：
 
 ## 3. 第一次建立 Baseline
 
-实施完成后，在当前主分支上运行：
+本系统有**两种** baseline，用途和运行方式完全不同：
+
+| Baseline | Provider | Fixture Output | 命名 | 用途 |
+|----------|----------|----------------|------|------|
+| 框架健全性基线 | `fake` | 允许（`modelFixture.content`） | `framework-sanity-baseline-v1` | 验证 eval 框架本身（scorer / runner / schema）没有回归 |
+| 真实质量基线 | `real` | 禁止（`--disallow-fixtures`） | `baseline-v1-real-single-call-agent` | 评估当前 Agent 的**真实**建议质量，指导后续优化方向 |
+
+> **重要提示：不要被 fake fixture 的 100 分误导**
+>
+> 框架健全性基线使用 fake provider + fixture answer，如果 scorer 和 case 设计正确，**满分 100 是正常的自检结果**。这只代表"框架本身能正确运行"，**不代表 Agent 已经优秀**。
+>
+> 真正能指导 Agent 优化方向的质量基线，必须使用 `real provider` + 禁止 fixture，只有这样才能反映 Agent 在真实场景下的建议质量。新团队请务必区分两者，不要因为 fake 100 分而认为 Agent 不需要优化。
+
+### 3.1 建立框架健全性基线
 
 ```bash
-# 框架健壮性基线（fake provider）
 pnpm --filter @health-advisor/agent-core eval:agent:core:fixture
+```
 
-# 真实 Agent 质量基线（real provider）
-pnpm --filter @health-advisor/agent-core eval:agent:quality
+### 3.2 建立真实质量基线
+
+```bash
+pnpm --filter @health-advisor/agent-core eval:agent:quality \
+  --provider real \
+  --output packages/agent-core/evals/reports/baseline-v1-real-single-call-agent
 ```
 
 命令会生成：
@@ -50,7 +67,7 @@ packages/agent-core/evals/reports/<timestamp>/
 建议把目录重命名为可读版本号，例如：
 
 ```text
-# 框架健壮性基线（fake provider）
+# 框架健全性基线（fake provider）
 packages/agent-core/evals/reports/framework-sanity-baseline-v1/
 
 # 真实 Agent 质量基线（real provider）
@@ -214,7 +231,13 @@ Regression case 的目标是防复发，不是覆盖所有常规路径。
 
 优点：稳定、便宜、可重复。
 
-限制：不能完整评估真实生成质量。
+**关键限制：fake 分数无法评估 Agent 的真实建议质量。**
+
+Fake provider 的分数反映的是"eval 框架在给定固定输出时能否正确打分"，而不是"Agent 的建议好不好"。当 case 内含 `modelFixture.content` 时，LLM 被完全绕过——scorer 验证的是 fixture 内容与 expectations 的匹配度，与 Agent 实际生成能力无关。因此：
+
+- fake 100 分 = eval 框架自检通过，**不等于** Agent 质量优秀
+- fake 分数下降 = 框架或 case 可能有问题，**不是** Agent 退化了
+- 任何关于"Agent 质量如何"、"优化有没有效果"的结论，都必须基于 **real provider** 的评估结果
 
 ### Real Provider
 
