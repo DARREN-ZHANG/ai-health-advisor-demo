@@ -198,6 +198,7 @@ export interface EvalArtifacts {
 
 export interface EvalCaseResult {
   caseId: string;
+  category: string;
   passed: boolean;
   score: number;
   maxScore: number;

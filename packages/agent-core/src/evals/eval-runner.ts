@@ -196,6 +196,7 @@ async function runSingleCase(
 
   return {
     caseId: evalCase.id,
+    category: evalCase.category,
     passed,
     score,
     maxScore,
@@ -218,6 +219,7 @@ function buildErrorCaseResult(
 
   return {
     caseId: evalCase.id,
+    category: evalCase.category,
     passed: false,
     score: 0,
     maxScore: 1,
@@ -258,7 +260,6 @@ function aggregateReport(
   caseResults: EvalCaseResult[],
   suite: string,
   providerMode: EvalProviderMode,
-  caseCategories?: Map<string, string>,
 ): EvalReport {
   // 汇总 by category
   const byCategory: EvalReport['byCategory'] = {};
@@ -266,7 +267,7 @@ function aggregateReport(
   let totalMaxScore = 0;
 
   for (const result of caseResults) {
-    const category = caseCategories?.get(result.caseId) ?? 'uncategorized';
+    const category = result.category;
 
     if (!byCategory[category]) {
       byCategory[category] = { cases: 0, passed: 0, failed: 0, score: 0, maxScore: 0 };
@@ -433,12 +434,10 @@ export async function runEval(
 
   // 2. 逐个执行
   const caseResults: EvalCaseResult[] = [];
-  const caseCategories = new Map<string, string>();
   for (const evalCase of cases) {
     console.log(`执行 case: ${evalCase.id} (${evalCase.title})`);
     const result = await runSingleCase(evalCase, args.provider, dataDir, useStrictAssets);
     caseResults.push(result);
-    caseCategories.set(evalCase.id, evalCase.category);
 
     const status = result.passed ? 'PASS' : 'FAIL';
     console.log(`  [${status}] score: ${result.score}/${result.maxScore}`);
@@ -446,7 +445,7 @@ export async function runEval(
 
   // 3. 聚合报告
   const suiteName = args.suite ?? (args.caseId ? 'single' : 'all');
-  const report = aggregateReport(caseResults, suiteName, args.provider, caseCategories);
+  const report = aggregateReport(caseResults, suiteName, args.provider);
 
   // real 模式时添加 provider/model 信息
   if (args.provider === 'real') {

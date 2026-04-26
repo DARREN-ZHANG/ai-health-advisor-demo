@@ -618,6 +618,7 @@ describe('report writer', () => {
       cases: [
         {
           caseId: 'case-pass-001',
+          category: 'homepage',
           passed: true,
           score: 50,
           maxScore: 50,
@@ -657,6 +658,7 @@ describe('report writer', () => {
         },
         {
           caseId: 'case-fail-001',
+          category: 'view-summary',
           passed: false,
           score: 0,
           maxScore: 50,
@@ -720,6 +722,90 @@ describe('report writer', () => {
     expect(paths.mdPath).toBeDefined();
     expect(existsSync(paths.jsonPath!)).toBe(true);
     expect(existsSync(paths.mdPath!)).toBe(true);
+  });
+
+  it('混合 category 的 byCategory 正确分组且 markdown 包含 category breakdown', () => {
+    // 构造包含多个 category 的报告
+    const multiCatReport: import('../../evals/types').EvalReport = {
+      runId: 'multi-cat-run',
+      gitSha: 'abc1234',
+      createdAt: '2026-04-26T00:00:00.000Z',
+      suite: 'core',
+      providerMode: 'fake',
+      totals: {
+        cases: 4,
+        passed: 2,
+        failed: 2,
+        hardFailures: 2,
+        score: 30,
+        maxScore: 40,
+      },
+      byCategory: {
+        homepage: { cases: 2, passed: 1, failed: 1, score: 15, maxScore: 20 },
+        'advisor-chat': { cases: 1, passed: 1, failed: 0, score: 10, maxScore: 10 },
+        'cross-cutting': { cases: 1, passed: 0, failed: 1, score: 5, maxScore: 10 },
+      },
+      cases: [
+        {
+          caseId: 'h-pass',
+          category: 'homepage',
+          passed: true,
+          score: 10,
+          maxScore: 10,
+          checks: [],
+          artifacts: { caseId: 'h-pass', request: makeRequest() },
+        },
+        {
+          caseId: 'h-fail',
+          category: 'homepage',
+          passed: false,
+          score: 5,
+          maxScore: 10,
+          checks: [],
+          artifacts: { caseId: 'h-fail', request: makeRequest() },
+        },
+        {
+          caseId: 'c-pass',
+          category: 'advisor-chat',
+          passed: true,
+          score: 10,
+          maxScore: 10,
+          checks: [],
+          artifacts: { caseId: 'c-pass', request: makeRequest() },
+        },
+        {
+          caseId: 'x-fail',
+          category: 'cross-cutting',
+          passed: false,
+          score: 5,
+          maxScore: 10,
+          checks: [],
+          artifacts: { caseId: 'x-fail', request: makeRequest() },
+        },
+      ],
+    };
+
+    // 验证 JSON 报告包含 category 字段
+    const paths = writeReport(multiCatReport, TEMP_REPORT_DIR, 'both');
+    const jsonContent = JSON.parse(readFileSync(paths.jsonPath!, 'utf-8'));
+
+    // 每个 case 都有 category
+    expect(jsonContent.cases[0].category).toBe('homepage');
+    expect(jsonContent.cases[1].category).toBe('homepage');
+    expect(jsonContent.cases[2].category).toBe('advisor-chat');
+    expect(jsonContent.cases[3].category).toBe('cross-cutting');
+
+    // byCategory 正确分组
+    expect(jsonContent.byCategory.homepage.cases).toBe(2);
+    expect(jsonContent.byCategory['advisor-chat'].cases).toBe(1);
+    expect(jsonContent.byCategory['cross-cutting'].cases).toBe(1);
+
+    // 验证 markdown 包含 category breakdown
+    const mdContent = readFileSync(paths.mdPath!, 'utf-8');
+    expect(mdContent).toContain('## Category Breakdown');
+    expect(mdContent).toContain('homepage');
+    expect(mdContent).toContain('advisor-chat');
+    expect(mdContent).toContain('cross-cutting');
   });
 });
 
