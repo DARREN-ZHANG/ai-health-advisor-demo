@@ -221,6 +221,10 @@ export interface EvalReport {
   createdAt: string;
   suite: string;
   providerMode: 'fake' | 'real';
+  /** 使用的 provider（如 openai、gemini），仅 real 模式有值 */
+  provider?: string;
+  /** 使用的模型名称（如 gpt-4o-mini），仅 real 模式有值 */
+  model?: string;
   totals: {
     cases: number;
     passed: number;

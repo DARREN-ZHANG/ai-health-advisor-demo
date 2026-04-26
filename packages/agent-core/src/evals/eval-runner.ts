@@ -6,10 +6,11 @@
  */
 
 import { resolve, join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { loadEvalCases } from './case-loader';
 import { createEvalRuntime } from './eval-runtime';
-import { executeAgent, type AgentRuntimeObserver } from '../runtime/agent-runtime';
+import { executeAgent, type AgentRuntimeObserver, type AgentRuntimeDeps } from '../runtime/agent-runtime';
 import { DEFAULT_SCORERS } from './scorers';
 import { writeReport, type ReportFormat } from './report-writer';
 import type {
@@ -33,6 +34,7 @@ interface CliArgs {
   failOnHard: boolean;
   baselineReport?: string;
   failOnScoreRegression?: number;
+  disallowFixtures: boolean;
 }
 
 /**
@@ -44,6 +46,7 @@ function parseArgs(argv: string[]): CliArgs {
     provider: 'fake',
     report: 'both',
     failOnHard: false,
+    disallowFixtures: false,
   };
 
   let i = 2; // 跳过 node 和脚本路径
@@ -73,6 +76,9 @@ function parseArgs(argv: string[]): CliArgs {
         break;
       case '--fail-on-score-regression':
         args.failOnScoreRegression = Number(argv[++i]);
+        break;
+      case '--disallow-fixtures':
+        args.disallowFixtures = true;
         break;
       default:
         // 未知参数忽略
@@ -141,16 +147,25 @@ async function runSingleCase(
   evalCase: AgentEvalCase,
   providerMode: EvalProviderMode,
   dataDir?: string,
+  strictAssets?: boolean,
 ): Promise<EvalCaseResult> {
-  // 创建运行时依赖
-  const deps = createEvalRuntime({
-    evalCase,
-    dataDir,
-    providerMode,
-  });
-
   // 创建 observer 采集 artifacts
   const { observer, getArtifacts } = createArtifactObserver(evalCase);
+
+  // 创建运行时依赖（可能因 provider 配置或 strict assets 失败）
+  let deps: AgentRuntimeDeps;
+  try {
+    deps = createEvalRuntime({
+      evalCase,
+      dataDir,
+      providerMode,
+      strictAssets,
+    });
+  } catch (err) {
+    // runtime 创建失败，记录错误
+    const artifacts = getArtifacts();
+    return buildErrorCaseResult(evalCase, artifacts, err);
+  }
 
   let envelope: AgentResponseEnvelope | undefined;
   try {
@@ -375,6 +390,16 @@ export async function runEval(
   // 从 packageRoot 上溯到 repo 根（包含 data/sandbox 的目录）
   const dataDir = options?.dataDir ?? resolve(packageRoot, '../../data/sandbox');
 
+  // 仅当使用默认 dataDir（非显式传入）时验证目录存在
+  if (!options?.dataDir && !existsSync(dataDir)) {
+    console.error(`错误: 默认数据目录不存在: ${dataDir}`);
+    console.error('请确保从正确的仓库路径运行，或通过 options.dataDir 指定路径。');
+    return 1;
+  }
+
+  // CLI 调用时使用 strictAssets，测试通过 options.dataDir 调用时不用 strict
+  const useStrictAssets = !options?.dataDir;
+
   // 参数校验：提供了 --fail-on-score-regression 但缺少 --baseline-report
   if (args.failOnScoreRegression !== undefined && !args.baselineReport) {
     console.error('错误: 提供了 --fail-on-score-regression 但缺少 --baseline-report');
@@ -400,7 +425,7 @@ export async function runEval(
   const caseCategories = new Map<string, string>();
   for (const evalCase of cases) {
     console.log(`执行 case: ${evalCase.id} (${evalCase.title})`);
-    const result = await runSingleCase(evalCase, args.provider, dataDir);
+    const result = await runSingleCase(evalCase, args.provider, dataDir, useStrictAssets);
     caseResults.push(result);
     caseCategories.set(evalCase.id, evalCase.category);
 
@@ -411,6 +436,18 @@ export async function runEval(
   // 3. 聚合报告
   const suiteName = args.suite ?? (args.caseId ? 'single' : 'all');
   const report = aggregateReport(caseResults, suiteName, args.provider, caseCategories);
+
+  // real 模式时添加 provider/model 信息
+  if (args.provider === 'real') {
+    try {
+      const { resolveProviderConfig } = require('../provider/provider-config') as typeof import('../provider/provider-config');
+      const config = resolveProviderConfig(process.env as Record<string, string | undefined>);
+      report.provider = config.provider;
+      report.model = config.model;
+    } catch {
+      // 模块加载失败时忽略，不影响报告输出
+    }
+  }
 
   // 4. 写报告
   const outputDir = args.output ?? join(packageRoot, 'evals', 'reports', formatTimestamp());

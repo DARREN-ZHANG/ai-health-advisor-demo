@@ -123,6 +123,8 @@ export interface CreateEvalRuntimeOptions {
   evalCase: AgentEvalCase;
   dataDir?: string;
   providerMode: EvalProviderMode;
+  /** 当 true 时，缺少 assets 直接抛异常而非静默降级到 mock。CLI 默认 true，测试传 false */
+  strictAssets?: boolean;
 }
 
 /**
@@ -135,12 +137,13 @@ export function createEvalRuntime(
   options: CreateEvalRuntimeOptions,
 ): AgentRuntimeDeps {
   const { evalCase, dataDir, providerMode } = options;
+  const strict = options.strictAssets ?? false;
   const { setup } = evalCase;
   const profileId = setup.profileId;
 
   // ── 1. 加载 profile ─────────────────────────────
-  const profiles = loadProfilesSafe(dataDir);
-  const profileData = getProfileSafe(profiles, profileId);
+  const profiles = strict ? loadProfilesStrict(dataDir!) : loadProfilesSafe(dataDir);
+  const profileData = strict ? getProfileStrict(profiles, profileId) : getProfileSafe(profiles, profileId);
 
   // ── 2. 创建 memory store 并 seed ─────────────────
   const sessionMemory = new InMemorySessionMemoryStore();
@@ -168,13 +171,13 @@ export function createEvalRuntime(
   const agent = createEvalAgent(setup.modelFixture, providerMode);
 
   // ── 7. 创建 prompt loader 和 fallback engine ────
-  const promptLoader = createPromptLoaderWithFallback(dataDir);
-  const fallbackEngine = createFallbackEngineForEval(dataDir);
+  const promptLoader = strict ? createPromptLoaderStrict(dataDir!) : createPromptLoaderWithFallback(dataDir);
+  const fallbackEngine = strict ? createFallbackEngineStrict(dataDir!) : createFallbackEngineForEval(dataDir);
 
   // ── 8. 组装 deps ─────────────────────────────────
   const deps: AgentRuntimeDeps = {
     getProfile: (_pid: string) =>
-      _pid === profileId ? profileData : getProfileSafe(profiles, _pid),
+      _pid === profileId ? profileData : (strict ? getProfileStrict(profiles, _pid) : getProfileSafe(profiles, _pid)),
 
     selectByTimeframe: (
       records: DailyRecord[],
@@ -218,6 +221,34 @@ export function createEvalRuntime(
 }
 
 // ── 内部辅助函数 ────────────────────────────────────
+
+/** strict 模式：加载 profiles，失败时直接抛异常 */
+function loadProfilesStrict(dataDir: string): Map<string, ProfileData> {
+  return loadAllProfiles(dataDir);
+}
+
+/** strict 模式：获取 profile，找不到时直接抛异常 */
+function getProfileStrict(
+  profiles: Map<string, ProfileData>,
+  profileId: string,
+): ProfileData {
+  return sandboxGetProfile(profiles, profileId);
+}
+
+/** strict 模式：创建 prompt loader，失败时直接抛异常 */
+function createPromptLoaderStrict(dataDir: string): PromptLoader {
+  const promptsDir = join(dataDir, 'prompts');
+  const realLoader = createPromptLoader(undefined, promptsDir);
+  // 探测 system prompt 是否可读
+  realLoader.load('system');
+  return realLoader;
+}
+
+/** strict 模式：创建 fallback engine，失败时直接抛异常 */
+function createFallbackEngineStrict(dataDir: string): FallbackEngine {
+  const fallbacksDir = join(dataDir, 'fallbacks');
+  return createFallbackEngine({ readFile: (path, enc) => readFileSync(path, (enc ?? 'utf-8') as BufferEncoding) as string }, fallbacksDir);
+}
 
 /** 安全加载 profiles，失败时返回空 Map */
 function loadProfilesSafe(dataDir?: string): Map<string, ProfileData> {
