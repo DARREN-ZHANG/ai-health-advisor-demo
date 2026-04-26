@@ -19,7 +19,8 @@ Agent eval baseline 用来回答三个问题：
 | Suite | 命令 | 用途 | 何时运行 |
 |-------|------|------|----------|
 | Smoke Eval | `pnpm --filter @health-advisor/agent-core eval:agent:smoke` | 快速确认主链路、协议、安全硬门槛没坏 | 每个 Agent 相关 PR、本地快速验证、CI |
-| Core Eval | `pnpm --filter @health-advisor/agent-core eval:agent:core` | 建立质量画像，做改动前后对比 | prompt/context/memory/rules/tools/ReAct/reflection 改动前后 |
+| Core Fixture Eval | `pnpm --filter @health-advisor/agent-core eval:agent:core:fixture` | 框架健壮性回归，使用 fake provider + fixture answer | scorer / runner / schema 变更前后 |
+| Quality Eval | `pnpm --filter @health-advisor/agent-core eval:agent:quality` | 真实 Agent 质量基线，使用 real provider | prompt/context/memory/rules/tools/ReAct/reflection 改动前后 |
 | Regression Eval | `pnpm --filter @health-advisor/agent-core eval:agent:regression` | 防止历史失败复发 | 修复失败样本后、发布前、重要 demo 前 |
 
 默认 CI 只跑 fake provider 的 Smoke Eval。真实 provider eval 只能手动运行，不应作为默认 CI 门禁。
@@ -29,7 +30,11 @@ Agent eval baseline 用来回答三个问题：
 实施完成后，在当前主分支上运行：
 
 ```bash
-pnpm --filter @health-advisor/agent-core eval:agent:core
+# 框架健壮性基线（fake provider）
+pnpm --filter @health-advisor/agent-core eval:agent:core:fixture
+
+# 真实 Agent 质量基线（real provider）
+pnpm --filter @health-advisor/agent-core eval:agent:quality
 ```
 
 命令会生成：
@@ -45,7 +50,11 @@ packages/agent-core/evals/reports/<timestamp>/
 建议把目录重命名为可读版本号，例如：
 
 ```text
-packages/agent-core/evals/reports/baseline-v1-single-call-agent/
+# 框架健壮性基线（fake provider）
+packages/agent-core/evals/reports/framework-sanity-baseline-v1/
+
+# 真实 Agent 质量基线（real provider）
+packages/agent-core/evals/reports/baseline-v1-real-single-call-agent/
 ```
 
 报告目录默认不入 git。如果团队需要长期保存 baseline，应把 `eval-report.json` 作为 release artifact 或手动归档到约定位置，不要直接提交大量本地报告。
@@ -77,10 +86,10 @@ packages/agent-core/evals/reports/baseline-v1-single-call-agent/
 先确认当前 baseline report 路径，例如：
 
 ```text
-packages/agent-core/evals/reports/baseline-v1-single-call-agent/eval-report.json
+packages/agent-core/evals/reports/baseline-v1-real-single-call-agent/eval-report.json
 ```
 
-如果当前没有可信 baseline，先在 main 上跑一次 Core Eval 并归档。
+如果当前没有可信 baseline，先在 main 上跑一次 Quality Eval 并归档。
 
 ### 5.2 改动中
 
@@ -93,11 +102,11 @@ packages/agent-core/evals/reports/baseline-v1-single-call-agent/eval-report.json
 
 ### 5.3 改动后
 
-运行 Core Eval 并与 baseline 对比：
+运行 Quality Eval 并与 baseline 对比：
 
 ```bash
-pnpm --filter @health-advisor/agent-core eval:agent:core \
-  --baseline-report packages/agent-core/evals/reports/baseline-v1-single-call-agent/eval-report.json \
+pnpm --filter @health-advisor/agent-core eval:agent:quality \
+  --baseline-report packages/agent-core/evals/reports/baseline-v1-real-single-call-agent/eval-report.json \
   --fail-on-score-regression 2
 ```
 
@@ -157,7 +166,11 @@ pnpm --filter @health-advisor/agent-core eval:agent:core \
 建议 baseline 命名：
 
 ```text
-baseline-v1-single-call-agent
+# 框架健壮性基线（fake provider）
+framework-sanity-baseline-v1
+
+# 真实 Agent 质量基线（real provider）
+baseline-v1-real-single-call-agent
 baseline-v2-evidence-packet
 baseline-v3-structured-memory
 baseline-v4-tools-react
@@ -239,11 +252,17 @@ Agent 相关 PR 合并前检查：
 pnpm --filter @health-advisor/agent-core eval:agent:smoke
 ```
 
+框架健壮性回归：
+
+```bash
+pnpm --filter @health-advisor/agent-core eval:agent:core:fixture
+```
+
 Agent 质量优化：
 
 ```bash
-pnpm --filter @health-advisor/agent-core eval:agent:core \
-  --baseline-report packages/agent-core/evals/reports/baseline-v1-single-call-agent/eval-report.json \
+pnpm --filter @health-advisor/agent-core eval:agent:quality \
+  --baseline-report packages/agent-core/evals/reports/baseline-v1-real-single-call-agent/eval-report.json \
   --fail-on-score-regression 2
 ```
 
@@ -251,14 +270,15 @@ pnpm --filter @health-advisor/agent-core eval:agent:core \
 
 ```bash
 pnpm --filter @health-advisor/agent-core eval:agent:regression
-pnpm --filter @health-advisor/agent-core eval:agent:core
+pnpm --filter @health-advisor/agent-core eval:agent:core:fixture
 ```
 
 发布或重要 demo 前：
 
 ```bash
 pnpm --filter @health-advisor/agent-core eval:agent:smoke
-pnpm --filter @health-advisor/agent-core eval:agent:core
+pnpm --filter @health-advisor/agent-core eval:agent:core:fixture
+pnpm --filter @health-advisor/agent-core eval:agent:quality
 pnpm --filter @health-advisor/agent-core eval:agent:regression
 ```
 

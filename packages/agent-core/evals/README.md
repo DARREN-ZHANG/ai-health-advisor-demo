@@ -17,13 +17,15 @@
 | Suite | 用途 | Case 数量 | 说明 |
 |-------|------|-----------|------|
 | **smoke** | P0 冒烟测试 | 15 | 覆盖所有主要任务类型（homepage / view-summary / chat / cross-cutting），每个 case 验证核心路径 |
-| **core** | P1 核心场景 | 55 | 覆盖更多边界条件和细分场景，按 category 组织子目录 |
+| **core** | P1 核心 Fixture 场景 | 55 | 覆盖更多边界条件和细分场景，按 category 组织子目录。使用 fake provider + fixture answer，用于框架健壮性回归 |
+| **quality** | 真实 Agent 质量基线 | 暂无 | 使用 real provider 调用真实 LLM，禁止 fixture answer（`--disallow-fixtures`），用于评估 Agent 实际生成质量 |
 | **regression** | 回归锁定 | 暂无 | 用于锁定已修复的 bug，防止复发。从真实 bug 报告沉淀 |
 
 ### Suite 运行策略
 
 - **smoke**：CI 必跑，`--fail-on-hard` 硬失败门禁
-- **core**：本地全量回归，合并前验证
+- **core**（fixture）：本地全量回归，合并前验证框架健壮性，基线命名为 `framework-sanity-baseline-v1`
+- **quality**：真实 Agent 质量基线，使用 real provider，基线命名为 `baseline-v1-real-single-call-agent`
 - **regression**：按需运行，锁定已知 bug
 
 ---
@@ -71,11 +73,19 @@
 pnpm --filter @health-advisor/agent-core eval:agent:smoke
 ```
 
-### 运行 Core Suite（55 个 P1 case）
+### 运行 Core Fixture Suite（55 个 P1 case，fake provider）
 
 ```bash
-pnpm --filter @health-advisor/agent-core eval:agent:core
+pnpm --filter @health-advisor/agent-core eval:agent:core:fixture
 ```
+
+### 运行 Quality Suite（真实 Agent 质量基线）
+
+```bash
+pnpm --filter @health-advisor/agent-core eval:agent:quality
+```
+
+> Quality Suite 使用 real provider 调用真实 LLM，启用 `--disallow-fixtures` 确保 case 不包含 `modelFixture.content`。适合 prompt 大幅重构后做端到端验证、版本发布前的全量质量确认、建立/更新 quality baseline。
 
 ### 运行单个 Case
 
@@ -85,7 +95,7 @@ pnpm --filter @health-advisor/agent-core eval:agent:case <case-id>
 pnpm --filter @health-advisor/agent-core eval:agent:case H-001
 ```
 
-> 所有命令默认使用 `--provider fake`（不调用真实 LLM）和 `--report both`（同时输出 JSON 和 Markdown 报告）。Smoke 额外启用 `--fail-on-hard`，即硬失败时进程以非零退出码结束。
+> 除 quality suite 外，所有命令默认使用 `--provider fake`（不调用真实 LLM）和 `--report both`（同时输出 JSON 和 Markdown 报告）。Smoke 额外启用 `--fail-on-hard`，即硬失败时进程以非零退出码结束。Quality suite 使用 `--provider real` 和 `--disallow-fixtures`。
 
 ---
 
@@ -111,11 +121,11 @@ Markdown 报告包含：
 
 ## 6. 如何添加新 Case
 
-1. **确定 category 和 suite**：根据功能领域选择 `smoke/`、`core/<category>/` 或 `regression/` 目录
+1. **确定 category 和 suite**：根据功能领域选择 `smoke/`、`core/<category>/`、`quality/` 或 `regression/` 目录
 2. **创建 JSON 文件**：参考现有 case（如 `smoke/homepage-normal.json`）作为模板
 3. **填写关键字段**：
    - `id` — 全局唯一，格式建议 `<类别缩写>-<序号>`（如 `C-016`）
-   - `setup.modelFixture` — 设计 Fake Provider 应返回的内容
+   - `setup.modelFixture` — 设计 Fake Provider 应返回的内容（quality suite case **不包含** `modelFixture.content`，因为使用 real provider）
    - `expectations` — 声明各 scorer 的期望值
 4. **本地验证**：
    ```bash
@@ -156,6 +166,7 @@ packages/agent-core/evals/
 │   │   ├── view-summary/
 │   │   ├── advisor-chat/
 │   │   └── cross-cutting/
+│   ├── quality/           # 真实 Agent 质量基线 case（不包含 modelFixture.content）
 │   └── regression/        # 回归锁定 case（按需沉淀）
 └── reports/               # 运行报告（gitignored）
 ```
