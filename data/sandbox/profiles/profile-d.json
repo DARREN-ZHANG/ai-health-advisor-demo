@@ -5,7 +5,11 @@
     "age": 31,
     "gender": "male",
     "avatar": "avatar-f.png",
-    "tags": ["有氧运动", "社交饮酒", "恢复赤字"],
+    "tags": [
+      "有氧运动",
+      "社交饮酒",
+      "恢复赤字"
+    ],
     "baseline": {
       "restingHr": 58,
       "hrv": 55,
@@ -14,7 +18,7 @@
       "avgSteps": 10000
     }
   },
-  "initialDemoTime": "2026-04-24T08:00",
+  "initialDemoTime": "2026-04-26T07:15",
   "historyRef": {
     "file": "history/profile-d-daily-records.json"
   },

@@ -5,7 +5,11 @@
     "age": 28,
     "gender": "male",
     "avatar": "avatar-a.png",
-    "tags": ["规律健身", "长睡眠", "HRV优秀"],
+    "tags": [
+      "规律健身",
+      "长睡眠",
+      "HRV优秀"
+    ],
     "baseline": {
       "restingHr": 48,
       "hrv": 95,
@@ -14,7 +18,7 @@
       "avgSteps": 12000
     }
   },
-  "initialDemoTime": "2026-04-24T07:05",
+  "initialDemoTime": "2026-04-26T07:05",
   "historyRef": {
     "file": "history/profile-a-daily-records.json"
   },

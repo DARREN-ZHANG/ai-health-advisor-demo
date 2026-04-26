@@ -5,7 +5,11 @@
     "age": 26,
     "gender": "female",
     "avatar": "avatar-e.png",
-    "tags": ["偏瘦", "短睡眠", "高压力"],
+    "tags": [
+      "偏瘦",
+      "短睡眠",
+      "高压力"
+    ],
     "baseline": {
       "restingHr": 78,
       "hrv": 15,
@@ -14,7 +18,7 @@
       "avgSteps": 4000
     }
   },
-  "initialDemoTime": "2026-04-24T06:00",
+  "initialDemoTime": "2026-04-26T06:45",
   "historyRef": {
     "file": "history/profile-c-daily-records.json"
   },
