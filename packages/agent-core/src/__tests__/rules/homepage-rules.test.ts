@@ -88,6 +88,11 @@ describe('homepageRules', () => {
       (s) => s.metric === 'sleep' && s.severity === 'warning',
     );
     expect(sleepSignals.length).toBeGreaterThan(0);
+    for (const s of sleepSignals) {
+      expect(s.message).not.toContain('基线');
+      expect(s.message).not.toContain('基准线');
+      expect(s.message).not.toContain('baseline');
+    }
   });
 
   it('血氧过低产生 critical 信号', () => {

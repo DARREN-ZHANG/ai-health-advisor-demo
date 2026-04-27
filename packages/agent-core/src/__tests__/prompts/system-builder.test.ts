@@ -55,13 +55,16 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('睡眠改善');
   });
 
-  it('包含基线数据', () => {
+  it('包含个人参考水平数据', () => {
     const prompt = buildSystemPrompt(makeContext(), mockLoader);
     expect(prompt).toContain('62'); // restingHR
     expect(prompt).toContain('58'); // hrv
     expect(prompt).toContain('98'); // spo2
     expect(prompt).toContain('420'); // avgSleepMinutes
     expect(prompt).toContain('8500'); // avgSteps
+    expect(prompt).not.toContain('基线');
+    expect(prompt).not.toContain('基准线');
+    expect(prompt).not.toContain('baseline');
   });
 
   it('包含数据质量声明（无 missingData）', () => {

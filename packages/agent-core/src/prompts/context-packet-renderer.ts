@@ -59,10 +59,10 @@ function renderUserContext(user: UserContextPacket): string {
   lines.push(`- 年龄：${user.age}`);
   if (user.tags.length > 0) lines.push(`- 标签：${user.tags.join('、')}`);
   lines.push('');
-  lines.push('## 基线参考值');
-  lines.push(`- 静息心率：${user.baselines.restingHR} bpm`);
-  lines.push(`- HRV 基线：${user.baselines.hrv} ms`);
-  lines.push(`- SpO2 基线：${user.baselines.spo2}%`);
+  lines.push('## 个人参考水平（内部分析用，不要原样写给用户）');
+  lines.push(`- 静息心率通常水平：${user.baselines.restingHR} bpm`);
+  lines.push(`- HRV 通常水平：${user.baselines.hrv} ms`);
+  lines.push(`- SpO2 参考水平：${user.baselines.spo2}%`);
   lines.push(`- 平均睡眠：${user.baselines.avgSleepMinutes} 分钟`);
   lines.push(`- 平均步数：${user.baselines.avgSteps} 步`);
   return lines.join('\n');
@@ -167,7 +167,7 @@ function renderHomepage(homepage: HomepageContextPacket): string {
       const parts: string[] = [`- ${m.metric}：${m.value}${m.unit}`];
       if (m.baseline !== undefined && m.deltaPctVsBaseline !== undefined) {
         const sign = m.deltaPctVsBaseline > 0 ? '+' : '';
-        parts.push(`（基线 ${m.baseline}，偏离 ${sign}${m.deltaPctVsBaseline}%）`);
+        parts.push(`（相对平时 ${sign}${m.deltaPctVsBaseline}%）`);
       }
       if (m.status === 'attention') parts.push('[注意]');
       lines.push(parts.join(''));
@@ -305,7 +305,7 @@ function renderMetricSummary(ms: MetricSummary, prefix: string = ''): string {
   if (ms.average) parts.push(`avg ${ms.average.value}${ms.average.unit}`);
   if (ms.baseline) {
     const delta = ms.deltaPctVsBaseline !== undefined ? ` (${ms.deltaPctVsBaseline > 0 ? '+' : ''}${ms.deltaPctVsBaseline}%)` : '';
-    parts.push(`baseline ${ms.baseline.value}${ms.baseline.unit}${delta}`);
+    parts.push(`通常水平 ${ms.baseline.value}${ms.baseline.unit}${delta}`);
   }
   parts.push(`trend ${ms.trendDirection}`);
   if (ms.anomalyPoints.length > 0) {

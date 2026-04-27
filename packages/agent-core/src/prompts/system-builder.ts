@@ -20,12 +20,12 @@ export function buildSystemPrompt(
     sections.push(`- 标签：${context.profile.tags.join('、')}`);
   }
 
-  // 基线数据
+  // 个人参考水平
   sections.push('');
-  sections.push('## 基线参考值');
-  sections.push(`- 静息心率：${context.profile.baselines.restingHR} bpm`);
-  sections.push(`- HRV 基线：${context.profile.baselines.hrv} ms`);
-  sections.push(`- SpO2 基线：${context.profile.baselines.spo2}%`);
+  sections.push('## 个人参考水平（内部分析用，不要原样写给用户）');
+  sections.push(`- 静息心率通常水平：${context.profile.baselines.restingHR} bpm`);
+  sections.push(`- HRV 通常水平：${context.profile.baselines.hrv} ms`);
+  sections.push(`- SpO2 参考水平：${context.profile.baselines.spo2}%`);
   sections.push(`- 平均睡眠：${context.profile.baselines.avgSleepMinutes} 分钟`);
   sections.push(`- 平均步数：${context.profile.baselines.avgSteps} 步`);
 

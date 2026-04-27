@@ -72,11 +72,12 @@ const sleepRule: InsightRule = {
 
     // 1. 时长判定 (收紧至 75% 预警，符合临床对睡眠剥夺的定义)
     if (sleepMinutes < baseline * 0.6) {
+      const sleepShortfallMin = Math.round(baseline - sleepMinutes);
       signals.push({
         category: 'anomaly',
         severity: 'warning',
         metric: 'sleep',
-        message: '昨晚睡眠时长严重不足（低于基线 40% 以上），认知能力将受显著影响',
+        message: `昨晚睡眠时长严重不足（比平时少约 ${sleepShortfallMin} 分钟），认知能力将受显著影响`,
       });
     } else if (sleepMinutes < baseline * 0.75) {
       signals.push({

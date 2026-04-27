@@ -266,4 +266,75 @@ describe('renderTaskContextPacket', () => {
     expect(output).not.toContain('undefined');
     expect(output).toContain('任务上下文');
   });
+
+  it('homepage context must not contain user-visible baseline jargon', () => {
+    const packet: TaskContextPacket = {
+      task: { type: 'homepage_summary', page: 'home' },
+      userContext: {
+        profileId: 'p1',
+        name: 'Test',
+        age: 30,
+        tags: [],
+        baselines: { restingHR: 60, hrv: 60, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
+      },
+      dataWindow: { start: '2026-04-04', end: '2026-04-10', recordCount: 7, completenessPct: 100 },
+      missingData: [],
+      evidence: [],
+      visibleCharts: [
+        {
+          chartToken: ChartTokenId.HRV_7DAYS,
+          metric: 'hrv',
+          timeframe: 'week',
+          visible: true,
+          dataSummary: {
+            metric: 'hrv',
+            latest: { value: 58, unit: 'ms', date: '2026-04-10' },
+            average: { value: 59, unit: 'ms' },
+            baseline: { value: 60, unit: 'ms' },
+            deltaPctVsBaseline: -3,
+            trendDirection: 'stable',
+            anomalyPoints: [],
+            missing: { missingCount: 0, totalCount: 7, completenessPct: 100 },
+            evidenceIds: ['e1'],
+          },
+          evidenceIds: ['e1'],
+        },
+      ],
+      homepage: {
+        recentEvents: [],
+        latest24h: {
+          date: '2026-04-10',
+          metrics: [
+            { metric: 'hrv', value: 58, unit: 'ms', baseline: 60, deltaPctVsBaseline: -3, status: 'normal', evidenceId: 'e1' },
+            { metric: 'sleep_total', value: 420, unit: 'min', baseline: 420, deltaPctVsBaseline: 0, status: 'normal', evidenceId: 'e2' },
+          ],
+        },
+        trend7d: [
+          {
+            metric: 'hrv',
+            latest: { value: 58, unit: 'ms', date: '2026-04-10' },
+            average: { value: 59, unit: 'ms' },
+            baseline: { value: 60, unit: 'ms' },
+            deltaPctVsBaseline: -3,
+            trendDirection: 'stable',
+            anomalyPoints: [],
+            missing: { missingCount: 0, totalCount: 7, completenessPct: 100 },
+            evidenceIds: ['e3'],
+          },
+        ],
+        rulesInsights: [{ category: 'trend', severity: 'info', message: 'HRV stable' }],
+        suggestedChartTokens: [ChartTokenId.HRV_7DAYS],
+      },
+    };
+
+    const output = renderTaskContextPacket(packet);
+    expect(output).not.toContain('基线');
+    expect(output).not.toContain('基准线');
+    expect(output).not.toContain('偏离基线');
+    expect(output).not.toContain('baseline');
+    // Internal data fields should still be present in the rendered output
+    expect(output).toContain('60');
+    expect(output).toContain('相对平时');
+    expect(output).toContain('通常水平');
+  });
 });

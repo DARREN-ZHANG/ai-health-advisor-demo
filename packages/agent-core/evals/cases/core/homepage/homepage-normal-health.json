@@ -9,7 +9,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周各项指标表现良好，睡眠质量维持在稳定水平，深睡占比接近基线。心率变异性保持平稳，未见明显波动；日常活动量已达标，步数和运动时间均处于健康区间。建议继续保持规律作息和适度运动。\",\"chartTokens\":[],\"microTips\":[]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周各项指标表现良好，睡眠质量维持在稳定水平，深睡占比接近你平时水平。心率变异性保持平稳，未见明显波动；日常活动量已达标，步数和运动时间均处于健康区间。建议继续保持规律作息和适度运动。\",\"chartTokens\":[],\"microTips\":[]}"
     }
   },
   "request": {
