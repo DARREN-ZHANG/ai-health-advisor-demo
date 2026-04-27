@@ -131,7 +131,30 @@ describe('Data Routes', () => {
       expect(Array.isArray(body.data)).toBe(true);
       expect(body.data).toHaveLength(2);
       expect(body.data[0].token).toBe('HRV_7DAYS');
+      expect(body.data[0].timeline.some((point: { values: Record<string, number | null> }) => point.values.hrv != null)).toBe(true);
       expect(body.data[1].token).toBe('SLEEP_7DAYS');
+    });
+
+    test('day timeframe 的 HRV chart-data 使用日级 HRV，不返回空 intraday', async () => {
+      const clock = app.runtime.overrideStore.getDemoClock('profile-a');
+      const currentDate = clock.currentTime.slice(0, 10);
+
+      try {
+        app.runtime.overrideStore.performSync('profile-a', 'manual_refresh');
+        const response = await app.inject({
+          method: 'GET',
+          url: '/profiles/profile-a/chart-data?tokens=HRV_7DAYS&timeframe=day',
+        });
+
+        expect(response.statusCode).toBe(200);
+        const body = response.json();
+        expect(body.success).toBe(true);
+        expect(body.data[0].timeline).toHaveLength(1);
+        expect(body.data[0].timeline[0].date).toBe(currentDate);
+        expect(body.data[0].timeline[0].values.hrv).toEqual(expect.any(Number));
+      } finally {
+        app.runtime.overrideStore.reset('all');
+      }
     });
 
     test('无有效 token 返回 400', async () => {

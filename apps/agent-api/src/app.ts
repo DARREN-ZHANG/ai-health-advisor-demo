@@ -11,6 +11,7 @@ import { profileRoutes } from './modules/profiles/routes.js';
 import { dataRoutes } from './modules/data/routes.js';
 import { aiRoutes } from './modules/ai/routes.js';
 import { godModeRoutes } from './modules/god-mode/routes.js';
+import { BriefCache } from './services/brief-cache.js';
 
 export async function buildApp() {
   const config = loadConfig();
@@ -51,10 +52,12 @@ export async function buildApp() {
 
   // 创建运行时注册表
   const registry = createRuntimeRegistry(config, app.metrics);
+  const briefCache = new BriefCache();
 
   // 装饰 Fastify 实例
   app.decorate('runtime', registry);
   app.decorate('config', config);
+  app.decorate('briefCache', briefCache);
 
   // 注册路由
   await app.register(healthRoutes);

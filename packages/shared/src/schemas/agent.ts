@@ -40,7 +40,7 @@ export const AgentResponseEnvelopeSchema = z.object({
   meta: z.object({
     taskType: AgentTaskTypeSchema,
     pageContext: PageContextSchema,
-    finishReason: z.enum(['complete', 'fallback', 'timeout']),
+    finishReason: z.enum(['complete', 'fallback', 'timeout', 'cached']),
     sessionId: z.string().optional(),
   }),
 });

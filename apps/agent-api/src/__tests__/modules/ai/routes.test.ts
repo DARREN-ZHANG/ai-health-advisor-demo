@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import path from 'node:path';
+import { cpSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { buildApp } from '../../../app.js';
 import type { FastifyInstance } from 'fastify';
 import type { AgentResponseEnvelope, PageContext } from '@health-advisor/shared';
@@ -15,7 +17,7 @@ vi.mock('@health-advisor/agent-core', async (importOriginal) => {
 import { executeAgent } from '@health-advisor/agent-core';
 const mockedExecuteAgent = vi.mocked(executeAgent);
 
-const DATA_DIR = path.resolve(process.cwd(), '../../data/sandbox');
+const SOURCE_DATA_DIR = path.resolve(process.cwd(), '../../data/sandbox');
 
 const defaultPageContext: PageContext = {
   profileId: 'profile-a',
@@ -34,17 +36,24 @@ const mockResponse: AgentResponseEnvelope = {
 
 describe('AI Routes', () => {
   let app: FastifyInstance;
+  let dataDir: string;
 
   beforeAll(async () => {
+    dataDir = mkdtempSync(path.join(tmpdir(), 'health-advisor-ai-routes-'));
+    cpSync(SOURCE_DATA_DIR, dataDir, { recursive: true });
+
     process.env.FALLBACK_ONLY_MODE = 'true';
+    process.env.ENABLE_GOD_MODE = 'true';
     process.env.NODE_ENV = 'test';
-    process.env.DATA_DIR = DATA_DIR;
+    process.env.DATA_DIR = dataDir;
     app = await buildApp();
   });
 
   afterAll(async () => {
     await app.close();
+    rmSync(dataDir, { recursive: true, force: true });
     delete process.env.FALLBACK_ONLY_MODE;
+    delete process.env.ENABLE_GOD_MODE;
     delete process.env.NODE_ENV;
     delete process.env.DATA_DIR;
   });
@@ -143,6 +152,58 @@ describe('AI Routes', () => {
       });
 
       expect(response.statusCode).toBe(400);
+    });
+
+    test('GOD MODE 校准后不再返回旧的 morning brief 缓存', async () => {
+      mockedExecuteAgent.mockReset();
+      app.briefCache.clearAll();
+      app.runtime.overrideStore.reset('all');
+
+      const staleResponse: AgentResponseEnvelope = {
+        ...mockResponse,
+        summary: 'HRV 数据缺失',
+      };
+      const freshResponse: AgentResponseEnvelope = {
+        ...mockResponse,
+        summary: 'HRV 数据已恢复',
+      };
+
+      mockedExecuteAgent
+        .mockResolvedValueOnce(staleResponse)
+        .mockResolvedValueOnce(freshResponse);
+
+      const first = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+        },
+      });
+
+      expect(first.statusCode).toBe(200);
+      expect(first.json().data.summary).toBe('HRV 数据缺失');
+
+      const recalibrate = await app.inject({
+        method: 'POST',
+        url: '/god-mode/recalibrate',
+        payload: {},
+      });
+
+      expect(recalibrate.statusCode).toBe(200);
+
+      const second = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+        },
+      });
+
+      expect(second.statusCode).toBe(200);
+      expect(second.json().data.summary).toBe('HRV 数据已恢复');
+      expect(mockedExecuteAgent).toHaveBeenCalledTimes(2);
     });
   });
 

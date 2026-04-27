@@ -9,6 +9,14 @@ interface ChartSeriesConfig {
   defaultDays: number;
 }
 
+const INTRADAY_METRICS = new Set([
+  'hr',
+  'sleep.totalMinutes',
+  'activity.steps',
+  'spo2',
+  'stress.load',
+]);
+
 const TOKEN_CONFIG: Record<ChartTokenId, ChartSeriesConfig> = {
   HRV_7DAYS: { metrics: ['hrv'], defaultDays: 7 },
   SLEEP_7DAYS: { metrics: ['sleep.totalMinutes', 'sleep.score'], defaultDays: 7 },
@@ -17,7 +25,7 @@ const TOKEN_CONFIG: Record<ChartTokenId, ChartSeriesConfig> = {
   SPO2_7DAYS: { metrics: ['spo2'], defaultDays: 7 },
   SLEEP_STAGE_LAST_NIGHT: { metrics: ['sleep.stages.deep', 'sleep.stages.rem', 'sleep.stages.light', 'sleep.stages.awake'], defaultDays: 1 },
   STRESS_LOAD_7DAYS: { metrics: ['stress.load'], defaultDays: 7 },
-  HRV_SLEEP_14DAYS_COMPARE: { metrics: ['hr', 'sleep.totalMinutes'], defaultDays: 14 },
+  HRV_SLEEP_14DAYS_COMPARE: { metrics: ['hrv', 'sleep.totalMinutes'], defaultDays: 14 },
 };
 
 export interface ChartDataResponse {
@@ -51,8 +59,9 @@ export class ChartService {
         customDateRange,
       });
 
-      // day timeframe 使用分时数据（2小时窗口，12个点）
-      const timeline = timeframe === 'day'
+      // day timeframe 仅对 IntradaySnapshot 可表达的指标使用分时数据。
+      // HRV 是日级指标，不能从 intraday 快照读取。
+      const timeline = timeframe === 'day' && config.metrics.every((metric) => INTRADAY_METRICS.has(metric))
         ? normalizeIntradayTimeline(filtered, config.metrics)
         : normalizeTimeline(filtered, config.metrics);
 

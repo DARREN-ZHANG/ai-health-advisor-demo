@@ -52,6 +52,11 @@ export class BriefCache {
     this.store.delete(`${profileId}:${today}`);
   }
 
+  /** 清除全部缓存，供 God Mode 等全局数据变更后使用 */
+  clearAll(): void {
+    this.store.clear();
+  }
+
   /** 清除所有过期条目 */
   evictExpired(): void {
     const now = Date.now();

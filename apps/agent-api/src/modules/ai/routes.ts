@@ -4,7 +4,6 @@ import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 import { AgentRequestSchema } from '@health-advisor/agent-core';
 import { buildMeta } from '../../utils/meta.js';
 import { AiOrchestrator } from '../../services/ai-orchestrator.js';
-import { BriefCache } from '../../services/brief-cache.js';
 import type { AiRequestMeta } from '../../plugins/request-context.js';
 
 interface MorningBriefBody {
@@ -29,7 +28,7 @@ interface ChatBody {
 }
 
 export async function aiRoutes(app: FastifyInstance) {
-  const briefCache = new BriefCache();
+  const briefCache = app.briefCache;
   const orchestrator = new AiOrchestrator({
     registry: app.runtime,
     metrics: app.metrics,

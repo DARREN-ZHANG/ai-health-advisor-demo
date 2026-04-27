@@ -77,6 +77,9 @@ interface CloneProfileBody {
 
 export async function godModeRoutes(app: FastifyInstance) {
   const service = new GodModeService(app.runtime);
+  const invalidateBriefCache = () => {
+    app.briefCache.clearAll();
+  };
 
   // BE-022: /god-mode/switch-profile
   app.post<{ Body: SwitchProfileBody }>('/god-mode/switch-profile', async (request, reply) => {
@@ -110,6 +113,7 @@ export async function godModeRoutes(app: FastifyInstance) {
 
     const targetProfileId = profileId ?? app.runtime.overrideStore.getCurrentProfileId();
     const result = service.injectEvent(targetProfileId, parsed.data as EventInjectPayload, request.ctx?.sessionId);
+    invalidateBriefCache();
     return createSuccessResponse(result, buildMeta(request));
   });
 
@@ -126,6 +130,7 @@ export async function godModeRoutes(app: FastifyInstance) {
 
     const targetProfileId = profileId ?? app.runtime.overrideStore.getCurrentProfileId();
     const result = service.overrideMetric(targetProfileId, parsed.data as MetricOverridePayload, request.ctx?.sessionId);
+    invalidateBriefCache();
     return createSuccessResponse(result, buildMeta(request));
   });
 
@@ -139,6 +144,7 @@ export async function godModeRoutes(app: FastifyInstance) {
     }
 
     const result = service.reset(parsed.data as ResetPayload, request.ctx?.sessionId);
+    invalidateBriefCache();
     return createSuccessResponse(result, buildMeta(request));
   });
 
@@ -167,6 +173,7 @@ export async function godModeRoutes(app: FastifyInstance) {
         advanceClock: parsed.data.advanceClock,
       },
     );
+    invalidateBriefCache();
     return createSuccessResponse(result, buildMeta(request));
   });
 
@@ -180,6 +187,7 @@ export async function godModeRoutes(app: FastifyInstance) {
     }
 
     const result = service.triggerSync(parsed.data.trigger, request.ctx?.sessionId);
+    invalidateBriefCache();
     return createSuccessResponse(result, buildMeta(request));
   });
 
@@ -193,6 +201,7 @@ export async function godModeRoutes(app: FastifyInstance) {
     }
 
     const result = service.advanceClock(parsed.data.minutes);
+    invalidateBriefCache();
     return createSuccessResponse(result, buildMeta(request));
   });
 
@@ -206,12 +215,14 @@ export async function godModeRoutes(app: FastifyInstance) {
     }
 
     const result = service.resetProfileTimeline(parsed.data.profileId, request.ctx?.sessionId);
+    invalidateBriefCache();
     return createSuccessResponse(result, buildMeta(request));
   });
 
   // 一键校准演示数据：以当前真实日期为演示日，重新生成 31 天历史
   app.post('/god-mode/recalibrate', async (request) => {
     const result = service.recalibrate(request.ctx?.sessionId);
+    invalidateBriefCache();
     return createSuccessResponse(result, buildMeta(request));
   });
 
@@ -232,6 +243,7 @@ export async function godModeRoutes(app: FastifyInstance) {
 
       try {
         const result = service.updateProfile(request.params.profileId, parsed.data as UpdateProfilePayload);
+        invalidateBriefCache();
         return createSuccessResponse(result, buildMeta(request));
       } catch (error) {
         const statusCode = (error as unknown as { statusCode?: number }).statusCode ?? 500;
@@ -264,6 +276,7 @@ export async function godModeRoutes(app: FastifyInstance) {
         parsed.data.newProfileId,
         parsed.data.overrides as CloneProfilePayload['overrides'],
       );
+      invalidateBriefCache();
       return createSuccessResponse(result, buildMeta(request));
     } catch (error) {
       const statusCode = (error as unknown as { statusCode?: number }).statusCode ?? 500;
@@ -282,6 +295,7 @@ export async function godModeRoutes(app: FastifyInstance) {
     async (request, reply) => {
       try {
         const result = service.deleteProfile(request.params.profileId);
+        invalidateBriefCache();
         return createSuccessResponse(result, buildMeta(request));
       } catch (error) {
         const statusCode = (error as unknown as { statusCode?: number }).statusCode ?? 500;
@@ -301,6 +315,7 @@ export async function godModeRoutes(app: FastifyInstance) {
     async (request, reply) => {
       try {
         const result = service.resetProfile(request.params.profileId);
+        invalidateBriefCache();
         return createSuccessResponse(result, buildMeta(request));
       } catch (error) {
         const statusCode = (error as unknown as { statusCode?: number }).statusCode ?? 500;

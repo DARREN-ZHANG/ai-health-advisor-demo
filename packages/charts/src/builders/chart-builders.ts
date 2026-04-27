@@ -5,11 +5,11 @@ import { DARK_THEME_BASE, lineSeries } from './theme';
 
 /**
  * 构建最近7天 HRV 趋势图配置
- * series key: 'hr'（取 hr 数组平均值）
+ * series key: 'hrv'
  */
 export function buildHrv7Days(data: StandardTimeSeries): EChartsOption {
   const meta = CHART_TOKEN_META[ChartTokenId.HRV_7DAYS];
-  const seriesData = data.series['hr'] ?? [];
+  const seriesData = data.series['hrv'] ?? [];
 
   return {
     ...DARK_THEME_BASE,
@@ -161,12 +161,12 @@ export function buildSleepStageLastNight(data: StandardTimeSeries): EChartsOptio
 /**
  * 构建 HRV-睡眠14天对比图配置
  * 双 Y 轴折线图：左轴 HRV (ms)，右轴睡眠 (h)
- * series keys: 'hr'（取均值）, 'sleep.totalMinutes'（转小时）
+ * series keys: 'hrv', 'sleep.totalMinutes'（转小时）
  */
 export function buildHrvSleep14DaysCompare(data: StandardTimeSeries): EChartsOption {
   const meta = CHART_TOKEN_META[ChartTokenId.HRV_SLEEP_14DAYS_COMPARE];
 
-  const hrvData = data.series['hr'] ?? [];
+  const hrvData = data.series['hrv'] ?? [];
   const sleepRaw = data.series['sleep.totalMinutes'] ?? [];
   const sleepHours = sleepRaw.map((v) => (v !== null ? Number((v / 60).toFixed(1)) : null));
 

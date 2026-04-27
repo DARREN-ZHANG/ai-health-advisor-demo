@@ -22,6 +22,7 @@ const mockData: StandardTimeSeries = {
     '2025-01-07',
   ],
   series: {
+    hrv: [52, 55, 50, 53, 56, 54, 57],
     hr: [72, 75, 68, 71, 74, 70, 73],
     'sleep.totalMinutes': [420, 390, 450, 480, 360, 420, 400],
     'hr.resting': [60, 62, 58, 61, 63, 59, 60],
@@ -37,7 +38,7 @@ const mockData: StandardTimeSeries = {
 
 describe('chart builders', () => {
   const builders = [
-    { name: 'buildHrv7Days', fn: buildHrv7Days, seriesKey: 'hr' },
+    { name: 'buildHrv7Days', fn: buildHrv7Days, seriesKey: 'hrv' },
     { name: 'buildSleep7Days', fn: buildSleep7Days, seriesKey: 'sleep.totalMinutes' },
     { name: 'buildRestingHr7Days', fn: buildRestingHr7Days, seriesKey: 'hr.resting' },
     { name: 'buildActivity7Days', fn: buildActivity7Days, seriesKey: 'activity.steps' },
@@ -86,6 +87,13 @@ describe('chart builders', () => {
     expect(series[0]!.data[0]).toBe(7.0); // 420 分钟 = 7 小时
     expect(series[0]!.data[2]).toBe(7.5); // 450 分钟 = 7.5 小时
   });
+
+  it('buildHrv7Days 使用 hrv series，而不是心率 hr series', () => {
+    const option = buildHrv7Days(mockData);
+    const series = option.series as Array<{ data: (number | null)[] }>;
+
+    expect(series[0]!.data).toEqual(mockData.series.hrv);
+  });
 });
 
 describe('buildSleepStageLastNight', () => {
@@ -131,6 +139,13 @@ describe('buildHrvSleep14DaysCompare', () => {
     const series = option.series as Array<{ data: (number | null)[] }>;
     // 睡眠 series 是第二个，420 分钟 = 7 小时
     expect(series[1]!.data[0]).toBe(7.0);
+  });
+
+  it('HRV 数据使用 hrv series', () => {
+    const option = buildHrvSleep14DaysCompare(mockData);
+    const series = option.series as Array<{ data: (number | null)[] }>;
+
+    expect(series[0]!.data).toEqual(mockData.series.hrv);
   });
 
   it('包含图例', () => {

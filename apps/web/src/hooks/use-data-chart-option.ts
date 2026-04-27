@@ -63,7 +63,7 @@ function toStandardTimeSeries(
  * 各 tokenId 对应的 series key 映射，用于从 StandardTimeSeries 中提取数据
  */
 const TOKEN_SERIES_KEY: Partial<Record<ChartTokenId, string>> = {
-  [ChartTokenId.HRV_7DAYS]: 'hr',
+  [ChartTokenId.HRV_7DAYS]: 'hrv',
   [ChartTokenId.SLEEP_7DAYS]: 'sleep.totalMinutes',
   [ChartTokenId.RESTING_HR_7DAYS]: 'hr',
   [ChartTokenId.ACTIVITY_7DAYS]: 'activity.steps',
