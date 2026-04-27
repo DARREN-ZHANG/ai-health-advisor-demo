@@ -39,7 +39,7 @@ export function aggregateDailyRecord(
   const hr = aggregateHeartRate(dayEvents);
 
   // 睡眠聚合
-  const sleep = aggregateSleep(dayEvents, date);
+  const sleep = aggregateSleep(dayEvents);
 
   // 活动聚合
   const activity = aggregateActivity(dayEvents);
@@ -75,6 +75,31 @@ export function aggregateCurrentDayRecord(
 ): DailyRecord {
   const date = currentTime.slice(0, 10);
   return aggregateDailyRecord(syncedEvents, date);
+}
+
+/**
+ * 将当前日设备事件聚合结果覆盖到历史日记录上。
+ *
+ * 设备事件是当前日已同步事实，优先级高于历史记录；但 HRV 目前不是设备事件流
+ * 可聚合的 metric，因此当聚合结果没有 HRV 时保留历史日记录里的 HRV。
+ */
+export function mergeCurrentDayRecord(
+  historicalRecord: DailyRecord | undefined,
+  aggregatedRecord: DailyRecord,
+): DailyRecord {
+  if (!historicalRecord) {
+    return aggregatedRecord;
+  }
+
+  return {
+    ...aggregatedRecord,
+    ...(historicalRecord.hrv != null && aggregatedRecord.hrv == null
+      ? { hrv: historicalRecord.hrv }
+      : {}),
+    ...(historicalRecord.intraday
+      ? { intraday: mergeIntradayData(historicalRecord.intraday, aggregatedRecord.intraday ?? []) }
+      : {}),
+  };
 }
 
 /**
@@ -148,7 +173,7 @@ function sampleQuantiles(data: number[], count: number): number[] {
 // ============================================================
 
 /** 从睡眠阶段事件构建 SleepData */
-function aggregateSleep(events: DeviceEvent[], date: string): SleepData | undefined {
+function aggregateSleep(events: DeviceEvent[]): SleepData | undefined {
   const stageEvents = events
     .filter((e) => e.metric === 'sleepStage' && typeof e.value === 'string')
     .sort((a, b) => a.measuredAt.localeCompare(b.measuredAt));

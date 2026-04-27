@@ -20,7 +20,7 @@ import {
   recognizeEvents,
   computeDerivedTemporalStates,
   aggregateCurrentDayRecord,
-  mergeIntradayData,
+  mergeCurrentDayRecord,
 } from '@health-advisor/sandbox';
 import type { AppConfig } from '../config/env.js';
 import { createSessionStore, type SessionStoreService } from './session-store.js';
@@ -109,11 +109,7 @@ export function createRuntimeRegistry(
     const syncedEvents = overrideStore.getSyncedEvents(profileId);
     if (syncedEvents.length > 0) {
       const aggregatedRecord = aggregateCurrentDayRecord(syncedEvents, clock.currentTime);
-
-      // 用历史记录的 intraday 补充聚合数据的空缺时段
-      const currentDayRecord = historicalCurrentDay?.intraday
-        ? { ...aggregatedRecord, intraday: mergeIntradayData(historicalCurrentDay.intraday, aggregatedRecord.intraday ?? []) }
-        : aggregatedRecord;
+      const currentDayRecord = mergeCurrentDayRecord(historicalCurrentDay, aggregatedRecord);
 
       return { ...raw, records: [...historicalRecords, currentDayRecord] };
     }

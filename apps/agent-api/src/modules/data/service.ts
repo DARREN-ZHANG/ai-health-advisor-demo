@@ -1,6 +1,6 @@
 import type { DailyRecord, DataTab, Timeframe, DateRange, StressTimelineResponse, StressTimelinePoint, StressTrend, DataCenterResponse, DeviceEvent } from '@health-advisor/shared';
 import { timeframeToDateRange } from '@health-advisor/shared';
-import { normalizeTimeline, rollingMedian, aggregateCurrentDayRecord, mergeIntradayData, type TimelinePoint } from '@health-advisor/sandbox';
+import { normalizeTimeline, rollingMedian, aggregateCurrentDayRecord, mergeCurrentDayRecord, type TimelinePoint } from '@health-advisor/sandbox';
 import type { RuntimeRegistry } from '../../runtime/registry.js';
 
 // tab → 需要提取的 metrics
@@ -92,12 +92,7 @@ export class DataService {
     if (syncedEvents.length > 0) {
       // 有已同步事件：聚合当前日记录
       const aggregatedRecord = aggregateCurrentDayRecord(syncedEvents, clock.currentTime);
-
-      // 用历史记录的 intraday 补充聚合数据的空缺时段
-      // 确保日维度图表始终有完整的 24 小时数据
-      const currentDayRecord = historicalCurrentDay?.intraday
-        ? { ...aggregatedRecord, intraday: mergeIntradayData(historicalCurrentDay.intraday, aggregatedRecord.intraday ?? []) }
-        : aggregatedRecord;
+      const currentDayRecord = mergeCurrentDayRecord(historicalCurrentDay, aggregatedRecord);
 
       return [...historicalRecords, currentDayRecord];
     }

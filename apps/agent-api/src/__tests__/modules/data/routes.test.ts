@@ -69,6 +69,30 @@ describe('Data Routes', () => {
       expect(Array.isArray(body.data.timeline)).toBe(true);
     });
 
+    test('当前日同步后 hrv tab 仍返回最近一天 HRV', async () => {
+      const clock = app.runtime.overrideStore.getDemoClock('profile-a');
+      const currentDate = clock.currentTime.slice(0, 10);
+      const rawCurrentDay = app.runtime.getRawProfile('profile-a').records.find((record) => record.date === currentDate);
+
+      expect(rawCurrentDay?.hrv).toBeDefined();
+
+      try {
+        app.runtime.overrideStore.performSync('profile-a', 'manual_refresh');
+        const response = await app.inject({
+          method: 'GET',
+          url: `/profiles/profile-a/data?tab=hrv&timeframe=custom&startDate=${currentDate}&endDate=${currentDate}`,
+        });
+
+        expect(response.statusCode).toBe(200);
+        const body = response.json();
+        expect(body.success).toBe(true);
+        expect(body.data.timeline).toHaveLength(1);
+        expect(body.data.timeline[0].values.hrv).toBe(rawCurrentDay!.hrv);
+      } finally {
+        app.runtime.overrideStore.reset('all');
+      }
+    });
+
     test('stress tab 返回 StressTimelineResponse', async () => {
       const response = await app.inject({
         method: 'GET',

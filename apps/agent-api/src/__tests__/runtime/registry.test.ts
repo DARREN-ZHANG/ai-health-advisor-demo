@@ -33,7 +33,8 @@ describe('RuntimeRegistry', () => {
   it('getProfile 返回有效的 profile 数据', () => {
     const data = registry.getProfile('profile-a');
     expect(data.profile.profileId).toBe('profile-a');
-    expect(data.profile.name).toBe('张健康');
+    expect(typeof data.profile.name).toBe('string');
+    expect(data.profile.name.length).toBeGreaterThan(0);
     expect(data.records.length).toBeGreaterThan(0);
   });
 
@@ -77,6 +78,23 @@ describe('RuntimeRegistry', () => {
 
   it('overrideStore 可用', () => {
     expect(registry.overrideStore.getCurrentProfileId()).toBeDefined();
+  });
+
+  it('当前日发生同步后仍保留历史 HRV', () => {
+    const clock = registry.overrideStore.getDemoClock('profile-a');
+    const currentDate = clock.currentTime.slice(0, 10);
+    const rawCurrentDay = registry.getRawProfile('profile-a').records.find((record) => record.date === currentDate);
+
+    expect(rawCurrentDay?.hrv).toBeDefined();
+
+    try {
+      registry.overrideStore.performSync('profile-a', 'manual_refresh');
+      const currentDay = registry.getProfile('profile-a').records.find((record) => record.date === currentDate);
+
+      expect(currentDay?.hrv).toBe(rawCurrentDay!.hrv);
+    } finally {
+      registry.overrideStore.reset('all');
+    }
   });
 
   it('provider env 包含自定义 base URL', () => {

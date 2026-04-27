@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import type { ActivitySegment, DeviceEvent } from '@health-advisor/shared';
+import type { ActivitySegment, DailyRecord, IntradaySnapshot } from '@health-advisor/shared';
 import { generateEventsForSegment } from '../../helpers/activity-generators';
-import { aggregateDailyRecord, aggregateCurrentDayRecord, mergeIntradayData } from '../../helpers/raw-to-daily';
+import { aggregateDailyRecord, aggregateCurrentDayRecord, mergeCurrentDayRecord, mergeIntradayData } from '../../helpers/raw-to-daily';
 
 // ============================================================
 // 测试用辅助函数
@@ -305,6 +305,43 @@ describe('raw-to-daily', () => {
 
       expect(merged).toHaveLength(2);
       expect(merged[0]!.hr).toBe(56);
+    });
+  });
+
+  describe('mergeCurrentDayRecord', () => {
+    it('聚合当前日记录时保留历史 HRV 并合并 intraday 空缺时段', () => {
+      const historical: DailyRecord = {
+        date: '2026-04-16',
+        hrv: 62,
+        intraday: [
+          { hour: 0, hr: 52 },
+          { hour: 2, hr: 54 },
+        ],
+      };
+      const aggregated: DailyRecord = {
+        date: '2026-04-16',
+        hr: [58, 62, 74],
+        intraday: [
+          { hour: 0 },
+          { hour: 2, hr: 59 },
+        ],
+      };
+
+      const merged = mergeCurrentDayRecord(historical, aggregated);
+
+      expect(merged.hrv).toBe(62);
+      expect(merged.hr).toEqual([58, 62, 74]);
+      expect(merged.intraday).toEqual([
+        { hour: 0, hr: 52 },
+        { hour: 2, hr: 59 },
+      ]);
+    });
+
+    it('聚合记录已有 HRV 时优先使用聚合值', () => {
+      const historical: DailyRecord = { date: '2026-04-16', hrv: 62 };
+      const aggregated: DailyRecord = { date: '2026-04-16', hrv: 64 };
+
+      expect(mergeCurrentDayRecord(historical, aggregated).hrv).toBe(64);
     });
   });
 });

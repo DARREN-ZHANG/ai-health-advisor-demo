@@ -98,7 +98,7 @@ export {
 export type { SyncState } from './helpers/sync-engine';
 
 // Helpers — raw to daily aggregation
-export { aggregateDailyRecord, aggregateCurrentDayRecord, mergeIntradayData } from './helpers/raw-to-daily';
+export { aggregateDailyRecord, aggregateCurrentDayRecord, mergeCurrentDayRecord, mergeIntradayData } from './helpers/raw-to-daily';
 
 // Generators — deterministic data generation
 export { generateHistory, PROFILE_CONFIGS, generateDateRange, buildProfileConfig } from './generators/history';
