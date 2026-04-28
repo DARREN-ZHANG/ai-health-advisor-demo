@@ -89,7 +89,7 @@ const sleepRule: InsightRule = {
     }
 
     // 2. 质量判定 (深睡比例 < 15% 视为质量不佳)
-    const deepMinutes = (latest.sleep as any).stages?.deep || 0;
+    const deepMinutes = latest.sleep.stages?.deep ?? 0;
     if (sleepMinutes > 0 && (deepMinutes / sleepMinutes) < 0.15) {
       signals.push({
         category: 'anomaly',
@@ -123,7 +123,7 @@ const spo2Rule: InsightRule = {
         category: 'anomaly',
         severity: 'critical',
         metric: 'spo2',
-        message: `血氧饱和度持续偏低（均值 ${Math.round(avg)}%），建议及时就医`,
+        message: '血氧饱和度持续偏低，可能提示呼吸状态需要专业评估，建议及时就医',
       }];
     }
     if (avg < 95) {
@@ -131,7 +131,7 @@ const spo2Rule: InsightRule = {
         category: 'anomaly',
         severity: 'warning',
         metric: 'spo2',
-        message: `血氧饱和度略低（均值 ${Math.round(avg)}%），需关注`,
+        message: '血氧饱和度略低，建议关注睡眠呼吸、佩戴状态和近期身体不适',
       }];
     }
     return [];

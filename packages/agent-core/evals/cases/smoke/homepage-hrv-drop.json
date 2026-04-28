@@ -9,7 +9,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 本周呈明显下降趋势，较上周下降约百分之十五，可能提示身体恢复不足或压力增加。自主神经系统调节能力减弱，建议关注睡眠质量并适当减少高强度训练，增加恢复时间，保持规律作息以促进身体恢复。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"HRV 下降时建议减少高强度训练\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 本周走弱，提示身体恢复不足或压力增加，自主神经调节能力可能正在承压。建议今天减少高强度训练，优先保证睡眠质量和恢复时间，用低强度活动替代冲刺训练，今晚尽量提前入睡。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"HRV 走弱时建议今天减少高强度训练\"]}"
     }
   },
   "request": {
@@ -30,7 +30,8 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["HRV"]
+      "mustMention": ["HRV"],
+      "forbiddenPatterns": ["HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%)"]
     },
     "status": {
       "expectedStatusColor": "warning"

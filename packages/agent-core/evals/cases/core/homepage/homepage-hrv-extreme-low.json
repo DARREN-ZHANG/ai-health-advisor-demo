@@ -16,7 +16,7 @@
     ],
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 持续处于极低水平，本周平均值仅约十八毫秒，明显低于你近期通常水平，身体承受较大压力且恢复能力显著下降。建议充分休息，避免剧烈运动和过度劳累，若持续未见改善建议就医观察，由专业医生进一步评估。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"HRV 极低时建议充分休息并观察变化\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 持续处于极低状态，提示身体承受较大压力且恢复能力显著下降。建议今天充分休息，避免剧烈运动和过度劳累；若这种状态持续或伴随明显不适，应就医观察，由专业医生进一步评估。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"HRV 极低时建议充分休息并观察变化\"]}"
     }
   },
   "request": {
@@ -38,7 +38,8 @@
     },
     "summary": {
       "mustMention": ["HRV"],
-      "mustMentionAny": [["休息", "就医", "观察", "专业"]]
+      "mustMentionAny": [["休息", "就医", "观察", "专业"]],
+      "forbiddenPatterns": ["HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%|低于.*通常|低于.*平时)"]
     },
     "status": {
       "allowedStatusColors": ["warning", "error"]

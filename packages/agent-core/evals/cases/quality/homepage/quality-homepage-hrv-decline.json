@@ -33,7 +33,8 @@
     },
     "summary": {
       "mustMention": ["HRV"],
-      "mustMentionAny": [["恢复", "休息", "减少训练"]]
+      "mustMentionAny": [["恢复", "休息", "减少训练"]],
+      "forbiddenPatterns": ["HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%|低于.*通常|低于.*平时)"]
     },
     "status": {
       "expectedStatusColor": "warning"

@@ -37,7 +37,8 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["血氧"]
+      "mustMention": ["血氧"],
+      "forbiddenPatterns": ["血氧.*(\\d+%|百分之|均值)", "SpO2.*(\\d+%|百分之|均值)"]
     },
     "status": {
       "allowedStatusColors": ["warning", "error"]

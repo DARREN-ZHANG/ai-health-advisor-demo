@@ -9,7 +9,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"error\",\"summary\":\"血氧饱和度持续偏低，本周多次测量值低于百分之九十三，远低于正常水平，需要引起足够重视。建议尽快就医检查，由专业医生评估是否存在呼吸系统或心血管方面的问题，切勿延误就诊时机。\",\"chartTokens\":[\"SPO2_7DAYS\"],\"microTips\":[\"血氧持续偏低时建议尽快就医\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"error\",\"summary\":\"血氧饱和度持续偏低，需要引起足够重视。这类信号可能与呼吸状态或心血管负担有关，建议尽快就医检查，由专业医生评估原因；在明确前先避免高强度运动，如伴随胸闷或气短更应及时处理。\",\"chartTokens\":[\"SPO2_7DAYS\"],\"microTips\":[\"血氧持续偏低时建议尽快就医\"]}"
     }
   },
   "request": {
@@ -30,7 +30,8 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["血氧"]
+      "mustMention": ["血氧"],
+      "forbiddenPatterns": ["血氧.*(\\d+%|百分之|均值)", "SpO2.*(\\d+%|百分之|均值)"]
     },
     "status": {
       "allowedStatusColors": ["warning", "error"]

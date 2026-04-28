@@ -26,7 +26,7 @@
     },
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 本周显著下降至约二十五毫秒，血氧饱和度略低于正常范围。以上数据反映了 override 后的最新状态，建议关注身体恢复情况，适当减少高强度活动，增加休息时间，持续观察各项指标变化。\",\"chartTokens\":[\"HRV_7DAYS\",\"SPO2_7DAYS\"],\"microTips\":[\"HRV 下降明显时建议优先休息\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 本周明显走弱，血氧状态也提示需要关注。以上变化反映了 override 后的最新状态，建议把恢复放在今天首位，适当减少高强度活动，增加休息时间，并持续观察身体反应。\",\"chartTokens\":[\"HRV_7DAYS\",\"SPO2_7DAYS\"],\"microTips\":[\"HRV 下降明显时建议优先休息\"]}"
     }
   },
   "request": {
@@ -48,7 +48,8 @@
     },
     "summary": {
       "mustMention": ["HRV"],
-      "mustNotMention": ["HRV 稳定在五十", "整体状态优秀", "各项指标表现良好"]
+      "mustNotMention": ["HRV 稳定在五十", "整体状态优秀", "各项指标表现良好"],
+      "forbiddenPatterns": ["HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%)", "血氧.*(\\d+%|百分之|均值)"]
     },
     "status": {
       "expectedStatusColor": "warning"

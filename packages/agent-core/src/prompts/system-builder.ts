@@ -1,6 +1,7 @@
 import type { AgentContext } from '../types/agent-context';
 import type { PromptLoader } from './prompt-loader';
 import type { MissingDataItem } from '../context/context-packet';
+import { AgentTaskType } from '@health-advisor/shared';
 
 export function buildSystemPrompt(
   context: AgentContext,
@@ -23,9 +24,15 @@ export function buildSystemPrompt(
   // 个人参考水平
   sections.push('');
   sections.push('## 个人参考水平（内部分析用，不要原样写给用户）');
-  sections.push(`- 静息心率通常水平：${context.profile.baselines.restingHR} bpm`);
-  sections.push(`- HRV 通常水平：${context.profile.baselines.hrv} ms`);
-  sections.push(`- SpO2 参考水平：${context.profile.baselines.spo2}%`);
+  if (context.task.type === AgentTaskType.HOMEPAGE_SUMMARY) {
+    sections.push('- 静息心率通常水平：仅用于内部状态判定，首页简报禁止输出具体数值或相对关系');
+    sections.push('- HRV 通常水平：仅用于内部恢复解读，首页简报禁止输出具体数值或相对关系');
+    sections.push('- SpO2 参考水平：仅用于内部风险判断，首页简报禁止输出具体数值或相对关系');
+  } else {
+    sections.push(`- 静息心率通常水平：${context.profile.baselines.restingHR} bpm`);
+    sections.push(`- HRV 通常水平：${context.profile.baselines.hrv} ms`);
+    sections.push(`- SpO2 参考水平：${context.profile.baselines.spo2}%`);
+  }
   sections.push(`- 平均睡眠：${context.profile.baselines.avgSleepMinutes} 分钟`);
   sections.push(`- 平均步数：${context.profile.baselines.avgSteps} 步`);
 

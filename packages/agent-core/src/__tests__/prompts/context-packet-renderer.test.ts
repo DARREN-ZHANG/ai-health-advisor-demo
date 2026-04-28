@@ -63,7 +63,7 @@ describe('renderTaskContextPacket', () => {
     expect(output).toContain('最近可用日期：2026-04-08');
   });
 
-  it('renders evidence facts', () => {
+  it('hides homepage interpretation-only metric values in evidence facts', () => {
     const packet: TaskContextPacket = {
       task: { type: 'homepage_summary', page: 'home' },
       userContext: {
@@ -92,7 +92,9 @@ describe('renderTaskContextPacket', () => {
     const output = renderTaskContextPacket(packet);
     expect(output).toContain('Evidence Facts');
     expect(output).toContain('latest_hrv');
-    expect(output).toContain('58ms');
+    expect(output).toContain('metric=hrv');
+    expect(output).not.toContain('58ms');
+    expect(output).not.toContain('value=58');
   });
 
   it('renders homepage packet', () => {
@@ -332,9 +334,15 @@ describe('renderTaskContextPacket', () => {
     expect(output).not.toContain('基准线');
     expect(output).not.toContain('偏离基线');
     expect(output).not.toContain('baseline');
-    // Internal data fields should still be present in the rendered output
-    expect(output).toContain('60');
-    expect(output).toContain('相对平时');
+    expect(output).not.toContain('58ms');
+    expect(output).not.toContain('59ms');
+    expect(output).not.toContain('60ms');
+    expect(output).not.toContain('value=58ms');
+    const hrvLine = output.split('\n').find((line) => line.startsWith('- hrv：')) ?? '';
+    expect(hrvLine).not.toContain('58');
+    expect(hrvLine).not.toContain('相对平时');
+    expect(output).toContain('sleep_total：420min（相对平时 0%）');
     expect(output).toContain('通常水平');
+    expect(output).toContain('仅用于解读');
   });
 });

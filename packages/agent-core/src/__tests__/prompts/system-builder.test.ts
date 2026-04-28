@@ -55,16 +55,34 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('睡眠改善');
   });
 
-  it('包含个人参考水平数据', () => {
+  it('首页系统提示隐藏解释型指标的个人参考数值', () => {
     const prompt = buildSystemPrompt(makeContext(), mockLoader);
-    expect(prompt).toContain('62'); // restingHR
-    expect(prompt).toContain('58'); // hrv
-    expect(prompt).toContain('98'); // spo2
+    expect(prompt).toContain('静息心率通常水平：仅用于内部状态判定');
+    expect(prompt).toContain('HRV 通常水平：仅用于内部恢复解读');
+    expect(prompt).toContain('SpO2 参考水平：仅用于内部风险判断');
+    expect(prompt).not.toContain('62 bpm');
+    expect(prompt).not.toContain('58 ms');
+    expect(prompt).not.toContain('98%');
     expect(prompt).toContain('420'); // avgSleepMinutes
     expect(prompt).toContain('8500'); // avgSteps
     expect(prompt).not.toContain('基线');
     expect(prompt).not.toContain('基准线');
     expect(prompt).not.toContain('baseline');
+  });
+
+  it('非首页任务保留个人参考水平数据', () => {
+    const prompt = buildSystemPrompt(makeContext({
+      task: {
+        type: AgentTaskType.VIEW_SUMMARY,
+        pageContext: { profileId: 'profile-a', page: 'data-center', dataTab: 'hrv', timeframe: 'week' },
+        tab: 'hrv',
+        timeframe: 'week',
+      },
+    }), mockLoader);
+
+    expect(prompt).toContain('62 bpm');
+    expect(prompt).toContain('58 ms');
+    expect(prompt).toContain('98%');
   });
 
   it('包含数据质量声明（无 missingData）', () => {

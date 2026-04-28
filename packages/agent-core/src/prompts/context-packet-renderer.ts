@@ -11,6 +11,9 @@ import type {
   AdvisorChatContextPacket,
   MetricSummary,
 } from '../context/context-packet';
+import { AgentTaskType, ChartTokenId, type DataTab } from '@health-advisor/shared';
+
+const HOMEPAGE_INTERPRETATION_ONLY_METRICS = new Set(['hrv', 'spo2', 'resting_hr', 'resting-hr']);
 
 // ────────────────────────────────────────────
 // 主入口
@@ -18,13 +21,14 @@ import type {
 
 export function renderTaskContextPacket(packet: TaskContextPacket): string {
   const sections: string[] = [];
+  const isHomepage = packet.task.type === AgentTaskType.HOMEPAGE_SUMMARY;
 
   sections.push(renderTaskPacket(packet.task));
-  sections.push(renderUserContext(packet.userContext));
+  sections.push(renderUserContext(packet.userContext, isHomepage));
   sections.push(renderDataWindow(packet.dataWindow));
   sections.push(renderMissingData(packet.missingData));
-  sections.push(renderVisibleCharts(packet.visibleCharts));
-  sections.push(renderEvidence(packet.evidence));
+  sections.push(renderVisibleCharts(packet.visibleCharts, isHomepage));
+  sections.push(renderEvidence(packet.evidence, isHomepage));
 
   if (packet.homepage) sections.push(renderHomepage(packet.homepage));
   if (packet.viewSummary) sections.push(renderViewSummary(packet.viewSummary));
@@ -53,16 +57,22 @@ function renderTaskPacket(task: TaskPacket): string {
 // User Context
 // ────────────────────────────────────────────
 
-function renderUserContext(user: UserContextPacket): string {
+function renderUserContext(user: UserContextPacket, isHomepage: boolean): string {
   const lines = ['## 用户信息'];
   lines.push(`- 姓名：${user.name}`);
   lines.push(`- 年龄：${user.age}`);
   if (user.tags.length > 0) lines.push(`- 标签：${user.tags.join('、')}`);
   lines.push('');
   lines.push('## 个人参考水平（内部分析用，不要原样写给用户）');
-  lines.push(`- 静息心率通常水平：${user.baselines.restingHR} bpm`);
-  lines.push(`- HRV 通常水平：${user.baselines.hrv} ms`);
-  lines.push(`- SpO2 参考水平：${user.baselines.spo2}%`);
+  if (isHomepage) {
+    lines.push('- 静息心率通常水平：仅用于内部状态判定，首页简报禁止输出具体数值或相对关系');
+    lines.push('- HRV 通常水平：仅用于内部恢复解读，首页简报禁止输出具体数值或相对关系');
+    lines.push('- SpO2 参考水平：仅用于内部风险判断，首页简报禁止输出具体数值或相对关系');
+  } else {
+    lines.push(`- 静息心率通常水平：${user.baselines.restingHR} bpm`);
+    lines.push(`- HRV 通常水平：${user.baselines.hrv} ms`);
+    lines.push(`- SpO2 参考水平：${user.baselines.spo2}%`);
+  }
   lines.push(`- 平均睡眠：${user.baselines.avgSleepMinutes} 分钟`);
   lines.push(`- 平均步数：${user.baselines.avgSteps} 步`);
   return lines.join('\n');
@@ -107,13 +117,15 @@ function renderMissingData(items: MissingDataItem[]): string {
 // Visible Charts
 // ────────────────────────────────────────────
 
-function renderVisibleCharts(charts: VisibleChartPacket[]): string {
+function renderVisibleCharts(charts: VisibleChartPacket[], isHomepage: boolean): string {
   if (charts.length === 0) return '';
 
   const lines = ['## 可见图表'];
   for (const chart of charts) {
     lines.push(`- ${chart.chartToken} (${chart.metric}, ${chart.timeframe})`);
-    lines.push(renderMetricSummary(chart.dataSummary, '  '));
+    lines.push(renderMetricSummary(chart.dataSummary, '  ', {
+      interpretationOnly: isHomepage && isHomepageInterpretationOnlyMetric(chart.metric),
+    }));
   }
   return lines.join('\n');
 }
@@ -122,7 +134,7 @@ function renderVisibleCharts(charts: VisibleChartPacket[]): string {
 // Evidence
 // ────────────────────────────────────────────
 
-function renderEvidence(evidence: EvidenceFact[]): string {
+function renderEvidence(evidence: EvidenceFact[], isHomepage: boolean): string {
   if (evidence.length === 0) return '';
 
   const lines = ['## Evidence Facts'];
@@ -131,7 +143,9 @@ function renderEvidence(evidence: EvidenceFact[]): string {
     parts.push(`source=${fact.source}`);
     if (fact.dateRange) parts.push(`${fact.dateRange.start}~${fact.dateRange.end}`);
     if (fact.metric) parts.push(`metric=${fact.metric}`);
-    if (fact.value !== undefined) parts.push(`value=${fact.value}${fact.unit ?? ''}`);
+    if (fact.value !== undefined && !(isHomepage && isHomepageInterpretationOnlyMetric(fact.metric))) {
+      parts.push(`value=${fact.value}${fact.unit ?? ''}`);
+    }
     parts.push(`derivation=${fact.derivation}`);
     lines.push(parts.join(', '));
   }
@@ -163,6 +177,8 @@ function renderHomepage(homepage: HomepageContextPacket): string {
   for (const m of homepage.latest24h.metrics) {
     if (m.status === 'missing') {
       lines.push(`- ${m.metric}：数据缺失`);
+    } else if (isHomepageInterpretationOnlyMetric(m.metric)) {
+      lines.push(`- ${m.metric}：${formatLatest24hStatus(m.status)}，用于解读状态与建议，不输出具体数值或参考关系`);
     } else {
       const parts: string[] = [`- ${m.metric}：${m.value}${m.unit}`];
       if (m.baseline !== undefined && m.deltaPctVsBaseline !== undefined) {
@@ -178,7 +194,9 @@ function renderHomepage(homepage: HomepageContextPacket): string {
   if (homepage.trend7d.length > 0) {
     lines.push('## 过去一周趋势');
     for (const t of homepage.trend7d) {
-      lines.push(renderMetricSummary(t, '- '));
+      lines.push(renderMetricSummary(t, '- ', {
+        interpretationOnly: isHomepageInterpretationOnlyMetric(t.metric),
+      }));
     }
   }
 
@@ -298,9 +316,20 @@ function renderAdvisorChat(chat: AdvisorChatContextPacket): string {
 // MetricSummary 渲染（公共辅助）
 // ────────────────────────────────────────────
 
-function renderMetricSummary(ms: MetricSummary, prefix: string = ''): string {
+function renderMetricSummary(
+  ms: MetricSummary,
+  prefix: string = '',
+  options: { interpretationOnly?: boolean } = {},
+): string {
   const parts: string[] = [];
   parts.push(`${prefix}${ms.metric}:`);
+  if (options.interpretationOnly) {
+    parts.push(`trend ${ms.trendDirection}`);
+    if (ms.anomalyPoints.length > 0) parts.push(`anomalies detected`);
+    parts.push(ms.missing.missingCount === 0 ? 'data complete' : 'partial data');
+    parts.push('仅用于解读：不要输出数值或相对关系');
+    return parts.join(', ');
+  }
   if (ms.latest) parts.push(`latest ${ms.latest.value}${ms.latest.unit} on ${ms.latest.date ?? 'latest'}`);
   if (ms.average) parts.push(`avg ${ms.average.value}${ms.average.unit}`);
   if (ms.baseline) {
@@ -319,8 +348,6 @@ function renderMetricSummary(ms: MetricSummary, prefix: string = ''): string {
 // 辅助：tab 到 chartToken
 // ────────────────────────────────────────────
 
-import { ChartTokenId, type DataTab } from '@health-advisor/shared';
-
 function getChartTokenForTab(tab: DataTab): ChartTokenId | undefined {
   const map: Record<DataTab, ChartTokenId> = {
     overview: ChartTokenId.HRV_7DAYS,
@@ -332,4 +359,20 @@ function getChartTokenForTab(tab: DataTab): ChartTokenId | undefined {
     stress: ChartTokenId.STRESS_LOAD_7DAYS,
   };
   return map[tab];
+}
+
+function isHomepageInterpretationOnlyMetric(metric?: string): boolean {
+  return metric !== undefined && HOMEPAGE_INTERPRETATION_ONLY_METRICS.has(metric);
+}
+
+function formatLatest24hStatus(status: 'normal' | 'attention' | 'missing'): string {
+  switch (status) {
+    case 'attention':
+      return '需要关注';
+    case 'missing':
+      return '数据缺失';
+    case 'normal':
+    default:
+      return '未见明显异常';
+  }
 }
