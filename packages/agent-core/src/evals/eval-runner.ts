@@ -428,6 +428,22 @@ export async function runEval(
     return 1;
   }
 
+  // real provider 预检：缺少 API key 时直接失败，不执行任何 case
+  if (args.provider === 'real') {
+    let apiKeyMissing = true;
+    try {
+      const { resolveProviderConfig } = require('../provider/provider-config') as typeof import('../provider/provider-config');
+      const config = resolveProviderConfig(process.env as Record<string, string | undefined>);
+      apiKeyMissing = !config.apiKey.trim();
+    } catch {
+      // 模块加载失败时也视为缺少配置
+    }
+    if (apiKeyMissing) {
+      console.error('错误: --provider real 需要配置 LLM_API_KEY。请设置 LLM_API_KEY 后重试，或改用 --provider fake。');
+      return 1;
+    }
+  }
+
   // 1. 加载 cases
   const cases = loadEvalCases({
     rootDir: caseRootDir,

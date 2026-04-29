@@ -1121,7 +1121,7 @@ describe('eval runner — provider 模式', () => {
     }
   });
 
-  it('--provider real 无 API key 时 case 执行失败但不崩溃', async () => {
+  it('--provider real 无 API key 时返回 exit code 1', async () => {
     const tempCaseDir = join(TEMP_PROVIDER_DIR, 'cases');
     mkdirSync(tempCaseDir, { recursive: true });
 
@@ -1150,11 +1150,47 @@ describe('eval runner — provider 模式', () => {
         },
       );
 
-      // 无 API key 或模块解析失败时，runSingleCase 应捕获异常
-      // runner 不崩溃，返回 0（case 失败但不触发 fail-on-hard）
-      expect(typeof exitCode).toBe('number');
-      expect(exitCode).toBeGreaterThanOrEqual(0);
-      expect(exitCode).toBeLessThanOrEqual(1);
+      // 缺少 API key 是配置错误，应直接返回 1
+      expect(exitCode).toBe(1);
+    } finally {
+      if (originalKey) process.env.LLM_API_KEY = originalKey;
+    }
+  });
+
+  it('--provider real 无 API key 时不生成 eval-report.json', async () => {
+    const tempCaseDir = join(TEMP_PROVIDER_DIR, 'cases');
+    mkdirSync(tempCaseDir, { recursive: true });
+
+    const failCase = makeEvalCase({
+      id: 'real-provider-no-key-report',
+      title: 'Real Provider No Key Report',
+      suite: 'smoke',
+      setup: {
+        profileId: 'profile-a',
+      },
+    });
+
+    const { writeFileSync: writeFile } = await import('node:fs');
+    writeFile(join(tempCaseDir, 'real-provider-no-key-report.json'), JSON.stringify(failCase, null, 2), 'utf-8');
+
+    const outputDir = join(TEMP_PROVIDER_DIR, 'no-key-output');
+    mkdirSync(outputDir, { recursive: true });
+
+    // 清除 API key
+    const originalKey = process.env.LLM_API_KEY;
+    delete process.env.LLM_API_KEY;
+
+    try {
+      await runEval(
+        ['node', 'eval-runner.ts', '--case', 'real-provider-no-key-report', '--provider', 'real', '--report', 'json', '--output', outputDir],
+        {
+          caseRootDir: tempCaseDir,
+          dataDir: DATA_DIR,
+        },
+      );
+
+      // 不应生成报告文件
+      expect(existsSync(join(outputDir, 'eval-report.json'))).toBe(false);
     } finally {
       if (originalKey) process.env.LLM_API_KEY = originalKey;
     }
