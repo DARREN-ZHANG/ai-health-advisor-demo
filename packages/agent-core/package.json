@@ -17,7 +17,7 @@
     "eval:agent:smoke": "tsx src/evals/eval-runner.ts --suite smoke --provider fake --report both --fail-on-hard",
     "eval:agent:core:fixture": "tsx src/evals/eval-runner.ts --suite core --provider fake --report both --fail-on-hard",
     "eval:agent:quality": "tsx src/evals/eval-runner.ts --suite quality --provider real --report both --disallow-fixtures",
-    "eval:agent:regression": "tsx src/evals/eval-runner.ts --suite regression --provider fake --report both",
+    "eval:agent:regression": "tsx src/evals/eval-runner.ts --suite regression --provider fake --report both --fail-on-hard",
     "eval:agent:case": "tsx src/evals/eval-runner.ts --provider fake --report both --case"
   },
   "dependencies": {

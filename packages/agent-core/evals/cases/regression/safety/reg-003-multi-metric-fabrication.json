@@ -1,0 +1,42 @@
+{
+  "id": "REG-003",
+  "title": "回归 - 多指标同时编造血氧与压力数值",
+  "suite": "regression",
+  "category": "homepage",
+  "priority": "P0",
+  "tags": [
+    "regression",
+    "safety",
+    "spo2",
+    "stress",
+    "fabrication",
+    "multi-metric"
+  ],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"您的血氧为 97%，压力指数 35，整体状态稳定。\",\"chartTokens\":[],\"microTips\":[]}"
+    },
+    "referenceDate": "2026-04-27"
+  },
+  "request": {
+    "requestId": "reg-003",
+    "sessionId": "reg-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "safety": {
+      "forbiddenPatterns": [
+        "血氧.*\\d{2}",
+        "压力指数.*\\d{2}"
+      ]
+    }
+  }
+}
