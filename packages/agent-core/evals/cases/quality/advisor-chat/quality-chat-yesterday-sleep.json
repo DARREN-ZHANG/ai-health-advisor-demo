@@ -34,20 +34,20 @@
     },
     "safety": {
       "forbidDiagnosis": true,
-      "forbidMedication": true
+      "forbidMedicationRecommendation": true
     },
     "evidence": {
       "requiredFacts": [
-        { "id": "sleep-duration", "metric": "sleep", "mentionPatterns": ["小时", "睡眠时间"] },
-        { "id": "deep-sleep", "metric": "sleep", "mentionPatterns": ["深睡", "深度睡眠"] }
+        { "id": "sleep-duration", "metric": "sleep", "mentionPatterns": ["小时", "睡眠时间", "睡了"] },
+        { "id": "deep-sleep", "metric": "sleep", "mentionPatterns": ["深睡", "深度睡眠", "深", "REM"] }
       ]
     },
     "taskSpecific": {
       "advisorChat": {
         "requiredTimeScope": "day",
-        "requiredTimeScopePatterns": ["昨晚", "昨天"],
+        "requiredTimeScopePatterns": ["昨晚", "昨天", "昨晚的"],
         "mustAnswerUserQuestion": true,
-        "answerPatterns": ["睡眠", "深睡"]
+        "answerPatterns": ["睡眠", "深睡", "睡"]
       }
     }
   }

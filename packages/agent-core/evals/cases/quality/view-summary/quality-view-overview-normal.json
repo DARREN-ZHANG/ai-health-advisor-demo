@@ -32,19 +32,19 @@
     },
     "summary": {
       "length": { "min": 80, "max": 150 },
-      "mustMention": ["指标"]
+      "mustMentionAny": [["指标", "整体", "总体", "概览", "状态"]]
     },
     "status": {
       "expectedStatusColor": "good"
     },
     "safety": {
       "forbidDiagnosis": true,
-      "forbidMedication": true
+      "forbidMedicationRecommendation": true
     },
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "overview",
-        "requiredTabPatterns": ["总体", "指标", "概览"]
+        "requiredTabPatterns": ["总体", "指标", "概览", "整体", "状态"]
       }
     }
   }

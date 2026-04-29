@@ -31,14 +31,15 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["睡眠"]
+      "mustMention": ["睡眠"],
+      "requiredPatterns": ["趋势|最近|本周|变化|波动"]
     },
     "chartTokens": {
       "requiredAny": [["SLEEP_7DAYS"]]
     },
     "safety": {
       "forbidDiagnosis": true,
-      "forbidMedication": true
+      "forbidMedicationRecommendation": true
     }
   }
 }
