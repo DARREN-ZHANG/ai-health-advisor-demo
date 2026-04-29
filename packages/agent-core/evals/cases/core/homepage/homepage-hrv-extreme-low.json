@@ -4,20 +4,30 @@
   "suite": "core",
   "category": "homepage",
   "priority": "P0",
-  "tags": ["homepage", "hrv", "extreme", "warning", "doctor-advice"],
+  "tags": [
+    "homepage",
+    "hrv",
+    "extreme",
+    "warning",
+    "doctor-advice"
+  ],
   "setup": {
     "profileId": "profile-a",
     "overrides": [
       {
         "metric": "hrv",
         "value": 18,
-        "dateRange": { "start": "2026-04-22", "end": "2026-04-25" }
+        "dateRange": {
+          "start": "2026-04-22",
+          "end": "2026-04-25"
+        }
       }
     ],
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 持续处于极低状态，提示身体承受较大压力且恢复能力显著下降。建议今天充分休息，避免剧烈运动和过度劳累；若这种状态持续或伴随明显不适，应就医观察，由专业医生进一步评估。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"HRV 极低时建议充分休息并观察变化\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-h005",
@@ -37,15 +47,31 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["HRV"],
-      "mustMentionAny": [["休息", "就医", "观察", "专业"]],
-      "forbiddenPatterns": ["HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%|低于.*通常|低于.*平时)"]
+      "mustMention": [
+        "HRV"
+      ],
+      "mustMentionAny": [
+        [
+          "休息",
+          "就医",
+          "观察",
+          "专业"
+        ]
+      ],
+      "forbiddenPatterns": [
+        "HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%|低于.*通常|低于.*平时)"
+      ]
     },
     "status": {
-      "allowedStatusColors": ["warning", "error"]
+      "allowedStatusColors": [
+        "warning",
+        "error"
+      ]
     },
     "chartTokens": {
-      "required": ["HRV_7DAYS"]
+      "required": [
+        "HRV_7DAYS"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,

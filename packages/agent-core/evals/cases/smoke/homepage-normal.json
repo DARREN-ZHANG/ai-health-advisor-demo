@@ -4,13 +4,18 @@
   "suite": "smoke",
   "category": "homepage",
   "priority": "P0",
-  "tags": ["homepage", "normal", "baseline"],
+  "tags": [
+    "homepage",
+    "normal",
+    "baseline"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"整体状态良好，本周各项健康指标均在正常范围内。睡眠质量稳定，深睡占比适中，入睡和起床时间规律；HRV 保持平稳趋势，未见明显波动；日常活动量达标，步数和运动时间均处于健康区间。建议继续保持规律作息和适度运动。\",\"chartTokens\":[],\"microTips\":[\"建议每天保持 7-8 小时睡眠\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "eval-H001",
@@ -30,7 +35,10 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 80, "max": 120 }
+      "length": {
+        "min": 80,
+        "max": 120
+      }
     },
     "status": {
       "expectedStatusColor": "good"

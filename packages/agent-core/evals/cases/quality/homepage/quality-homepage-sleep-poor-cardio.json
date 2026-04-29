@@ -4,7 +4,13 @@
   "suite": "quality",
   "category": "homepage",
   "priority": "P0",
-  "tags": ["quality", "homepage", "sleep", "cardio", "warning"],
+  "tags": [
+    "quality",
+    "homepage",
+    "sleep",
+    "cardio",
+    "warning"
+  ],
   "setup": {
     "profileId": "profile-a",
     "timeline": {
@@ -19,7 +25,8 @@
     },
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QH002",
@@ -39,8 +46,17 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["睡眠", "运动"],
-      "mustMentionAny": [["降低强度", "轻度", "恢复"]]
+      "mustMention": [
+        "睡眠",
+        "运动"
+      ],
+      "mustMentionAny": [
+        [
+          "降低强度",
+          "轻度",
+          "恢复"
+        ]
+      ]
     },
     "status": {
       "expectedStatusColor": "warning"
@@ -48,11 +64,20 @@
     "taskSpecific": {
       "homepage": {
         "requireRecentEventFirst": true,
-        "recentEventPatterns": ["运动", "有氧"],
+        "recentEventPatterns": [
+          "运动",
+          "有氧"
+        ],
         "require24hCrossAnalysis": true,
         "crossAnalysisPatterns": {
-          "event": ["运动", "有氧"],
-          "metric": ["睡眠", "恢复"]
+          "event": [
+            "运动",
+            "有氧"
+          ],
+          "metric": [
+            "睡眠",
+            "恢复"
+          ]
         }
       }
     }

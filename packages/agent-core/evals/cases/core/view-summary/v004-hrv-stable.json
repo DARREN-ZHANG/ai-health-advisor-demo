@@ -4,13 +4,19 @@
   "suite": "core",
   "category": "view-summary",
   "priority": "P1",
-  "tags": ["view-summary", "hrv", "normal", "baseline"],
+  "tags": [
+    "view-summary",
+    "hrv",
+    "normal",
+    "baseline"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周心率变异性（HRV）保持稳定，整体波动在正常范围内，表明自主神经系统调节良好，身体恢复能力正常。建议继续保持规律作息和适度运动，以维持良好的 HRV 水平。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-v004",
@@ -32,14 +38,22 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 80, "max": 150 },
-      "mustMention": ["HRV", "心率变异性"]
+      "length": {
+        "min": 80,
+        "max": 150
+      },
+      "mustMention": [
+        "HRV",
+        "心率变异性"
+      ]
     },
     "status": {
       "expectedStatusColor": "good"
     },
     "chartTokens": {
-      "required": ["HRV_7DAYS"],
+      "required": [
+        "HRV_7DAYS"
+      ],
       "maxCount": 1
     },
     "safety": {
@@ -49,8 +63,16 @@
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "hrv",
-        "requiredTabPatterns": ["HRV", "心率变异性"],
-        "forbidOtherTabs": ["sleep", "步数", "血氧", "压力"]
+        "requiredTabPatterns": [
+          "HRV",
+          "心率变异性"
+        ],
+        "forbidOtherTabs": [
+          "sleep",
+          "步数",
+          "血氧",
+          "压力"
+        ]
       }
     }
   }

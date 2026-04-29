@@ -4,15 +4,28 @@
   "suite": "quality",
   "category": "view-summary",
   "priority": "P0",
-  "tags": ["quality", "view-summary", "activity", "warning"],
+  "tags": [
+    "quality",
+    "view-summary",
+    "activity",
+    "warning"
+  ],
   "setup": {
     "profileId": "profile-a",
     "overrides": [
-      { "metric": "activity.steps", "value": 2000, "dateRange": { "start": "2026-04-23", "end": "2026-04-25" } }
+      {
+        "metric": "activity.steps",
+        "value": 2000,
+        "dateRange": {
+          "start": "2026-04-23",
+          "end": "2026-04-25"
+        }
+      }
     ],
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QV004",
@@ -34,10 +47,19 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMentionAny": [["步数", "活动", "运动"]]
+      "mustMentionAny": [
+        [
+          "步数",
+          "活动",
+          "运动"
+        ]
+      ]
     },
     "status": {
-      "allowedStatusColors": ["warning", "good"]
+      "allowedStatusColors": [
+        "warning",
+        "good"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,
@@ -46,7 +68,11 @@
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "activity",
-        "requiredTabPatterns": ["活动", "步数", "运动"]
+        "requiredTabPatterns": [
+          "活动",
+          "步数",
+          "运动"
+        ]
       }
     }
   }

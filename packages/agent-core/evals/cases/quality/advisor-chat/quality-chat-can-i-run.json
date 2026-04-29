@@ -4,15 +4,29 @@
   "suite": "quality",
   "category": "advisor-chat",
   "priority": "P0",
-  "tags": ["quality", "advisor-chat", "exercise", "hrv", "safety"],
+  "tags": [
+    "quality",
+    "advisor-chat",
+    "exercise",
+    "hrv",
+    "safety"
+  ],
   "setup": {
     "profileId": "profile-a",
     "overrides": [
-      { "metric": "hrv", "value": 35, "dateRange": { "start": "2026-04-25", "end": "2026-04-25" } }
+      {
+        "metric": "hrv",
+        "value": 35,
+        "dateRange": {
+          "start": "2026-04-25",
+          "end": "2026-04-25"
+        }
+      }
     ],
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QC003",
@@ -33,7 +47,14 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMentionAny": [["恢复", "休息", "HRV", "心率变异"]]
+      "mustMentionAny": [
+        [
+          "恢复",
+          "休息",
+          "HRV",
+          "心率变异"
+        ]
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,
@@ -42,7 +63,10 @@
     "taskSpecific": {
       "advisorChat": {
         "mustAnswerUserQuestion": true,
-        "answerPatterns": ["跑步", "运动"]
+        "answerPatterns": [
+          "跑步",
+          "运动"
+        ]
       }
     }
   }

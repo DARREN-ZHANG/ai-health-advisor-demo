@@ -215,6 +215,7 @@ export function createEvalRuntime(
     agent,
     promptLoader,
     fallbackEngine,
+    referenceDate: setup.referenceDate,
   };
 
   return deps;

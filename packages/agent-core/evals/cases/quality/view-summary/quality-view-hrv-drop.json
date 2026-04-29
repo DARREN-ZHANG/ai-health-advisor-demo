@@ -4,12 +4,18 @@
   "suite": "quality",
   "category": "view-summary",
   "priority": "P0",
-  "tags": ["quality", "view-summary", "hrv", "warning"],
+  "tags": [
+    "quality",
+    "view-summary",
+    "hrv",
+    "warning"
+  ],
   "setup": {
     "profileId": "profile-b",
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QV002",
@@ -31,7 +37,10 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["HRV", "下降"]
+      "mustMention": [
+        "HRV",
+        "下降"
+      ]
     },
     "status": {
       "expectedStatusColor": "warning"
@@ -43,7 +52,10 @@
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "hrv",
-        "requiredTabPatterns": ["HRV", "心率变异"]
+        "requiredTabPatterns": [
+          "HRV",
+          "心率变异"
+        ]
       }
     }
   }

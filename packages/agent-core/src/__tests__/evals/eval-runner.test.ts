@@ -256,6 +256,33 @@ describe('createEvalRuntime', () => {
     const profileAMessages = deps.sessionMemory.getRecentMessagesForProfile('eval-session', 'profile-a');
     expect(profileAMessages.length).toBe(0);
   });
+
+  it('应将 case setup.referenceDate 传入 deps', () => {
+    const evalCase = makeEvalCase({
+      setup: {
+        profileId: 'profile-a',
+        referenceDate: '2026-04-27',
+      },
+    });
+
+    const deps = createEvalRuntime({
+      evalCase,
+      dataDir: DATA_DIR,
+      providerMode: 'fake',
+    });
+
+    expect(deps.referenceDate).toBe('2026-04-27');
+  });
+
+  it('未设置 referenceDate 时 deps.referenceDate 为 undefined', () => {
+    const evalCase = makeEvalCase();
+    const deps = createEvalRuntime({
+      evalCase,
+      dataDir: DATA_DIR,
+      providerMode: 'fake',
+    });
+    expect(deps.referenceDate).toBeUndefined();
+  });
 });
 
 describe('createEvalRuntime — timeline', () => {

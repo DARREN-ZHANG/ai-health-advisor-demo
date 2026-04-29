@@ -4,13 +4,19 @@
   "suite": "core",
   "category": "view-summary",
   "priority": "P1",
-  "tags": ["view-summary", "activity", "normal", "baseline"],
+  "tags": [
+    "view-summary",
+    "activity",
+    "normal",
+    "baseline"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周活动量达标，日均步数超过8000步，运动时间充足。有氧运动和日常活动搭配合理，整体活动水平处于健康区间。建议继续保持当前的运动习惯，注意运动后的充分拉伸和恢复。\",\"chartTokens\":[\"ACTIVITY_7DAYS\"],\"microTips\":[]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-v013",
@@ -32,8 +38,13 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 80, "max": 150 },
-      "mustMention": ["活动"]
+      "length": {
+        "min": 80,
+        "max": 150
+      },
+      "mustMention": [
+        "活动"
+      ]
     },
     "status": {
       "expectedStatusColor": "good"
@@ -48,8 +59,14 @@
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "activity",
-        "requiredTabPatterns": ["活动", "步数"],
-        "forbidOtherTabs": ["HRV", "sleep"]
+        "requiredTabPatterns": [
+          "活动",
+          "步数"
+        ],
+        "forbidOtherTabs": [
+          "HRV",
+          "sleep"
+        ]
       }
     }
   }

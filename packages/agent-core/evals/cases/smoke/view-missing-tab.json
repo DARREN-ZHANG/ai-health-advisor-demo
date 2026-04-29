@@ -4,13 +4,18 @@
   "suite": "smoke",
   "category": "view-summary",
   "priority": "P0",
-  "tags": ["view-summary", "fallback", "validation"],
+  "tags": [
+    "view-summary",
+    "fallback",
+    "validation"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"fallback\",\"statusColor\":\"good\",\"summary\":\"暂无足够数据生成视图摘要，请稍后再试。\",\"chartTokens\":[],\"microTips\":[]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "eval-V-missing",
@@ -29,10 +34,15 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 10, "max": 200 }
+      "length": {
+        "min": 10,
+        "max": 200
+      }
     },
     "status": {
-      "allowedStatusColors": ["good"]
+      "allowedStatusColors": [
+        "good"
+      ]
     },
     "chartTokens": {
       "maxCount": 0

@@ -4,13 +4,18 @@
   "suite": "core",
   "category": "homepage",
   "priority": "P0",
-  "tags": ["homepage", "low-data", "fallback"],
+  "tags": [
+    "homepage",
+    "low-data",
+    "fallback"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"fallback\",\"statusColor\":\"good\",\"summary\":\"当前数据量不足以进行全面分析，请继续佩戴设备以获取更多健康数据。\",\"chartTokens\":[],\"microTips\":[]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-h009",
@@ -30,7 +35,10 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 20, "max": 200 }
+      "length": {
+        "min": 20,
+        "max": 200
+      }
     },
     "status": {
       "expectedStatusColor": "good"

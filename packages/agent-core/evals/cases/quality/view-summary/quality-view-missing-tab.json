@@ -4,12 +4,18 @@
   "suite": "quality",
   "category": "view-summary",
   "priority": "P0",
-  "tags": ["quality", "view-summary", "spo2", "normal"],
+  "tags": [
+    "quality",
+    "view-summary",
+    "spo2",
+    "normal"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QV005",
@@ -36,7 +42,10 @@
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "spo2",
-        "requiredTabPatterns": ["血氧", "SpO2"]
+        "requiredTabPatterns": [
+          "血氧",
+          "SpO2"
+        ]
       }
     }
   }

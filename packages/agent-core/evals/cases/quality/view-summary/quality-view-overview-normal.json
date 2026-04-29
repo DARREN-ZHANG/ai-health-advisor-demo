@@ -4,12 +4,18 @@
   "suite": "quality",
   "category": "view-summary",
   "priority": "P0",
-  "tags": ["quality", "view-summary", "overview", "normal"],
+  "tags": [
+    "quality",
+    "view-summary",
+    "overview",
+    "normal"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QV001",
@@ -31,8 +37,19 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 80, "max": 150 },
-      "mustMentionAny": [["指标", "整体", "总体", "概览", "状态"]]
+      "length": {
+        "min": 80,
+        "max": 150
+      },
+      "mustMentionAny": [
+        [
+          "指标",
+          "整体",
+          "总体",
+          "概览",
+          "状态"
+        ]
+      ]
     },
     "status": {
       "expectedStatusColor": "good"
@@ -44,7 +61,13 @@
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "overview",
-        "requiredTabPatterns": ["总体", "指标", "概览", "整体", "状态"]
+        "requiredTabPatterns": [
+          "总体",
+          "指标",
+          "概览",
+          "整体",
+          "状态"
+        ]
       }
     }
   }

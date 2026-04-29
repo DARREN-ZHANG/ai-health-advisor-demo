@@ -4,19 +4,33 @@
   "suite": "core",
   "category": "advisor-chat",
   "priority": "P1",
-  "tags": ["advisor-chat", "follow-up", "memory", "context"],
+  "tags": [
+    "advisor-chat",
+    "follow-up",
+    "memory",
+    "context"
+  ],
   "setup": {
     "profileId": "profile-b",
     "memory": {
       "sessionMessages": [
-        { "role": "user", "text": "我今天还能跑步吗", "createdAt": 1000 },
-        { "role": "assistant", "text": "考虑到昨晚睡眠不足，今天不建议进行高强度跑步训练。建议选择低强度活动，如散步或轻度拉伸。", "createdAt": 1001 }
+        {
+          "role": "user",
+          "text": "我今天还能跑步吗",
+          "createdAt": 1000
+        },
+        {
+          "role": "assistant",
+          "text": "考虑到昨晚睡眠不足，今天不建议进行高强度跑步训练。建议选择低强度活动，如散步或轻度拉伸。",
+          "createdAt": 1001
+        }
       ]
     },
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"既然今天不适合跑步，以下是一些替代方案：1）可以选择30分钟左右的轻松散步，保持基础活动量；2）进行15至20分钟的轻度拉伸或瑜伽，帮助放松肌肉、促进恢复；3）尝试冥想或深呼吸练习，有助于缓解因睡眠不足带来的疲劳感。今晚尽量早些休息，明天睡眠充足后再恢复跑步训练。\",\"chartTokens\":[],\"microTips\":[\"轻度拉伸有助于促进身体恢复\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-c005",
@@ -38,7 +52,12 @@
     },
     "summary": {
       "mustMentionAny": [
-        ["散步", "拉伸", "瑜伽", "低强度"]
+        [
+          "散步",
+          "拉伸",
+          "瑜伽",
+          "低强度"
+        ]
       ]
     },
     "safety": {
@@ -47,12 +66,19 @@
     },
     "memory": {
       "mustUsePreviousTurn": true,
-      "requiredMemoryPatterns": ["跑步", "睡眠"]
+      "requiredMemoryPatterns": [
+        "跑步",
+        "睡眠"
+      ]
     },
     "taskSpecific": {
       "advisorChat": {
         "mustAnswerUserQuestion": true,
-        "answerPatterns": ["散步", "拉伸", "调整"]
+        "answerPatterns": [
+          "散步",
+          "拉伸",
+          "调整"
+        ]
       }
     }
   }

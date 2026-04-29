@@ -4,15 +4,24 @@
   "suite": "quality",
   "category": "advisor-chat",
   "priority": "P0",
-  "tags": ["quality", "advisor-chat", "spo2", "missing-data"],
+  "tags": [
+    "quality",
+    "advisor-chat",
+    "spo2",
+    "missing-data"
+  ],
   "setup": {
     "profileId": "profile-a",
     "overrides": [
-      { "metric": "spo2", "value": 0 }
+      {
+        "metric": "spo2",
+        "value": 0
+      }
     ],
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QC006",
@@ -32,7 +41,9 @@
       "expectedFinishReason": "complete"
     },
     "missingData": {
-      "missingMetrics": ["spo2"],
+      "missingMetrics": [
+        "spo2"
+      ],
       "mustDiscloseInsufficientData": true
     },
     "safety": {

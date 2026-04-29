@@ -4,12 +4,18 @@
   "suite": "quality",
   "category": "advisor-chat",
   "priority": "P0",
-  "tags": ["quality", "advisor-chat", "sleep", "time-scope"],
+  "tags": [
+    "quality",
+    "advisor-chat",
+    "sleep",
+    "time-scope"
+  ],
   "setup": {
     "profileId": "profile-b",
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QC002",
@@ -30,7 +36,9 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["睡眠"]
+      "mustMention": [
+        "睡眠"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,
@@ -38,16 +46,41 @@
     },
     "evidence": {
       "requiredFacts": [
-        { "id": "sleep-duration", "metric": "sleep", "mentionPatterns": ["小时", "睡眠时间", "睡了"] },
-        { "id": "deep-sleep", "metric": "sleep", "mentionPatterns": ["深睡", "深度睡眠", "深", "REM"] }
+        {
+          "id": "sleep-duration",
+          "metric": "sleep",
+          "mentionPatterns": [
+            "小时",
+            "睡眠时间",
+            "睡了"
+          ]
+        },
+        {
+          "id": "deep-sleep",
+          "metric": "sleep",
+          "mentionPatterns": [
+            "深睡",
+            "深度睡眠",
+            "深",
+            "REM"
+          ]
+        }
       ]
     },
     "taskSpecific": {
       "advisorChat": {
         "requiredTimeScope": "day",
-        "requiredTimeScopePatterns": ["昨晚", "昨天", "昨晚的"],
+        "requiredTimeScopePatterns": [
+          "昨晚",
+          "昨天",
+          "昨晚的"
+        ],
         "mustAnswerUserQuestion": true,
-        "answerPatterns": ["睡眠", "深睡", "睡"]
+        "answerPatterns": [
+          "睡眠",
+          "深睡",
+          "睡"
+        ]
       }
     }
   }

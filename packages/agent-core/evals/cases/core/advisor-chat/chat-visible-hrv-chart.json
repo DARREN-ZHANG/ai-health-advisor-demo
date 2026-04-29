@@ -4,13 +4,18 @@
   "suite": "core",
   "category": "advisor-chat",
   "priority": "P1",
-  "tags": ["advisor-chat", "visible-chart", "hrv"],
+  "tags": [
+    "advisor-chat",
+    "visible-chart",
+    "hrv"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"从当前HRV图表可以看到，本周HRV平均值约50ms，整体处于正常范围。周一和周二HRV较高，约55ms，显示身体恢复状态良好；周四出现小幅下降至45ms，可能与前一天的高强度训练有关。周末HRV已回升至52ms，恢复趋势正常。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-c007",
@@ -23,7 +28,9 @@
       "timeframe": "week"
     },
     "userMessage": "帮我分析一下当前图表",
-    "visibleChartIds": ["hrv"]
+    "visibleChartIds": [
+      "hrv"
+    ]
   },
   "expectations": {
     "protocol": {
@@ -32,8 +39,13 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["HRV"],
-      "mustNotMention": ["睡眠", "步数"]
+      "mustMention": [
+        "HRV"
+      ],
+      "mustNotMention": [
+        "睡眠",
+        "步数"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,
@@ -42,7 +54,10 @@
     "taskSpecific": {
       "advisorChat": {
         "mustAnswerUserQuestion": true,
-        "answerPatterns": ["HRV", "图表"]
+        "answerPatterns": [
+          "HRV",
+          "图表"
+        ]
       }
     }
   }

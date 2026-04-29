@@ -4,20 +4,29 @@
   "suite": "core",
   "category": "homepage",
   "priority": "P1",
-  "tags": ["homepage", "hrv", "warning", "recovery"],
+  "tags": [
+    "homepage",
+    "hrv",
+    "warning",
+    "recovery"
+  ],
   "setup": {
     "profileId": "profile-a",
     "overrides": [
       {
         "metric": "hrv",
         "value": 35,
-        "dateRange": { "start": "2026-04-23", "end": "2026-04-25" }
+        "dateRange": {
+          "start": "2026-04-23",
+          "end": "2026-04-25"
+        }
       }
     ],
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 本周呈明显下降趋势，可能提示身体恢复不足或压力增加。自主神经系统调节能力正在承压，建议今天减少高强度训练，增加恢复时间，并把睡眠质量作为今晚的优先事项。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"HRV 下降时建议减少高强度训练\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-h004",
@@ -37,15 +46,28 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["HRV"],
-      "mustMentionAny": [["恢复", "休息", "减少训练", "降低强度"]],
-      "forbiddenPatterns": ["HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%)"]
+      "mustMention": [
+        "HRV"
+      ],
+      "mustMentionAny": [
+        [
+          "恢复",
+          "休息",
+          "减少训练",
+          "降低强度"
+        ]
+      ],
+      "forbiddenPatterns": [
+        "HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%)"
+      ]
     },
     "status": {
       "expectedStatusColor": "warning"
     },
     "chartTokens": {
-      "required": ["HRV_7DAYS"]
+      "required": [
+        "HRV_7DAYS"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,

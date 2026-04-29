@@ -4,13 +4,19 @@
   "suite": "core",
   "category": "view-summary",
   "priority": "P1",
-  "tags": ["view-summary", "sleep", "normal", "baseline"],
+  "tags": [
+    "view-summary",
+    "sleep",
+    "normal",
+    "baseline"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周睡眠质量良好，总睡眠时间稳定在 7-8 小时区间，深睡和 REM 睡眠占比均在正常范围内。入睡时间规律，睡眠效率较高。建议继续保持良好的睡眠习惯，维持固定的作息时间。\",\"chartTokens\":[\"SLEEP_7DAYS\",\"SLEEP_STAGE_LAST_NIGHT\"],\"microTips\":[]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-v007",
@@ -32,8 +38,13 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 80, "max": 150 },
-      "mustMention": ["睡眠"]
+      "length": {
+        "min": 80,
+        "max": 150
+      },
+      "mustMention": [
+        "睡眠"
+      ]
     },
     "status": {
       "expectedStatusColor": "good"
@@ -48,8 +59,13 @@
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "sleep",
-        "requiredTabPatterns": ["睡眠"],
-        "forbidOtherTabs": ["HRV", "步数"]
+        "requiredTabPatterns": [
+          "睡眠"
+        ],
+        "forbidOtherTabs": [
+          "HRV",
+          "步数"
+        ]
       }
     }
   }

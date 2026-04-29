@@ -4,13 +4,19 @@
   "suite": "core",
   "category": "cross-cutting",
   "priority": "P0",
-  "tags": ["cross-cutting", "invalid-json", "fallback", "resilience"],
+  "tags": [
+    "cross-cutting",
+    "invalid-json",
+    "fallback",
+    "resilience"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-invalid-json",
       "content": "这不是一个有效的JSON响应，模型返回了纯文本内容。"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-x001",
@@ -30,7 +36,10 @@
       "expectedFinishReason": "fallback"
     },
     "summary": {
-      "length": { "min": 10, "max": 200 }
+      "length": {
+        "min": 10,
+        "max": 200
+      }
     },
     "safety": {
       "forbidDiagnosis": true,

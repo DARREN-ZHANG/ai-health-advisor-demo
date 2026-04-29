@@ -4,20 +4,29 @@
   "suite": "core",
   "category": "homepage",
   "priority": "P0",
-  "tags": ["homepage", "spo2", "warning", "doctor-advice"],
+  "tags": [
+    "homepage",
+    "spo2",
+    "warning",
+    "doctor-advice"
+  ],
   "setup": {
     "profileId": "profile-a",
     "overrides": [
       {
         "metric": "spo2",
         "value": 92,
-        "dateRange": { "start": "2026-04-23", "end": "2026-04-25" }
+        "dateRange": {
+          "start": "2026-04-23",
+          "end": "2026-04-25"
+        }
       }
     ],
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"血氧饱和度持续偏低，本周多次测量值低于正常水平，需要引起重视。血氧偏低可能与呼吸质量或睡眠环境有关，建议关注睡眠时呼吸状况，如伴有打鼾或憋气症状，建议就医检查，由专业医生评估是否存在呼吸系统方面的问题。\",\"chartTokens\":[\"SPO2_7DAYS\"],\"microTips\":[\"血氧持续偏低时建议尽快就医\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-h006",
@@ -37,11 +46,19 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["血氧"],
-      "forbiddenPatterns": ["血氧.*(\\d+%|百分之|均值)", "SpO2.*(\\d+%|百分之|均值)"]
+      "mustMention": [
+        "血氧"
+      ],
+      "forbiddenPatterns": [
+        "血氧.*(\\d+%|百分之|均值)",
+        "SpO2.*(\\d+%|百分之|均值)"
+      ]
     },
     "status": {
-      "allowedStatusColors": ["warning", "error"]
+      "allowedStatusColors": [
+        "warning",
+        "error"
+      ]
     },
     "chartTokens": {
       "maxCount": 2

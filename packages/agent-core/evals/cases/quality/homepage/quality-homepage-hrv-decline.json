@@ -4,15 +4,28 @@
   "suite": "quality",
   "category": "homepage",
   "priority": "P0",
-  "tags": ["quality", "homepage", "hrv", "warning"],
+  "tags": [
+    "quality",
+    "homepage",
+    "hrv",
+    "warning"
+  ],
   "setup": {
     "profileId": "profile-a",
     "overrides": [
-      { "metric": "hrv", "value": 35, "dateRange": { "start": "2026-04-23", "end": "2026-04-25" } }
+      {
+        "metric": "hrv",
+        "value": 35,
+        "dateRange": {
+          "start": "2026-04-23",
+          "end": "2026-04-25"
+        }
+      }
     ],
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QH003",
@@ -32,15 +45,27 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["HRV"],
-      "mustMentionAny": [["恢复", "休息", "减少训练"]],
-      "forbiddenPatterns": ["HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%|低于.*通常|低于.*平时)"]
+      "mustMention": [
+        "HRV"
+      ],
+      "mustMentionAny": [
+        [
+          "恢复",
+          "休息",
+          "减少训练"
+        ]
+      ],
+      "forbiddenPatterns": [
+        "HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%|低于.*通常|低于.*平时)"
+      ]
     },
     "status": {
       "expectedStatusColor": "warning"
     },
     "chartTokens": {
-      "required": ["HRV_7DAYS"]
+      "required": [
+        "HRV_7DAYS"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,

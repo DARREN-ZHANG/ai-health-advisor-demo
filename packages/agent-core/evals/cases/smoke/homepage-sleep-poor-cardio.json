@@ -4,13 +4,19 @@
   "suite": "smoke",
   "category": "homepage",
   "priority": "P0",
-  "tags": ["homepage", "sleep", "cardio", "warning"],
+  "tags": [
+    "homepage",
+    "sleep",
+    "cardio",
+    "warning"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"昨夜睡眠不足，今日进行有氧运动需注意恢复。深睡仅四十五分钟，比你平时明显偏少；睡眠总时长不足六小时，身体恢复不充分。建议降低运动强度，以轻度活动为主，避免剧烈有氧加重疲劳积累。\",\"chartTokens\":[\"SLEEP_7DAYS\"],\"microTips\":[\"睡眠不足时建议避免高强度运动\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "eval-H002",
@@ -30,13 +36,18 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["睡眠", "运动"]
+      "mustMention": [
+        "睡眠",
+        "运动"
+      ]
     },
     "status": {
       "expectedStatusColor": "warning"
     },
     "chartTokens": {
-      "required": ["SLEEP_7DAYS"]
+      "required": [
+        "SLEEP_7DAYS"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,
