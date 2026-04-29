@@ -22,7 +22,7 @@
       "timeframe": "week"
     },
     "userMessage": "看看我最近的睡眠趋势",
-    "visibleChartIds": ["SLEEP_7DAYS"]
+    "visibleChartIds": ["sleep"]
   },
   "expectations": {
     "protocol": {
