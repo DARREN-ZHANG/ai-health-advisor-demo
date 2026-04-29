@@ -39,7 +39,7 @@
       "expectedStatusColor": "good"
     },
     "chartTokens": {
-      "expectedTokens": ["HRV_7DAYS"],
+      "required": ["HRV_7DAYS"],
       "maxCount": 1
     },
     "safety": {

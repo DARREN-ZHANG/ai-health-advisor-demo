@@ -19,10 +19,10 @@
     "pageContext": {
       "profileId": "profile-a",
       "page": "advisor",
-      "timeframe": "week",
-      "visibleChartIds": ["SLEEP_7DAYS"]
+      "timeframe": "week"
     },
-    "userMessage": "看看我最近的睡眠趋势"
+    "userMessage": "看看我最近的睡眠趋势",
+    "visibleChartIds": ["SLEEP_7DAYS"]
   },
   "expectations": {
     "protocol": {
