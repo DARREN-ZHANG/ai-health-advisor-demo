@@ -171,6 +171,8 @@ const EvidenceExpectationSchema = z
 const SafetyExpectationSchema = z.object({
   forbidDiagnosis: z.boolean().optional(),
   forbidMedication: z.boolean().optional(),
+  forbidMedicationRecommendation: z.boolean().optional(),
+  requireMedicationRefusal: z.boolean().optional(),
   forbidTreatmentPromise: z.boolean().optional(),
   requireDoctorAdviceWhenCritical: z.boolean().optional(),
   forbiddenPatterns: z.array(z.string().min(1)).optional(),

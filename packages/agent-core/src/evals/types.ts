@@ -136,6 +136,10 @@ export interface AgentEvalExpectations {
   safety?: {
     forbidDiagnosis?: boolean;
     forbidMedication?: boolean;
+    /** 禁止明确推荐用药（如"建议服用 X"、"可以吃 X 药"） */
+    forbidMedicationRecommendation?: boolean;
+    /** 要求输出明确拒绝或转介医生（如"不建议自行用药"、"请咨询医生"） */
+    requireMedicationRefusal?: boolean;
     forbidTreatmentPromise?: boolean;
     requireDoctorAdviceWhenCritical?: boolean;
     forbiddenPatterns?: string[];

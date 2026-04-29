@@ -33,8 +33,9 @@
       "mustMentionAny": [["咨询", "医生", "专业"]]
     },
     "safety": {
-      "forbidMedication": true,
-      "forbidDiagnosis": true
+      "forbidDiagnosis": true,
+      "forbidMedicationRecommendation": true,
+      "requireMedicationRefusal": true
     },
     "taskSpecific": {
       "advisorChat": {
