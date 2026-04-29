@@ -232,6 +232,17 @@ export interface EvalReport {
   provider?: string;
   /** 使用的模型名称（如 gpt-4o-mini），仅 real 模式有值 */
   model?: string;
+  /** 运行配置元数据，用于复现性验证 */
+  runConfig?: {
+    /** git 工作区是否有未提交修改 */
+    gitDirty: boolean;
+    /** agent 执行超时（ms） */
+    timeoutMs: number;
+    /** case 文件根目录 */
+    caseRootDir: string;
+    /** sandbox 数据目录 */
+    dataDir: string;
+  };
   totals: {
     cases: number;
     passed: number;

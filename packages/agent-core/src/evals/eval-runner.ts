@@ -24,6 +24,53 @@ import type {
 import type { TaskContextPacket } from '../context/context-packet';
 import type { AgentResponseEnvelope } from '@health-advisor/shared';
 
+// ── Timeout 配置解析 ────────────────────────────────────────
+
+/** 合法 timeout 范围 */
+const MIN_TIMEOUT_MS = 1000;
+const MAX_TIMEOUT_MS = 120000;
+const DEFAULT_TIMEOUT_MS = 6000;
+
+/**
+ * 解析 LLM_TIMEOUT_MS 环境变量。
+ *
+ * 规则：
+ * - 未配置时返回默认值 6000
+ * - 非数字、0、负数、超出范围时返回错误对象
+ */
+export function resolveEvalTimeoutMs(
+  env: Record<string, string | undefined>,
+): number | { error: string } {
+  const raw = env.LLM_TIMEOUT_MS;
+  if (raw === undefined || raw === '') {
+    return DEFAULT_TIMEOUT_MS;
+  }
+
+  const parsed = Number(raw);
+
+  if (!Number.isFinite(parsed)) {
+    return { error: `LLM_TIMEOUT_MS="${raw}" 不是合法数字` };
+  }
+
+  if (!Number.isInteger(parsed)) {
+    return { error: `LLM_TIMEOUT_MS="${raw}" 必须是整数` };
+  }
+
+  if (parsed <= 0) {
+    return { error: `LLM_TIMEOUT_MS="${raw}" 必须为正数` };
+  }
+
+  if (parsed < MIN_TIMEOUT_MS) {
+    return { error: `LLM_TIMEOUT_MS="${raw}" 低于最小值 ${MIN_TIMEOUT_MS}` };
+  }
+
+  if (parsed > MAX_TIMEOUT_MS) {
+    return { error: `LLM_TIMEOUT_MS="${raw}" 超过最大值 ${MAX_TIMEOUT_MS}` };
+  }
+
+  return parsed;
+}
+
 // ── CLI 参数解析 ────────────────────────────────────────
 
 interface CliArgs {
@@ -169,6 +216,7 @@ async function runSingleCase(
   providerMode: EvalProviderMode,
   dataDir?: string,
   strictAssets?: boolean,
+  timeoutMs: number = 6000,
 ): Promise<EvalCaseResult> {
   // 创建 observer 采集 artifacts
   const { observer, getArtifacts } = createArtifactObserver(evalCase);
@@ -190,11 +238,8 @@ async function runSingleCase(
 
   let envelope: AgentResponseEnvelope | undefined;
   try {
-    // 执行 agent，超时从 LLM_TIMEOUT_MS 读取，默认 6000ms
-    const agentTimeout = process.env.LLM_TIMEOUT_MS
-      ? parseInt(process.env.LLM_TIMEOUT_MS, 10)
-      : 6000;
-    envelope = await executeAgent(evalCase.request, deps, agentTimeout, observer);
+    // 使用校验后的 timeout 值
+    envelope = await executeAgent(evalCase.request, deps, timeoutMs, observer);
   } catch (err) {
     // 执行异常，记录错误信息
     const artifacts = getArtifacts();
@@ -347,6 +392,17 @@ function getGitSha(): string {
   }
 }
 
+/** 检测 git 工作区是否有未提交修改 */
+function isGitDirty(): boolean {
+  try {
+    const output = execSync('git status --short').toString().trim();
+    return output.length > 0;
+  } catch {
+    // 无法检测时保守返回 true（可能不是 git 仓库）
+    return true;
+  }
+}
+
 // ── Baseline 对比 ──────────────────────────────────────
 
 /**
@@ -431,6 +487,15 @@ export async function runEval(
     return 1;
   }
 
+  // timeout 配置校验：非法时 fail loudly，不执行任何 case
+  const timeoutResult = resolveEvalTimeoutMs(process.env as Record<string, string | undefined>);
+  if (typeof timeoutResult === 'object') {
+    console.error(`错误: ${timeoutResult.error}`);
+    console.error(`合法范围: ${MIN_TIMEOUT_MS} <= LLM_TIMEOUT_MS <= ${MAX_TIMEOUT_MS}`);
+    return 1;
+  }
+  const agentTimeout = timeoutResult;
+
   // real provider 预检：缺少 API key 时直接失败，不执行任何 case
   if (args.provider === 'real') {
     let apiKeyMissing = true;
@@ -476,7 +541,7 @@ export async function runEval(
   const caseResults: EvalCaseResult[] = [];
   for (const evalCase of cases) {
     console.log(`执行 case: ${evalCase.id} (${evalCase.title})`);
-    const result = await runSingleCase(evalCase, args.provider, dataDir, useStrictAssets);
+    const result = await runSingleCase(evalCase, args.provider, dataDir, useStrictAssets, agentTimeout);
     caseResults.push(result);
 
     const status = result.passed ? 'PASS' : 'FAIL';
@@ -486,6 +551,20 @@ export async function runEval(
   // 3. 聚合报告
   const suiteName = args.suite ?? (args.caseId ? 'single' : 'all');
   const report = aggregateReport(caseResults, suiteName, args.provider);
+
+  // 注入运行配置元数据（复现性验证）
+  const gitDirty = isGitDirty();
+  report.runConfig = {
+    gitDirty,
+    timeoutMs: agentTimeout,
+    caseRootDir,
+    dataDir,
+  };
+
+  // git dirty 标记：在 console 中明确提示
+  if (gitDirty) {
+    console.warn('⚠️ 警告: Git 工作区有未提交修改，此 baseline 不可复现');
+  }
 
   // real 模式时添加 provider/model 信息
   if (args.provider === 'real') {

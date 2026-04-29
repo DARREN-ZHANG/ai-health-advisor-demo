@@ -4,7 +4,7 @@ import type { AgentEvalCase } from '../../evals/types';
 import type { AgentRequest } from '../../types/agent-request';
 import { AgentTaskType } from '@health-advisor/shared';
 import { join } from 'node:path';
-import { runEval } from '../../evals/eval-runner';
+import { runEval, resolveEvalTimeoutMs } from '../../evals/eval-runner';
 import { writeReport } from '../../evals/report-writer';
 import { mkdirSync, rmSync, existsSync, readFileSync } from 'node:fs';
 
@@ -724,6 +724,47 @@ describe('report writer', () => {
     expect(existsSync(paths.mdPath!)).toBe(true);
   });
 
+  it('runConfig 写入 JSON 报告并展示在 markdown 中', () => {
+    const report = makeReport({
+      runConfig: {
+        gitDirty: false,
+        timeoutMs: 60000,
+        caseRootDir: '/path/to/cases',
+        dataDir: '/path/to/data',
+      },
+    });
+    const paths = writeReport(report, TEMP_REPORT_DIR, 'both');
+
+    // JSON 包含 runConfig
+    const jsonContent = JSON.parse(readFileSync(paths.jsonPath!, 'utf-8'));
+    expect(jsonContent.runConfig).toBeDefined();
+    expect(jsonContent.runConfig.gitDirty).toBe(false);
+    expect(jsonContent.runConfig.timeoutMs).toBe(60000);
+    expect(jsonContent.runConfig.caseRootDir).toBe('/path/to/cases');
+    expect(jsonContent.runConfig.dataDir).toBe('/path/to/data');
+
+    // Markdown 包含 runConfig 展示
+    const mdContent = readFileSync(paths.mdPath!, 'utf-8');
+    expect(mdContent).toContain('Git Dirty');
+    expect(mdContent).toContain('60000ms');
+    expect(mdContent).toContain('/path/to/cases');
+    expect(mdContent).toContain('/path/to/data');
+  });
+
+  it('gitDirty=true 时 markdown 显示 true', () => {
+    const report = makeReport({
+      runConfig: {
+        gitDirty: true,
+        timeoutMs: 6000,
+        caseRootDir: '/cases',
+        dataDir: '/data',
+      },
+    });
+    const paths = writeReport(report, TEMP_REPORT_DIR, 'markdown');
+    const mdContent = readFileSync(paths.mdPath!, 'utf-8');
+    expect(mdContent).toContain('Git Dirty**: true');
+  });
+
   it('混合 category 的 byCategory 正确分组且 markdown 包含 category breakdown', () => {
     // 构造包含多个 category 的报告
     const multiCatReport: import('../../evals/types').EvalReport = {
@@ -1235,5 +1276,189 @@ describe('eval runner — 报告 metadata', () => {
 
     // 清理
     rmSync(join(__dirname, '__temp_meta_reports__'), { recursive: true, force: true });
+  });
+
+  it('runConfig 写入 eval-report.json', async () => {
+    const tempCaseDir = join(__dirname, '__temp_runconfig_reports__', 'cases');
+    mkdirSync(tempCaseDir, { recursive: true });
+
+    const passCase = makeEvalCase({
+      id: 'runconfig-test-case',
+      title: 'RunConfig Test Case',
+      suite: 'smoke',
+    });
+
+    const { writeFileSync: writeFile } = await import('node:fs');
+    writeFile(join(tempCaseDir, 'runconfig-test-case.json'), JSON.stringify(passCase, null, 2), 'utf-8');
+
+    const outputDir = join(__dirname, '__temp_runconfig_reports__', 'output');
+    mkdirSync(outputDir, { recursive: true });
+
+    await runEval(
+      ['node', 'eval-runner.ts', '--case', 'runconfig-test-case', '--provider', 'fake', '--report', 'json', '--output', outputDir],
+      {
+        caseRootDir: tempCaseDir,
+        dataDir: DATA_DIR,
+      },
+    );
+
+    const reportPath = join(outputDir, 'eval-report.json');
+    if (existsSync(reportPath)) {
+      const content = readFileSync(reportPath, 'utf-8');
+      const report = JSON.parse(content);
+      expect(report.runConfig).toBeDefined();
+      expect(report.runConfig.timeoutMs).toBe(6000);
+      expect(typeof report.runConfig.gitDirty).toBe('boolean');
+      expect(report.runConfig.caseRootDir).toBe(tempCaseDir);
+      expect(report.runConfig.dataDir).toBe(DATA_DIR);
+    }
+
+    // 清理
+    rmSync(join(__dirname, '__temp_runconfig_reports__'), { recursive: true, force: true });
+  });
+});
+
+// ── resolveEvalTimeoutMs 单元测试 ──────────────────────────────
+
+describe('resolveEvalTimeoutMs', () => {
+  it('未配置时返回默认值 6000', () => {
+    const result = resolveEvalTimeoutMs({});
+    expect(result).toBe(6000);
+  });
+
+  it('空字符串时返回默认值 6000', () => {
+    const result = resolveEvalTimeoutMs({ LLM_TIMEOUT_MS: '' });
+    expect(result).toBe(6000);
+  });
+
+  it('合法值 60000 正常返回', () => {
+    const result = resolveEvalTimeoutMs({ LLM_TIMEOUT_MS: '60000' });
+    expect(result).toBe(60000);
+  });
+
+  it('LLM_TIMEOUT_MS=abc 返回错误', () => {
+    const result = resolveEvalTimeoutMs({ LLM_TIMEOUT_MS: 'abc' });
+    expect(typeof result).toBe('object');
+    expect((result as { error: string }).error).toContain('不是合法数字');
+  });
+
+  it('LLM_TIMEOUT_MS=0 返回错误', () => {
+    const result = resolveEvalTimeoutMs({ LLM_TIMEOUT_MS: '0' });
+    expect(typeof result).toBe('object');
+    expect((result as { error: string }).error).toContain('正数');
+  });
+
+  it('LLM_TIMEOUT_MS=-1 返回错误', () => {
+    const result = resolveEvalTimeoutMs({ LLM_TIMEOUT_MS: '-1' });
+    expect(typeof result).toBe('object');
+    expect((result as { error: string }).error).toContain('正数');
+  });
+
+  it('LLM_TIMEOUT_MS=500 低于最小值返回错误', () => {
+    const result = resolveEvalTimeoutMs({ LLM_TIMEOUT_MS: '500' });
+    expect(typeof result).toBe('object');
+    expect((result as { error: string }).error).toContain('低于最小值');
+  });
+
+  it('LLM_TIMEOUT_MS=200000 超过最大值返回错误', () => {
+    const result = resolveEvalTimeoutMs({ LLM_TIMEOUT_MS: '200000' });
+    expect(typeof result).toBe('object');
+    expect((result as { error: string }).error).toContain('超过最大值');
+  });
+
+  it('LLM_TIMEOUT_MS=3.5 非整数返回错误', () => {
+    const result = resolveEvalTimeoutMs({ LLM_TIMEOUT_MS: '3.5' });
+    expect(typeof result).toBe('object');
+    expect((result as { error: string }).error).toContain('整数');
+  });
+});
+
+// ── 非法 timeout 不生成 report 测试 ──────────────────────────────
+
+describe('eval runner — 非法 timeout', () => {
+  const TEMP_TIMEOUT_DIR = join(__dirname, '__temp_timeout_reports__');
+
+  beforeEach(() => {
+    mkdirSync(TEMP_TIMEOUT_DIR, { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(TEMP_TIMEOUT_DIR, { recursive: true, force: true });
+  });
+
+  it('LLM_TIMEOUT_MS=abc 时 exit code 为 1 且不生成 report', async () => {
+    const originalTimeout = process.env.LLM_TIMEOUT_MS;
+    process.env.LLM_TIMEOUT_MS = 'abc';
+
+    const outputDir = join(TEMP_TIMEOUT_DIR, 'output');
+    mkdirSync(outputDir, { recursive: true });
+
+    try {
+      const exitCode = await runEval(
+        ['node', 'eval-runner.ts', '--suite', 'smoke', '--provider', 'fake', '--report', 'json', '--output', outputDir],
+        {
+          caseRootDir: join(__dirname, '../../../evals/cases'),
+          dataDir: DATA_DIR,
+        },
+      );
+
+      expect(exitCode).toBe(1);
+      // 不应生成报告
+      expect(existsSync(join(outputDir, 'eval-report.json'))).toBe(false);
+    } finally {
+      if (originalTimeout !== undefined) {
+        process.env.LLM_TIMEOUT_MS = originalTimeout;
+      } else {
+        delete process.env.LLM_TIMEOUT_MS;
+      }
+    }
+  });
+
+  it('LLM_TIMEOUT_MS=0 时 exit code 为 1', async () => {
+    const originalTimeout = process.env.LLM_TIMEOUT_MS;
+    process.env.LLM_TIMEOUT_MS = '0';
+
+    try {
+      const exitCode = await runEval(
+        ['node', 'eval-runner.ts', '--suite', 'smoke', '--provider', 'fake', '--report', 'json'],
+        {
+          caseRootDir: join(__dirname, '../../../evals/cases'),
+          dataDir: DATA_DIR,
+        },
+      );
+
+      expect(exitCode).toBe(1);
+    } finally {
+      if (originalTimeout !== undefined) {
+        process.env.LLM_TIMEOUT_MS = originalTimeout;
+      } else {
+        delete process.env.LLM_TIMEOUT_MS;
+      }
+    }
+  });
+
+  it('LLM_TIMEOUT_MS=60000 能正常执行', async () => {
+    const originalTimeout = process.env.LLM_TIMEOUT_MS;
+    process.env.LLM_TIMEOUT_MS = '60000';
+
+    try {
+      const exitCode = await runEval(
+        ['node', 'eval-runner.ts', '--suite', 'smoke', '--provider', 'fake', '--report', 'json'],
+        {
+          caseRootDir: join(__dirname, '../../../evals/cases'),
+          dataDir: DATA_DIR,
+        },
+      );
+
+      expect(typeof exitCode).toBe('number');
+      expect(exitCode).toBeGreaterThanOrEqual(0);
+      expect(exitCode).toBeLessThanOrEqual(1);
+    } finally {
+      if (originalTimeout !== undefined) {
+        process.env.LLM_TIMEOUT_MS = originalTimeout;
+      } else {
+        delete process.env.LLM_TIMEOUT_MS;
+      }
+    }
   });
 });

@@ -81,6 +81,12 @@ function buildMarkdownContent(report: EvalReport): string {
   lines.push(`- **Created At**: ${report.createdAt}`);
   lines.push(`- **Suite**: ${report.suite}`);
   lines.push(`- **Provider Mode**: ${report.providerMode}`);
+  if (report.runConfig) {
+    lines.push(`- **Git Dirty**: ${report.runConfig.gitDirty}`);
+    lines.push(`- **Timeout**: ${report.runConfig.timeoutMs}ms`);
+    lines.push(`- **Case Root**: ${report.runConfig.caseRootDir}`);
+    lines.push(`- **Data Dir**: ${report.runConfig.dataDir}`);
+  }
   lines.push('');
 
   // 总分
