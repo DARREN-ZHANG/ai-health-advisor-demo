@@ -115,3 +115,51 @@
 - QC-004 的 `forbid_medication_recommendation` 误判已修复，但模型仍不输出明确拒绝表达，属于真实质量缺陷。
 - homepage 是唯一 0/6 通过的 category（仅 QH-001 通过），失败类型以摘要过长为主。
 - 当前 baseline 基于单次运行，LLM 输出有随机性。建议在优化后跑 2-3 次，取中位数分数作为稳定基线。
+
+---
+
+## Eval System Gap Fixes（2026-04-29）
+
+本轮修复了评测系统的能力规划缺口与落地问题。目标是让评测系统能稳定回答：当前失败是否真的来自 Agent，而不是 case 配置、scorer 漏检或运行时漂移。
+
+### Evaluated Code SHA
+
+待 quality baseline 重跑后更新。当前 commit 为 `feat/eval-capability-gap-fixes` 分支。
+
+### Fake Provider Suite Results
+
+| Suite | Cases | Passed | Failed | Hard Failures | Score |
+|-------|-------|--------|--------|---------------|-------|
+| smoke | 15 | 15 | 0 | 0 | 174/175 (99.4%) |
+| core fixture | 54 | 54 | 0 | 0 | 757/757 (100%) |
+| regression | 5 | 0 | 5 | 5 | 21/28 (75.0%) |
+
+- smoke: 15/15 通过，无 hard failure
+- core fixture: 54/54 通过，无 hard failure（H-008 override 修复后）
+- regression: 5 个 case 全部被 scorer 正确检测出已知质量问题（hard failure 为预期行为）
+
+### 修复清单
+
+| 修复 | 影响 | 提交 |
+|------|------|------|
+| Protocol scorer 检查 expectedSource | 消除 source 声明不校验的盲区 | `144ed9d` |
+| Case schema strict 模式 | 防止字段错放被静默忽略 | `f013cc3` |
+| QC-007 visibleChartIds 修正 | 使用 tab id 格式，放在 request 顶层 | `baf9a4b` |
+| QH-002 timeline performSync | 运动事件成为 synced event，recentEvents 非空 | `42379a5` |
+| referenceDate 驱动数据窗口 | 92 个 case 配置固定 referenceDate，消除日期漂移 | （合并提交） |
+| H-008 activity.steps override | 修复 override metric 路径，活动规则正确触发 | `889f432` |
+| Core fixture --fail-on-hard | hard failure 时命令返回非 0 | `889f432` |
+| Regression suite 5 个 case | 覆盖 spo2/activity/multi-metric 编造、药物建议、诊断声明 | （合并提交） |
+| Structured claims 规划文档 | 三阶段路线图：pattern → claim extractor → envelope upgrade | （合并提交） |
+
+### 待完成
+
+- **Quality baseline 重跑**：需要配置 `LLM_API_KEY` 后执行：
+  ```bash
+  pnpm --filter @health-advisor/agent-core eval:agent:quality \
+    --provider real \
+    --output packages/agent-core/evals/reports/baseline-v1-real-single-call-agent
+  ```
+- 重跑后需更新上方 Run Metadata（Evaluated Code SHA、gitDirty）和 Hard Failures 分布
+- 需确认 QC-007（visibleChartIds 修正后）的 chartTokens 检查是否通过
+- 需确认 QH-002（performSync 后）的 recentEventFirst 检查是否通过
