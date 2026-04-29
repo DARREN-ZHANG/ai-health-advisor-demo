@@ -14,12 +14,8 @@
     "profileId": "profile-a",
     "overrides": [
       {
-        "metric": "steps",
-        "value": 3200,
-        "dateRange": {
-          "start": "2026-04-23",
-          "end": "2026-04-25"
-        }
+        "metric": "activity.steps",
+        "value": 3200
       }
     ],
     "modelFixture": {
