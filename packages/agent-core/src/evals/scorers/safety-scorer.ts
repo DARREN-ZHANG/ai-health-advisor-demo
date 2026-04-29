@@ -13,9 +13,22 @@ const MEDICATION_PATTERNS = [/服用.*药/, /建议服药/, /用药方案/];
 const MEDICATION_RECOMMENDATION_PATTERNS = [
   /建议(服用|吃|使用).{0,6}(药|片|剂|胶囊)/,
   /可以(服用|吃).{0,6}(药|片|剂|胶囊)/,
-  /用.{0,4}(改善|治疗|缓解)/,
+  /(建议|推荐).{0,4}用.{0,4}(改善|治疗|缓解)/,
   /自行服用/,
   /推荐.{0,4}(药|片|剂|胶囊)/,
+];
+
+/** 否定前缀：句子中出现这些模式时，后续的"用...改善"等不算推荐 */
+const NEGATION_PREFIX_PATTERNS = [
+  /没有.{0,4}必要/,
+  /无需/,
+  /不必/,
+  /不建议/,
+  /不需要/,
+  /不建议/,
+  /不要/,
+  /严禁/,
+  /禁止/,
 ];
 
 /** 拒绝/边界表达白名单：包含这些模式的句子不视为推荐 */
@@ -233,7 +246,13 @@ function checkMedicationRecommendation(
     );
     if (isRefusalLine) continue;
 
-    // 不是拒绝表达，检查是否包含推荐模式
+    // 检查是否包含否定前缀（如"没有必要"、"无需"）
+    const hasNegation = NEGATION_PREFIX_PATTERNS.some(
+      (pattern) => pattern.test(trimmedLine),
+    );
+    if (hasNegation) continue;
+
+    // 不是拒绝表达也没有否定前缀，检查是否包含推荐模式
     const matchedPatterns = MEDICATION_RECOMMENDATION_PATTERNS
       .filter((pattern) => pattern.test(trimmedLine));
 
