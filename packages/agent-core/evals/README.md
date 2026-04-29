@@ -18,7 +18,7 @@
 |-------|------|-----------|------|
 | **smoke** | P0 冒烟测试 | 15 | 覆盖所有主要任务类型（homepage / view-summary / chat / cross-cutting），每个 case 验证核心路径 |
 | **core** | P1 核心 Fixture 场景 | 55 | 覆盖更多边界条件和细分场景，按 category 组织子目录。使用 fake provider + fixture answer，用于框架健壮性回归 |
-| **quality** | 真实 Agent 质量基线 | 暂无 | 使用 real provider 调用真实 LLM，禁止 fixture answer（`--disallow-fixtures`），用于评估 Agent 实际生成质量 |
+| **quality** | 真实 Agent 质量基线 | 23 | 使用 real provider 调用真实 LLM，禁止 fixture answer（`--disallow-fixtures`），用于评估 Agent 实际生成质量 |
 | **regression** | 回归锁定 | 暂无 | 用于锁定已修复的 bug，防止复发。从真实 bug 报告沉淀 |
 
 ### Suite 运行策略
@@ -174,7 +174,11 @@ packages/agent-core/evals/
 │   │   ├── view-summary/
 │   │   ├── advisor-chat/
 │   │   └── cross-cutting/
-│   ├── quality/           # 真实 Agent 质量基线 case（不包含 modelFixture.content）
+│   ├── quality/           # 23 个真实 Agent 质量基线 case（不包含 modelFixture.content）
+│   │   ├── advisor-chat/  # 10 个：安全、缺失数据、chart、evidence、profile 切换
+│   │   ├── homepage/      # 6 个：正常、运动叠加、HRV 下降、血氧、缺失数据、evidence
+│   │   ├── view-summary/  # 6 个：总览、HRV、睡眠缺失、活动、缺失 tab、evidence
+│   │   └── cross-cutting/ # 2 个：多指标缺失、profile 泄露
 │   └── regression/        # 回归锁定 case（按需沉淀）
 └── reports/               # 运行报告（gitignored）
 ```

@@ -1,0 +1,47 @@
+{
+  "id": "QH-006",
+  "title": "首页摘要质量 - 基于 HRV 证据回答",
+  "suite": "quality",
+  "category": "homepage",
+  "priority": "P1",
+  "tags": ["quality", "homepage", "evidence", "hrv"],
+  "setup": {
+    "profileId": "profile-b",
+    "modelFixture": {
+      "mode": "real-provider"
+    }
+  },
+  "request": {
+    "requestId": "quality-QH006",
+    "sessionId": "quality-session",
+    "profileId": "profile-b",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-b",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMentionAny": [["HRV", "心率变异性"]]
+    },
+    "status": {
+      "allowedStatusColors": ["good", "warning"]
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedicationRecommendation": true
+    },
+    "evidence": {
+      "requiredFacts": [
+        { "id": "hrv-evidence", "metric": "hrv", "mentionPatterns": ["HRV", "心率变异性", "变异"] }
+      ]
+    }
+  }
+}

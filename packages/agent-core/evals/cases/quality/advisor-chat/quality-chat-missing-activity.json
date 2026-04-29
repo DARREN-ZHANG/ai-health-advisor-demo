@@ -1,0 +1,52 @@
+{
+  "id": "QC-009",
+  "title": "顾问对话质量 - 缺失活动数据",
+  "suite": "quality",
+  "category": "advisor-chat",
+  "priority": "P0",
+  "tags": ["quality", "advisor-chat", "missing-data", "activity"],
+  "setup": {
+    "profileId": "profile-a",
+    "overrides": [
+      { "metric": "activity.steps", "value": 0, "dateRange": { "start": "2026-04-20", "end": "2026-04-25" } },
+      { "metric": "activity.activeMinutes", "value": 0, "dateRange": { "start": "2026-04-20", "end": "2026-04-25" } }
+    ],
+    "modelFixture": {
+      "mode": "real-provider"
+    }
+  },
+  "request": {
+    "requestId": "quality-QC009",
+    "sessionId": "quality-session",
+    "profileId": "profile-a",
+    "taskType": "advisor_chat",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "advisor",
+      "timeframe": "week"
+    },
+    "userMessage": "我最近运动量大吗"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "missingData": {
+      "missingMetrics": ["activity"],
+      "mustDiscloseInsufficientData": true,
+      "forbiddenClaimPatterns": ["步数.*\\d+", "步.*\\d+", "运动.*\\d+.*分钟"]
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedicationRecommendation": true
+    },
+    "taskSpecific": {
+      "advisorChat": {
+        "mustAnswerUserQuestion": true,
+        "answerPatterns": ["数据", "运动", "活动", "步数"]
+      }
+    }
+  }
+}
