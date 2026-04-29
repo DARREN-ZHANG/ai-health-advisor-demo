@@ -59,6 +59,7 @@ export function buildTaskContextPacket(
       spo2: baselines.spo2,
       stress: undefined,
     },
+    context.task.visibleChartIds,
   );
   const allRecords = (context.dataWindow.allRecords as DailyRecord[] | undefined) ?? records;
   const missingData = buildMissingDataPacket(records, allMetrics, evidence, {

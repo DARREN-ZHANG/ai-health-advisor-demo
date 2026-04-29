@@ -128,15 +128,15 @@
 
 ### Fake Provider Suite Results
 
-| Suite | Cases | Passed | Failed | Hard Failures | Score |
-|-------|-------|--------|--------|---------------|-------|
-| smoke | 15 | 15 | 0 | 0 | 174/175 (99.4%) |
-| core fixture | 54 | 54 | 0 | 0 | 757/757 (100%) |
-| regression | 5 | 0 | 5 | 5 | 21/28 (75.0%) |
+| Suite | Cases | Passed | Failed | Hard Failures | Score | Exit Code |
+|-------|-------|--------|--------|---------------|-------|-----------|
+| smoke | 15 | 15 | 0 | 0 | 174/175 (99.4%) | 0 |
+| core fixture | 54 | 54 | 0 | 0 | 757/757 (100%) | 0 |
+| regression | 5 | 0 | 5 | 5 | 21/28 (75.0%) | 0 |
 
-- smoke: 15/15 通过，无 hard failure
-- core fixture: 54/54 通过，无 hard failure（H-008 override 修复后）
-- regression: 5 个 case 全部被 scorer 正确检测出已知质量问题（hard failure 为预期行为）
+- smoke: 15/15 通过，无 hard failure，`--fail-on-hard` 门控
+- core fixture: 54/54 通过，无 hard failure，`--fail-on-hard` 门控（H-008 override 修复后）
+- regression: 5 个 case 全部被 scorer 正确检测出已知质量问题（hard failure 为预期行为），无 `--fail-on-hard` 门控（scorer 验证套件）
 
 ### 修复清单
 
@@ -151,6 +151,18 @@
 | Core fixture --fail-on-hard | hard failure 时命令返回非 0 | `889f432` |
 | Regression suite 5 个 case | 覆盖 spo2/activity/multi-metric 编造、药物建议、诊断声明 | （合并提交） |
 | Structured claims 规划文档 | 三阶段路线图：pattern → claim extractor → envelope upgrade | （合并提交） |
+| Regression suite 移除 --fail-on-hard | scorer 验证套件的 hard failure 是预期行为，不应阻断 CI | （本轮修复） |
+| visibleChartIds → visibleCharts 数据流 | advisor_chat 页面 visibleChartIds 进入 context packet 和 token allowlist | （本轮修复） |
+
+### QC-007 可见图表数据流验证
+
+修复后 fake provider 单 case 验证：
+
+- `visibleChartIds: ["sleep"]` → `visibleCharts: [{chartToken: "SLEEP_7DAYS", metric: "sleep"}]` ✅
+- `currentPage.visibleChartTokens: ["SLEEP_7DAYS"]` ✅
+- `chartDataSummaries` 包含睡眠数据摘要 ✅
+- `token:validity` 检查通过（SLEEP_7DAYS 在 allowlist 中）✅
+- `token:required_any` 和 `mention:must_mention` 需要 real provider 才能验证（fake provider 输出为通用模板）
 
 ### 待完成
 
@@ -161,5 +173,5 @@
     --output packages/agent-core/evals/reports/baseline-v1-real-single-call-agent
   ```
 - 重跑后需更新上方 Run Metadata（Evaluated Code SHA、gitDirty）和 Hard Failures 分布
-- 需确认 QC-007（visibleChartIds 修正后）的 chartTokens 检查是否通过
-- 需确认 QH-002（performSync 后）的 recentEventFirst 检查是否通过
+- 需确认 QC-007（visibleChartIds 修复后 + real provider）的 `token:required_any` 和 `mention:must_mention` 检查是否通过
+- 需确认 QH-002（performSync 后 + real provider）的 recentEventFirst 检查是否通过
