@@ -3,12 +3,15 @@
 ## Run Metadata
 
 - Date: 2026-04-29
-- Git SHA: a5cd784
+- Evaluated Code SHA: a5cd784（baseline 在此 clean commit 上运行）
+- Review Doc SHA: 33241e0（仅文档提交，不含代码变更）
 - Suite: quality
 - Provider: openai
 - Model: gemini-3-flash-preview
 - Timeout: 60000ms
 - Report: `packages/agent-core/evals/reports/baseline-v1-real-single-call-agent/eval-report.json`
+
+> 注意：Evaluated Code SHA 记录的是实际运行 eval 时的代码版本，Review Doc SHA 是后续文档提交的版本。评测结果基于 Evaluated Code SHA。
 
 ## Run Config
 
