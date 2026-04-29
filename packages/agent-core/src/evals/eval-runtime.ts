@@ -281,7 +281,7 @@ function seedMemory(
   const sessionId = 'eval-session';
   const profileId = setup.profileId;
 
-  // seed session messages
+  // seed session messages（当前 profile）
   const messages = setup.memory?.sessionMessages ?? [];
   for (const msg of messages) {
     sessionMemory.appendMessage(sessionId, profileId, {
@@ -289,6 +289,20 @@ function seedMemory(
       text: msg.text,
       createdAt: msg.createdAt ?? Date.now(),
     });
+  }
+
+  // seed memoryByProfile：为不同 profile 注入 session messages
+  if (setup.memoryByProfile) {
+    for (const [targetProfileId, profileMemory] of Object.entries(setup.memoryByProfile)) {
+      const targetMessages = profileMemory.sessionMessages ?? [];
+      for (const msg of targetMessages) {
+        sessionMemory.appendMessage(sessionId, targetProfileId, {
+          role: msg.role,
+          text: msg.text,
+          createdAt: msg.createdAt ?? Date.now(),
+        });
+      }
+    }
   }
 
   // seed analytical memory

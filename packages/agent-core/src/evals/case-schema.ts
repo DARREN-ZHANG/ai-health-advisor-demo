@@ -37,6 +37,23 @@ const AgentEvalSetupSchema = z.object({
     })
     .optional(),
 
+  memoryByProfile: z
+    .record(
+      z.string().min(1),
+      z.object({
+        sessionMessages: z
+          .array(
+            z.object({
+              role: z.enum(['user', 'assistant']),
+              text: z.string().min(1),
+              createdAt: z.number().optional(),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .optional(),
+
   overrides: z
     .array(
       z.object({

@@ -43,6 +43,15 @@ export interface AgentEvalSetup {
     };
   };
 
+  /** 为不同 profile seed memory，用于跨 profile isolation 测试 */
+  memoryByProfile?: Record<string, {
+    sessionMessages?: Array<{
+      role: 'user' | 'assistant';
+      text: string;
+      createdAt?: number;
+    }>;
+  }>;
+
   overrides?: Array<{
     metric: string;
     value: unknown;

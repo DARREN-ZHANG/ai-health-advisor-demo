@@ -225,6 +225,37 @@ describe('createEvalRuntime', () => {
       'sleep:month': '睡眠月度总结',
     });
   });
+
+  it('memoryByProfile 为不同 profile seed session messages', () => {
+    const evalCase = makeEvalCase({
+      setup: {
+        profileId: 'profile-a',
+        memoryByProfile: {
+          'profile-b': {
+            sessionMessages: [
+              { role: 'user', text: '赵沉睡最近的睡眠怎么样？' },
+              { role: 'assistant', text: '赵沉睡本周平均睡眠约5小时。' },
+            ],
+          },
+        },
+      },
+    });
+
+    const deps = createEvalRuntime({
+      evalCase,
+      dataDir: DATA_DIR,
+      providerMode: 'fake',
+    });
+
+    // profile-b 应有 seed 消息
+    const profileBMessages = deps.sessionMemory.getRecentMessagesForProfile('eval-session', 'profile-b');
+    expect(profileBMessages.length).toBe(2);
+    expect(profileBMessages[0]!.text).toBe('赵沉睡最近的睡眠怎么样？');
+
+    // profile-a 不应看到 profile-b 的消息
+    const profileAMessages = deps.sessionMemory.getRecentMessagesForProfile('eval-session', 'profile-a');
+    expect(profileAMessages.length).toBe(0);
+  });
 });
 
 describe('createEvalRuntime — timeline', () => {
