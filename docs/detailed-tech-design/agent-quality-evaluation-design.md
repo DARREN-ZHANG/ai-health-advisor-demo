@@ -1020,18 +1020,220 @@ Core Eval 可作为手动命令或 nightly job。
 - 后续加入人工抽样和 LLM-as-judge 评估表达质量。
 - 不把所有主观表达都写成关键词约束。
 
-## 18. 后续扩展
+## 18. Structured Evidence And Claims 评测规划
 
-第二阶段可扩展：
+### 18.1 问题陈述
+
+当前第一阶段的所有 scorer（protocol、mention、evidence、missing-data、safety 等）均基于**文本 pattern matching**：通过正则表达式检查关键词是否提及、禁止模式是否出现、结构是否合规。
+
+这种 pattern-based 方案在第一阶段是正确选择：
+
+- 快速、确定性强、无额外 LLM 调用成本。
+- 能有效捕获协议违规、安全越界、缺失数据编造等硬门槛问题。
+
+但 pattern matching 有天然局限：
+
+- **无法区分引用和编造**：`mustMention: ["睡眠"]` 只能验证"提到了睡眠"，无法验证提及的睡眠时长是否来自真实数据。
+- **无法验证事实精度**：`睡眠.*\d+(\.\d+)?\s*(小时|分钟)` 能检测到"睡眠 7.5 小时"，但无法验证这个数字是否与 context 中的实际 sleep 数据一致。
+- **容易误判和漏判**：同义表达、否定语境、间接引用都会导致 pattern 失效。例如"不建议剧烈运动"会命中 `运动` 关键词但语义不同。
+- **维护成本随 case 增长**：每个 case 都要手写 pattern，pattern 之间可能冲突，新场景需要新 pattern。
+
+随着 Agent 能力增强（引入 tools、ReAct 模式、reflection 自检），Agent 输出会变得更加复杂和多样化。Pattern scorer 在处理这些复杂输出时会越来越不够用。
+
+### 18.2 三阶段路线图
+
+#### 第一阶段：Pattern-Based Checks（当前阶段，已实施）
+
+- 使用正则 pattern 检查关键词提及、禁止模式、结构合规。
+- Scorer 基于 `EvalScorerInput` 的 `envelope` 和 `artifacts` 做断言。
+- 所有评判由确定性规则完成，无 LLM 调用。
+
+**优点**：
+
+- 快速、可复现、无额外成本。
+- 能有效捕获协议违规、安全越界、缺失数据编造等硬门槛。
+
+**局限**：
+
+- 无法验证事实精度（数值是否与 source data 一致）。
+- Pattern 可能误匹配（否定语境、同义表达）。
+- 无法区分"有证据支撑的声明"和"LLM 编造的声明"。
+
+**退出条件**：Core Eval 稳定运行，baseline 已建立，pattern scorer 的误判/漏判率可通过人工 review 量化。
+
+#### 第二阶段：Structured Claim Extractor（eval-only）
+
+在 eval 流程中增加一个 **claim parser**，从 Agent 输出中提取结构化 claim，然后对 claim 做精确验证。
+
+核心思路：**Agent 输出不变，eval 流程增加结构化提取和验证步骤。**
+
+**Claim Parser** 从 `summary` 和 `microTips` 中提取结构化 claim：
+
+```ts
+// 从 Agent 自然语言输出中提取的结构化声明
+interface ExtractedClaim {
+  // 声明涉及的指标，如 "spo2"、"sleep"、"hrv"
+  metric: string;
+  // 声明的具体内容，如 "98%"、"7.5小时"、"持续下降"
+  claim: string;
+  // 声明的来源判定
+  // - "stated": 明确引用了数据中的具体值
+  // - "inferred": 从趋势或上下文推断的结论
+  // - "ungrounded": 无法追溯到任何输入数据
+  source: 'stated' | 'inferred' | 'ungrounded';
+  // 声明涉及的时间范围（如可提取）
+  dateRange?: 'last_night' | 'today' | 'this_week' | 'this_month' | 'custom';
+  // claim 在原文中的位置（用于 trace）
+  textSpan?: { start: number; end: number };
+}
+```
+
+示例提取结果：
+
+```json
+[
+  { "metric": "spo2", "claim": "98%", "source": "stated" },
+  { "metric": "sleep", "claim": "7.5小时", "source": "stated", "dateRange": "last_night" },
+  { "metric": "hrv", "claim": "持续下降", "source": "inferred", "dateRange": "this_week" },
+  { "metric": "stress", "claim": "建议冥想", "source": "ungrounded" }
+]
+```
+
+**Claim Validator** 对提取的 claim 做以下检查：
+
+1. **Evidence 引用验证**：每个 `source: "stated"` 的 claim 是否能追溯到 `AgentContext` 中存在的 evidence（timeline data、override data、rule evaluation result）。
+2. **数值一致性**：claim 的数值（如 `98%`、`7.5小时`）是否与 context 中的实际数据一致。
+3. **时间范围一致性**：claim 的 `dateRange` 是否与 request 的 `timeframe` 一致。
+4. **缺失指标标记**：case 标记为 missing 的 metric，不应出现 `source: "stated"` 的 claim。
+5. **无证据声明标记**：`source: "ungrounded"` 的 claim 不应涉及具体数值或医学结论。
+
+**实现要点**：
+
+- Claim parser 可以是规则引擎（基于 metric 关键词 + 数值 pattern + 时间副词 pattern），也可以是小模型（轻量 NER + relation extraction）。
+- 在 eval artifact 中做 eval-only response contract，**不需要改生产 envelope**。
+- Claim validation 依赖 `AgentContext` 中已有的结构化数据（overrides、timeline segments、rule results），不依赖 LLM 生成新信息。
+
+**新增 Scorer**：
+
+```ts
+// 新增 structured-claim-scorer
+interface StructuredClaimCheckResult {
+  checkId: 'structured-claim';
+  severity: 'hard' | 'soft';
+  passed: boolean;
+  score: number;
+  maxScore: number;
+  message: string;
+  details: {
+    totalClaims: number;
+    grounded: number;
+    ungrounded: number;
+    violations: Array<{
+      claim: ExtractedClaim;
+      violation: 'value_mismatch' | 'metric_missing' | 'date_mismatch' | 'no_evidence';
+      expectedValue?: string;
+      actualValue?: string;
+    }>;
+  };
+}
+```
+
+**退出条件**：Claim parser 在 Core Eval case 上的提取准确率（人工标注）达到 90%+。Claim validator 能检测到第一阶段的 pattern scorer 遗漏的 false positive。
+
+#### 第三阶段：Product Envelope Upgrade（可选）
+
+在第二阶段验证有效后，考虑将 structured claims 引入生产 envelope。
+
+**Agent 输出增加可选字段**：
+
+```ts
+// AgentResponseEnvelope 新增可选字段（第三阶段）
+interface AgentResponseEnvelope {
+  // ... 现有字段不变 ...
+  claims?: Array<{
+    metric: string;
+    statement: string;
+    evidenceRefs?: string[];  // 引用 context 中的数据来源 ID
+    confidence?: 'high' | 'medium' | 'low';
+  }>;
+}
+```
+
+**产品价值**：
+
+- 前端可以展示 evidence 来源、支持内联引用（如"根据昨晚睡眠数据..."后显示数据卡片）。
+- 用户可以追溯建议的数据依据。
+- 为后续 tools / ReAct 模式的 intermediate steps 追踪提供基础。
+
+**实施前提**：
+
+- 第二阶段 claim parser 和 validator 已在 eval 中验证有效。
+- 产品团队评估用户体验影响（是否增加认知负担、是否需要折叠展示）。
+- 性能开销评估（增加 claim 提取的延迟和 token 消耗）。
+- 只有在第二阶段验证有效后才启动第三阶段。
+
+**不实施的条件**：如果第二阶段的 eval-only claim extraction 已经足够支撑质量保障，且产品没有展示 evidence 来源的需求，则可以长期停留在第二阶段。
+
+### 18.3 与 tools / ReAct / reflection 的关联
+
+#### 引入 tools 后
+
+Agent 引入 tools 后，可以主动查询数据源（如查询最近 7 天的 HRV 趋势、获取运动恢复指数）。这意味着：
+
+- Agent 输出的 claim 精度要求更高，因为 Agent 有能力获取精确数据。
+- Structured claim validation 可以对比 claim 与 tool 返回的原始数据，验证一致性。
+- Tool 调用结果可以作为 claim 的 evidence 来源，eval 可以追踪 claim → tool call → data source 的完整链路。
+
+#### ReAct 模式
+
+ReAct（Reasoning + Acting）模式下，Agent 的 intermediate steps（思考链、工具调用、观察结果）需要被 eval 追踪：
+
+- Structured claims 为 ReAct eval 提供了验收标准：最终输出的 claim 是否与 intermediate steps 中的 reasoning 一致。
+- Eval observer 需要扩展以捕获 ReAct 的 intermediate steps。
+- Claim parser 可以验证 Agent 是否在 reasoning 中正确使用了 tool 返回的数据，而不是在最终输出中编造不同的结论。
+
+#### Reflection 自检
+
+Reflection 模式下，Agent 在输出前会自检建议：
+
+- Structured claims 为 reflection 提供了自检依据：Agent 可以检查每个 claim 是否有对应的 evidence。
+- Eval 可以验证 reflection 是否有效修正了 ungrounded claims。
+
+#### 引入门槛总结
+
+```text
+Pattern-Based Checks（当前）
+  │
+  ├─ 引入 tools ────────── 需要 Structured Claim Extractor 验证 tool 返回数据的正确使用
+  │
+  ├─ 引入 ReAct ────────── 需要 Structured Claim Extractor 验证 reasoning 与 claim 的一致性
+  │
+  ├─ 引入 reflection ───── 需要 Structured Claim Extractor 为自检提供 claim 级粒度
+  │
+  └─ Product 展示 evidence ── 需要 Product Envelope Upgrade（第三阶段）
+```
+
+Structured claims 是 tools / ReAct / reflection 引入的质量保障前提。没有 claim 级评测，这些高级模式的效果无法被可靠评估。
+
+### 18.4 实施时间线建议
+
+| 阶段 | 前置条件 | 建议时机 |
+|------|----------|----------|
+| 第一阶段（Pattern-Based） | 无 | 已实施 |
+| 第二阶段（Claim Extractor） | Core Eval baseline 稳定、tools 引入前 | 在 tools / ReAct 实施之前的过渡期 |
+| 第三阶段（Envelope Upgrade） | 第二阶段验证有效、产品有 evidence 展示需求 | tools / ReAct 稳定后的产品迭代周期 |
+
+## 19. 其他后续扩展
+
+除 Structured Evidence And Claims 外，后续还可扩展：
 
 - LLM-as-judge subjective scorer。
 - Golden answer diff，但不要求逐字匹配。
-- Structured evidence output，让模型输出 `claims[]`，再由 evaluator 验证每条 claim。
 - Prompt version / model version 对比报告。
 - Eval dashboard。
 - 从 demo failure 自动生成 regression case。
 
-## 19. 关键结论
+## 20. 关键结论
 
 第一阶段应建设一个可扩展 deterministic eval framework，而不是只写少量临时测试。
 
