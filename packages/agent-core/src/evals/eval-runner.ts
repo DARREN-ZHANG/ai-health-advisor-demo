@@ -190,8 +190,11 @@ async function runSingleCase(
 
   let envelope: AgentResponseEnvelope | undefined;
   try {
-    // 执行 agent，超时 6s
-    envelope = await executeAgent(evalCase.request, deps, 6000, observer);
+    // 执行 agent，超时从 LLM_TIMEOUT_MS 读取，默认 6000ms
+    const agentTimeout = process.env.LLM_TIMEOUT_MS
+      ? parseInt(process.env.LLM_TIMEOUT_MS, 10)
+      : 6000;
+    envelope = await executeAgent(evalCase.request, deps, agentTimeout, observer);
   } catch (err) {
     // 执行异常，记录错误信息
     const artifacts = getArtifacts();
