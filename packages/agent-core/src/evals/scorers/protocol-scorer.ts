@@ -10,6 +10,7 @@ import type { EvalCheckResult, EvalScorerInput } from '../types';
  * - meta.taskType 与 request taskType 匹配
  * - meta.pageContext.profileId 与 request profileId 匹配
  * - expectedFinishReason 匹配
+ * - expectedSource 匹配
  */
 export const protocolScorer = {
   id: 'protocol',
@@ -49,6 +50,11 @@ export const protocolScorer = {
     // 检查 5：finishReason 匹配
     if (protocol?.expectedFinishReason !== undefined) {
       results.push(checkFinishReason(evalCase.id, evalCase, envelope!));
+    }
+
+    // 检查 6：source 匹配
+    if (protocol?.expectedSource !== undefined) {
+      results.push(checkSource(evalCase.id, evalCase, envelope!));
     }
 
     return results;
@@ -148,5 +154,26 @@ function checkFinishReason(
     message: passed
       ? `finishReason 匹配: ${expected}`
       : `finishReason 不匹配: 期望 ${expected}, 实际 ${actual}`,
+  };
+}
+
+/** 检查 envelope.source 是否匹配预期 */
+function checkSource(
+  caseId: string,
+  evalCase: EvalScorerInput['evalCase'],
+  envelope: NonNullable<EvalScorerInput['envelope']>,
+): EvalCheckResult {
+  const expected = evalCase.expectations.protocol?.expectedSource;
+  const actual = envelope.source;
+  const passed = actual === expected;
+  return {
+    checkId: `${caseId}:protocol:source_match`,
+    severity: 'hard',
+    passed,
+    score: passed ? 1 : 0,
+    maxScore: 1,
+    message: passed
+      ? `source 匹配: ${expected}`
+      : `source 不匹配: 期望 ${expected}, 实际 ${actual}`,
   };
 }

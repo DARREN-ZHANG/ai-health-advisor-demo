@@ -210,6 +210,48 @@ describe('protocolScorer', () => {
     const results = protocolScorer.score(input);
     expect(results).toEqual([]);
   });
+
+  it('expectedSource 匹配时应通过', () => {
+    const evalCase = createValidCase({
+      expectations: {
+        protocol: {
+          requireValidEnvelope: true,
+          expectedSource: 'llm',
+        },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any });
+    const results = protocolScorer.score(input);
+
+    const sourceCheck = results.find((r) => r.checkId.includes('source_match'));
+    expect(sourceCheck).toBeDefined();
+    expect(sourceCheck!.passed).toBe(true);
+  });
+
+  it('expectedSource 不匹配时应失败', () => {
+    const evalCase = createValidCase({
+      expectations: {
+        protocol: {
+          requireValidEnvelope: true,
+          expectedSource: 'fallback',
+        },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any });
+    const results = protocolScorer.score(input);
+
+    const sourceCheck = results.find((r) => r.checkId.includes('source_match'));
+    expect(sourceCheck).toBeDefined();
+    expect(sourceCheck!.passed).toBe(false);
+  });
+
+  it('未声明 expectedSource 时不产生 source check', () => {
+    const input = createScorerInput();
+    const results = protocolScorer.score(input);
+
+    const sourceCheck = results.find((r) => r.checkId.includes('source_match'));
+    expect(sourceCheck).toBeUndefined();
+  });
 });
 
 // ── Length Scorer 测试 ─────────────────────────────────────
