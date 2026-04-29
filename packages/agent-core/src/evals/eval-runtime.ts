@@ -148,7 +148,7 @@ export function createEvalRuntime(
   // ── 2. 创建 memory store 并 seed ─────────────────
   const sessionMemory = new InMemorySessionMemoryStore();
   const analyticalMemory = new InMemoryAnalyticalMemoryStore();
-  seedMemory(sessionMemory, analyticalMemory, setup);
+  seedMemory(sessionMemory, analyticalMemory, setup, evalCase.request.sessionId);
 
   // ── 3. 准备 overrides ────────────────────────────
   const overrideEntries: OverrideEntry[] = (setup.overrides ?? []).map((o) => ({
@@ -277,8 +277,8 @@ function seedMemory(
   sessionMemory: InMemorySessionMemoryStore,
   analyticalMemory: InMemoryAnalyticalMemoryStore,
   setup: AgentEvalCase['setup'],
+  sessionId: string,
 ): void {
-  const sessionId = 'eval-session';
   const profileId = setup.profileId;
 
   // seed session messages（当前 profile）
