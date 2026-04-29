@@ -8,6 +8,7 @@
   "setup": {
     "profileId": "profile-a",
     "timeline": {
+      "performSync": "app_open",
       "appendSegments": [
         {
           "segmentType": "steady_cardio",
