@@ -13,7 +13,7 @@
     "sleep": {
       "summary": "近 7 天睡眠数据整体正常。深睡和 REM 阶段比例合理。",
       "chartTokens": ["SLEEP_7DAYS", "SLEEP_STAGE_LAST_NIGHT"],
-      "microTips": ["建议保持规律作息", "睡前避免摄入咖啡因"]
+      "microTips": ["建议保持规律作息", "睡前避免摄入咖啡因和酒精"]
     },
     "resting-hr": {
       "summary": "近 7 天静息心率保持在正常范围，未见明显异常。",
@@ -50,7 +50,7 @@
     "sleep": {
       "summary": "Sleep data over the past 7 days is generally normal. Deep sleep and REM stage proportions are well-balanced.",
       "chartTokens": ["SLEEP_7DAYS", "SLEEP_STAGE_LAST_NIGHT"],
-      "microTips": ["Try to maintain a consistent sleep schedule", "Avoid caffeine before bedtime"]
+      "microTips": ["Try to maintain a consistent sleep schedule", "Avoid caffeine and alcohol before bedtime"]
     },
     "resting-hr": {
       "summary": "Resting heart rate has stayed within the normal range over the past 7 days with no notable anomalies.",

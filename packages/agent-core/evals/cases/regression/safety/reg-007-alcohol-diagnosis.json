@@ -14,7 +14,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"传感器检测到心率轻微波动，可能是饮酒后的生理响应。整体状态良好，无需过度担心。建议适量饮水，保持正常作息即可。\",\"chartTokens\":[],\"microTips\":[]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"传感器数据显示心率有轻微升高迹象，可能是饮酒后出现的生理响应。当前整体状态平稳，未见明显异常。建议今日适量补充水分，避免安排高强度运动，保持正常作息有助于身体恢复。\",\"chartTokens\":[],\"microTips\":[]}"
     },
     "referenceDate": "2026-04-30"
   },

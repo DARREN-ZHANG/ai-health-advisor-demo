@@ -84,9 +84,35 @@ function computeTimingScore(peakOffsetMin: number): number {
 }
 
 /** meal 上下文子分数 */
-function computeContextScore(nearbyTypes: string[]): number {
-  if (nearbyTypes.includes('meal_intake')) return 1.0;
-  return 0;
+function computeContextScore(hasNearbyMeal: boolean): number {
+  return hasNearbyMeal ? 1.0 : 0;
+}
+
+/** 检查 t0 附近是否存在进餐特征（不使用 segmentId） */
+function hasNearbyMealIntake(allEvents: DeviceEvent[], t0Time: string): boolean {
+  const windowStart = addMinutes(t0Time, -30);
+  const windowEnd = addMinutes(t0Time, 30);
+
+  const motions: number[] = [];
+  const hrs: number[] = [];
+  const stepsValues: number[] = [];
+
+  for (const e of allEvents) {
+    if (!e.measuredAt || e.measuredAt < windowStart || e.measuredAt > windowEnd) continue;
+    if (typeof e.value !== 'number') continue;
+    if (e.metric === 'motion') motions.push(e.value);
+    if (e.metric === 'heartRate') hrs.push(e.value);
+    if (e.metric === 'steps') stepsValues.push(e.value);
+  }
+
+  if (motions.length === 0 || hrs.length === 0) return false;
+
+  const avgMotion = avg(motions);
+  const avgHr = avg(hrs);
+  const maxSteps = stepsValues.length > 0 ? Math.max(...stepsValues) : 0;
+
+  // meal_intake 特征：低活动(2~7)、中等心率(60~90)、低步数
+  return avgMotion >= 2 && avgMotion <= 7 && avgHr >= 60 && avgHr <= 90 && maxSteps < 50;
 }
 
 // ============================================================
@@ -171,37 +197,44 @@ function detectSpo2Drop(baselineAvg: number, responseAvg: number): boolean {
   return (baselineAvg - responseAvg) >= 2;
 }
 
-/** 检查咖啡因重叠（通过附近 segmentId 或已识别的 caffeine event 判断） */
+/** 检查咖啡因重叠（通过传感器模式判断，不使用 segmentId） */
 function detectCaffeineOverlap(
-  responseBuckets: TimeBucket[],
+  _responseBuckets: TimeBucket[],
   allEvents: DeviceEvent[],
+  t0Time: string,
 ): boolean {
-  // 通过检查 response 窗口内是否存在 hrvRmssd + stressLoad + heartRate 的剧烈组合
-  // 更简单的做法：检查附近事件中是否有 segment.type === caffeine_intake 的 segmentId
-  const responseStart = responseBuckets[0]?.time;
-  const responseEnd = responseBuckets[responseBuckets.length - 1]?.time;
-  if (!responseStart || !responseEnd) return false;
+  // 检查 t0 ± 90min 窗口内是否存在咖啡因特征模式：高 HR (>85) + 高 stress (>25) + 低 RMSSD (<42)
+  const windowStart = addMinutes(t0Time, -90);
+  const windowEnd = addMinutes(t0Time, 90);
 
-  const nearbyEvents = allEvents.filter((e) => {
-    if (!e.measuredAt) return false;
-    return e.measuredAt >= responseStart && e.measuredAt <= responseEnd;
-  });
+  const hrValues: number[] = [];
+  const stressValues: number[] = [];
+  const rmssdValues: number[] = [];
 
-  // 检查附近是否有 caffeine_intake 的 segmentId
-  const caffeineSegmentIds = new Set(
-    nearbyEvents
-      .filter((e) => e.segmentId && e.segmentId.includes('caffeine'))
-      .map((e) => e.segmentId!),
-  );
+  for (const e of allEvents) {
+    if (!e.measuredAt || e.measuredAt < windowStart || e.measuredAt > windowEnd) continue;
+    if (typeof e.value !== 'number') continue;
+    if (e.metric === 'heartRate') hrValues.push(e.value);
+    if (e.metric === 'stressLoad') stressValues.push(e.value);
+    if (e.metric === 'hrvRmssd') rmssdValues.push(e.value);
+  }
 
-  // 注意：这里只用于混杂标记，不能作为识别的决定性因素
-  return caffeineSegmentIds.size > 0;
+  if (hrValues.length === 0 || stressValues.length === 0 || rmssdValues.length === 0) {
+    return false;
+  }
+
+  const avgHr = avg(hrValues);
+  const avgStress = avg(stressValues);
+  const avgRmssd = avg(rmssdValues);
+
+  // 咖啡因特征：显著高 HR + 高 stress + 低 RMSSD
+  return avgHr > 85 && avgStress > 25 && avgRmssd < 42;
 }
 
-/** 检查睡眠重叠 */
+/** 检查睡眠重叠（包含 baseline 和 response 窗口） */
 function detectSleepOverlap(buckets: TimeBucket[], t0Offset: number): boolean {
   const sleepWindow = buckets.filter(
-    (b) => b.minuteOffset >= t0Offset - 15 && b.minuteOffset <= t0Offset + 120,
+    (b) => b.minuteOffset >= t0Offset - 60 && b.minuteOffset <= t0Offset + 120,
   );
   // 如果窗口内运动极低且心率低，可能是睡眠
   if (sleepWindow.length === 0) return false;
@@ -250,15 +283,18 @@ export function detectPossibleAlcoholIntake(
   const minBucketOffset = buckets[0]!.minuteOffset;
   const maxBucketOffset = buckets[buckets.length - 1]!.minuteOffset;
 
-  for (let t0Offset = minBucketOffset + 60; t0Offset <= maxBucketOffset - 120; t0Offset += 15) {
+  for (let t0Offset = minBucketOffset + 60; t0Offset <= maxBucketOffset - 120; t0Offset += 5) {
     const candidate = analyzeCandidate(buckets, t0Offset, refTime, profileEvents);
     if (!candidate) continue;
 
     // 检查是否与已有结果重叠
     const t0Time = candidate.t0;
+    const candidateEnd = addMinutes(t0Time, 120);
     const overlapping = results.some((r) => {
-      const overlap = Math.min(diffMinutes(r.start, addMinutes(t0Time, 120)), diffMinutes(t0Time, r.end));
-      return overlap > 30;
+      const overlapStart = r.start > t0Time ? r.start : t0Time;
+      const overlapEnd = r.end < candidateEnd ? r.end : candidateEnd;
+      const overlapMin = diffMinutes(overlapStart, overlapEnd);
+      return overlapMin > 30;
     });
     if (overlapping) continue;
 
@@ -297,12 +333,22 @@ function analyzeCandidate(
   const baselineAvgStress = avg(baselineBuckets.flatMap((b) => b.stressLoads)) || 25;
   const baselineAvgSpo2 = avg(baselineBuckets.flatMap((b) => b.spo2Values)) || 97;
 
-  // 计算响应指标
-  const responseAvgHr = avg(responseBuckets.flatMap((b) => b.heartRates));
-  const responseAvgRmssd = avg(responseBuckets.flatMap((b) => b.hrvRmssds));
-  const responseAvgStress = avg(responseBuckets.flatMap((b) => b.stressLoads));
-  const responseAvgSpo2 = avg(responseBuckets.flatMap((b) => b.spo2Values));
-  const responseAvgMotion = avg(responseBuckets.flatMap((b) => b.motions));
+  // 计算响应指标（response 窗口必须有核心指标数据）
+  const responseHrValues = responseBuckets.flatMap((b) => b.heartRates);
+  const responseRmssdValues = responseBuckets.flatMap((b) => b.hrvRmssds);
+  const responseStressValues = responseBuckets.flatMap((b) => b.stressLoads);
+  const responseSpo2Values = responseBuckets.flatMap((b) => b.spo2Values);
+  const responseMotionValues = responseBuckets.flatMap((b) => b.motions);
+
+  if (responseHrValues.length === 0 || responseRmssdValues.length === 0 || responseStressValues.length === 0) {
+    return null;
+  }
+
+  const responseAvgHr = avg(responseHrValues);
+  const responseAvgRmssd = avg(responseRmssdValues);
+  const responseAvgStress = avg(responseStressValues);
+  const responseAvgSpo2 = responseSpo2Values.length > 0 ? avg(responseSpo2Values) : 97;
+  const responseAvgMotion = avg(responseMotionValues);
   // 步数是累积值，需要计算每5分钟增量而非直接取平均
   const responseSteps = responseBuckets.map((b) => b.steps);
   const stepDeltas: number[] = [];
@@ -328,8 +374,8 @@ function analyzeCandidate(
   // 3. stress 上升 >= 5
   if (responseAvgStress - baselineAvgStress < 5) return null;
 
-  // 4. 低活动（motion < 2.5 或每5分钟步数增量 < 30）
-  if (responseAvgMotion >= 2.5 && responseAvgStepsDelta >= 30) return null;
+  // 4. 低活动（motion < 2.5 且每5分钟步数增量 < 30）
+  if (responseAvgMotion >= 2.5 || responseAvgStepsDelta >= 30) return null;
 
   // 5. SpO2 不能明显下降
   if (baselineAvgSpo2 > 0 && baselineAvgSpo2 - responseAvgSpo2 >= 2) return null;
@@ -355,7 +401,7 @@ function analyzeCandidate(
   }
 
   // 咖啡因重叠
-  const caffeineOverlap = detectCaffeineOverlap(responseBuckets, allEvents);
+  const caffeineOverlap = detectCaffeineOverlap(responseBuckets, allEvents, t0Time);
   if (caffeineOverlap) {
     confounds.push('存在咖啡因摄入，可能与酒精响应混淆');
   }
@@ -378,8 +424,9 @@ function analyzeCandidate(
   }
   const timingScore = computeTimingScore(peakOffset - t0Offset);
 
-  // Context：检查附近是否有 meal_intake
-  const contextScore = 0; // v1 简化处理
+  // Context：检查附近是否有 meal_intake 特征
+  const nearbyMeal = hasNearbyMealIntake(allEvents, t0Time);
+  const contextScore = computeContextScore(nearbyMeal);
 
   // 总分计算（权重加权和）
   const score =

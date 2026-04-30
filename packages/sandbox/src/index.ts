@@ -63,6 +63,13 @@ export {
   generateIntermittentExerciseEvents,
   generateWalkEvents,
   generateSleepEvents,
+  generateDeepFocusEvents,
+  generateAnxietyEpisodeEvents,
+  generateBreathingPauseEvents,
+  generateAlcoholIntakeEvents,
+  generateCaffeineIntakeEvents,
+  generateNightmareEvents,
+  generateRelaxationEvents,
 } from './helpers/activity-generators';
 
 // Helpers — raw event repository
