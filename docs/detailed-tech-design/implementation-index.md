@@ -23,6 +23,7 @@
 
 - 若本轮评审主题是“主时间轴推进、设备缓存/同步、God Mode 片段注入”，应额外阅读 `demo-timeline-device-sync-plan.md`
 - 若本轮评审主题是“首页实时简报避免向用户暴露 baseline/基线术语”，应额外阅读 `homepage-baseline-language-implementation-guide.md`
+- 若本轮评审主题是“基于传感器时序响应推导可能咖啡因摄入”，应额外阅读 `caffeine-intake-detection-design.md`，并按 `../execute-plans/caffeine-intake-detection-implementation-plan.md` 执行
 
 ---
 
