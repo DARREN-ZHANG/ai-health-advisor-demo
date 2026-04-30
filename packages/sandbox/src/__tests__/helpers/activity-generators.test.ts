@@ -457,9 +457,9 @@ describe('activity-generators', () => {
     it('should generate 48 five-minute data points for 240 minutes', () => {
       const segment = makeSegment(baseSegment);
       const events = generateCaffeineIntakeEvents(segment);
-      // 5~240 每 5 分钟 = 48 个点 × 6 指标 = 288，加上 2 wearState = 290
+      // m=0 基线 × 6 + m=5~240 每 5 分钟 = 48 个点 × 6 指标 = 294，加上 2 wearState = 296
       const dataEvents = events.filter((e) => e.metric !== 'wearState');
-      expect(dataEvents.length).toBe(48 * 6);
+      expect(dataEvents.length).toBe(49 * 6); // m=0 + m=5~240 (49 points)
       expect(events.filter((e) => e.metric === 'wearState').length).toBe(2);
     });
 
@@ -477,8 +477,8 @@ describe('activity-generators', () => {
       for (const offset of offsets) {
         expect(offset % 5).toBe(0);
       }
-      // 第一个点在 m=5，最后一个在 m=240
-      expect(offsets[0]).toBe(5);
+      // 第一个点在 m=0（基线），最后一个在 m=240
+      expect(offsets[0]).toBe(0);
       expect(offsets[offsets.length - 1]).toBe(240);
     });
 

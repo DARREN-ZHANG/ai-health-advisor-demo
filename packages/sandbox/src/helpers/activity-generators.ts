@@ -636,24 +636,32 @@ function generateCaffeineIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
   events.push(makeEvent(segment, 0, 'wearState', true, idx++));
   events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
 
-  // 5 分钟间隔生成
+  // 在 m=0 生成基线事件（factor=0，真实基线值），供 detector 建立伪基线
+  events.push(makeEvent(segment, 0, 'heartRate', hrBaseline, idx++));
+  events.push(makeEvent(segment, 0, 'hrvRmssd', rmssdBaseline, idx++));
+  events.push(makeEvent(segment, 0, 'stressLoad', stressBaseline, idx++));
+  events.push(makeEvent(segment, 0, 'spo2', spo2Baseline, idx++));
+  events.push(makeEvent(segment, 0, 'motion', 0.3, idx++));
+  events.push(makeEvent(segment, 0, 'steps', 0, idx++));
+
+  // 5 分钟间隔生成（factor 从 0 平滑上升，所有 delta 从 0 缩放到 peak）
   for (let m = 5; m <= totalMin; m += 5) {
     const factor = caffeineResponseFactor(m);
     const d = deterministic(42, m);
     const noise = d * 0.3 + 0.85; // 0.85~1.15 的微噪声
 
-    // HR：随 factor 上升
-    const hrDelta = ranges.hrDeltaMin + (ranges.hrDeltaMax - ranges.hrDeltaMin) * factor;
+    // HR：从基线随 factor 线性上升至 peak
+    const hrDelta = ranges.hrDeltaMax * factor;
     const hr = Math.round(hrBaseline + hrDelta * noise);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
 
-    // RMSSD：随 factor 下降（RMSSD 越低越差）
-    const rmssdDrop = ranges.rmssdDropMin + (ranges.rmssdDropMax - ranges.rmssdDropMin) * factor;
+    // RMSSD：从基线随 factor 线性下降至 peak drop
+    const rmssdDrop = ranges.rmssdDropMax * factor;
     const rmssd = Math.round((rmssdBaseline * (1 - rmssdDrop * noise)) * 10) / 10;
     events.push(makeEvent(segment, m, 'hrvRmssd', rmssd, idx++));
 
-    // stressLoad：随 factor 上升
-    const stressDelta = ranges.stressDeltaMin + (ranges.stressDeltaMax - ranges.stressDeltaMin) * factor;
+    // stressLoad：从基线随 factor 线性上升至 peak
+    const stressDelta = ranges.stressDeltaMax * factor;
     const stress = Math.round(stressBaseline + stressDelta * noise);
     events.push(makeEvent(segment, m, 'stressLoad', stress, idx++));
 

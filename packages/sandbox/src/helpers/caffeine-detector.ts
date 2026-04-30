@@ -19,13 +19,27 @@ interface TimeBucket {
   motions: number[];
   steps: number[];
   spo2Values: number[];
+  sleepStages: string[];
 }
 
 /** 候选锚点的分析结果 */
 interface CandidateResult {
   t0: string;
-  baseline: { avgHr: number; avgRmssd: number; avgStress: number; avgSpo2: number };
-  response: { avgHr: number; avgRmssd: number; avgStress: number; avgSpo2: number; lowActivity: boolean };
+  baseline: {
+    avgHr: number;
+    avgRmssd: number;
+    avgStress: number;
+    avgSpo2: number;
+    rmssdPseudoBaseline: boolean;
+    stressPseudoBaseline: boolean;
+  };
+  response: {
+    avgHr: number;
+    avgRmssd: number;
+    avgStress: number;
+    avgSpo2: number;
+    lowActivity: boolean;
+  };
   score: number;
   subScores: {
     hrScore: number;
@@ -97,6 +111,9 @@ function computeContextScore(nearbyTypes: string[]): number {
 /** 给时间戳加分钟 */
 function addMinutes(timestamp: string, minutes: number): string {
   const date = new Date(`${timestamp}:00`);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`无效的时间戳格式: ${timestamp}`);
+  }
   date.setMinutes(date.getMinutes() + minutes);
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -119,6 +136,14 @@ function avg(values: number[]): number {
   return values.reduce((s, v) => s + v, 0) / values.length;
 }
 
+/** 数组标准差 */
+function stdDev(values: number[]): number {
+  if (values.length < 2) return 0;
+  const mean = avg(values);
+  const squaredDiffs = values.map((v) => (v - mean) ** 2);
+  return Math.sqrt(avg(squaredDiffs));
+}
+
 /** 将事件按 5 分钟时间桶聚合 */
 function buildTimeBuckets(events: DeviceEvent[], refTime: string): TimeBucket[] {
   const bucketMap = new Map<number, TimeBucket>();
@@ -136,8 +161,15 @@ function buildTimeBuckets(events: DeviceEvent[], refTime: string): TimeBucket[] 
         motions: [],
         steps: [],
         spo2Values: [],
+        sleepStages: [],
       };
       bucketMap.set(offset, bucket);
+    }
+
+    // sleepStage 的 value 是 string，单独处理
+    if (e.metric === 'sleepStage') {
+      bucket.sleepStages.push(String(e.value));
+      continue;
     }
 
     if (typeof e.value !== 'number') continue;
@@ -158,18 +190,46 @@ function buildTimeBuckets(events: DeviceEvent[], refTime: string): TimeBucket[] 
 // 混杂因素检测
 // ============================================================
 
-/** 检查运动重叠（通过 response 窗口的运动和步数增量判断） */
+/** 检查运动重叠（超过一半的时间桶有高运动） */
 function detectExerciseOverlap(responseBuckets: TimeBucket[]): boolean {
   const highMotionCount = responseBuckets.filter(
     (b) => avg(b.motions) > 2.0,
   ).length;
-  // 超过一半的时间桶有高运动 => 可能是运动
   return highMotionCount > responseBuckets.length * 0.5;
 }
 
 /** 检查 SpO2 明显下降 */
 function detectSpo2Drop(baselineAvg: number, responseAvg: number): boolean {
   return (baselineAvg - responseAvg) >= 2;
+}
+
+/**
+ * 检查焦虑混杂模式
+ * 基于传感器模式：高压力 + 不规则运动 + 心率高波动
+ */
+function detectAnxietyConfound(responseBuckets: TimeBucket[], baselineAvgStress: number): boolean {
+  // 高压力：平均 stress 超过基线 25 以上
+  const stressValues = responseBuckets.flatMap((b) => b.stressLoads);
+  if (stressValues.length === 0) return false;
+  const avgStress = avg(stressValues);
+  if (avgStress - baselineAvgStress < 25) return false;
+
+  // 不规则运动：motion 标准差 > 0.8
+  const motionValues = responseBuckets.flatMap((b) => b.motions);
+  if (motionValues.length < 2) return false;
+
+  // 心率波动大
+  const hrValues = responseBuckets.flatMap((b) => b.heartRates);
+  if (hrValues.length < 4) return false;
+
+  return stdDev(motionValues) > 0.8 && stdDev(hrValues) > 8;
+}
+
+/** 检查睡眠重叠：baseline + gap 窗口内有 sleepStage 事件 */
+function detectSleepOverlap(baselineBuckets: TimeBucket[], gapBuckets: TimeBucket[]): boolean {
+  const allBuckets = [...baselineBuckets, ...gapBuckets];
+  const sleepStages = allBuckets.flatMap((b) => b.sleepStages);
+  return sleepStages.length > 0;
 }
 
 // ============================================================
@@ -181,6 +241,11 @@ function detectSpo2Drop(baselineAvg: number, responseAvg: number): boolean {
  *
  * 只基于已同步 sensor events 推导，不依赖 segment.type 或 segmentId。
  * 返回 confidence >= 0.72 的 possible_caffeine_intake 事件。
+ *
+ * 关键设计决策：
+ * - 使用 RMSSD 首次出现位置约束候选锚点范围（咖啡因是唯一产生 RMSSD 的场景）
+ * - baseline RMSSD/stress 缺失时使用吸收延迟期伪基线（而非硬编码默认值）
+ * - 关键指标完全不可用时不输出 public event
  */
 export function detectPossibleCaffeineIntake(
   events: DeviceEvent[],
@@ -207,29 +272,39 @@ export function detectPossibleCaffeineIntake(
 
   if (buckets.length < 10) return []; // 数据太少
 
-  // 扫描候选锚点：每 15 分钟一个候选
-  const results: RecognizedEvent[] = [];
+  // 找到 RMSSD 数据首次出现的位置（咖啡因响应的强线索）
+  const rmssdBuckets = buckets.filter((b) => b.hrvRmssds.length > 0);
+  if (rmssdBuckets.length === 0) return [];
+  const rmssdOnset = rmssdBuckets[0]!.minuteOffset;
+
+  // 限制候选锚点范围：RMSSD 首次出现前 5 分钟到首次出现后 5 分钟
+  // m=0 基线事件确保 RMSSD onset ≈ 实际摄入时间，±5 容忍微小时间偏移
   const minBucketOffset = buckets[0]!.minuteOffset;
   const maxBucketOffset = buckets[buckets.length - 1]!.minuteOffset;
+  const minT0 = Math.max(minBucketOffset + 60, rmssdOnset - 5);
+  const maxT0 = Math.min(maxBucketOffset - 120, rmssdOnset + 5);
 
-  for (let t0Offset = minBucketOffset + 60; t0Offset <= maxBucketOffset - 120; t0Offset += 15) {
+  if (minT0 > maxT0) return [];
+
+  // 收集所有通过的候选，选择得分最高的
+  const candidates: CandidateResult[] = [];
+
+  for (let t0Offset = minT0; t0Offset <= maxT0; t0Offset += 5) {
     const candidate = analyzeCandidate(buckets, t0Offset, refTime);
     if (!candidate) continue;
 
-    // 检查是否与已有结果重叠
-    const t0Time = candidate.t0;
-    const overlapping = results.some((r) => {
-      const overlap = Math.min(diffMinutes(r.start, addMinutes(t0Time, 120)), diffMinutes(t0Time, r.end));
-      return overlap > 30;
-    });
-    if (overlapping) continue;
-
     if (candidate.score >= 0.72) {
-      results.push(buildCaffeineEvent(candidate, profileId, currentTime));
+      candidates.push(candidate);
     }
   }
 
-  return results;
+  if (candidates.length === 0) return [];
+
+  // 选择得分最高的候选
+  candidates.sort((a, b) => b.score - a.score);
+  const best = candidates[0]!;
+
+  return [buildCaffeineEvent(best, profileId, currentTime)];
 }
 
 /** 分析单个候选锚点 */
@@ -244,26 +319,73 @@ function analyzeCandidate(
   const baselineBuckets = buckets.filter(
     (b) => b.minuteOffset >= t0Offset - 60 && b.minuteOffset < t0Offset - 15,
   );
+  // 伪基线窗口（吸收延迟期）：t0-15 ~ t0+15
+  const pseudoBaselineBuckets = buckets.filter(
+    (b) => b.minuteOffset >= t0Offset - 15 && b.minuteOffset <= t0Offset + 15,
+  );
   // response 窗口：t0+15 ~ t0+120
   const responseBuckets = buckets.filter(
     (b) => b.minuteOffset >= t0Offset + 15 && b.minuteOffset <= t0Offset + 120,
   );
 
+  // 睡眠排除：如果在 baseline 或吸收延迟窗口有睡眠事件，排除
+  if (detectSleepOverlap(baselineBuckets, pseudoBaselineBuckets)) return null;
+
   // 需要足够的基线和响应数据
   if (baselineBuckets.length < 3 || responseBuckets.length < 6) return null;
 
-  // 计算基线指标（若数据不足则使用合理默认值）
-  const baselineAvgHr = avg(baselineBuckets.flatMap((b) => b.heartRates)) || 68;
-  const baselineAvgRmssd = avg(baselineBuckets.flatMap((b) => b.hrvRmssds)) || 50;
-  const baselineAvgStress = avg(baselineBuckets.flatMap((b) => b.stressLoads)) || 25;
-  const baselineAvgSpo2 = avg(baselineBuckets.flatMap((b) => b.spo2Values)) || 97;
+  // ── 基线指标计算 ──
 
-  // 计算响应指标
+  // HR 基线：必须从实际数据获取
+  const baselineFlatHr = baselineBuckets.flatMap((b) => b.heartRates);
+  if (baselineFlatHr.length === 0) return null;
+  const baselineAvgHr = avg(baselineFlatHr);
+
+  // RMSSD 基线：优先 baseline 窗口，次选吸收延迟期伪基线
+  let baselineAvgRmssd: number | null = null;
+  let rmssdPseudoBaseline = false;
+  const baselineFlatRmssd = baselineBuckets.flatMap((b) => b.hrvRmssds);
+  if (baselineFlatRmssd.length > 0) {
+    baselineAvgRmssd = avg(baselineFlatRmssd);
+  } else {
+    // 吸收延迟期（factor≈0）的 RMSSD 接近真实基线
+    const pseudoRmssd = pseudoBaselineBuckets.flatMap((b) => b.hrvRmssds);
+    if (pseudoRmssd.length > 0) {
+      baselineAvgRmssd = avg(pseudoRmssd);
+      rmssdPseudoBaseline = true;
+    }
+  }
+  // RMSSD 完全不可用 → 无法检测
+  if (baselineAvgRmssd === null) return null;
+
+  // stress 基线：优先 baseline 窗口，次选吸收延迟期伪基线
+  let baselineAvgStress: number | null = null;
+  let stressPseudoBaseline = false;
+  const baselineFlatStress = baselineBuckets.flatMap((b) => b.stressLoads);
+  if (baselineFlatStress.length > 0) {
+    baselineAvgStress = avg(baselineFlatStress);
+  } else {
+    const pseudoStress = pseudoBaselineBuckets.flatMap((b) => b.stressLoads);
+    if (pseudoStress.length > 0) {
+      baselineAvgStress = avg(pseudoStress);
+      stressPseudoBaseline = true;
+    }
+  }
+  // stress 完全不可用 → 无法检测
+  if (baselineAvgStress === null) return null;
+
+  // SpO2 基线（允许缺失，使用合理默认值）
+  const baselineFlatSpo2 = baselineBuckets.flatMap((b) => b.spo2Values);
+  const baselineAvgSpo2 = baselineFlatSpo2.length > 0 ? avg(baselineFlatSpo2) : 97;
+
+  // ── 响应指标计算 ──
+
   const responseAvgHr = avg(responseBuckets.flatMap((b) => b.heartRates));
   const responseAvgRmssd = avg(responseBuckets.flatMap((b) => b.hrvRmssds));
   const responseAvgStress = avg(responseBuckets.flatMap((b) => b.stressLoads));
   const responseAvgSpo2 = avg(responseBuckets.flatMap((b) => b.spo2Values));
   const responseAvgMotion = avg(responseBuckets.flatMap((b) => b.motions));
+
   // 步数是累积值，需要计算每5分钟增量而非直接取平均
   const responseSteps = responseBuckets.map((b) => b.steps);
   const stepDeltas: number[] = [];
@@ -276,38 +398,47 @@ function analyzeCandidate(
   }
   const responseAvgStepsDelta = avg(stepDeltas);
 
-  // 最低证据条件检查
-  // 1. response 内至少 3 个点 HR 高于 baseline >= 8 bpm
+  // ── 最低证据条件检查 ──
+
+  // 1. response 内至少 3 个桶 HR 高于 baseline >= 8 bpm
   const hrElevatedBuckets = responseBuckets.filter(
     (b) => avg(b.heartRates) >= baselineAvgHr + 8,
   );
   if (hrElevatedBuckets.length < 3) return null;
 
-  // 2. RMSSD 下降 >= 15%
+  // 2. RMSSD 下降 >= 15%（关键指标，不可用默认值推导）
   if (baselineAvgRmssd <= 0 || (baselineAvgRmssd - responseAvgRmssd) / baselineAvgRmssd < 0.15) return null;
 
-  // 3. stress 上升 >= 10
+  // 3. stress 上升 >= 10（关键指标）
   if (responseAvgStress - baselineAvgStress < 10) return null;
 
-  // 4. 低活动（motion < 2.0 且每5分钟步数增量 < 20）
-  if (responseAvgMotion >= 2.0 && responseAvgStepsDelta >= 20) return null;
+  // 4. 低活动：motion < 2.0 且 steps < 20/5min（任一不满足即排除）
+  if (responseAvgMotion >= 2.0 || responseAvgStepsDelta >= 20) return null;
 
   // 5. SpO2 不能明显下降
-  if (baselineAvgSpo2 > 0 && baselineAvgSpo2 - responseAvgSpo2 >= 2) return null;
+  if (baselineAvgSpo2 > 0 && detectSpo2Drop(baselineAvgSpo2, responseAvgSpo2)) return null;
 
-  // 混杂因素检查
+  // ── 混杂因素检查 ──
+
   const confounds: string[] = [];
-  const exerciseOverlap = detectExerciseOverlap(responseBuckets);
-  if (exerciseOverlap) {
-    // 运动重叠时不输出（已在最低条件排除，但保留逻辑完整性）
-    return null;
-  }
 
+  // 运动重叠 → 直接排除
+  const exerciseOverlap = detectExerciseOverlap(responseBuckets);
+  if (exerciseOverlap) return null;
+
+  // SpO2 轻微下降 → 记录但允许继续
   if (baselineAvgSpo2 > 0 && responseAvgSpo2 < baselineAvgSpo2 - 1.5) {
     confounds.push('SpO2 轻微下降');
   }
 
-  // 计算子分数
+  // 焦虑混杂 → 扣分但不排除
+  const anxietyDetected = detectAnxietyConfound(responseBuckets, baselineAvgStress);
+  if (anxietyDetected) {
+    confounds.push('焦虑/高压力混杂因素');
+  }
+
+  // ── 子分数计算 ──
+
   const hrScore = computeHrScore(baselineAvgHr, responseAvgHr, hrElevatedBuckets.length);
   const rmssdScore = computeRmssdScore(baselineAvgRmssd, responseAvgRmssd);
   const stressScore = computeStressScore(baselineAvgStress, responseAvgStress);
@@ -324,10 +455,10 @@ function analyzeCandidate(
     }
   }
   const timingScore = computeTimingScore(peakOffset - t0Offset);
-  const contextScore = 0; // v1 没有 drink/meal 上下文
+  const contextScore = computeContextScore([]); // v1 没有 drink/meal 上下文
 
   // 总分计算（权重加权和）
-  const score =
+  let score =
     hrScore * 0.35 +
     rmssdScore * 0.30 +
     stressScore * 0.15 +
@@ -336,7 +467,9 @@ function analyzeCandidate(
     contextScore * 0.05;
 
   // 焦虑混杂扣分
-  const finalScore = confounds.length > 0 ? score * 0.75 : score;
+  if (anxietyDetected) {
+    score *= 0.75;
+  }
 
   return {
     t0: t0Time,
@@ -345,6 +478,8 @@ function analyzeCandidate(
       avgRmssd: baselineAvgRmssd,
       avgStress: baselineAvgStress,
       avgSpo2: baselineAvgSpo2,
+      rmssdPseudoBaseline,
+      stressPseudoBaseline,
     },
     response: {
       avgHr: responseAvgHr,
@@ -353,7 +488,7 @@ function analyzeCandidate(
       avgSpo2: responseAvgSpo2,
       lowActivity: responseAvgMotion < 2.0 && responseAvgStepsDelta < 20,
     },
-    score: finalScore,
+    score,
     subScores: { hrScore, rmssdScore, stressScore, activityScore, timingScore, contextScore },
     confounds,
   };
@@ -367,7 +502,6 @@ function buildCaffeineEvent(
 ): RecognizedEvent {
   const startTime = candidate.t0;
   const endTime = addMinutes(startTime, 120); // response window 结束
-  const durationMin = diffMinutes(startTime, endTime);
 
   const hrDelta = Math.round(candidate.response.avgHr - candidate.baseline.avgHr);
   const rmssdDropPct = candidate.baseline.avgRmssd > 0
@@ -381,6 +515,14 @@ function buildCaffeineEvent(
     `low motion and low steps, SpO2 stable`,
     `confidence ${Math.round(candidate.score * 100)}%`,
   ];
+
+  // 标注伪基线使用情况（让 evidence 更透明）
+  if (candidate.baseline.rmssdPseudoBaseline) {
+    evidence.push('RMSSD baseline estimated from early response data');
+  }
+  if (candidate.baseline.stressPseudoBaseline) {
+    evidence.push('stress baseline estimated from early response data');
+  }
 
   if (candidate.confounds.length > 0) {
     evidence.push(`confounds: ${candidate.confounds.join(', ')}`);
