@@ -9,6 +9,7 @@ import {
   generateWalkEvents,
   generateSleepEvents,
   generateCaffeineIntakeEvents,
+  generateAlcoholIntakeEvents,
 } from '../../helpers/activity-generators';
 
 // ============================================================
@@ -668,6 +669,233 @@ describe('activity-generators', () => {
     it('should produce wearState events at start and end', () => {
       const segment = makeSegment(baseSegment);
       const events = generateCaffeineIntakeEvents(segment);
+      const wearState = events.filter((e) => e.metric === 'wearState');
+      expect(wearState.length).toBe(2);
+      expect(wearState[0].value).toBe(true);
+      expect(wearState[0].measuredAt).toBe(segment.start);
+      expect(wearState[1].value).toBe(false);
+      expect(wearState[1].measuredAt).toBe(segment.end);
+    });
+  });
+
+  describe('generateAlcoholIntakeEvents', () => {
+    const baseSegment = {
+      segmentId: 'seg-alcohol-1',
+      type: 'alcohol_intake' as const,
+      start: '2026-04-16T08:00',
+      end: '2026-04-16T11:00',
+    };
+
+    it('should generate 36 five-minute data points for 180 minutes', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateAlcoholIntakeEvents(segment);
+      // 5~180 每 5 分钟 = 36 个点 × 6 指标 = 216，加上 2 wearState = 218
+      const dataEvents = events.filter((e) => e.metric !== 'wearState');
+      expect(dataEvents.length).toBe(36 * 6);
+      expect(events.filter((e) => e.metric === 'wearState').length).toBe(2);
+    });
+
+    it('should generate events at 5-minute intervals', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateAlcoholIntakeEvents(segment);
+      const hrEvents = events.filter((e) => e.metric === 'heartRate');
+      const offsets = hrEvents.map((e) => {
+        const time = e.measuredAt;
+        const start = segment.start;
+        const diff = (new Date(`${time}:00`).getTime() - new Date(`${start}:00`).getTime()) / 60000;
+        return diff;
+      });
+      for (const offset of offsets) {
+        expect(offset % 5).toBe(0);
+      }
+      expect(offsets[0]).toBe(5);
+      expect(offsets[offsets.length - 1]).toBe(180);
+    });
+
+    it('should produce all required metrics per 5-minute point', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateAlcoholIntakeEvents(segment);
+      const metrics = new Set(events.filter((e) => e.metric !== 'wearState').map((e) => e.metric));
+      expect(metrics).toContain('heartRate');
+      expect(metrics).toContain('hrvRmssd');
+      expect(metrics).toContain('stressLoad');
+      expect(metrics).toContain('spo2');
+      expect(metrics).toContain('motion');
+      expect(metrics).toContain('steps');
+    });
+
+    describe('moderate amount', () => {
+      it('should have peak HR elevation in the 40-80min window', () => {
+        const segment = makeSegment(baseSegment);
+        const events = generateAlcoholIntakeEvents(segment);
+        const hrEvents = events.filter((e) => e.metric === 'heartRate');
+        const hrBaseline = 68;
+
+        const peakHrs = hrEvents.filter((e) => {
+          const diff = (new Date(`${e.measuredAt}:00`).getTime() - new Date(`${segment.start}:00`).getTime()) / 60000;
+          return diff >= 40 && diff <= 80;
+        }).map((e) => e.value as number);
+
+        const avgPeakHr = peakHrs.reduce((a, b) => a + b, 0) / peakHrs.length;
+        // moderate: HR baseline + 4~9 => peak 应在 72~
+        expect(avgPeakHr).toBeGreaterThan(hrBaseline + 3);
+      });
+
+      it('should have RMSSD drop in expected range during peak', () => {
+        const segment = makeSegment(baseSegment);
+        const events = generateAlcoholIntakeEvents(segment);
+        const rmssdEvents = events.filter((e) => e.metric === 'hrvRmssd');
+        const rmssdBaseline = 50;
+
+        const peakRmssds = rmssdEvents.filter((e) => {
+          const diff = (new Date(`${e.measuredAt}:00`).getTime() - new Date(`${segment.start}:00`).getTime()) / 60000;
+          return diff >= 40 && diff <= 80;
+        }).map((e) => e.value as number);
+
+        const avgPeakRmssd = peakRmssds.reduce((a, b) => a + b, 0) / peakRmssds.length;
+        // moderate: RMSSD baseline - 5~12 ms => 应显著低于基线
+        expect(avgPeakRmssd).toBeLessThan(rmssdBaseline - 3);
+      });
+
+      it('should have stress elevation during peak', () => {
+        const segment = makeSegment(baseSegment);
+        const events = generateAlcoholIntakeEvents(segment);
+        const stressEvents = events.filter((e) => e.metric === 'stressLoad');
+        const stressBaseline = 25;
+
+        const peakStress = stressEvents.filter((e) => {
+          const diff = (new Date(`${e.measuredAt}:00`).getTime() - new Date(`${segment.start}:00`).getTime()) / 60000;
+          return diff >= 40 && diff <= 80;
+        }).map((e) => e.value as number);
+
+        const avgPeakStress = peakStress.reduce((a, b) => a + b, 0) / peakStress.length;
+        // moderate: stress baseline + 7~15 => 应高于基线
+        expect(avgPeakStress).toBeGreaterThan(stressBaseline + 5);
+      });
+    });
+
+    describe('heavy amount', () => {
+      it('should have stronger HR response than moderate', () => {
+        const modSegment = makeSegment(baseSegment);
+        const heavySegment = makeSegment({
+          ...baseSegment,
+          segmentId: 'seg-alcohol-heavy',
+          params: { amount: 'heavy' },
+        });
+
+        const modEvents = generateAlcoholIntakeEvents(modSegment);
+        const heavyEvents = generateAlcoholIntakeEvents(heavySegment);
+
+        const getPeakHr = (events: typeof modEvents, segment: typeof modSegment) => {
+          return events
+            .filter((e) => e.metric === 'heartRate')
+            .filter((e) => {
+              const diff = (new Date(`${e.measuredAt}:00`).getTime() - new Date(`${segment.start}:00`).getTime()) / 60000;
+              return diff >= 40 && diff <= 80;
+            })
+            .map((e) => e.value as number)
+            .reduce((a, b) => a + b, 0);
+        };
+
+        const modPeakHr = getPeakHr(modEvents, modSegment);
+        const heavyPeakHr = getPeakHr(heavyEvents, heavySegment);
+        expect(heavyPeakHr).toBeGreaterThan(modPeakHr);
+      });
+
+      it('should have stronger RMSSD drop than moderate', () => {
+        const modSegment = makeSegment(baseSegment);
+        const heavySegment = makeSegment({
+          ...baseSegment,
+          segmentId: 'seg-alcohol-heavy',
+          params: { amount: 'heavy' },
+        });
+
+        const getPeakRmssd = (segment: typeof modSegment) => {
+          const all = generateAlcoholIntakeEvents(segment);
+          return all
+            .filter((e) => e.metric === 'hrvRmssd')
+            .filter((e) => {
+              const diff = (new Date(`${e.measuredAt}:00`).getTime() - new Date(`${segment.start}:00`).getTime()) / 60000;
+              return diff >= 40 && diff <= 80;
+            })
+            .map((e) => e.value as number)
+            .reduce((a, b) => a + b, 0);
+        };
+
+        const modPeak = getPeakRmssd(modSegment);
+        const heavyPeak = getPeakRmssd(heavySegment);
+        // heavy 的 RMSSD 下降更多，所以值更低
+        expect(heavyPeak).toBeLessThan(modPeak);
+      });
+    });
+
+    describe('light amount', () => {
+      it('should have weaker response than moderate', () => {
+        const modSegment = makeSegment(baseSegment);
+        const lightSegment = makeSegment({
+          ...baseSegment,
+          segmentId: 'seg-alcohol-light',
+          params: { amount: 'light' },
+        });
+
+        const modEvents = generateAlcoholIntakeEvents(modSegment);
+        const lightEvents = generateAlcoholIntakeEvents(lightSegment);
+
+        const getPeakHr = (events: typeof modEvents, segment: typeof modSegment) => {
+          return events
+            .filter((e) => e.metric === 'heartRate')
+            .filter((e) => {
+              const diff = (new Date(`${e.measuredAt}:00`).getTime() - new Date(`${segment.start}:00`).getTime()) / 60000;
+              return diff >= 40 && diff <= 80;
+            })
+            .map((e) => e.value as number)
+            .reduce((a, b) => a + b, 0);
+        };
+
+        const modPeakHr = getPeakHr(modEvents, modSegment);
+        const lightPeakHr = getPeakHr(lightEvents, lightSegment);
+        expect(lightPeakHr).toBeLessThan(modPeakHr);
+      });
+    });
+
+    it('should keep SpO2 stable near baseline', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateAlcoholIntakeEvents(segment);
+      const spo2Events = events.filter((e) => e.metric === 'spo2');
+      for (const e of spo2Events) {
+        expect(e.value as number).toBeGreaterThanOrEqual(95);
+        expect(e.value as number).toBeLessThanOrEqual(99);
+      }
+    });
+
+    it('should keep motion and steps low activity', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateAlcoholIntakeEvents(segment);
+      const motionEvents = events.filter((e) => e.metric === 'motion');
+      const stepsEvents = events.filter((e) => e.metric === 'steps');
+      for (const e of motionEvents) {
+        expect(e.value as number).toBeLessThan(2.5);
+      }
+      const lastSteps = stepsEvents[stepsEvents.length - 1];
+      expect(lastSteps.value as number).toBeLessThan(1000);
+    });
+
+    it('should be deterministic', () => {
+      const segment = makeSegment(baseSegment);
+      const events1 = generateAlcoholIntakeEvents(segment);
+      const events2 = generateAlcoholIntakeEvents(segment);
+      expect(events1).toEqual(events2);
+    });
+
+    it('should produce events within segment time range', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateAlcoholIntakeEvents(segment);
+      assertEventsInRange(events, segment.start, segment.end);
+    });
+
+    it('should produce wearState events at start and end', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateAlcoholIntakeEvents(segment);
       const wearState = events.filter((e) => e.metric === 'wearState');
       expect(wearState.length).toBe(2);
       expect(wearState[0].value).toBe(true);

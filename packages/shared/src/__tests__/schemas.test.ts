@@ -592,6 +592,10 @@ describe('RecognizedEventTypeSchema', () => {
     expect(RecognizedEventTypeSchema.parse('possible_caffeine_intake')).toBe('possible_caffeine_intake');
   });
 
+  it('accepts possible_alcohol_intake', () => {
+    expect(RecognizedEventTypeSchema.parse('possible_alcohol_intake')).toBe('possible_alcohol_intake');
+  });
+
   it('rejects invalid recognized event type', () => {
     expect(() => RecognizedEventTypeSchema.parse('invalid')).toThrow();
   });
@@ -633,6 +637,11 @@ describe('RecognizedEventSchema', () => {
 
   it('accepts possible_caffeine_intake event type', () => {
     const event = { ...validEvent, type: 'possible_caffeine_intake' as const };
+    expect(RecognizedEventSchema.parse(event)).toEqual(event);
+  });
+
+  it('accepts possible_alcohol_intake event type', () => {
+    const event = { ...validEvent, type: 'possible_alcohol_intake' as const };
     expect(RecognizedEventSchema.parse(event)).toEqual(event);
   });
 

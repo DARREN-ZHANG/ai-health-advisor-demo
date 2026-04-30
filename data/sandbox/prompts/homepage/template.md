@@ -6,6 +6,7 @@ Generate a real-time briefing based on the user's **most recent events**, **past
 
 **Recent Events (60%) — Core Analysis & Recommendations**:
 - Focus on the activity the user just completed or is currently engaged in (e.g., exercise, meal, prolonged sitting, sleep)
+- For possible_caffeine_intake and possible_alcohol_intake events, you MUST use probabilistic language (e.g., "possibly consumed", "appears to be"). NEVER say "confirmed intake" or infer specific beverage or alcohol types
 - Analyze the immediate impact of that event on the body's condition
 - Provide direct, actionable follow-up recommendations (e.g., exercise type adjustments, rest timing, dietary supplements)
 

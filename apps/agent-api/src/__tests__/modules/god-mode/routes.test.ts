@@ -379,6 +379,37 @@ describe('God-Mode Routes', () => {
       });
     });
 
+    test('追加 alcohol_intake 片段返回 200', async () => {
+      // 先重置确保干净状态
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/timeline-append',
+        payload: {
+          segmentType: 'alcohol_intake',
+          params: { amount: 'moderate' },
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      expect(body.data).toHaveProperty('currentDemoTime');
+      expect(body.data.pendingEventCount).toBeGreaterThanOrEqual(0);
+
+      // 清理
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+    });
+
     test('无效 segmentType 返回 400', async () => {
       const response = await app.inject({
         method: 'POST',
