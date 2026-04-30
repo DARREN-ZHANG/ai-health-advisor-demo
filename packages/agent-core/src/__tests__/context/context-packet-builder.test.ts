@@ -274,4 +274,50 @@ describe('buildTaskContextPacket', () => {
       expect(m.lastAvailableDate).toBe('2026-04-06');
     }
   });
+
+  it('includes possible_caffeine_intake in recentEvents with enhanced derivation', () => {
+    const ctx = makeContext({
+      timelineSync: {
+        recognizedEvents: [
+          {
+            recognizedEventId: 're-caffeine-1',
+            profileId: 'profile-a',
+            type: 'possible_caffeine_intake',
+            start: '2026-04-10T09:00',
+            end: '2026-04-10T11:00',
+            confidence: 0.81,
+            evidence: [
+              'recognized possible caffeine response',
+              'HR +11bpm, RMSSD -24%, stress +16',
+              'low motion and low steps, SpO2 stable',
+              'confidence 81%',
+            ],
+          },
+        ],
+        derivedTemporalStates: [],
+        syncMetadata: {
+          lastSyncedMeasuredAt: '2026-04-10T11:00',
+          pendingEventCount: 0,
+        },
+      },
+    });
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+
+    // 应包含 possible_caffeine_intake 事件
+    expect(packet.homepage.recentEvents.length).toBeGreaterThan(0);
+    const caffeineEvent = packet.homepage.recentEvents.find(
+      (e) => e.type === 'possible_caffeine_intake',
+    );
+    expect(caffeineEvent).toBeDefined();
+    expect(caffeineEvent!.confidence).toBe(0.81);
+    expect(caffeineEvent!.durationMin).toBe(120);
+
+    // Evidence 应包含增强的 derivation
+    const caffeineEvidence = packet.evidence.find((f) =>
+      f.id.startsWith('event_possible_caffeine_intake'),
+    );
+    expect(caffeineEvidence).toBeDefined();
+    expect(caffeineEvidence!.derivation).toContain('possible caffeine intake');
+    expect(caffeineEvidence!.derivation).toContain('HR +11bpm');
+  });
 });
