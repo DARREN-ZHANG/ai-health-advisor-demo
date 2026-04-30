@@ -163,6 +163,7 @@
       "anxietyEpisode": "Anxiety",
       "breathingPause": "Apnea",
       "alcoholIntake": "Alcohol",
+      "caffeineIntake": "Caffeine",
       "nightmare": "Nightmare",
       "relaxation": "Relax"
     },
