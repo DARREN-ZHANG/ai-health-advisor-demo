@@ -3,9 +3,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
+import { isValidChartTokenId } from '@health-advisor/shared';
 import type { StressTimelineResponse, ChartTokenId, DataCenterResponse } from '@health-advisor/shared';
 import type { StandardTimeSeries, ChartDataPoint } from '@health-advisor/charts';
 import { toTimeSeries } from '@health-advisor/charts';
+
+export type ChartDataByToken = Partial<Record<ChartTokenId, StandardTimeSeries>>;
 
 export function useDataCenterQuery(
   profileId: string | undefined,
@@ -53,7 +56,27 @@ export function useChartDataQuery(
   });
 }
 
-function normalizeChartDataResponse(response: unknown): StandardTimeSeries | null {
+export function useChartDataByTokenQuery(
+  profileId: string | undefined,
+  tokens: ChartTokenId[],
+  timeframe: string = 'week'
+) {
+  return useQuery({
+    queryKey: queryKeys.dataCenter.chartDataByToken(profileId || '', tokens.join(','), timeframe),
+    queryFn: async () => {
+      if (!profileId || tokens.length === 0) return null;
+
+      const response = await apiClient.get<unknown>(
+        `/profiles/${profileId}/chart-data?tokens=${tokens.join(',')}&timeframe=${timeframe}`
+      );
+      return normalizeChartDataByTokenResponse(response);
+    },
+    enabled: !!profileId && tokens.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function normalizeChartDataResponse(response: unknown): StandardTimeSeries | null {
   if (!response) return null;
 
   if (isStandardTimeSeries(response)) {
@@ -68,6 +91,26 @@ function normalizeChartDataResponse(response: unknown): StandardTimeSeries | nul
     const timelines = response.filter(hasTimeline).map((item) => item.timeline);
     if (timelines.length === 0) return null;
     return toTimeSeries(mergeTimelinePoints(timelines));
+  }
+
+  return null;
+}
+
+export function normalizeChartDataByTokenResponse(response: unknown): ChartDataByToken | null {
+  if (!response) return null;
+
+  if (hasTokenTimeline(response)) {
+    return { [response.token]: toTimeSeries(response.timeline) };
+  }
+
+  if (Array.isArray(response)) {
+    const items = response.filter(hasTokenTimeline);
+    if (items.length === 0) return null;
+
+    return items.reduce<ChartDataByToken>((byToken, item) => {
+      byToken[item.token] = toTimeSeries(item.timeline);
+      return byToken;
+    }, {});
   }
 
   return null;
@@ -90,6 +133,15 @@ function hasTimeline(value: unknown): value is { timeline: ChartDataPoint[] } {
     value !== null &&
     'timeline' in value &&
     Array.isArray((value as { timeline?: unknown }).timeline)
+  );
+}
+
+function hasTokenTimeline(value: unknown): value is { token: ChartTokenId; timeline: ChartDataPoint[] } {
+  return (
+    hasTimeline(value) &&
+    'token' in value &&
+    typeof (value as { token?: unknown }).token === 'string' &&
+    isValidChartTokenId((value as { token: string }).token)
   );
 }
 

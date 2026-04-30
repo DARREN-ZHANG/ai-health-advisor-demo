@@ -49,4 +49,19 @@ describe('toTimeSeries', () => {
       hr: [72, null],
     });
   });
+
+  it('包含后续数据点才出现的 key', () => {
+    const points: ChartDataPoint[] = [
+      { date: '00:00', values: { hr: 72 } },
+      { date: '2026-04-30', values: { hrv: 102, 'sleep.totalMinutes': 379 } },
+    ];
+
+    const result = toTimeSeries(points);
+
+    expect(result.series).toEqual({
+      hr: [72, null],
+      hrv: [null, 102],
+      'sleep.totalMinutes': [null, 379],
+    });
+  });
 });

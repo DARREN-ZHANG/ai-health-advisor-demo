@@ -8,7 +8,7 @@ import { OverviewGrid } from '@/components/data-center/OverviewGrid';
 import { DeviceStatusBar } from '@/components/data-center/DeviceStatusBar';
 import { useDataCenterStore } from '@/stores/data-center.store';
 import { useProfileStore } from '@/stores/profile.store';
-import { useDataCenterQuery, useChartDataQuery } from '@/hooks/use-data-query';
+import { useDataCenterQuery, useChartDataByTokenQuery } from '@/hooks/use-data-query';
 import { useDeviceSyncQuery } from '@/hooks/use-device-sync';
 import { useDataChartOption, createCompactChartOption } from '@/hooks/use-data-chart-option';
 import { useViewSummary } from '@/hooks/use-ai-query';
@@ -61,7 +61,7 @@ export default function DataCenterPage() {
   const chartOption = useDataChartOption((isOverview ? 'sleep' : activeTab) as DataTab, chartData);
 
   // 获取趋势汇总数据（6 项指标，概览 tab 与详情 tab 共用）
-  const { data: trendData, isLoading: isTrendLoading } = useChartDataQuery(
+  const { data: trendDataByToken, isLoading: isTrendLoading } = useChartDataByTokenQuery(
     currentProfileId,
     TREND_TOKEN_IDS,
     timeframe
@@ -69,7 +69,7 @@ export default function DataCenterPage() {
 
   // 构建概览网格数据
   const trends = useMemo(() => {
-    if (!trendData) {
+    if (!trendDataByToken) {
       return TREND_TOKEN_CONFIGS.map((config) => ({
         id: config.id,
         label: config.label,
@@ -86,12 +86,12 @@ export default function DataCenterPage() {
         label: config.label,
         tokenId: config.tokenId,
         metricKey: config.metricKey,
-        data: trendData,
+        data: trendDataByToken[config.tokenId],
         isLoading: isTrendLoading,
         formatValue: config.formatValue,
       })
     );
-  }, [trendData, isTrendLoading]);
+  }, [trendDataByToken, isTrendLoading]);
 
   const isAnyLoading = isLoading || isFetching;
 
@@ -261,11 +261,11 @@ function buildTrendItem({
   label: string;
   tokenId: ChartTokenId;
   metricKey: string;
-  data: StandardTimeSeries;
+  data: StandardTimeSeries | null | undefined;
   isLoading: boolean;
   formatValue: (v: number) => string | number;
 }) {
-  const series = data.series[metricKey] ?? [];
+  const series = data?.series[metricKey] ?? [];
   const current = series.at(-1);
   const previous = series.at(-2);
   const meta = CHART_TOKEN_META[tokenId];

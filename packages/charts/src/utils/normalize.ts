@@ -11,14 +11,15 @@ export interface StandardTimeSeries {
 
 /**
  * 将 ChartDataPoint 数组转换为标准时间序列格式
- * 自动从第一个数据点提取所有指标 key
+ * 自动从所有数据点提取指标 key
  */
 export function toTimeSeries(points: ChartDataPoint[]): StandardTimeSeries {
   if (points.length === 0) return { dates: [], series: {} };
 
   const dates = points.map((p) => p.date);
-  const firstValues = points[0]?.values ?? {};
-  const metricKeys = Object.keys(firstValues);
+  const metricKeys = Array.from(
+    new Set(points.flatMap((point) => Object.keys(point.values))),
+  );
   const series: Record<string, (number | null)[]> = {};
 
   for (const key of metricKeys) {
