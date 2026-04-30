@@ -28,7 +28,7 @@ describe('loadProfile', () => {
     const profile = loadProfile(DATA_DIR, 'profiles/profile-a.json');
 
     expect(profile.profile.profileId).toBe('profile-a');
-    expect(profile.profile.name).toBe('林巅峰');
+    expect(profile.profile.name).toEqual({ zh: '林巅峰', en: 'Lin Dianfeng' });
     expect(profile.profile.age).toBe(28);
     expect(profile.profile.gender).toBe('male');
     // 新版结构从 historyRef 加载 records

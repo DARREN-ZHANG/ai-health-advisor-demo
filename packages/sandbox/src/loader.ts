@@ -9,6 +9,10 @@ import {
   type ActivitySegment,
   type DeviceBufferState,
   type DemoClock,
+  type Locale,
+  type LocalizableText,
+  DEFAULT_LOCALE,
+  localize,
 } from '@health-advisor/shared';
 import { loadHistoryArchive } from './helpers/history-archive';
 import { loadTimelineScriptFile } from './helpers/timeline-script';
@@ -17,8 +21,34 @@ import { createDemoClock } from './helpers/demo-clock';
 /** manifest.json 中每个 profile 的条目 */
 export interface ManifestProfileEntry {
   profileId: string;
-  name: string;
+  name: LocalizableText;
   file: string;
+}
+
+/** 展平后的 Profile（name 和 tags 为纯字符串） */
+export type LocalizedProfile = Omit<SandboxProfile, 'name' | 'tags'> & {
+  name: string;
+  tags: string[];
+};
+
+/** 将双语 Profile 展平为指定语言 */
+export function localizeProfile(profile: SandboxProfile, locale: Locale): LocalizedProfile {
+  return {
+    ...profile,
+    name: localize(profile.name, locale),
+    tags: profile.tags.map((tag) => localize(tag, locale)),
+  };
+}
+
+/** 将 manifest entry 的 name 展平为指定语言 */
+export function localizeManifestEntry(
+  entry: ManifestProfileEntry,
+  locale: Locale,
+): { profileId: string; name: string; file: string } {
+  return {
+    ...entry,
+    name: localize(entry.name, locale),
+  };
 }
 
 /** manifest.json 的完整结构 */

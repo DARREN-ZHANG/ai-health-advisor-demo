@@ -6,8 +6,10 @@ export {
   loadHistoryRecords,
   loadTimelineScript,
   buildInitialProfileState,
+  localizeProfile,
+  localizeManifestEntry,
 } from './loader';
-export type { ManifestProfileEntry, Manifest, ProfileFileV2, InitialProfileState } from './loader';
+export type { ManifestProfileEntry, Manifest, ProfileFileV2, InitialProfileState, LocalizedProfile } from './loader';
 
 // Helpers — history archive
 export { loadHistoryArchive, validateHistoryArchive } from './helpers/history-archive';

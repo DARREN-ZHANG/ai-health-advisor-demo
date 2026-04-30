@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { getProfile, listProfiles } from '../../selectors/profile';
-import type { ProfileData } from '@health-advisor/shared';
+import type { ProfileData, LocalizableText } from '@health-advisor/shared';
 import type { SandboxProfile } from '@health-advisor/shared';
 
-function makeProfileData(id: string, name: string, age: number): ProfileData {
+function makeProfileData(id: string, name: LocalizableText, age: number): ProfileData {
   return {
     profile: {
       profileId: id,
@@ -11,7 +11,7 @@ function makeProfileData(id: string, name: string, age: number): ProfileData {
       age,
       gender: 'male',
       avatar: `avatar-${id}.png`,
-      tags: ['test'],
+      tags: [{ zh: '测试标签', en: 'Test Tag' }],
       baseline: { restingHr: 60, hrv: 55, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
     } satisfies SandboxProfile,
     records: [
@@ -24,7 +24,7 @@ function makeProfileData(id: string, name: string, age: number): ProfileData {
 describe('getProfile', () => {
   it('should return profile when found', () => {
     const profiles = new Map<string, ProfileData>();
-    const data = makeProfileData('test-1', '测试用户', 30);
+    const data = makeProfileData('test-1', { zh: '测试用户', en: 'Test User' }, 30);
     profiles.set('test-1', data);
 
     const result = getProfile(profiles, 'test-1');
@@ -41,8 +41,8 @@ describe('getProfile', () => {
 describe('listProfiles', () => {
   it('should return summary for all profiles', () => {
     const profiles = new Map<string, ProfileData>();
-    profiles.set('test-1', makeProfileData('test-1', '用户A', 25));
-    profiles.set('test-2', makeProfileData('test-2', '用户B', 35));
+    profiles.set('test-1', makeProfileData('test-1', { zh: '用户A', en: 'User A' }, 25));
+    profiles.set('test-2', makeProfileData('test-2', { zh: '用户B', en: 'User B' }, 35));
 
     const summary = listProfiles(profiles);
 
@@ -52,7 +52,7 @@ describe('listProfiles', () => {
 
   it('should include correct record counts', () => {
     const profiles = new Map<string, ProfileData>();
-    profiles.set('test-1', makeProfileData('test-1', '用户A', 25));
+    profiles.set('test-1', makeProfileData('test-1', { zh: '用户A', en: 'User A' }, 25));
 
     const summary = listProfiles(profiles);
 
@@ -63,5 +63,23 @@ describe('listProfiles', () => {
     const profiles = new Map<string, ProfileData>();
 
     expect(listProfiles(profiles)).toEqual([]);
+  });
+
+  it('默认 zh 语言返回中文名', () => {
+    const profiles = new Map<string, ProfileData>();
+    profiles.set('test-1', makeProfileData('test-1', { zh: '用户A', en: 'User A' }, 25));
+
+    const summary = listProfiles(profiles);
+
+    expect(summary[0]!.name).toBe('用户A');
+  });
+
+  it('en 语言返回英文名', () => {
+    const profiles = new Map<string, ProfileData>();
+    profiles.set('test-1', makeProfileData('test-1', { zh: '用户A', en: 'User A' }, 25));
+
+    const summary = listProfiles(profiles, 'en');
+
+    expect(summary[0]!.name).toBe('User A');
   });
 });
