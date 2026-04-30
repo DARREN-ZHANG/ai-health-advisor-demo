@@ -73,17 +73,23 @@ function validateFallbacks(dataDir: string, fatal: string[]): void {
 
     try {
       const content = JSON.parse(readFileSync(filePath, 'utf-8')) as Record<string, unknown>;
-      for (const [key, value] of Object.entries(content)) {
-        const entry = value as Record<string, unknown>;
-        if (typeof entry.summary !== 'string' || entry.summary.length === 0) {
-          fatal.push(`fallbacks/${file} → "${key}": missing or empty "summary"`);
-        }
-        if (!Array.isArray(entry.chartTokens)) {
-          fatal.push(`fallbacks/${file} → "${key}": "chartTokens" is not an array`);
-        } else {
-          for (const token of entry.chartTokens as string[]) {
-            if (!isValidChartTokenId(token)) {
-              fatal.push(`fallbacks/${file} → "${key}": invalid chartToken "${token}"`);
+      for (const [langKey, langValue] of Object.entries(content)) {
+        const langEntries = langValue as Record<string, unknown>;
+        // 支持 { "zh": { "entry": {...} } } 的双层嵌套结构
+        for (const [entryKey, entryValue] of Object.entries(langEntries)) {
+          const entry = entryValue as Record<string, unknown>;
+          // 跳过非对象的值（如顶层直接就是条目的情况）
+          if (typeof entry !== 'object' || entry === null) continue;
+          if (typeof entry.summary !== 'string' || entry.summary.length === 0) {
+            fatal.push(`fallbacks/${file} → "${langKey}/${entryKey}": missing or empty "summary"`);
+          }
+          if (!Array.isArray(entry.chartTokens)) {
+            fatal.push(`fallbacks/${file} → "${langKey}/${entryKey}": "chartTokens" is not an array`);
+          } else {
+            for (const token of entry.chartTokens as string[]) {
+              if (!isValidChartTokenId(token)) {
+                fatal.push(`fallbacks/${file} → "${langKey}/${entryKey}": invalid chartToken "${token}"`);
+              }
             }
           }
         }

@@ -96,9 +96,9 @@ describe('validateStartupAssets', () => {
       manifest: validManifest,
       profiles: { 'test-profile': validProfile },
       fallbacks: {
-        homepage: { 'test-profile': validFallbackEntry },
-        'view-summary': { hrv: validFallbackEntry },
-        'advisor-chat': { 'test-profile': validFallbackEntry },
+        homepage: { zh: { 'test-profile': validFallbackEntry } },
+        'view-summary': { zh: { hrv: validFallbackEntry } },
+        'advisor-chat': { zh: { 'test-profile': validFallbackEntry } },
       },
       prompts: {
         'system.md': 'system prompt',
@@ -117,9 +117,9 @@ describe('validateStartupAssets', () => {
   it('manifest 缺失时产生致命错误', () => {
     const dir = trackDir(createTestDir({
       fallbacks: {
-        homepage: { 'test-profile': validFallbackEntry },
-        'view-summary': { hrv: validFallbackEntry },
-        'advisor-chat': { 'test-profile': validFallbackEntry },
+        homepage: { zh: { 'test-profile': validFallbackEntry } },
+        'view-summary': { zh: { hrv: validFallbackEntry } },
+        'advisor-chat': { zh: { 'test-profile': validFallbackEntry } },
       },
     }));
 
@@ -132,7 +132,7 @@ describe('validateStartupAssets', () => {
       manifest: validManifest,
       profiles: { 'test-profile': validProfile },
       fallbacks: {
-        homepage: { 'test-profile': validFallbackEntry },
+        homepage: { zh: { 'test-profile': validFallbackEntry } },
         // 缺少 view-summary 和 advisor-chat
       },
     }));
@@ -148,9 +148,9 @@ describe('validateStartupAssets', () => {
       manifest: validManifest,
       profiles: { 'test-profile': validProfile },
       fallbacks: {
-        homepage: { 'test-profile': { ...validFallbackEntry, chartTokens: ['INVALID_TOKEN'] } },
-        'view-summary': { hrv: validFallbackEntry },
-        'advisor-chat': { 'test-profile': validFallbackEntry },
+        homepage: { zh: { 'test-profile': { ...validFallbackEntry, chartTokens: ['INVALID_TOKEN'] } } },
+        'view-summary': { zh: { hrv: validFallbackEntry } },
+        'advisor-chat': { zh: { 'test-profile': validFallbackEntry } },
       },
     }));
 
@@ -163,9 +163,9 @@ describe('validateStartupAssets', () => {
       manifest: validManifest,
       profiles: { 'test-profile': validProfile },
       fallbacks: {
-        homepage: { 'test-profile': validFallbackEntry },
-        'view-summary': { hrv: validFallbackEntry },
-        'advisor-chat': { 'test-profile': validFallbackEntry },
+        homepage: { zh: { 'test-profile': validFallbackEntry } },
+        'view-summary': { zh: { hrv: validFallbackEntry } },
+        'advisor-chat': { zh: { 'test-profile': validFallbackEntry } },
       },
       // 不提供 prompts
     }));
@@ -176,5 +176,4 @@ describe('validateStartupAssets', () => {
     expect(result.warnings.some((w) => w.includes('prompts'))).toBe(true);
   });
 
-  });
 });
