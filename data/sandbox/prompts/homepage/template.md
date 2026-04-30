@@ -21,7 +21,7 @@ Generate a real-time briefing based on the user's **most recent events**, **past
 
 ### summary Writing Standard (Strictly Follow)
 
-The summary must be 80-120 words, **a single cohesive paragraph of natural language** — no bullet points or line breaks:
+The summary must be 50-100 words, **a single cohesive paragraph of natural language** — no bullet points or line breaks:
 
 1. **Opening** — Mention the most recent event first (1-2 sentences)
 2. **Cross-analysis** — Relate to 24h recovery status, explain why the body is reacting this way (1-2 sentences)
