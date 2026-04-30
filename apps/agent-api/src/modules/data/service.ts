@@ -1,6 +1,6 @@
 import type { DailyRecord, DataTab, Timeframe, DateRange, StressTimelineResponse, StressTimelinePoint, StressTrend, DataCenterResponse, DeviceEvent } from '@health-advisor/shared';
 import { timeframeToDateRange } from '@health-advisor/shared';
-import { normalizeTimeline, rollingMedian, aggregateCurrentDayRecord, mergeCurrentDayRecord, type TimelinePoint } from '@health-advisor/sandbox';
+import { normalizeTimeline, rollingMedian, type TimelinePoint } from '@health-advisor/sandbox';
 import type { RuntimeRegistry } from '../../runtime/registry.js';
 
 // tab → 需要提取的 metrics
@@ -56,53 +56,26 @@ export class DataService {
   /**
    * 获取冻结历史 + 当前活动日聚合的 records
    *
-   * 核心约束（§7.1, §7.3, §9.3, §13.4）：
-   * - 当前活动日的数据来源于"已同步可见事件"的聚合
-   * - 聚合数据不足的时段用历史记录补充，确保日维度图表完整
-   * - 历史天的完整数据使用冻结 DailyRecord[]
-   * - 无 synced events 时，当前活动日使用历史记录兜底
+   * getProfile (getProfileWithOverrides) 已经完成了：
+   * - 应用 override
+   * - 检测 demo clock，用已同步事件聚合替换当前活动日记录
+   * 此处直接返回其 records，避免重复替换。
    */
   private getRecordsWithCurrentDay(profileId: string): DailyRecord[] {
-    const profile = this.registry.getProfile(profileId);
-    const baseRecords = profile.records;
+    return this.registry.getProfile(profileId).records;
+  }
 
-    // 检查是否存在 demo clock（处于 demo timeline 模式）
-    const clock = this.registry.overrideStore.getDemoClock(profileId);
-    if (!clock.currentTime) {
-      // 非 demo 模式，直接返回原始 records
-      return baseRecords;
+  /**
+   * 获取 demo 模式下的参考日期。
+   * demo 时钟存在时返回其日期，否则返回 undefined（由调用方使用 new Date()）
+   */
+  private getDemoReferenceDate(profileId: string): string | undefined {
+    try {
+      const clock = this.registry.overrideStore.getDemoClock(profileId);
+      return clock.currentTime?.slice(0, 10) ?? undefined;
+    } catch {
+      return undefined;
     }
-
-    const currentDate = clock.currentTime.slice(0, 10);
-
-    // 保留当前活动日的完整历史记录，用于补充聚合数据
-    const historicalCurrentDay = baseRecords.find(
-      (r) => r.date === currentDate,
-    );
-
-    // 从 baseRecords 中排除当前活动日的完整历史记录
-    // 这样防止冻结历史中的当前日完整数据泄露给前端
-    const historicalRecords = baseRecords.filter(
-      (r) => r.date !== currentDate,
-    );
-
-    // 获取已同步的设备事件
-    const syncedEvents = this.registry.overrideStore.getSyncedEvents(profileId);
-
-    if (syncedEvents.length > 0) {
-      // 有已同步事件：聚合当前日记录
-      const aggregatedRecord = aggregateCurrentDayRecord(syncedEvents, clock.currentTime);
-      const currentDayRecord = mergeCurrentDayRecord(historicalCurrentDay, aggregatedRecord);
-
-      return [...historicalRecords, currentDayRecord];
-    }
-
-    // 无已同步事件但有历史记录：使用历史记录兜底
-    if (historicalCurrentDay) {
-      return [...historicalRecords, historicalCurrentDay];
-    }
-
-    return historicalRecords;
   }
 
   getTimelineData(
@@ -111,7 +84,8 @@ export class DataService {
     customDateRange?: DateRange,
   ): TimelineDataResponse {
     const records = this.getRecordsWithCurrentDay(profileId);
-    const range = timeframeToDateRange(timeframe, undefined, customDateRange);
+    const refDate = this.getDemoReferenceDate(profileId);
+    const range = timeframeToDateRange(timeframe, refDate, customDateRange);
     const filtered = this.registry.selectByTimeframe(records, timeframe, {
       referenceDate: range.end,
       customDateRange,
@@ -127,7 +101,8 @@ export class DataService {
     customDateRange?: DateRange,
   ): DataCenterResponse | StressTimelineResponse {
     const records = this.getRecordsWithCurrentDay(profileId);
-    const range = timeframeToDateRange(timeframe, undefined, customDateRange);
+    const refDate = this.getDemoReferenceDate(profileId);
+    const range = timeframeToDateRange(timeframe, refDate, customDateRange);
     const filtered = this.registry.selectByTimeframe(records, timeframe, {
       referenceDate: range.end,
       customDateRange,

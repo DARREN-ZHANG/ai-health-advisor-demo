@@ -51,9 +51,12 @@ export class ChartService {
     // 使用冻结历史 + 当前活动日聚合的 records
     const records = this.dataService.getRecordsForProfile(profileId);
 
+    // demo 模式下使用 demo 时钟日期作为参考，避免跨日时日期范围不匹配
+    const refDate = this.getDemoReferenceDate(profileId);
+
     return tokenIds.map((tokenId) => {
       const config = TOKEN_CONFIG[tokenId];
-      const range = timeframeToDateRange(timeframe, undefined, customDateRange);
+      const range = timeframeToDateRange(timeframe, refDate, customDateRange);
       const filtered = this.registry.selectByTimeframe(records, timeframe, {
         referenceDate: range.end,
         customDateRange,
@@ -67,5 +70,18 @@ export class ChartService {
 
       return { profileId, token: tokenId, range, timeline };
     });
+  }
+
+  /**
+   * 获取 demo 模式下的参考日期。
+   * demo 时钟存在时返回其日期，否则返回 undefined（由调用方使用 new Date()）
+   */
+  private getDemoReferenceDate(profileId: string): string | undefined {
+    try {
+      const clock = this.registry.overrideStore.getDemoClock(profileId);
+      return clock.currentTime?.slice(0, 10) ?? undefined;
+    } catch {
+      return undefined;
+    }
   }
 }
