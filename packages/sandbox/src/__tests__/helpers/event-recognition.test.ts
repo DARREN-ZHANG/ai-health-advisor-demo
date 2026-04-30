@@ -405,5 +405,83 @@ describe('event-recognition', () => {
       expect(caffeineEvent).toBeDefined();
       expect(caffeineEvent!.confidence).toBeGreaterThanOrEqual(0.72);
     });
+
+    it('baseline 窗口包含睡眠时 HR 应使用伪基线（避免 delta 偏高）', () => {
+      // 模拟 God Mode 早晨场景：睡眠段 + 咖啡因段
+      // 睡眠 HR（~58bpm）低于清醒静息 HR（~68bpm）
+      // 如果用睡眠 HR 作 baseline，delta 会虚高（+24bpm）
+      // 正确行为：检测到 baseline 有 sleep stages → 使用伪基线 HR
+
+      // 1. 睡眠段 05:00~08:00，HR 偏低
+      const sleepSegment = makeSegment({
+        segmentId: 'seg-sleep-morning',
+        type: 'sleep',
+        start: '2026-04-16T05:00',
+        end: '2026-04-16T08:00',
+      });
+
+      // 2. 咖啡因段 08:00~12:00
+      const caffeineSegment = makeSegment({
+        segmentId: 'seg-morning-coffee',
+        type: 'caffeine_intake',
+        start: '2026-04-16T08:00',
+        end: '2026-04-16T12:00',
+        params: { dose: 'moderate' },
+      });
+
+      const sleepEvents = generateEventsForSegment(sleepSegment);
+      const caffeineEvents = generateEventsForSegment(caffeineSegment);
+      const events = [...sleepEvents, ...caffeineEvents];
+
+      const results = recognizeEvents(events, profileId, currentTime);
+      const caffeineEvent = results.find((r) => r.type === 'possible_caffeine_intake');
+
+      expect(caffeineEvent).toBeDefined();
+      expect(caffeineEvent!.confidence).toBeGreaterThanOrEqual(0.72);
+
+      // 从 evidence 中提取 HR delta
+      const hrEvidence = caffeineEvent!.evidence.find((e) => e.includes('HR +'));
+      expect(hrEvidence).toBeDefined();
+      const hrDeltaMatch = hrEvidence!.match(/HR \+(\d+)bpm/);
+      expect(hrDeltaMatch).toBeDefined();
+      const hrDelta = parseInt(hrDeltaMatch![1], 10);
+
+      // 使用伪基线后，HR delta 应该在合理范围内（moderate 剂量 8-14bpm）
+      // 不应出现 +20bpm 以上的虚高值（来自睡眠 baseline）
+      expect(hrDelta).toBeLessThanOrEqual(18);
+
+      // evidence 应标注使用了 HR 伪基线
+      expect(caffeineEvent!.evidence.some((e) =>
+        e.includes('HR baseline estimated from early response data'),
+      )).toBe(true);
+    });
+
+    it('response 窗口重叠睡眠时应排除', () => {
+      // 基线窗口可以重叠睡眠（早晨场景），但 response 窗口不应重叠睡眠
+      // 模拟：睡眠段延伸到 response 窗口内（t0+15~t0+120）
+      const sleepSegment = makeSegment({
+        segmentId: 'seg-sleep-long',
+        type: 'sleep',
+        start: '2026-04-16T04:00',
+        end: '2026-04-16T09:30', // 延伸到咖啡因 response 窗口
+      });
+      const caffeineSegment = makeSegment({
+        segmentId: 'seg-caffeine',
+        type: 'caffeine_intake',
+        start: '2026-04-16T08:00',
+        end: '2026-04-16T12:00',
+        params: { dose: 'moderate' },
+      });
+
+      const events = [
+        ...generateEventsForSegment(sleepSegment),
+        ...generateEventsForSegment(caffeineSegment),
+      ];
+      const results = recognizeEvents(events, profileId, currentTime);
+      const caffeineEvent = results.find((r) => r.type === 'possible_caffeine_intake');
+
+      // response 窗口有睡眠 → 应排除
+      expect(caffeineEvent).toBeUndefined();
+    });
   });
 });

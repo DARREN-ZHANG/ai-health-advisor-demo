@@ -30,6 +30,7 @@ interface CandidateResult {
     avgRmssd: number;
     avgStress: number;
     avgSpo2: number;
+    hrPseudoBaseline: boolean;
     rmssdPseudoBaseline: boolean;
     stressPseudoBaseline: boolean;
   };
@@ -335,18 +336,44 @@ function analyzeCandidate(
     (b) => b.minuteOffset >= t0Offset + 15 && b.minuteOffset <= t0Offset + 120,
   );
 
-  // 睡眠排除：仅在 t0 时刻用户正在睡眠时排除（不排除历史睡眠）
+  // 睡眠排除策略：baseline 窗口可重叠睡眠（早晨场景合理），
+  // 但 response 窗口不可重叠睡眠（响应期应为清醒状态）
   if (detectSleepAtT0(buckets, t0Offset)) return null;
+  const responseHasSleep = responseBuckets.some((b) => b.sleepStages.length > 0);
+  if (responseHasSleep) return null;
 
   // 需要足够的基线和响应数据
   if (baselineBuckets.length < 3 || responseBuckets.length < 6) return null;
 
   // ── 基线指标计算 ──
 
-  // HR 基线：必须从实际数据获取
+  // HR 基线：优先 baseline 窗口，但若包含睡眠阶段则改用伪基线
+  // 睡眠期间的 HR 低于清醒静息 HR，会导致 delta 偏高（如 +24bpm 而非真实 +14bpm）
+  let baselineAvgHr: number | null = null;
+  let hrPseudoBaseline = false;
   const baselineFlatHr = baselineBuckets.flatMap((b) => b.heartRates);
-  if (baselineFlatHr.length === 0) return null;
-  const baselineAvgHr = avg(baselineFlatHr);
+  const baselineHasSleep = baselineBuckets.some((b) => b.sleepStages.length > 0);
+  if (baselineFlatHr.length > 0 && !baselineHasSleep) {
+    // baseline 有非睡眠 HR 数据，直接使用
+    baselineAvgHr = avg(baselineFlatHr);
+  } else if (baselineFlatHr.length > 0 && baselineHasSleep) {
+    // baseline 有睡眠数据，HR 被压低 → 改用伪基线窗口（吸收延迟期 factor≈0）
+    const pseudoHr = pseudoBaselineBuckets.flatMap((b) => b.heartRates);
+    if (pseudoHr.length > 0) {
+      baselineAvgHr = avg(pseudoHr);
+      hrPseudoBaseline = true;
+    } else {
+      baselineAvgHr = avg(baselineFlatHr);
+    }
+  } else {
+    // baseline 窗口无 HR 数据，尝试伪基线
+    const pseudoHr = pseudoBaselineBuckets.flatMap((b) => b.heartRates);
+    if (pseudoHr.length > 0) {
+      baselineAvgHr = avg(pseudoHr);
+      hrPseudoBaseline = true;
+    }
+  }
+  if (baselineAvgHr === null) return null;
 
   // RMSSD 基线：优先 baseline 窗口，次选吸收延迟期伪基线
   let baselineAvgRmssd: number | null = null;
@@ -381,9 +408,15 @@ function analyzeCandidate(
   // stress 完全不可用 → 无法检测
   if (baselineAvgStress === null) return null;
 
-  // SpO2 基线（允许缺失，使用合理默认值）
+  // SpO2 基线：优先 baseline 窗口，次选伪基线，最后兜底 97
   const baselineFlatSpo2 = baselineBuckets.flatMap((b) => b.spo2Values);
-  const baselineAvgSpo2 = baselineFlatSpo2.length > 0 ? avg(baselineFlatSpo2) : 97;
+  let baselineAvgSpo2: number;
+  if (baselineFlatSpo2.length > 0) {
+    baselineAvgSpo2 = avg(baselineFlatSpo2);
+  } else {
+    const pseudoSpo2 = pseudoBaselineBuckets.flatMap((b) => b.spo2Values);
+    baselineAvgSpo2 = pseudoSpo2.length > 0 ? avg(pseudoSpo2) : 97;
+  }
 
   // ── 响应指标计算 ──
 
@@ -485,6 +518,7 @@ function analyzeCandidate(
       avgRmssd: baselineAvgRmssd,
       avgStress: baselineAvgStress,
       avgSpo2: baselineAvgSpo2,
+      hrPseudoBaseline,
       rmssdPseudoBaseline,
       stressPseudoBaseline,
     },
@@ -524,6 +558,9 @@ function buildCaffeineEvent(
   ];
 
   // 标注伪基线使用情况（让 evidence 更透明）
+  if (candidate.baseline.hrPseudoBaseline) {
+    evidence.push('HR baseline estimated from early response data (sleep-depressed baseline excluded)');
+  }
   if (candidate.baseline.rmssdPseudoBaseline) {
     evidence.push('RMSSD baseline estimated from early response data');
   }
