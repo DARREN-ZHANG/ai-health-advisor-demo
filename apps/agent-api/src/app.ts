@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import { loadConfig } from './config/env.js';
 import { requestContextPlugin } from './plugins/request-context.js';
+import { langPlugin } from './plugins/lang-plugin.js';
 import { errorHandlerPlugin } from './plugins/error-handler.js';
 import { corsPlugin } from './plugins/cors.js';
 import { metricsPlugin } from './plugins/metrics.js';
@@ -46,6 +47,7 @@ export async function buildApp() {
 
   // 注册插件（顺序重要：requestContext 必须在 cors 之前，否则 OPTIONS preflight 会跳过 ctx 初始化）
   await app.register(requestContextPlugin);
+  await app.register(langPlugin);
   await app.register(corsPlugin, { config });
   await app.register(errorHandlerPlugin);
   await app.register(metricsPlugin);
