@@ -320,4 +320,50 @@ describe('buildTaskContextPacket', () => {
     expect(caffeineEvidence!.derivation).toContain('possible caffeine intake');
     expect(caffeineEvidence!.derivation).toContain('HR +11bpm');
   });
+
+  it('includes possible_alcohol_intake in recentEvents with enhanced derivation', () => {
+    const ctx = makeContext({
+      timelineSync: {
+        recognizedEvents: [
+          {
+            recognizedEventId: 're-alcohol-1',
+            profileId: 'profile-a',
+            type: 'possible_alcohol_intake',
+            start: '2026-04-10T20:00',
+            end: '2026-04-10T22:00',
+            confidence: 0.75,
+            evidence: [
+              'recognized possible alcohol response',
+              'HR +7bpm, RMSSD -8ms, stress +10',
+              'low motion and low steps, SpO2 stable',
+              'confidence 75%',
+            ],
+          },
+        ],
+        derivedTemporalStates: [],
+        syncMetadata: {
+          lastSyncedMeasuredAt: '2026-04-10T22:00',
+          pendingEventCount: 0,
+        },
+      },
+    });
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+
+    // 应包含 possible_alcohol_intake 事件
+    expect(packet.homepage.recentEvents.length).toBeGreaterThan(0);
+    const alcoholEvent = packet.homepage.recentEvents.find(
+      (e) => e.type === 'possible_alcohol_intake',
+    );
+    expect(alcoholEvent).toBeDefined();
+    expect(alcoholEvent!.confidence).toBe(0.75);
+    expect(alcoholEvent!.durationMin).toBe(120);
+
+    // Evidence 应包含增强的 derivation
+    const alcoholEvidence = packet.evidence.find((f) =>
+      f.id.startsWith('event_possible_alcohol_intake'),
+    );
+    expect(alcoholEvidence).toBeDefined();
+    expect(alcoholEvidence!.derivation).toContain('possible alcohol intake');
+    expect(alcoholEvidence!.derivation).toContain('HR +7bpm');
+  });
 });

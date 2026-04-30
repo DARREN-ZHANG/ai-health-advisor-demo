@@ -249,10 +249,13 @@ function buildRecentEvents(
         (new Date(ev.end).getTime() - new Date(ev.start).getTime()) / 60000,
       );
       const evidenceId = `event_${ev.type}_${ev.start}`;
-      // 咖啡因事件使用增强 derivation，包含 evidence 详情
-      const derivation = ev.type === 'possible_caffeine_intake'
-        ? `possible caffeine intake detected, confidence ${Math.round(ev.confidence * 100)}%. Evidence: ${ev.evidence.join('; ')}`
-        : `recognized event from timeline sync, confidence ${Math.round(ev.confidence * 100)}%`;
+      // 咖啡因/酒精事件使用增强 derivation，包含 evidence 详情
+      const derivation =
+        ev.type === 'possible_caffeine_intake'
+          ? `possible caffeine intake detected, confidence ${Math.round(ev.confidence * 100)}%. Evidence: ${ev.evidence.join('; ')}`
+          : ev.type === 'possible_alcohol_intake'
+            ? `possible alcohol intake detected, confidence ${Math.round(ev.confidence * 100)}%. Evidence: ${ev.evidence.join('; ')}`
+            : `recognized event from timeline sync, confidence ${Math.round(ev.confidence * 100)}%`;
       evidence.add({
         id: evidenceId,
         source: 'timeline_sync',
