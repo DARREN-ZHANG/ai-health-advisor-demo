@@ -116,8 +116,8 @@ describe('getChartTokenMeta', () => {
   it('returns correct meta for a token', () => {
     const meta = getChartTokenMeta(ChartTokenId.HRV_7DAYS);
     expect(meta.id).toBe(ChartTokenId.HRV_7DAYS);
-    expect(meta.label).toBe('HRV 趋势');
-    expect(meta.unit).toBe('ms');
+    expect(meta.label).toEqual({ zh: 'HRV 趋势', en: 'HRV Trend' });
+    expect(meta.unit).toEqual({ zh: 'ms', en: 'ms' });
   });
 });
 

@@ -101,6 +101,12 @@ export const DerivedTemporalStateSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 
+// LocalizableText 的 Zod Schema
+const LocalizableTextSchema = z.object({
+  zh: z.string().min(1),
+  en: z.string().min(1),
+});
+
 // ============================================================
 // 沙箱基础 Schema（已有）
 // ============================================================
@@ -115,11 +121,11 @@ export const BaselineMetricsSchema = z.object({
 
 export const SandboxProfileSchema = z.object({
   profileId: z.string().min(1),
-  name: z.string().min(1),
+  name: LocalizableTextSchema,
   age: z.number().int().min(1).max(150),
   gender: z.enum(['male', 'female']),
   avatar: z.string().min(1),
-  tags: z.array(z.string().min(1)).min(1),
+  tags: z.array(LocalizableTextSchema).min(1),
   baseline: BaselineMetricsSchema,
   weeklyBaseline: BaselineMetricsSchema.partial().optional(),
   dailyBaseline: BaselineMetricsSchema.partial().optional(),

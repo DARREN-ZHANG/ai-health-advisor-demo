@@ -48,11 +48,11 @@ import { AgentTaskType } from '../types/agent';
 describe('SandboxProfileSchema', () => {
   const validProfile = {
     profileId: 'profile-a',
-    name: '张健康',
+    name: { zh: '张健康', en: 'Zhang Jiankang' },
     age: 32,
     gender: 'male' as const,
     avatar: '👨‍💻',
-    tags: ['恢复稳定', '睡眠质量优'],
+    tags: [{ zh: '恢复稳定', en: 'Stable Recovery' }, { zh: '睡眠质量优', en: 'Excellent Sleep' }],
     baseline: { restingHr: 62, hrv: 58, spo2: 98, avgSleepMinutes: 420, avgSteps: 8500 },
   };
 

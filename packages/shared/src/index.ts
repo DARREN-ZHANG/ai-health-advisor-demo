@@ -39,6 +39,16 @@ export type {
 // Types — chart token
 export { ChartTokenId } from './types/chart-token';
 
+// Types — locale
+export type { Locale, LocalizableText } from './types/locale';
+export {
+  DEFAULT_LOCALE,
+  SUPPORTED_LOCALES,
+  isValidLocale,
+  parseLocale,
+  localize,
+} from './types/locale';
+
 // Types — agent
 export { AgentTaskType } from './types/agent';
 export type { DataTab, Timeframe, PageContext, AgentResponseEnvelope } from './types/agent';

@@ -1,3 +1,5 @@
+import type { LocalizableText } from './locale';
+
 // ============================================================
 // 时间轴与原始流相关类型
 // ============================================================
@@ -123,11 +125,11 @@ export interface BaselineMetrics {
 
 export interface SandboxProfile {
   profileId: string;
-  name: string;
+  name: LocalizableText;
   age: number;
   gender: 'male' | 'female';
   avatar: string;
-  tags: string[];
+  tags: LocalizableText[];
   baseline: BaselineMetrics;
   weeklyBaseline?: Partial<BaselineMetrics>;
   dailyBaseline?: Partial<BaselineMetrics>;
