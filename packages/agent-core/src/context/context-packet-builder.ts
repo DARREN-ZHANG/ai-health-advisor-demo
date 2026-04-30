@@ -705,5 +705,27 @@ function buildRelevantFacts(
     );
   }
 
+  // 7. Timeline recognized events（特别是咖啡因概率事件）
+  if (context.timelineSync) {
+    for (const ev of context.timelineSync.recognizedEvents) {
+      if (ev.type === 'possible_caffeine_intake') {
+        const evidenceId = `event_${ev.type}_${ev.start}`;
+        evidence.add({
+          id: evidenceId,
+          source: 'timeline_sync',
+          metric: ev.type,
+          dateRange: { start: ev.start, end: ev.end },
+          derivation: `possible caffeine intake detected, confidence ${Math.round(ev.confidence * 100)}%. Evidence: ${ev.evidence.join('; ')}`,
+        });
+        add(
+          `可能的咖啡因摄入`,
+          'event',
+          `检测到可能的含咖啡因饮品摄入后生理响应，置信度 ${Math.round(ev.confidence * 100)}%，${ev.evidence.join('; ')}`,
+          [evidenceId],
+        );
+      }
+    }
+  }
+
   return facts;
 }

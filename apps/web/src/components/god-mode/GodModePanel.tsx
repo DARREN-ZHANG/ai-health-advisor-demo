@@ -19,7 +19,7 @@ const TIMELINE_SEGMENT_KEYS: { type: TimelineAppendPayload['segmentType']; label
   { type: 'anxiety_episode', labelKey: 'anxietyEpisode', icon: '😰', params: { trigger: 'work' } },
   { type: 'breathing_pause', labelKey: 'breathingPause', icon: '🫁', params: { severity: 'moderate' } },
   { type: 'alcohol_intake', labelKey: 'alcoholIntake', icon: '🍺', params: { amount: 'moderate' } },
-  { type: 'caffeine_intake', labelKey: 'caffeineIntake', icon: '☕', params: { dose: 'moderate' } },
+  { type: 'caffeine_intake', labelKey: 'caffeineIntake', icon: '☕', params: { dose: 'moderate', context: 'unknown' } },
   { type: 'nightmare', labelKey: 'nightmare', icon: '👻', params: { intensity: 'high' } },
   { type: 'relaxation', labelKey: 'relaxation', icon: '📖', params: { activity: 'reading' } },
 ];
