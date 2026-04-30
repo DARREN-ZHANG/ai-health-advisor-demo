@@ -1,4 +1,4 @@
-import type { AgentTaskType, DataTab, Timeframe, PageContext, RecognizedEvent, DerivedTemporalState } from '@health-advisor/shared';
+import type { AgentTaskType, DataTab, Timeframe, PageContext, RecognizedEvent, DerivedTemporalState, Locale } from '@health-advisor/shared';
 
 export type AgentStatusColor = 'green' | 'yellow' | 'red';
 
@@ -62,4 +62,6 @@ export interface AgentContext {
   };
   /** 时间轴同步上下文（demo timeline 模式下可用） */
   timelineSync?: TimelineSyncContext;
+  /** 当前请求的语言标识 */
+  locale: Locale;
 }

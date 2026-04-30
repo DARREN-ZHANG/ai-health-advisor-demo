@@ -89,7 +89,7 @@ export async function aiRoutes(app: FastifyInstance) {
       );
     }
 
-    const result = await orchestrator.execute(parseResult.data);
+    const result = await orchestrator.execute(parseResult.data, request.lang);
     attachAiLogMeta(request, result.meta.finishReason);
     return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
   });
@@ -122,7 +122,7 @@ export async function aiRoutes(app: FastifyInstance) {
       );
     }
 
-    const result = await orchestrator.execute(parseResult.data);
+    const result = await orchestrator.execute(parseResult.data, request.lang);
     attachAiLogMeta(request, result.meta.finishReason);
     return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
   });
@@ -162,7 +162,7 @@ export async function aiRoutes(app: FastifyInstance) {
       );
     }
 
-    const result = await orchestrator.execute(parseResult.data);
+    const result = await orchestrator.execute(parseResult.data, request.lang);
     attachAiLogMeta(request, result.meta.finishReason);
     return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
   });

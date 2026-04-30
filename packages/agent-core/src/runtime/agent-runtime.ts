@@ -1,6 +1,6 @@
 import type { AgentRequest } from '../types/agent-request';
-import type { AgentResponseEnvelope, AgentTaskType } from '@health-advisor/shared';
-import { AgentTaskType as AT } from '@health-advisor/shared';
+import type { AgentResponseEnvelope, AgentTaskType, Locale } from '@health-advisor/shared';
+import { AgentTaskType as AT, DEFAULT_LOCALE } from '@health-advisor/shared';
 import type { ContextBuilderDeps } from '../context/context-types';
 import type { HealthAgent } from '../executor/create-agent';
 import type { PromptLoader } from '../prompts/prompt-loader';
@@ -63,6 +63,7 @@ export async function executeAgent(
   deps: AgentRuntimeDeps,
   timeoutMs: number = AGENT_SLA_TIMEOUT_MS,
   observer?: AgentRuntimeObserver,
+  locale: Locale = DEFAULT_LOCALE,
 ): Promise<AgentResponseEnvelope> {
   const fallbackKey: FallbackLookupKey = {
     profileId: request.profileId,
@@ -72,7 +73,7 @@ export async function executeAgent(
 
   try {
     // 1. 构建 Agent 上下文
-    const context = buildAgentContext(request, deps, deps.referenceDate);
+    const context = buildAgentContext(request, deps, deps.referenceDate, locale);
     tryNotify(() => observer?.onContextBuilt?.(context));
 
     // 2. low-data 快速 fallback：数据不足时跳过 LLM 调用

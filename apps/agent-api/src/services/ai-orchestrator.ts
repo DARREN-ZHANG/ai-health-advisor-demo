@@ -1,4 +1,4 @@
-import { AgentTaskType, type AgentResponseEnvelope } from '@health-advisor/shared';
+import { AgentTaskType, type AgentResponseEnvelope, type Locale } from '@health-advisor/shared';
 import { executeAgent, type AgentRequest } from '@health-advisor/agent-core';
 import type { RuntimeRegistry } from '../runtime/registry.js';
 import type { MetricsStore } from '../plugins/metrics.js';
@@ -14,7 +14,7 @@ export interface AiOrchestratorDeps {
 export class AiOrchestrator {
   constructor(private deps: AiOrchestratorDeps) {}
 
-  async execute(request: AgentRequest): Promise<AgentResponseEnvelope> {
+  async execute(request: AgentRequest, locale?: Locale): Promise<AgentResponseEnvelope> {
     // 对 HOMEPAGE_SUMMARY 检查 brief 缓存
     if (request.taskType === AgentTaskType.HOMEPAGE_SUMMARY && this.deps.briefCache) {
       const cached = this.deps.briefCache.get(request.profileId);
@@ -29,6 +29,8 @@ export class AiOrchestrator {
         request,
         this.deps.registry,
         this.deps.timeoutMs,
+        undefined,
+        locale,
       );
 
       if (result.meta.finishReason === 'timeout') {

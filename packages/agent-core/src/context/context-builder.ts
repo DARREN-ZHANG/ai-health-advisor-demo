@@ -2,6 +2,8 @@ import type { AgentRequest } from '../types/agent-request';
 import type { AgentContext, AgentStatusColor } from '../types/agent-context';
 import type { ContextBuilderDeps } from './context-types';
 import type { DatedEvent } from '@health-advisor/sandbox';
+import type { Locale } from '@health-advisor/shared';
+import { localize, DEFAULT_LOCALE } from '@health-advisor/shared';
 import { selectWindowByTask } from './window-selector';
 import { detectMissingFields } from './missing-fields';
 import { LOW_DATA_THRESHOLD } from '../constants/limits';
@@ -12,6 +14,7 @@ export function buildAgentContext(
   request: AgentRequest,
   deps: ContextBuilderDeps,
   referenceDate?: string,
+  locale: Locale = DEFAULT_LOCALE,
 ): AgentContext {
   // 1. 解析 profile
   const profileData = deps.getProfile(request.profileId);
@@ -68,9 +71,9 @@ export function buildAgentContext(
   return {
     profile: {
       profileId: profile.profileId,
-      name: profile.name,
+      name: localize(profile.name, DEFAULT_LOCALE),
       age: profile.age,
-      tags: profile.tags || [],
+      tags: (profile.tags || []).map((tag) => localize(tag, DEFAULT_LOCALE)),
       baselines: {
         restingHR: profile.baseline.restingHr,
         hrv: profile.baseline.hrv,
@@ -104,6 +107,7 @@ export function buildAgentContext(
       latestRuleSummary: analytical?.latestRuleSummary,
     },
     ...(timelineSync ? { timelineSync } : {}),
+    locale,
   };
 }
 
