@@ -59,6 +59,7 @@ const mockPromptLoader: PromptLoader = {
     };
     return templates[name] ?? '';
   },
+  loadStyle: () => '',
   listAvailable: () => ['system', 'homepage', 'view-summary', 'advisor-chat'],
 };
 

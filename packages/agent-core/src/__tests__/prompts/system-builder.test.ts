@@ -30,6 +30,7 @@ function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
     dataWindow: { start: '2026-04-04', end: '2026-04-10', records: [], missingFields: [] },
     signals: { overallStatus: 'green', anomalies: [], trends: [], events: [], lowData: false },
     memory: { recentMessages: [] },
+    locale: 'zh',
     ...overrides,
   };
 }

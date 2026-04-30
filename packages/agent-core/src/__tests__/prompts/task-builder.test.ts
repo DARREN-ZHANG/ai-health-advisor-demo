@@ -15,6 +15,7 @@ const mockLoader: PromptLoader = {
     };
     return templates[name] ?? '';
   },
+  loadStyle: () => '',
   listAvailable: () => ['homepage', 'view-summary', 'advisor-chat'],
 };
 
@@ -39,6 +40,7 @@ function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
     },
     signals: { overallStatus: 'green', anomalies: [], trends: [], events: [], lowData: false },
     memory: { recentMessages: [] },
+    locale: 'zh',
     ...overrides,
   };
 }

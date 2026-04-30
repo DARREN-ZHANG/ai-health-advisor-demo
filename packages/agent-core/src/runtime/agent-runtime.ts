@@ -79,7 +79,7 @@ export async function executeAgent(
     // 2. low-data 快速 fallback：数据不足时跳过 LLM 调用
     if (context.signals.lowData) {
       tryNotify(() => observer?.onFallback?.('low_data'));
-      return toLowDataFallback(deps.fallbackEngine, request.taskType, fallbackKey);
+      return toLowDataFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
     }
 
     // 3. 执行规则引擎
@@ -111,7 +111,7 @@ export async function executeAgent(
 
     if (!parseResult.success) {
       tryNotify(() => observer?.onFallback?.('invalid_output'));
-      return toFallback(deps.fallbackEngine, request.taskType, fallbackKey);
+      return toFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
     }
 
     // 8. 校验 chart tokens（只能来自 visibleCharts 或 suggestedChartTokens）
@@ -158,10 +158,10 @@ export async function executeAgent(
   } catch (error) {
     if (error instanceof TimeoutError) {
       tryNotify(() => observer?.onFallback?.('timeout'));
-      return toTimeoutFallback(deps.fallbackEngine, request.taskType, fallbackKey);
+      return toTimeoutFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
     }
     tryNotify(() => observer?.onFallback?.('provider_error'));
-    return toFallback(deps.fallbackEngine, request.taskType, fallbackKey);
+    return toFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
   }
 }
 
@@ -240,16 +240,18 @@ function toFallback(
   engine: FallbackEngine,
   taskType: AgentTaskType,
   key: FallbackLookupKey,
+  locale: Locale,
 ): AgentResponseEnvelope {
-  return engine.getFallback(taskType, key);
+  return engine.getFallback(taskType, key, locale);
 }
 
 function toTimeoutFallback(
   engine: FallbackEngine,
   taskType: AgentTaskType,
   key: FallbackLookupKey,
+  locale: Locale,
 ): AgentResponseEnvelope {
-  const fallback = engine.getFallback(taskType, key);
+  const fallback = engine.getFallback(taskType, key, locale);
   return {
     ...fallback,
     meta: {
@@ -263,8 +265,9 @@ function toLowDataFallback(
   engine: FallbackEngine,
   taskType: AgentTaskType,
   key: FallbackLookupKey,
+  locale: Locale,
 ): AgentResponseEnvelope {
-  const fallback = engine.getFallback(taskType, key);
+  const fallback = engine.getFallback(taskType, key, locale);
   return {
     ...fallback,
     meta: {

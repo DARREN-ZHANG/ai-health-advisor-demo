@@ -76,7 +76,7 @@ function makeMinimalProfile(profileId: string): ProfileData {
   return {
     profile: {
       profileId,
-      name: '测试用户',
+      name: { zh: '测试用户', en: 'Test User' },
       age: 30,
       gender: 'male',
       avatar: '',
@@ -415,6 +415,7 @@ const MOCK_PROMPT_TEMPLATES: Record<string, string> = {
 function createMockPromptLoader(): PromptLoader {
   return {
     load: (name: PromptName) => MOCK_PROMPT_TEMPLATES[name] ?? '',
+    loadStyle: () => '',
     listAvailable: (): PromptName[] => ['system', 'homepage', 'view-summary', 'advisor-chat'],
   };
 }
