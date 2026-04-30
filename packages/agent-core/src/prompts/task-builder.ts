@@ -69,7 +69,7 @@ export function buildTaskPrompt(
   // 使用 TaskContextPacket 渲染（如果可用）
   if (packet) {
     sections.push('');
-    sections.push(renderTaskContextPacket(packet));
+    sections.push(renderTaskContextPacket(packet, locale));
   } else {
     // 降级：保留基本数据窗口信息
     sections.push('');
