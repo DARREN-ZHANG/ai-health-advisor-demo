@@ -320,4 +320,50 @@ describe('buildTaskContextPacket', () => {
     expect(caffeineEvidence!.derivation).toContain('possible caffeine intake');
     expect(caffeineEvidence!.derivation).toContain('HR +11bpm');
   });
+
+  it('advisor chat 应在 relevantFacts 中包含 caffeine 概率事件', () => {
+    const ctx = makeContext({
+      task: {
+        type: AgentTaskType.ADVISOR_CHAT,
+        pageContext: { profileId: 'profile-a', page: 'advisor', timeframe: 'day' },
+        userMessage: '我是不是喝咖啡了',
+      },
+      timelineSync: {
+        recognizedEvents: [
+          {
+            recognizedEventId: 're-caffeine-test',
+            profileId: 'profile-a',
+            type: 'possible_caffeine_intake',
+            start: '2026-04-10T09:00',
+            end: '2026-04-10T11:00',
+            confidence: 0.85,
+            evidence: ['HR +12bpm', 'RMSSD -22%', 'stress +15'],
+          },
+        ],
+        syncMetadata: {
+          lastSyncedMeasuredAt: '2026-04-10T11:00',
+          pendingEventCount: 0,
+        },
+      },
+    });
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+
+    // advisor chat packet 应存在
+    expect(packet.advisorChat).toBeDefined();
+
+    // relevantFacts 应包含咖啡因事件
+    const caffeineFact = packet.advisorChat!.relevantFacts.find(
+      (f) => f.label === '可能的咖啡因摄入',
+    );
+    expect(caffeineFact).toBeDefined();
+    expect(caffeineFact!.factType).toBe('event');
+    expect(caffeineFact!.summary).toContain('85%');
+    expect(caffeineFact!.summary).toContain('HR +12bpm');
+
+    // 应有对应的 evidence
+    const hasEvidence = packet.evidence.some((e) =>
+      e.id.startsWith('event_possible_caffeine_intake'),
+    );
+    expect(hasEvidence).toBe(true);
+  });
 });

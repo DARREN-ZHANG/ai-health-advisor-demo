@@ -14,7 +14,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"传感器检测到心率轻微波动，可能是含咖啡因饮品摄入后的生理响应。整体状态良好，无需过度担心。建议适量饮水，保持正常作息即可。注意观察后续数小时内心率变化。\",\"chartTokens\":[],\"microTips\":[]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"传感器检测到心率出现轻微波动，可能是含咖啡因饮品摄入后的生理响应。整体状态良好，无需过度担心。建议今天适量饮水帮助代谢，保持正常作息即可。注意观察后续数小时内心率变化。\",\"chartTokens\":[],\"microTips\":[]}"
     },
     "referenceDate": "2026-04-30"
   },
