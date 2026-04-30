@@ -4,12 +4,17 @@
   "suite": "quality",
   "category": "advisor-chat",
   "priority": "P0",
-  "tags": ["quality", "advisor-chat", "daily-status"],
+  "tags": [
+    "quality",
+    "advisor-chat",
+    "daily-status"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QC001",
@@ -30,7 +35,9 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["睡眠"]
+      "mustMention": [
+        "睡眠"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,
@@ -39,9 +46,14 @@
     "taskSpecific": {
       "advisorChat": {
         "requiredTimeScope": "day",
-        "requiredTimeScopePatterns": ["今天", "今日"],
+        "requiredTimeScopePatterns": [
+          "今天",
+          "今日"
+        ],
         "mustAnswerUserQuestion": true,
-        "answerPatterns": ["状态"]
+        "answerPatterns": [
+          "状态"
+        ]
       }
     }
   }

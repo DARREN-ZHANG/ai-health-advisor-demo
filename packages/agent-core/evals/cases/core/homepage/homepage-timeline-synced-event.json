@@ -4,7 +4,13 @@
   "suite": "core",
   "category": "homepage",
   "priority": "P1",
-  "tags": ["homepage", "timeline", "synced", "event", "cross-analysis"],
+  "tags": [
+    "homepage",
+    "timeline",
+    "synced",
+    "event",
+    "cross-analysis"
+  ],
   "setup": {
     "profileId": "profile-a",
     "timeline": {
@@ -12,7 +18,10 @@
       "appendSegments": [
         {
           "segmentType": "steady_cardio",
-          "params": { "distanceMeters": 5000, "durationMinutes": 30 },
+          "params": {
+            "distanceMeters": 5000,
+            "durationMinutes": 30
+          },
           "offsetMinutes": 0,
           "durationMinutes": 30,
           "advanceClock": true
@@ -22,7 +31,8 @@
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"今日完成一次三十分钟跑步运动，结合二十四小时背景数据来看，运动前心率平稳，运动后心率恢复正常区间。本周睡眠质量稳定，HRV 趋势良好，整体恢复状态支持适度运动。建议保持当前运动频率和强度。\",\"chartTokens\":[\"ACTIVITY_7DAYS\"],\"microTips\":[\"运动后注意补充水分和适当休息\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-h013",
@@ -42,10 +52,15 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["跑步"]
+      "mustMention": [
+        "跑步"
+      ]
     },
     "status": {
-      "allowedStatusColors": ["good", "warning"]
+      "allowedStatusColors": [
+        "good",
+        "warning"
+      ]
     },
     "chartTokens": {
       "maxCount": 2
@@ -57,11 +72,22 @@
     "taskSpecific": {
       "homepage": {
         "requireRecentEventFirst": true,
-        "recentEventPatterns": ["跑步", "运动"],
+        "recentEventPatterns": [
+          "跑步",
+          "运动"
+        ],
         "require24hCrossAnalysis": true,
         "crossAnalysisPatterns": {
-          "event": ["跑步", "运动"],
-          "metric": ["心率", "HRV", "睡眠", "恢复"]
+          "event": [
+            "跑步",
+            "运动"
+          ],
+          "metric": [
+            "心率",
+            "HRV",
+            "睡眠",
+            "恢复"
+          ]
         }
       }
     }

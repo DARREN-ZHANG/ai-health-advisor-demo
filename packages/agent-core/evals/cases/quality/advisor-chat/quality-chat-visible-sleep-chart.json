@@ -4,12 +4,18 @@
   "suite": "quality",
   "category": "advisor-chat",
   "priority": "P0",
-  "tags": ["quality", "advisor-chat", "sleep", "chart"],
+  "tags": [
+    "quality",
+    "advisor-chat",
+    "sleep",
+    "chart"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QC007",
@@ -19,10 +25,12 @@
     "pageContext": {
       "profileId": "profile-a",
       "page": "advisor",
-      "timeframe": "week",
-      "visibleChartIds": ["SLEEP_7DAYS"]
+      "timeframe": "week"
     },
-    "userMessage": "看看我最近的睡眠趋势"
+    "userMessage": "看看我最近的睡眠趋势",
+    "visibleChartIds": [
+      "sleep"
+    ]
   },
   "expectations": {
     "protocol": {
@@ -31,11 +39,19 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["睡眠"],
-      "requiredPatterns": ["趋势|最近|本周|变化|波动"]
+      "mustMention": [
+        "睡眠"
+      ],
+      "requiredPatterns": [
+        "趋势|最近|本周|变化|波动"
+      ]
     },
     "chartTokens": {
-      "requiredAny": [["SLEEP_7DAYS"]]
+      "requiredAny": [
+        [
+          "SLEEP_7DAYS"
+        ]
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,

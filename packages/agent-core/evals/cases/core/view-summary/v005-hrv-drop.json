@@ -4,13 +4,19 @@
   "suite": "core",
   "category": "view-summary",
   "priority": "P0",
-  "tags": ["view-summary", "hrv", "warning", "trend"],
+  "tags": [
+    "view-summary",
+    "hrv",
+    "warning",
+    "trend"
+  ],
   "setup": {
     "profileId": "profile-b",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"本周 HRV 呈明显下降趋势，交感神经活动增强，身体恢复能力可能受到影响。下降幅度超出正常波动范围，建议增加休息时间、注意压力管理，适当进行冥想或深呼吸等放松训练，并确保充足睡眠。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"每天10分钟冥想有助于改善 HRV\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-v005",
@@ -32,8 +38,14 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 80, "max": 150 },
-      "mustMention": ["HRV", "下降"]
+      "length": {
+        "min": 80,
+        "max": 150
+      },
+      "mustMention": [
+        "HRV",
+        "下降"
+      ]
     },
     "status": {
       "expectedStatusColor": "warning"
@@ -48,8 +60,13 @@
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "hrv",
-        "requiredTabPatterns": ["HRV"],
-        "forbidOtherTabs": ["sleep", "步数"]
+        "requiredTabPatterns": [
+          "HRV"
+        ],
+        "forbidOtherTabs": [
+          "sleep",
+          "步数"
+        ]
       }
     }
   }

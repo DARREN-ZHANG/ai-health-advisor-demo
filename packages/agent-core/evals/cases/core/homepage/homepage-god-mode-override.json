@@ -4,19 +4,30 @@
   "suite": "core",
   "category": "homepage",
   "priority": "P1",
-  "tags": ["homepage", "override", "god-mode", "memory-isolation"],
+  "tags": [
+    "homepage",
+    "override",
+    "god-mode",
+    "memory-isolation"
+  ],
   "setup": {
     "profileId": "profile-a",
     "overrides": [
       {
         "metric": "hrv",
         "value": 25,
-        "dateRange": { "start": "2026-04-20", "end": "2026-04-25" }
+        "dateRange": {
+          "start": "2026-04-20",
+          "end": "2026-04-25"
+        }
       },
       {
         "metric": "spo2",
         "value": 94,
-        "dateRange": { "start": "2026-04-20", "end": "2026-04-25" }
+        "dateRange": {
+          "start": "2026-04-20",
+          "end": "2026-04-25"
+        }
       }
     ],
     "memory": {
@@ -27,7 +38,8 @@
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 本周明显走弱，血氧状态也提示需要关注。以上变化反映了 override 后的最新状态，建议把恢复放在今天首位，适当减少高强度活动，增加休息时间，并持续观察身体反应。\",\"chartTokens\":[\"HRV_7DAYS\",\"SPO2_7DAYS\"],\"microTips\":[\"HRV 下降明显时建议优先休息\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-h014",
@@ -47,18 +59,32 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["HRV"],
-      "mustNotMention": ["HRV 稳定在五十", "整体状态优秀", "各项指标表现良好"],
-      "forbiddenPatterns": ["HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%)", "血氧.*(\\d+%|百分之|均值)"]
+      "mustMention": [
+        "HRV"
+      ],
+      "mustNotMention": [
+        "HRV 稳定在五十",
+        "整体状态优秀",
+        "各项指标表现良好"
+      ],
+      "forbiddenPatterns": [
+        "HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%)",
+        "血氧.*(\\d+%|百分之|均值)"
+      ]
     },
     "status": {
       "expectedStatusColor": "warning"
     },
     "chartTokens": {
-      "required": ["HRV_7DAYS"]
+      "required": [
+        "HRV_7DAYS"
+      ]
     },
     "memory": {
-      "forbiddenLeakPatterns": ["HRV 稳定在五十", "整体状态优秀"]
+      "forbiddenLeakPatterns": [
+        "HRV 稳定在五十",
+        "整体状态优秀"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,

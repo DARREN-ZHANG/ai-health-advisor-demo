@@ -4,13 +4,19 @@
   "suite": "core",
   "category": "view-summary",
   "priority": "P1",
-  "tags": ["view-summary", "spo2", "normal", "baseline"],
+  "tags": [
+    "view-summary",
+    "spo2",
+    "normal",
+    "baseline"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周血氧饱和度保持在正常范围内，未见明显异常波动。血氧水平稳定在健康区间，表明呼吸系统功能状态良好。建议继续保持健康的生活方式，如出现呼吸不畅等情况请及时就医。\",\"chartTokens\":[\"SPO2_7DAYS\"],\"microTips\":[]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-v016",
@@ -32,8 +38,13 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 80, "max": 150 },
-      "mustMention": ["血氧"]
+      "length": {
+        "min": 80,
+        "max": 150
+      },
+      "mustMention": [
+        "血氧"
+      ]
     },
     "status": {
       "expectedStatusColor": "good"
@@ -48,8 +59,14 @@
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "spo2",
-        "requiredTabPatterns": ["血氧"],
-        "forbidOtherTabs": ["HRV", "sleep", "步数"]
+        "requiredTabPatterns": [
+          "血氧"
+        ],
+        "forbidOtherTabs": [
+          "HRV",
+          "sleep",
+          "步数"
+        ]
       }
     }
   }

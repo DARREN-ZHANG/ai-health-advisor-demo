@@ -288,6 +288,46 @@ describe('AgentEvalCaseSchema', () => {
     });
   });
 
+  // ── strict schema：未知字段应被拒绝 ──────────────────
+
+  describe('strict schema：未知字段应被拒绝', () => {
+    it('顶层未知字段应失败', () => {
+      const input = createValidCase();
+      (input as any).unknownTopLevel = 'should fail';
+      expect(() => parseAgentEvalCase(input)).toThrow();
+    });
+
+    it('setup 中未知字段应失败', () => {
+      const input = createValidCase();
+      (input.setup as any).unknownSetupField = 'should fail';
+      expect(() => parseAgentEvalCase(input)).toThrow();
+    });
+
+    it('request 中未知字段应失败', () => {
+      const input = createValidCase();
+      (input.request as any).unknownRequestField = 'should fail';
+      expect(() => parseAgentEvalCase(input)).toThrow();
+    });
+
+    it('pageContext 中放入 visibleChartIds 应失败', () => {
+      const input = createValidCase();
+      (input.request.pageContext as any).visibleChartIds = ['SLEEP_7DAYS'];
+      expect(() => parseAgentEvalCase(input)).toThrow();
+    });
+
+    it('request 顶层 visibleChartIds 应通过', () => {
+      const input = createValidCase();
+      input.request.visibleChartIds = ['sleep'];
+      expect(() => parseAgentEvalCase(input)).not.toThrow();
+    });
+
+    it('expectations 中未知字段应失败', () => {
+      const input = createValidCase();
+      (input.expectations as any).unknownExpectation = 'should fail';
+      expect(() => parseAgentEvalCase(input)).toThrow();
+    });
+  });
+
   // ── evidence 校验 ───────────────────────────────────
 
   describe('evidence', () => {

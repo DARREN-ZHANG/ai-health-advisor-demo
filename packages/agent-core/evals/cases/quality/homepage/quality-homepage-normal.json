@@ -4,12 +4,18 @@
   "suite": "quality",
   "category": "homepage",
   "priority": "P0",
-  "tags": ["quality", "homepage", "normal", "baseline"],
+  "tags": [
+    "quality",
+    "homepage",
+    "normal",
+    "baseline"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QH001",
@@ -29,7 +35,10 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 80, "max": 150 }
+      "length": {
+        "min": 80,
+        "max": 150
+      }
     },
     "status": {
       "expectedStatusColor": "good"

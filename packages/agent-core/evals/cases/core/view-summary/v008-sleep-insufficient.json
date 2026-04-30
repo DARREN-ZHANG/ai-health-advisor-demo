@@ -4,13 +4,19 @@
   "suite": "core",
   "category": "view-summary",
   "priority": "P0",
-  "tags": ["view-summary", "sleep", "warning", "actionable"],
+  "tags": [
+    "view-summary",
+    "sleep",
+    "warning",
+    "actionable"
+  ],
   "setup": {
     "profileId": "profile-b",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"本周睡眠严重不足，平均睡眠时间不足6小时，深睡占比明显偏低。长期睡眠不足会影响免疫力和认知功能，建议设定固定的就寝时间，睡前避免咖啡因和蓝光刺激，争取每晚至少7小时的睡眠。\",\"chartTokens\":[\"SLEEP_7DAYS\",\"SLEEP_STAGE_LAST_NIGHT\"],\"microTips\":[\"建议将就寝时间提前30分钟\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-v008",
@@ -32,8 +38,14 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 80, "max": 150 },
-      "mustMention": ["睡眠", "不足"]
+      "length": {
+        "min": 80,
+        "max": 150
+      },
+      "mustMention": [
+        "睡眠",
+        "不足"
+      ]
     },
     "status": {
       "expectedStatusColor": "warning"
@@ -48,8 +60,13 @@
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "sleep",
-        "requiredTabPatterns": ["睡眠"],
-        "forbidOtherTabs": ["HRV", "步数"]
+        "requiredTabPatterns": [
+          "睡眠"
+        ],
+        "forbidOtherTabs": [
+          "HRV",
+          "步数"
+        ]
       }
     }
   }

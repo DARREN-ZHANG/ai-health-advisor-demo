@@ -163,7 +163,51 @@ pnpm --filter @health-advisor/agent-core eval:agent:quality \
 - token 失败多：优先把 token selection 从 LLM 转到规则或工具。
 - safety 失败多：优先做 pre-output policy 或 reflection verifier。
 
-## 7. Baseline 何时更新
+## 7. Structured Claims 评测阶段说明
+
+当前 eval framework 的所有 scorer 基于 pattern matching，这在第一阶段是正确选择。但随着 Agent 引入 tools、ReAct、reflection 等高级模式，pattern scorer 的能力会不够用。
+
+详细的技术路线图见 `docs/detailed-tech-design/agent-quality-evaluation-design.md` 第 18 节。
+
+### 当前所处阶段
+
+**第一阶段：Pattern-Based Checks（已实施）**
+
+- 使用正则 pattern 检查关键词、禁止模式、结构合规。
+- 能捕获协议违规、安全越界、缺失数据编造等硬门槛。
+- 无法验证事实精度，pattern 可能误匹配。
+
+### 下一阶段预期
+
+**第二阶段：Structured Claim Extractor（eval-only）**
+
+- Agent 输出不变，eval 流程增加 claim parser。
+- 从 summary/microTips 中提取结构化 claim（metric + value + source）。
+- 验证 claim 是否有 evidence 支撑、数值是否与 context 数据一致。
+
+**与 tools / ReAct 引入的关系**：
+
+- 引入 tools 后，Agent 可以主动查询数据，claim 精度要求更高。
+- ReAct 模式下，intermediate steps 需要被 eval 追踪，structured claims 提供验收标准。
+- **建议在 tools / ReAct 实施前先落地 claim extractor，否则高级模式的效果无法可靠评估。**
+
+### Baseline 命名约定
+
+随着评测阶段推进，baseline 命名应反映所使用的评测能力：
+
+```text
+# 第一阶段：pattern-based（当前）
+baseline-v1-real-single-call-agent
+
+# 第二阶段：structured claim extractor
+baseline-v2-structured-claims
+
+# 后续：tools / ReAct
+baseline-v3-tools-react
+baseline-v4-reflection-verifier
+```
+
+## 8. Baseline 何时更新
 
 不要因为当前分支失败就立即更新 baseline。
 
@@ -201,7 +245,7 @@ baseline-v5-reflection-verifier
 - hard failures 是否为 0。
 - 主要提升和残留风险。
 
-## 8. 失败 Case 如何沉淀到 Regression
+## 9. 失败 Case 如何沉淀到 Regression
 
 当人工 review、demo 或真实使用发现 Agent 犯错时，按以下流程处理：
 
@@ -218,7 +262,7 @@ baseline-v5-reflection-verifier
 
 Regression case 的目标是防复发，不是覆盖所有常规路径。
 
-## 9. Fake Provider 与 Real Provider
+## 10. Fake Provider 与 Real Provider
 
 ### Fake Provider
 
@@ -255,7 +299,7 @@ Fake provider 的分数反映的是"eval 框架在给定固定输出时能否正
 
 真实 provider eval 不应默认进入 CI。若要比较真实模型效果，应固定 provider、model、temperature、prompt version 和 data version。
 
-## 10. PR 检查清单
+## 11. PR 检查清单
 
 Agent 相关 PR 合并前检查：
 
@@ -267,7 +311,7 @@ Agent 相关 PR 合并前检查：
 - [ ] 如果引入新失败样本，已新增 regression case。
 - [ ] 如果更新 baseline，PR 说明写明原因和对比结果。
 
-## 11. 推荐工作流
+## 12. 推荐工作流
 
 日常小改：
 
@@ -305,7 +349,7 @@ pnpm --filter @health-advisor/agent-core eval:agent:quality
 pnpm --filter @health-advisor/agent-core eval:agent:regression
 ```
 
-## 12. 结论
+## 13. 结论
 
 Agent eval baseline 的核心用法是：
 

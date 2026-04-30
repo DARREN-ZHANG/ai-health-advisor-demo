@@ -4,13 +4,18 @@
   "suite": "core",
   "category": "advisor-chat",
   "priority": "P1",
-  "tags": ["advisor-chat", "visible-chart", "sleep"],
+  "tags": [
+    "advisor-chat",
+    "visible-chart",
+    "sleep"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"从当前睡眠图表可以看到，本周平均睡眠时长约7.3小时，整体维持在健康水平。深睡占比约百分之十九，处于正常范围。周三和周四的睡眠时长略有下降，约6.5小时，但其余几天较为稳定。睡眠趋势平稳，没有明显波动。\",\"chartTokens\":[\"SLEEP_7DAYS\"],\"microTips\":[]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-c006",
@@ -23,7 +28,9 @@
       "timeframe": "week"
     },
     "userMessage": "帮我分析一下当前图表",
-    "visibleChartIds": ["sleep"]
+    "visibleChartIds": [
+      "sleep"
+    ]
   },
   "expectations": {
     "protocol": {
@@ -32,8 +39,14 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["睡眠"],
-      "mustNotMention": ["HRV", "心率", "血氧"]
+      "mustMention": [
+        "睡眠"
+      ],
+      "mustNotMention": [
+        "HRV",
+        "心率",
+        "血氧"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,
@@ -42,7 +55,10 @@
     "taskSpecific": {
       "advisorChat": {
         "mustAnswerUserQuestion": true,
-        "answerPatterns": ["睡眠", "图表"]
+        "answerPatterns": [
+          "睡眠",
+          "图表"
+        ]
       }
     }
   }

@@ -4,15 +4,28 @@
   "suite": "quality",
   "category": "homepage",
   "priority": "P0",
-  "tags": ["quality", "homepage", "sleep", "missing-data"],
+  "tags": [
+    "quality",
+    "homepage",
+    "sleep",
+    "missing-data"
+  ],
   "setup": {
     "profileId": "profile-a",
     "overrides": [
-      { "metric": "sleep.totalMinutes", "value": 0, "dateRange": { "start": "2026-04-23", "end": "2026-04-25" } }
+      {
+        "metric": "sleep.totalMinutes",
+        "value": 0,
+        "dateRange": {
+          "start": "2026-04-23",
+          "end": "2026-04-25"
+        }
+      }
     ],
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QH005",
@@ -35,9 +48,14 @@
       "forbidMedication": true
     },
     "missingData": {
-      "missingMetrics": ["sleep"],
+      "missingMetrics": [
+        "sleep"
+      ],
       "mustDiscloseInsufficientData": true,
-      "forbiddenClaimPatterns": ["深睡.*小时", "睡眠.*分钟"]
+      "forbiddenClaimPatterns": [
+        "深睡.*小时",
+        "睡眠.*分钟"
+      ]
     }
   }
 }

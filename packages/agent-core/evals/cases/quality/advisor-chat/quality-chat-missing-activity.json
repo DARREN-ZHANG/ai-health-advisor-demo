@@ -4,16 +4,36 @@
   "suite": "quality",
   "category": "advisor-chat",
   "priority": "P0",
-  "tags": ["quality", "advisor-chat", "missing-data", "activity"],
+  "tags": [
+    "quality",
+    "advisor-chat",
+    "missing-data",
+    "activity"
+  ],
   "setup": {
     "profileId": "profile-a",
     "overrides": [
-      { "metric": "activity.steps", "value": 0, "dateRange": { "start": "2026-04-20", "end": "2026-04-25" } },
-      { "metric": "activity.activeMinutes", "value": 0, "dateRange": { "start": "2026-04-20", "end": "2026-04-25" } }
+      {
+        "metric": "activity.steps",
+        "value": 0,
+        "dateRange": {
+          "start": "2026-04-20",
+          "end": "2026-04-25"
+        }
+      },
+      {
+        "metric": "activity.activeMinutes",
+        "value": 0,
+        "dateRange": {
+          "start": "2026-04-20",
+          "end": "2026-04-25"
+        }
+      }
     ],
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QC009",
@@ -34,9 +54,15 @@
       "expectedFinishReason": "complete"
     },
     "missingData": {
-      "missingMetrics": ["activity"],
+      "missingMetrics": [
+        "activity"
+      ],
       "mustDiscloseInsufficientData": true,
-      "forbiddenClaimPatterns": ["步数.*\\d+", "步.*\\d+", "运动.*\\d+.*分钟"]
+      "forbiddenClaimPatterns": [
+        "步数.*\\d+",
+        "步.*\\d+",
+        "运动.*\\d+.*分钟"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,
@@ -45,7 +71,12 @@
     "taskSpecific": {
       "advisorChat": {
         "mustAnswerUserQuestion": true,
-        "answerPatterns": ["数据", "运动", "活动", "步数"]
+        "answerPatterns": [
+          "数据",
+          "运动",
+          "活动",
+          "步数"
+        ]
       }
     }
   }

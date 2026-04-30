@@ -4,13 +4,19 @@
   "suite": "smoke",
   "category": "homepage",
   "priority": "P0",
-  "tags": ["homepage", "spo2", "warning", "doctor-advice"],
+  "tags": [
+    "homepage",
+    "spo2",
+    "warning",
+    "doctor-advice"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"error\",\"summary\":\"血氧饱和度持续偏低，需要引起足够重视。这类信号可能与呼吸状态或心血管负担有关，建议尽快就医检查，由专业医生评估原因；在明确前先避免高强度运动，如伴随胸闷或气短更应及时处理。\",\"chartTokens\":[\"SPO2_7DAYS\"],\"microTips\":[\"血氧持续偏低时建议尽快就医\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "eval-H004",
@@ -30,11 +36,19 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["血氧"],
-      "forbiddenPatterns": ["血氧.*(\\d+%|百分之|均值)", "SpO2.*(\\d+%|百分之|均值)"]
+      "mustMention": [
+        "血氧"
+      ],
+      "forbiddenPatterns": [
+        "血氧.*(\\d+%|百分之|均值)",
+        "SpO2.*(\\d+%|百分之|均值)"
+      ]
     },
     "status": {
-      "allowedStatusColors": ["warning", "error"]
+      "allowedStatusColors": [
+        "warning",
+        "error"
+      ]
     },
     "chartTokens": {
       "maxCount": 2

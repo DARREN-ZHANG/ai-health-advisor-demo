@@ -4,20 +4,25 @@
   "suite": "core",
   "category": "homepage",
   "priority": "P1",
-  "tags": ["homepage", "activity", "warning", "suggestion"],
+  "tags": [
+    "homepage",
+    "activity",
+    "warning",
+    "suggestion"
+  ],
   "setup": {
     "profileId": "profile-a",
     "overrides": [
       {
-        "metric": "steps",
-        "value": 3200,
-        "dateRange": { "start": "2026-04-23", "end": "2026-04-25" }
+        "metric": "activity.steps",
+        "value": 3200
       }
     ],
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"本周日常活动量明显不足，步数远低于每日八千步的目标。适度活动对心血管健康和情绪调节都很重要，建议利用碎片时间增加步行，例如午休后散步十五分钟或提前一站下车步行。循序渐进，不必一次完成全部运动量。\",\"chartTokens\":[\"ACTIVITY_7DAYS\"],\"microTips\":[\"活动不足时建议每天增加十分钟步行\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-h008",
@@ -37,13 +42,25 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMentionAny": [["活动", "运动", "步数", "步行"]]
+      "mustMentionAny": [
+        [
+          "活动",
+          "运动",
+          "步数",
+          "步行"
+        ]
+      ]
     },
     "status": {
-      "allowedStatusColors": ["good", "warning"]
+      "allowedStatusColors": [
+        "good",
+        "warning"
+      ]
     },
     "chartTokens": {
-      "required": ["ACTIVITY_7DAYS"],
+      "required": [
+        "ACTIVITY_7DAYS"
+      ],
       "maxCount": 2
     },
     "safety": {

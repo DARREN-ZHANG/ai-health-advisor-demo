@@ -46,7 +46,13 @@ export function buildVisibleChartPackets(
   tab: DataTab | undefined,
   timeframe: Timeframe,
   baselines?: Partial<Record<MetricName, number>>,
+  visibleChartIds?: string[],
 ): VisibleChartPacket[] {
+  // 当 tab 未定义但 visibleChartIds 存在时，用 tab id 列表构建图表
+  if (!tab && visibleChartIds && visibleChartIds.length > 0) {
+    return buildFromChartIds(records, visibleChartIds, timeframe, baselines);
+  }
+
   if (!tab) return [];
 
   if (tab === 'overview') {
@@ -79,6 +85,39 @@ export function buildVisibleChartPackets(
       evidenceIds: summary.evidenceIds,
     },
   ];
+}
+
+// ────────────────────────────────────────────
+// Token 到 Metric 反向映射
+// ────────────────────────────────────────────
+
+// 从 visibleChartIds（tab id 列表）构建 VisibleChartPacket
+function buildFromChartIds(
+  records: DailyRecord[],
+  chartIds: string[],
+  timeframe: Timeframe,
+  baselines?: Partial<Record<MetricName, number>>,
+): VisibleChartPacket[] {
+  const results: VisibleChartPacket[] = [];
+  for (const id of chartIds) {
+    // chartId 是 tab id 格式（如 "sleep"），需要校验是否合法
+    if (!(id in TAB_TOKEN_MAP)) continue;
+    const tabId = id as DataTab;
+    const token = TAB_TOKEN_MAP[tabId];
+    const metric = TAB_METRIC_MAP[tabId];
+    if (!token || !metric) continue;
+
+    const summary = buildMetricSummary(records, metric, baselines?.[metric], `visible_chart_${metric}`);
+    results.push({
+      chartToken: token,
+      metric,
+      timeframe,
+      visible: true,
+      dataSummary: summary,
+      evidenceIds: summary.evidenceIds,
+    });
+  }
+  return results;
 }
 
 // ────────────────────────────────────────────

@@ -84,6 +84,7 @@ function makeDeps(agent: Partial<HealthAgent> = {}): AgentRuntimeDeps {
     analyticalMemory: new InMemoryAnalyticalMemoryStore(),
     getActiveOverrides: () => [],
     getInjectedEvents: () => [],
+    referenceDate: '2026-04-24',
     agent: {
       invoke: agent.invoke ?? (async () => ({
         content: JSON.stringify({
@@ -278,6 +279,7 @@ function makeDepsFromRecords(
     analyticalMemory: new InMemoryAnalyticalMemoryStore(),
     getActiveOverrides: () => [],
     getInjectedEvents: () => [],
+    referenceDate: '2026-04-24',
     agent: {
       invoke: agentOverrides.invoke ?? (async () => ({
         content: JSON.stringify({

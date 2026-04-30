@@ -24,6 +24,8 @@ export interface AgentRuntimeDeps extends ContextBuilderDeps {
   agent: HealthAgent;
   promptLoader: PromptLoader;
   fallbackEngine: FallbackEngine;
+  /** 可选的参考日期，用于固定 eval 数据窗口（格式：YYYY-MM-DD） */
+  referenceDate?: string;
 }
 
 /**
@@ -70,7 +72,7 @@ export async function executeAgent(
 
   try {
     // 1. 构建 Agent 上下文
-    const context = buildAgentContext(request, deps);
+    const context = buildAgentContext(request, deps, deps.referenceDate);
     tryNotify(() => observer?.onContextBuilt?.(context));
 
     // 2. low-data 快速 fallback：数据不足时跳过 LLM 调用

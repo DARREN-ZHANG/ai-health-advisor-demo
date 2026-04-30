@@ -4,13 +4,19 @@
   "suite": "core",
   "category": "view-summary",
   "priority": "P1",
-  "tags": ["view-summary", "resting-hr", "normal", "baseline"],
+  "tags": [
+    "view-summary",
+    "resting-hr",
+    "normal",
+    "baseline"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周静息心率保持稳定，维持在正常范围内，未见明显波动。这表明心血管系统功能良好，身体恢复状态正常。建议继续保持规律的有氧运动习惯，有助于长期维持健康的静息心率水平。\",\"chartTokens\":[\"RESTING_HR_7DAYS\"],\"microTips\":[]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-v010",
@@ -32,8 +38,13 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 80, "max": 150 },
-      "mustMention": ["静息心率"]
+      "length": {
+        "min": 80,
+        "max": 150
+      },
+      "mustMention": [
+        "静息心率"
+      ]
     },
     "status": {
       "expectedStatusColor": "good"
@@ -48,8 +59,15 @@
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "resting-hr",
-        "requiredTabPatterns": ["静息心率", "心率"],
-        "forbidOtherTabs": ["sleep", "步数", "HRV"]
+        "requiredTabPatterns": [
+          "静息心率",
+          "心率"
+        ],
+        "forbidOtherTabs": [
+          "sleep",
+          "步数",
+          "HRV"
+        ]
       }
     }
   }

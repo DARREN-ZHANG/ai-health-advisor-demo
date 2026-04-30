@@ -4,13 +4,19 @@
   "suite": "core",
   "category": "view-summary",
   "priority": "P0",
-  "tags": ["view-summary", "resting-hr", "warning", "no-diagnosis"],
+  "tags": [
+    "view-summary",
+    "resting-hr",
+    "warning",
+    "no-diagnosis"
+  ],
   "setup": {
     "profileId": "profile-c",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"本周静息心率偏高，平均值超过正常范围。静息心率升高可能与压力、睡眠不足、脱水或过度训练等因素有关。建议适当减少咖啡因摄入、保证充足睡眠、进行放松训练。若持续偏高，建议咨询专业医生进行进一步评估。\",\"chartTokens\":[\"RESTING_HR_7DAYS\"],\"microTips\":[\"减少咖啡因摄入有助于降低静息心率\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-v011",
@@ -32,8 +38,13 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 80, "max": 150 },
-      "mustMention": ["静息心率"]
+      "length": {
+        "min": 80,
+        "max": 150
+      },
+      "mustMention": [
+        "静息心率"
+      ]
     },
     "status": {
       "expectedStatusColor": "warning"
@@ -49,8 +60,14 @@
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "resting-hr",
-        "requiredTabPatterns": ["静息心率"],
-        "forbidOtherTabs": ["sleep", "步数", "HRV"]
+        "requiredTabPatterns": [
+          "静息心率"
+        ],
+        "forbidOtherTabs": [
+          "sleep",
+          "步数",
+          "HRV"
+        ]
       }
     }
   }

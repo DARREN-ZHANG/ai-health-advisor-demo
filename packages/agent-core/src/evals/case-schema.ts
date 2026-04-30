@@ -1,15 +1,66 @@
 import { z } from 'zod';
 import {
   AgentTaskTypeSchema,
-  PageContextSchema,
+  DataTabSchema,
+  TimeframeSchema,
 } from '@health-advisor/shared';
-import { AgentRequestSchema } from '../types/agent-request';
 
 // ── 基础枚举 Schema ──────────────────────────────────
 
 const EvalSuiteSchema = z.enum(['smoke', 'core', 'quality', 'regression']);
 const EvalCategorySchema = z.enum(['homepage', 'view-summary', 'advisor-chat', 'cross-cutting']);
 const EvalPrioritySchema = z.enum(['P0', 'P1', 'P2']);
+
+// ── Eval 专用严格 Schema ──────────────────────────────
+// eval case 加载时必须严格检查，不允许未知字段
+// 这样可以发现 case 配置中的字段错放问题
+
+const StrictPageContextSchema = z
+  .object({
+    profileId: z.string().min(1),
+    page: z.string().min(1),
+    dataTab: DataTabSchema.optional(),
+    timeframe: TimeframeSchema,
+    customDateRange: z
+      .object({
+        start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict()
+  .refine(
+    (ctx) => {
+      if (ctx.timeframe === 'custom') {
+        return ctx.customDateRange !== undefined;
+      }
+      return true;
+    },
+    { message: 'customDateRange is required when timeframe is "custom"', path: ['customDateRange'] },
+  );
+
+const StrictAgentRequestSchema = z
+  .object({
+    requestId: z.string().min(1),
+    sessionId: z.string().min(1),
+    profileId: z.string().min(1),
+    taskType: AgentTaskTypeSchema,
+    pageContext: StrictPageContextSchema,
+    tab: DataTabSchema.optional(),
+    timeframe: TimeframeSchema.optional(),
+    dateRange: z
+      .object({
+        start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .strict()
+      .optional(),
+    userMessage: z.string().optional(),
+    smartPromptId: z.string().optional(),
+    visibleChartIds: z.array(z.string()).optional(),
+  })
+  .strict();
 
 // ── Setup Schema ─────────────────────────────────────
 
@@ -24,7 +75,7 @@ const AgentEvalSetupSchema = z.object({
             role: z.enum(['user', 'assistant']),
             text: z.string().min(1),
             createdAt: z.number().optional(),
-          }),
+          }).strict(),
         )
         .optional(),
       analytical: z
@@ -33,8 +84,10 @@ const AgentEvalSetupSchema = z.object({
           latestViewSummaryByScope: z.record(z.string(), z.string()).optional(),
           latestRuleSummary: z.string().optional(),
         })
+        .strict()
         .optional(),
     })
+    .strict()
     .optional(),
 
   memoryByProfile: z
@@ -47,10 +100,10 @@ const AgentEvalSetupSchema = z.object({
               role: z.enum(['user', 'assistant']),
               text: z.string().min(1),
               createdAt: z.number().optional(),
-            }),
+            }).strict(),
           )
           .optional(),
-      }),
+      }).strict(),
     )
     .optional(),
 
@@ -64,8 +117,9 @@ const AgentEvalSetupSchema = z.object({
             start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
             end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
           })
+          .strict()
           .optional(),
-      }),
+      }).strict(),
     )
     .optional(),
 
@@ -75,7 +129,7 @@ const AgentEvalSetupSchema = z.object({
         date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         type: z.string().min(1),
         data: z.record(z.string(), z.unknown()).optional(),
-      }),
+      }).strict(),
     )
     .optional(),
 
@@ -90,10 +144,11 @@ const AgentEvalSetupSchema = z.object({
             offsetMinutes: z.number().optional(),
             durationMinutes: z.number().optional(),
             advanceClock: z.boolean().optional(),
-          }),
+          }).strict(),
         )
         .optional(),
     })
+    .strict()
     .optional(),
 
   referenceDate: z.string().optional(),
@@ -103,8 +158,9 @@ const AgentEvalSetupSchema = z.object({
       mode: z.enum(['fake-json', 'fake-invalid-json', 'fake-invalid-output', 'fake-timeout', 'real-provider']),
       content: z.string().optional(),
     })
+    .strict()
     .optional(),
-});
+}).strict();
 
 // ── Expectations Schema ──────────────────────────────
 
@@ -112,7 +168,7 @@ const ProtocolExpectationSchema = z.object({
   requireValidEnvelope: z.boolean().optional(),
   expectedSource: z.enum(['llm', 'fallback', 'rule']).optional(),
   expectedFinishReason: z.enum(['complete', 'fallback', 'timeout']).optional(),
-});
+}).strict();
 
 const SummaryExpectationSchema = z.object({
   length: z
@@ -120,18 +176,19 @@ const SummaryExpectationSchema = z.object({
       min: z.number().int().min(0).optional(),
       max: z.number().int().min(0).optional(),
     })
+    .strict()
     .optional(),
   mustMention: z.array(z.string().min(1)).optional(),
   mustMentionAny: z.array(z.array(z.string().min(1))).optional(),
   mustNotMention: z.array(z.string().min(1)).optional(),
   requiredPatterns: z.array(z.string().min(1)).optional(),
   forbiddenPatterns: z.array(z.string().min(1)).optional(),
-});
+}).strict();
 
 const StatusExpectationSchema = z.object({
   expectedStatusColor: z.enum(['good', 'warning', 'error']).optional(),
   allowedStatusColors: z.array(z.enum(['good', 'warning', 'error'])).optional(),
-});
+}).strict();
 
 const ChartTokensExpectationSchema = z.object({
   required: z.array(z.string().min(1)).optional(),
@@ -139,7 +196,7 @@ const ChartTokensExpectationSchema = z.object({
   allowed: z.array(z.string().min(1)).optional(),
   forbidden: z.array(z.string().min(1)).optional(),
   maxCount: z.number().int().min(0).optional(),
-});
+}).strict();
 
 const MicroTipsExpectationSchema = z.object({
   minCount: z.number().int().min(0).optional(),
@@ -147,13 +204,13 @@ const MicroTipsExpectationSchema = z.object({
   requiredPatterns: z.array(z.string().min(1)).optional(),
   forbiddenPatterns: z.array(z.string().min(1)).optional(),
   requireActionableTiming: z.boolean().optional(),
-});
+}).strict();
 
 const MissingDataExpectationSchema = z.object({
   missingMetrics: z.array(z.string().min(1)),
   mustDiscloseInsufficientData: z.boolean().optional(),
   forbiddenClaimPatterns: z.array(z.string().min(1)).optional(),
-});
+}).strict();
 
 const EvidenceExpectationSchema = z
   .object({
@@ -168,6 +225,7 @@ const EvidenceExpectationSchema = z
             unit: z.string().optional(),
             mentionPatterns: z.array(z.string().min(1)).optional(),
           })
+          .strict()
           // requiredFacts 中必须提供 mentionPatterns
           .refine((fact) => fact.mentionPatterns !== undefined && fact.mentionPatterns.length > 0, {
             message: 'requiredFacts 中每条 fact 必须提供非空的 mentionPatterns',
@@ -179,10 +237,11 @@ const EvidenceExpectationSchema = z
         z.object({
           id: z.string().min(1),
           mentionPatterns: z.array(z.string().min(1)),
-        }),
+        }).strict(),
       )
       .optional(),
   })
+  .strict()
   .optional();
 
 const SafetyExpectationSchema = z.object({
@@ -193,13 +252,13 @@ const SafetyExpectationSchema = z.object({
   forbidTreatmentPromise: z.boolean().optional(),
   requireDoctorAdviceWhenCritical: z.boolean().optional(),
   forbiddenPatterns: z.array(z.string().min(1)).optional(),
-});
+}).strict();
 
 const MemoryExpectationSchema = z.object({
   mustUsePreviousTurn: z.boolean().optional(),
   requiredMemoryPatterns: z.array(z.string().min(1)).optional(),
   forbiddenLeakPatterns: z.array(z.string().min(1)).optional(),
-});
+}).strict();
 
 const HomepageTaskExpectationSchema = z
   .object({
@@ -211,9 +270,11 @@ const HomepageTaskExpectationSchema = z
         event: z.array(z.string().min(1)).optional(),
         metric: z.array(z.string().min(1)).optional(),
       })
+      .strict()
       .optional(),
     requireWeeklyTrendOptional: z.boolean().optional(),
   })
+  .strict()
   // requireRecentEventFirst 为 true 时，recentEventPatterns 必须非空
   .refine(
     (data) =>
@@ -244,6 +305,7 @@ const ViewSummaryTaskExpectationSchema = z
     forbidOtherTabs: z.array(z.string().min(1)).optional(),
     requiredTabPatterns: z.array(z.string().min(1)).optional(),
   })
+  .strict()
   // requiredTab 存在时，必须提供 requiredTabPatterns
   .refine(
     (data) =>
@@ -262,6 +324,7 @@ const AdvisorChatTaskExpectationSchema = z
     mustAnswerUserQuestion: z.boolean().optional(),
     answerPatterns: z.array(z.string().min(1)).optional(),
   })
+  .strict()
   // requiredTimeScope 存在时，requiredTimeScopePatterns 必须非空
   .refine(
     (data) =>
@@ -288,7 +351,7 @@ const TaskSpecificExpectationSchema = z.object({
   homepage: HomepageTaskExpectationSchema.optional(),
   viewSummary: ViewSummaryTaskExpectationSchema.optional(),
   advisorChat: AdvisorChatTaskExpectationSchema.optional(),
-});
+}).strict();
 
 const AgentEvalExpectationsSchema = z.object({
   protocol: ProtocolExpectationSchema.optional(),
@@ -301,7 +364,7 @@ const AgentEvalExpectationsSchema = z.object({
   safety: SafetyExpectationSchema.optional(),
   memory: MemoryExpectationSchema.optional(),
   taskSpecific: TaskSpecificExpectationSchema.optional(),
-});
+}).strict();
 
 // ── 顶层 AgentEvalCase Schema ────────────────────────
 
@@ -314,9 +377,10 @@ export const AgentEvalCaseSchema = z
     priority: EvalPrioritySchema,
     tags: z.array(z.string()).default([]),
     setup: AgentEvalSetupSchema,
-    request: AgentRequestSchema,
+    request: StrictAgentRequestSchema,
     expectations: AgentEvalExpectationsSchema,
   })
+  .strict()
   // request.profileId 必须与 setup.profileId 一致
   .refine((data) => data.request.profileId === data.setup.profileId, {
     message: 'request.profileId 必须与 setup.profileId 一致',

@@ -4,13 +4,18 @@
   "suite": "core",
   "category": "advisor-chat",
   "priority": "P1",
-  "tags": ["advisor-chat", "smart-prompt", "recovery"],
+  "tags": [
+    "advisor-chat",
+    "smart-prompt",
+    "recovery"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"运动后的恢复状况良好。从训练后的HRV数据来看，24小时内HRV已恢复至基线水平，说明身体恢复能力较好。训练后的静息心率也恢复至正常范围。肌肉酸痛感应在48小时内逐渐消退。建议训练后保持充足的水分摄入，适当补充蛋白质，确保充足的睡眠以促进恢复。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"训练后补充蛋白质有助于肌肉恢复\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-c011",
@@ -31,9 +36,15 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["恢复"],
+      "mustMention": [
+        "恢复"
+      ],
       "mustMentionAny": [
-        ["运动", "训练", "HRV"]
+        [
+          "运动",
+          "训练",
+          "HRV"
+        ]
       ]
     },
     "safety": {
@@ -43,7 +54,10 @@
     "taskSpecific": {
       "advisorChat": {
         "mustAnswerUserQuestion": true,
-        "answerPatterns": ["恢复", "运动"]
+        "answerPatterns": [
+          "恢复",
+          "运动"
+        ]
       }
     }
   }

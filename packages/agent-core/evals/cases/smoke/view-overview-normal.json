@@ -4,13 +4,18 @@
   "suite": "smoke",
   "category": "view-summary",
   "priority": "P0",
-  "tags": ["view-summary", "overview", "normal"],
+  "tags": [
+    "view-summary",
+    "overview",
+    "normal"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周各项健康指标总体良好。心率变异性稳定在正常范围，睡眠质量保持良好水平，日常活动量充足。\",\"chartTokens\":[],\"microTips\":[]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "eval-V-normal",
@@ -32,7 +37,10 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 40, "max": 200 }
+      "length": {
+        "min": 40,
+        "max": 200
+      }
     },
     "status": {
       "expectedStatusColor": "good"
@@ -44,7 +52,10 @@
     "taskSpecific": {
       "viewSummary": {
         "requiredTab": "overview",
-        "requiredTabPatterns": ["总体", "指标"]
+        "requiredTabPatterns": [
+          "总体",
+          "指标"
+        ]
       }
     }
   }

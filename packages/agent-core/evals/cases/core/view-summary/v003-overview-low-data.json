@@ -15,7 +15,8 @@
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"当前可用数据较少，暂无法给出全面的健康指标分析。已收集到的数据显示基本指标处于正常范围内，建议持续佩戴设备以获取更完整的健康数据，一周后可进行更全面的综合评估。\",\"chartTokens\":[],\"microTips\":[\"持续佩戴设备可获取更完整的健康数据\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-v003",

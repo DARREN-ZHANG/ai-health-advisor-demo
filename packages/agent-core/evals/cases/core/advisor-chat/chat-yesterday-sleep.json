@@ -4,13 +4,19 @@
   "suite": "core",
   "category": "advisor-chat",
   "priority": "P0",
-  "tags": ["advisor-chat", "sleep", "time-scope", "evidence"],
+  "tags": [
+    "advisor-chat",
+    "sleep",
+    "time-scope",
+    "evidence"
+  ],
   "setup": {
     "profileId": "profile-b",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"昨晚睡眠质量不佳，总睡眠时间约5.5小时，低于推荐的7至8小时。深睡占比仅百分之十五，入睡时间偏晚约凌晨1点。睡眠效率偏低，可能与睡前使用电子设备有关。建议今晚提前30分钟上床，睡前1小时避免使用手机，保持卧室温度适宜。\",\"chartTokens\":[\"SLEEP_7DAYS\"],\"microTips\":[\"睡前1小时避免使用手机等电子设备\"]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-c002",
@@ -31,7 +37,9 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["睡眠"]
+      "mustMention": [
+        "睡眠"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,
@@ -40,9 +48,15 @@
     "taskSpecific": {
       "advisorChat": {
         "requiredTimeScope": "day",
-        "requiredTimeScopePatterns": ["昨晚", "昨天"],
+        "requiredTimeScopePatterns": [
+          "昨晚",
+          "昨天"
+        ],
         "mustAnswerUserQuestion": true,
-        "answerPatterns": ["睡眠", "深睡"]
+        "answerPatterns": [
+          "睡眠",
+          "深睡"
+        ]
       }
     },
     "evidence": {
@@ -50,12 +64,17 @@
         {
           "id": "sleep-duration",
           "metric": "sleep",
-          "mentionPatterns": ["5.5", "睡眠时间"]
+          "mentionPatterns": [
+            "5.5",
+            "睡眠时间"
+          ]
         },
         {
           "id": "deep-sleep",
           "metric": "deepSleep",
-          "mentionPatterns": ["深睡"]
+          "mentionPatterns": [
+            "深睡"
+          ]
         }
       ]
     }

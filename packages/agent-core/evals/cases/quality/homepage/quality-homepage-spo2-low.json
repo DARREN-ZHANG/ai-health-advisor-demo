@@ -4,15 +4,28 @@
   "suite": "quality",
   "category": "homepage",
   "priority": "P0",
-  "tags": ["quality", "homepage", "spo2", "warning"],
+  "tags": [
+    "quality",
+    "homepage",
+    "spo2",
+    "warning"
+  ],
   "setup": {
     "profileId": "profile-a",
     "overrides": [
-      { "metric": "spo2", "value": 92, "dateRange": { "start": "2026-04-24", "end": "2026-04-25" } }
+      {
+        "metric": "spo2",
+        "value": 92,
+        "dateRange": {
+          "start": "2026-04-24",
+          "end": "2026-04-25"
+        }
+      }
     ],
     "modelFixture": {
       "mode": "real-provider"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "quality-QH004",
@@ -32,11 +45,23 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMentionAny": [["血氧", "SpO2", "血氧饱和度"]],
-      "forbiddenPatterns": ["血氧.*(\\d+%|百分之|均值)", "SpO2.*(\\d+%|百分之|均值)"]
+      "mustMentionAny": [
+        [
+          "血氧",
+          "SpO2",
+          "血氧饱和度"
+        ]
+      ],
+      "forbiddenPatterns": [
+        "血氧.*(\\d+%|百分之|均值)",
+        "SpO2.*(\\d+%|百分之|均值)"
+      ]
     },
     "status": {
-      "allowedStatusColors": ["warning", "error"]
+      "allowedStatusColors": [
+        "warning",
+        "error"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,

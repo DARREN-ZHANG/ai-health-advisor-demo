@@ -4,13 +4,19 @@
   "suite": "core",
   "category": "advisor-chat",
   "priority": "P1",
-  "tags": ["advisor-chat", "recovery", "time-scope", "month"],
+  "tags": [
+    "advisor-chat",
+    "recovery",
+    "time-scope",
+    "month"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"最近一个月的恢复趋势整体向好。前两周HRV偏低，平均约42ms，可能与训练强度偏大有关；后两周逐步回升至48ms左右，显示身体恢复能力在改善。睡眠方面，本月平均睡眠时长约7.2小时，深睡占比从百分之十六提升至百分之二十，趋势积极。总体来看，恢复状态在稳步改善。\",\"chartTokens\":[\"HRV_30DAYS\"],\"microTips\":[]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-c003",
@@ -31,8 +37,13 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "mustMention": ["恢复"],
-      "mustNotMention": ["过去7天", "本周"]
+      "mustMention": [
+        "恢复"
+      ],
+      "mustNotMention": [
+        "过去7天",
+        "本周"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,
@@ -41,9 +52,15 @@
     "taskSpecific": {
       "advisorChat": {
         "requiredTimeScope": "month",
-        "requiredTimeScopePatterns": ["一个月", "月"],
+        "requiredTimeScopePatterns": [
+          "一个月",
+          "月"
+        ],
         "mustAnswerUserQuestion": true,
-        "answerPatterns": ["恢复", "趋势"]
+        "answerPatterns": [
+          "恢复",
+          "趋势"
+        ]
       }
     }
   }

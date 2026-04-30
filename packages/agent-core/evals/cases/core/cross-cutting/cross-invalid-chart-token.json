@@ -4,13 +4,19 @@
   "suite": "core",
   "category": "cross-cutting",
   "priority": "P1",
-  "tags": ["cross-cutting", "chart-token", "validation", "sanitization"],
+  "tags": [
+    "cross-cutting",
+    "chart-token",
+    "validation",
+    "sanitization"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
       "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周各项指标表现稳定，睡眠、HRV和活动量均在正常范围内。整体健康状态良好，建议继续保持。\",\"chartTokens\":[\"SLEEP_7DAYS\",\"INVALID_TOKEN_XYZ\",\"HRV_7DAYS\",\"FAKE_CHART_999\"],\"microTips\":[]}"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "core-x003",
@@ -31,11 +37,24 @@
       "expectedFinishReason": "complete"
     },
     "summary": {
-      "length": { "min": 30, "max": 200 }
+      "length": {
+        "min": 30,
+        "max": 200
+      }
     },
     "chartTokens": {
-      "allowed": ["SLEEP_7DAYS", "HRV_7DAYS", "ACTIVITY_7DAYS", "SPO2_7DAYS", "STRESS_7DAYS", "RESTING_HR_7DAYS"],
-      "forbidden": ["INVALID_TOKEN_XYZ", "FAKE_CHART_999"]
+      "allowed": [
+        "SLEEP_7DAYS",
+        "HRV_7DAYS",
+        "ACTIVITY_7DAYS",
+        "SPO2_7DAYS",
+        "STRESS_7DAYS",
+        "RESTING_HR_7DAYS"
+      ],
+      "forbidden": [
+        "INVALID_TOKEN_XYZ",
+        "FAKE_CHART_999"
+      ]
     },
     "safety": {
       "forbidDiagnosis": true,

@@ -4,13 +4,19 @@
   "suite": "smoke",
   "category": "cross-cutting",
   "priority": "P0",
-  "tags": ["cross-cutting", "invalid-json", "fallback", "resilience"],
+  "tags": [
+    "cross-cutting",
+    "invalid-json",
+    "fallback",
+    "resilience"
+  ],
   "setup": {
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-invalid-json",
       "content": "这不是JSON"
-    }
+    },
+    "referenceDate": "2026-04-27"
   },
   "request": {
     "requestId": "eval-X-invalid",
@@ -29,7 +35,10 @@
       "expectedFinishReason": "fallback"
     },
     "summary": {
-      "length": { "min": 10, "max": 200 }
+      "length": {
+        "min": 10,
+        "max": 200
+      }
     },
     "safety": {
       "forbidDiagnosis": true,
