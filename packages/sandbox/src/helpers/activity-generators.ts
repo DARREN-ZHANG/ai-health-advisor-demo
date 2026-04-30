@@ -494,36 +494,91 @@ function generateBreathingPauseEvents(segment: ActivitySegment): DeviceEvent[] {
 // 生成器: alcohol_intake（饮酒）
 // ============================================================
 
-/** 饮酒事件生成 */
+/** 酒精剂量等级 */
+type AlcoholAmount = 'light' | 'moderate' | 'heavy';
+
+/** 酒精响应曲线因子（0~1，在指定时间点的目标响应强度）
+ *  酒精吸收更快，达峰更早（30~60min），持续更长
+ */
+function alcoholResponseFactor(minuteOffset: number): number {
+  if (minuteOffset <= 0) return 0;
+  if (minuteOffset <= 20) return 0.3 * (minuteOffset / 20);
+  if (minuteOffset <= 40) return 0.3 + 0.7 * ((minuteOffset - 20) / 20);
+  if (minuteOffset <= 80) return 1.0;
+  if (minuteOffset <= 120) return 1.0 - 0.4 * ((minuteOffset - 80) / 40);
+  if (minuteOffset <= 180) return 0.6 - 0.4 * ((minuteOffset - 120) / 60);
+  return 0;
+}
+
+/** 各剂量对应的生理响应范围（基于可穿戴真实世界研究 PMC5878366） */
+const ALCOHOL_AMOUNT_RANGES: Record<AlcoholAmount, {
+  hrDeltaMin: number; hrDeltaMax: number;
+  rmssdDropMin: number; rmssdDropMax: number;
+  stressDeltaMin: number; stressDeltaMax: number;
+}> = {
+  light: { hrDeltaMin: 2, hrDeltaMax: 5, rmssdDropMin: 2, rmssdDropMax: 5, stressDeltaMin: 3, stressDeltaMax: 7 },
+  moderate: { hrDeltaMin: 4, hrDeltaMax: 9, rmssdDropMin: 5, rmssdDropMax: 12, stressDeltaMin: 7, stressDeltaMax: 15 },
+  heavy: { hrDeltaMin: 7, hrDeltaMax: 15, rmssdDropMin: 10, rmssdDropMax: 20, stressDeltaMin: 15, stressDeltaMax: 25 },
+};
+
+/** 饮酒事件生成（5 分钟间隔，3 小时窗口） */
 function generateAlcoholIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
   const events: DeviceEvent[] = [];
   const totalMin = diffMinutes(segment.start, segment.end);
   const params = segment.params ?? {};
   const amountRaw = params.amount;
-  const amount = amountRaw === 'light' || amountRaw === 'heavy' ? amountRaw : 'moderate';
-  const hrBase = amount === 'heavy' ? 95 : amount === 'light' ? 82 : 90;
+  const amount: AlcoholAmount =
+    amountRaw === 'light' || amountRaw === 'heavy' ? amountRaw : 'moderate';
+  const ranges = ALCOHOL_AMOUNT_RANGES[amount];
+
+  // 基线值：使用 profile 典型值
+  const hrBaseline = 68;
+  const rmssdBaseline = 50;
+  const stressBaseline = 25;
+  const spo2Baseline = 97;
+
   let idx = 0;
   let cumulativeSteps = 0;
 
   events.push(makeEvent(segment, 0, 'wearState', true, idx++));
   events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
 
-  for (let m = 0; m < totalMin; m += 1) {
-    const progress = m / totalMin;
-    const hrElevation = progress * 8;
-    const hr = rangeValue(Math.round(hrBase + hrElevation), 10, m, 90);
+  // 5 分钟间隔生成
+  for (let m = 5; m <= totalMin; m += 5) {
+    const factor = alcoholResponseFactor(m);
+    const d = deterministic(42, m);
+    const noise = d * 0.3 + 0.85; // 0.85~1.15 的微噪声
+
+    // HR：随 factor 上升（血管扩张后代偿性心率增快）
+    const hrDelta = ranges.hrDeltaMin + (ranges.hrDeltaMax - ranges.hrDeltaMin) * factor;
+    const hr = Math.round(hrBaseline + hrDelta * noise);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
-    const stepsDelta = Math.round(deterministic(91, m) * 20);
+
+    // RMSSD：随 factor 下降（副交感神经受抑制）——使用绝对值 drop（ms）
+    const rmssdDrop = ranges.rmssdDropMin + (ranges.rmssdDropMax - ranges.rmssdDropMin) * factor;
+    const rmssd = Math.round((rmssdBaseline - rmssdDrop * noise) * 10) / 10;
+    events.push(makeEvent(segment, m, 'hrvRmssd', Math.max(5, rmssd), idx++));
+
+    // stressLoad：随 factor 上升（交感神经相对占优）
+    const stressDelta = ranges.stressDeltaMin + (ranges.stressDeltaMax - ranges.stressDeltaMin) * factor;
+    const stress = Math.round(stressBaseline + stressDelta * noise);
+    events.push(makeEvent(segment, m, 'stressLoad', stress, idx++));
+
+    // SpO2：稳定或轻微下降 ±1%
+    const spo2Noise = deterministic(73, m) * 2 - 1; // -1~1
+    const spo2 = Math.round(spo2Baseline + spo2Noise);
+    events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
+
+    // motion：低活动 0.2~1.8（社交饮酒场景下以坐姿为主，略宽松于咖啡因）
+    const motion = Math.round((0.2 + deterministic(91, m) * 1.6) * 100) / 100;
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+
+    // steps：每 5 分钟 0~25 步（社交场景可能略有走动）
+    const stepsDelta = Math.round(deterministic(17, m) * 25);
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
-    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
-    const motion = aggregateMotion(imuSamples);
-    events.push(makeEvent(segment, m, 'motion', motion, idx++));
-    if (m % 5 === 0) {
-      const spo2 = rangeValue(96, 4, m, 93);
-      events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
-    }
   }
+
   return events;
 }
 
