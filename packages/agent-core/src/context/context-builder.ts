@@ -71,9 +71,9 @@ export function buildAgentContext(
   return {
     profile: {
       profileId: profile.profileId,
-      name: localize(profile.name, DEFAULT_LOCALE),
+      name: localize(profile.name, locale),
       age: profile.age,
-      tags: (profile.tags || []).map((tag) => localize(tag, DEFAULT_LOCALE)),
+      tags: (profile.tags || []).map((tag) => localize(tag, locale)),
       baselines: {
         restingHR: profile.baseline.restingHr,
         hrv: profile.baseline.hrv,

@@ -140,11 +140,11 @@ export class ProfileManager {
       : undefined;
 
     // 浅合并 profile 层字段
-    if (changes.name !== undefined) profileFile.profile.name = changes.name;
+    if (changes.name !== undefined) profileFile.profile.name = { zh: changes.name, en: changes.name };
     if (changes.age !== undefined) profileFile.profile.age = changes.age;
     if (changes.gender !== undefined) profileFile.profile.gender = changes.gender;
     if (changes.avatar !== undefined) profileFile.profile.avatar = changes.avatar;
-    if (changes.tags !== undefined) profileFile.profile.tags = changes.tags;
+    if (changes.tags !== undefined) profileFile.profile.tags = changes.tags.map((t) => ({ zh: t, en: t }));
     if (changes.baseline !== undefined) {
       profileFile.profile.baseline = {
         ...profileFile.profile.baseline,

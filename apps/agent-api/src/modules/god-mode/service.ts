@@ -20,6 +20,7 @@ import type {
   ResetPayload,
   UpdateProfilePayload,
 } from '@health-advisor/shared';
+import { localize, DEFAULT_LOCALE } from '@health-advisor/shared';
 
 export class GodModeService {
   constructor(private registry: RuntimeRegistry) {}
@@ -149,7 +150,7 @@ export class GodModeService {
       recentDerivedStates: derivedStates,
       availableProfiles: [...this.registry.profiles.values()].map((p) => ({
         profileId: p.profile.profileId,
-        name: p.profile.name,
+        name: localize(p.profile.name, DEFAULT_LOCALE),
       })),
     };
   }

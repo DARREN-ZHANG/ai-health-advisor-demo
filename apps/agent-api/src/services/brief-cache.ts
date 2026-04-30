@@ -20,9 +20,9 @@ function getToday(): string {
 export class BriefCache {
   private store = new Map<string, CacheEntry>();
 
-  get(profileId: string): AgentResponseEnvelope | null {
+  get(profileId: string, locale?: string): AgentResponseEnvelope | null {
     const today = getToday();
-    const key = `${profileId}:${today}`;
+    const key = `${profileId}:${today}:${locale ?? 'zh'}`;
     const entry = this.store.get(key);
 
     if (!entry) return null;
@@ -40,16 +40,20 @@ export class BriefCache {
     };
   }
 
-  set(profileId: string, response: AgentResponseEnvelope): void {
+  set(profileId: string, response: AgentResponseEnvelope, locale?: string): void {
     const today = getToday();
-    const key = `${profileId}:${today}`;
+    const key = `${profileId}:${today}:${locale ?? 'zh'}`;
     this.store.set(key, { date: today, response, cachedAt: Date.now() });
   }
 
-  /** 清除指定 profile 的当日缓存 */
+  /** 清除指定 profile 当日所有语言的缓存 */
   invalidate(profileId: string): void {
     const today = getToday();
-    this.store.delete(`${profileId}:${today}`);
+    for (const key of this.store.keys()) {
+      if (key.startsWith(`${profileId}:${today}:`)) {
+        this.store.delete(key);
+      }
+    }
   }
 
   /** 清除全部缓存，供 God Mode 等全局数据变更后使用 */

@@ -17,7 +17,7 @@ export class AiOrchestrator {
   async execute(request: AgentRequest, locale?: Locale): Promise<AgentResponseEnvelope> {
     // 对 HOMEPAGE_SUMMARY 检查 brief 缓存
     if (request.taskType === AgentTaskType.HOMEPAGE_SUMMARY && this.deps.briefCache) {
-      const cached = this.deps.briefCache.get(request.profileId);
+      const cached = this.deps.briefCache.get(request.profileId, locale);
       if (cached) {
         this.deps.metrics.incrementBriefCacheHit();
         return cached;
@@ -42,7 +42,7 @@ export class AiOrchestrator {
 
       // LLM 调用成功后写入 brief 缓存
       if (request.taskType === AgentTaskType.HOMEPAGE_SUMMARY && this.deps.briefCache && result.meta.finishReason === 'complete') {
-        this.deps.briefCache.set(request.profileId, result);
+        this.deps.briefCache.set(request.profileId, result, locale);
       }
 
       return result;
