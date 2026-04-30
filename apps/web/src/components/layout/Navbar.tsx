@@ -2,17 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Container, Button } from '@health-advisor/ui';
 import { useGodModeStore } from '@/stores/god-mode.store';
 import { HeartIcon } from '@heroicons/react/24/solid';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
-const navItems = [
-  { href: '/', label: '首页' },
-  { href: '/data-center', label: '数据中心' },
+const NAV_KEYS = [
+  { href: '/', key: 'home' as const },
+  { href: '/data-center', key: 'dataCenter' as const },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
+  const t = useTranslations('nav');
   const { isEnabled, toggleOpen } = useGodModeStore();
 
   return (
@@ -26,7 +29,7 @@ export function Navbar() {
             </span>
           </Link>
           <div className="hidden md:flex items-center gap-6">
-            {navItems.map((item) => (
+            {NAV_KEYS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -36,13 +39,14 @@ export function Navbar() {
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                {item.label}
+                {t(item.key)}
               </Link>
             ))}
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <LanguageSwitcher />
           {isEnabled && (
             <Button
               variant="ghost"

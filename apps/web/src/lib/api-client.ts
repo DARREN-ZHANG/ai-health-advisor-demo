@@ -52,6 +52,12 @@ async function request<T>(
     headers.set('X-Session-Id', sessionId);
   }
 
+  // 注入语言偏好
+  const locale = typeof window !== 'undefined'
+    ? (window.localStorage.getItem('lang') || 'zh')
+    : 'zh';
+  headers.set('X-Lang', locale);
+
   // 6 秒超时控制
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
