@@ -1,14 +1,14 @@
 {
   "profile": {
     "profileId": "profile-a",
-    "name": "林巅峰",
+    "name": { "zh": "林巅峰", "en": "Lin Dianfeng" },
     "age": 28,
     "gender": "male",
     "avatar": "avatar-a.png",
     "tags": [
-      "规律健身",
-      "长睡眠",
-      "HRV优秀"
+      { "zh": "规律健身", "en": "Regular exercise" },
+      { "zh": "长睡眠", "en": "Long sleep" },
+      { "zh": "HRV优秀", "en": "Excellent HRV" }
     ],
     "baseline": {
       "restingHr": 48,

@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "profiles": [
-    { "profileId": "profile-a", "name": "林巅峰", "file": "profiles/profile-a.json" },
-    { "profileId": "profile-b", "name": "赵沉睡", "file": "profiles/profile-b.json" },
-    { "profileId": "profile-c", "name": "孙焦虑", "file": "profiles/profile-c.json" },
-    { "profileId": "profile-d", "name": "周社交", "file": "profiles/profile-d.json" }
+    { "profileId": "profile-a", "name": { "zh": "林巅峰", "en": "Lin Dianfeng" }, "file": "profiles/profile-a.json" },
+    { "profileId": "profile-b", "name": { "zh": "赵沉睡", "en": "Zhao Chenshui" }, "file": "profiles/profile-b.json" },
+    { "profileId": "profile-c", "name": { "zh": "孙焦虑", "en": "Sun Jiaolv" }, "file": "profiles/profile-c.json" },
+    { "profileId": "profile-d", "name": { "zh": "周社交", "en": "Zhou Shejiao" }, "file": "profiles/profile-d.json" }
   ]
 }

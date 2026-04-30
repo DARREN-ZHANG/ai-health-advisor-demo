@@ -1,14 +1,14 @@
 {
   "profile": {
     "profileId": "profile-b",
-    "name": "赵沉睡",
+    "name": { "zh": "赵沉睡", "en": "Zhao Chenshui" },
     "age": 42,
     "gender": "male",
     "avatar": "avatar-d.png",
     "tags": [
-      "偏胖",
-      "睡眠呼吸暂停",
-      "慢性疲劳"
+      { "zh": "偏胖", "en": "Overweight" },
+      { "zh": "睡眠呼吸暂停", "en": "Sleep apnea" },
+      { "zh": "慢性疲劳", "en": "Chronic fatigue" }
     ],
     "baseline": {
       "restingHr": 72,

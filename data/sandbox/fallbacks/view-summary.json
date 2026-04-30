@@ -1,37 +1,76 @@
 {
-  "overview": {
-    "summary": "近期核心指标整体平稳，睡眠、心率、活动量均处于正常范围，无明显异常需关注。",
-    "chartTokens": ["HRV_7DAYS", "SLEEP_7DAYS", "RESTING_HR_7DAYS", "ACTIVITY_7DAYS", "SPO2_7DAYS", "STRESS_LOAD_7DAYS"],
-    "microTips": ["保持规律作息有助于维持各项指标稳定", "适当有氧运动可进一步提升心肺功能"]
+  "zh": {
+    "overview": {
+      "summary": "近期核心指标整体平稳，睡眠、心率、活动量均处于正常范围，无明显异常需关注。",
+      "chartTokens": ["HRV_7DAYS", "SLEEP_7DAYS", "RESTING_HR_7DAYS", "ACTIVITY_7DAYS", "SPO2_7DAYS", "STRESS_LOAD_7DAYS"],
+      "microTips": ["保持规律作息有助于维持各项指标稳定", "适当有氧运动可进一步提升心肺功能"]
+    },
+    "hrv": {
+      "summary": "近 7 天 HRV 数据整体在正常范围内，未发现明显异常波动。",
+      "chartTokens": ["HRV_7DAYS"],
+      "microTips": ["心率变异性稳定，说明自主神经调节良好"]
+    },
+    "sleep": {
+      "summary": "近 7 天睡眠数据整体正常。深睡和 REM 阶段比例合理。",
+      "chartTokens": ["SLEEP_7DAYS", "SLEEP_STAGE_LAST_NIGHT"],
+      "microTips": ["建议保持规律作息", "睡前避免摄入咖啡因"]
+    },
+    "resting-hr": {
+      "summary": "近 7 天静息心率保持在正常范围，未见明显异常。",
+      "chartTokens": ["RESTING_HR_7DAYS"],
+      "microTips": ["静息心率稳定是心血管健康的好指标"]
+    },
+    "activity": {
+      "summary": "近 7 天活动数据显示运动量适中，建议保持或适当增加。",
+      "chartTokens": ["ACTIVITY_7DAYS"],
+      "microTips": ["适当增加有氧运动有助于提升心肺功能"]
+    },
+    "spo2": {
+      "summary": "近 7 天血氧饱和度保持在正常水平。",
+      "chartTokens": ["SPO2_7DAYS"],
+      "microTips": ["血氧正常说明呼吸功能良好"]
+    },
+    "stress": {
+      "summary": "近 7 天压力负荷数据整体正常，建议关注高峰时段的放松。",
+      "chartTokens": ["STRESS_LOAD_7DAYS"],
+      "microTips": ["定期休息和深呼吸有助于管理压力水平"]
+    }
   },
-  "hrv": {
-    "summary": "近 7 天 HRV 数据整体在正常范围内，未发现明显异常波动。",
-    "chartTokens": ["HRV_7DAYS"],
-    "microTips": ["心率变异性稳定，说明自主神经调节良好"]
-  },
-  "sleep": {
-    "summary": "近 7 天睡眠数据整体正常。深睡和 REM 阶段比例合理。",
-    "chartTokens": ["SLEEP_7DAYS", "SLEEP_STAGE_LAST_NIGHT"],
-    "microTips": ["建议保持规律作息", "睡前避免摄入咖啡因"]
-  },
-  "resting-hr": {
-    "summary": "近 7 天静息心率保持在正常范围，未见明显异常。",
-    "chartTokens": ["RESTING_HR_7DAYS"],
-    "microTips": ["静息心率稳定是心血管健康的好指标"]
-  },
-  "activity": {
-    "summary": "近 7 天活动数据显示运动量适中，建议保持或适当增加。",
-    "chartTokens": ["ACTIVITY_7DAYS"],
-    "microTips": ["适当增加有氧运动有助于提升心肺功能"]
-  },
-  "spo2": {
-    "summary": "近 7 天血氧饱和度保持在正常水平。",
-    "chartTokens": ["SPO2_7DAYS"],
-    "microTips": ["血氧正常说明呼吸功能良好"]
-  },
-  "stress": {
-    "summary": "近 7 天压力负荷数据整体正常，建议关注高峰时段的放松。",
-    "chartTokens": ["STRESS_LOAD_7DAYS"],
-    "microTips": ["定期休息和深呼吸有助于管理压力水平"]
+  "en": {
+    "overview": {
+      "summary": "Core metrics have been generally stable recently. Sleep, heart rate, and activity levels are all within normal range with no significant anomalies to address.",
+      "chartTokens": ["HRV_7DAYS", "SLEEP_7DAYS", "RESTING_HR_7DAYS", "ACTIVITY_7DAYS", "SPO2_7DAYS", "STRESS_LOAD_7DAYS"],
+      "microTips": ["Maintaining a consistent routine helps keep all indicators stable", "Moderate aerobic exercise can further improve cardiovascular fitness"]
+    },
+    "hrv": {
+      "summary": "HRV data over the past 7 days is within the normal range with no significant fluctuations detected.",
+      "chartTokens": ["HRV_7DAYS"],
+      "microTips": ["Stable heart rate variability indicates healthy autonomic nervous regulation"]
+    },
+    "sleep": {
+      "summary": "Sleep data over the past 7 days is generally normal. Deep sleep and REM stage proportions are well-balanced.",
+      "chartTokens": ["SLEEP_7DAYS", "SLEEP_STAGE_LAST_NIGHT"],
+      "microTips": ["Try to maintain a consistent sleep schedule", "Avoid caffeine before bedtime"]
+    },
+    "resting-hr": {
+      "summary": "Resting heart rate has stayed within the normal range over the past 7 days with no notable anomalies.",
+      "chartTokens": ["RESTING_HR_7DAYS"],
+      "microTips": ["A stable resting heart rate is a good indicator of cardiovascular health"]
+    },
+    "activity": {
+      "summary": "Activity data over the past 7 days shows moderate exercise volume. Consider maintaining or slightly increasing it.",
+      "chartTokens": ["ACTIVITY_7DAYS"],
+      "microTips": ["Adding moderate aerobic exercise can help boost cardiovascular fitness"]
+    },
+    "spo2": {
+      "summary": "Blood oxygen saturation has remained at normal levels over the past 7 days.",
+      "chartTokens": ["SPO2_7DAYS"],
+      "microTips": ["Normal blood oxygen levels indicate healthy respiratory function"]
+    },
+    "stress": {
+      "summary": "Stress load data over the past 7 days is generally normal. Consider focusing on relaxation during peak stress periods.",
+      "chartTokens": ["STRESS_LOAD_7DAYS"],
+      "microTips": ["Regular breaks and deep breathing help manage stress levels"]
+    }
   }
 }

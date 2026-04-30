@@ -1,28 +1,58 @@
 {
-  "profile-a": {
-    "summary": "根据您的数据分析，整体健康状况良好。建议继续保持当前的作息和运动习惯。",
-    "chartTokens": ["HRV_7DAYS", "ACTIVITY_7DAYS"],
-    "microTips": [
-      "保持每周至少 150 分钟中等强度运动",
-      "持续关注睡眠质量，保持 7-8 小时的充足睡眠"
-    ]
+  "zh": {
+    "profile-a": {
+      "summary": "根据您的数据分析，整体健康状况良好。建议继续保持当前的作息和运动习惯。",
+      "chartTokens": ["HRV_7DAYS", "ACTIVITY_7DAYS"],
+      "microTips": [
+        "保持每周至少 150 分钟中等强度运动",
+        "持续关注睡眠质量，保持 7-8 小时的充足睡眠"
+      ]
+    },
+    "profile-b": {
+      "summary": "根据您的数据分析，建议关注睡眠质量和运动量。近期数据有一定波动，需要更多关注。",
+      "chartTokens": ["SLEEP_7DAYS", "STRESS_LOAD_7DAYS"],
+      "microTips": [
+        "睡前 1 小时避免使用电子设备",
+        "每天增加 3000 步可有效改善整体健康",
+        "适当的有氧运动有助于改善睡眠质量"
+      ]
+    },
+    "profile-c": {
+      "summary": "根据您的数据分析，存在明显的压力过大和睡眠不足问题，建议优先调整作息和压力管理策略。",
+      "chartTokens": ["STRESS_LOAD_7DAYS", "SLEEP_STAGE_LAST_NIGHT"],
+      "microTips": [
+        "深呼吸练习有助于缓解压力，建议每天进行",
+        "睡前 1 小时避免使用电子设备",
+        "严重睡眠不足时请考虑咨询专业医生"
+      ]
+    }
   },
-  "profile-b": {
-    "summary": "根据您的数据分析，建议关注睡眠质量和运动量。近期数据有一定波动，需要更多关注。",
-    "chartTokens": ["SLEEP_7DAYS", "STRESS_LOAD_7DAYS"],
-    "microTips": [
-      "睡前 1 小时避免使用电子设备",
-      "每天增加 3000 步可有效改善整体健康",
-      "适当的有氧运动有助于改善睡眠质量"
-    ]
-  },
-  "profile-c": {
-    "summary": "根据您的数据分析，存在明显的压力过大和睡眠不足问题，建议优先调整作息和压力管理策略。",
-    "chartTokens": ["STRESS_LOAD_7DAYS", "SLEEP_STAGE_LAST_NIGHT"],
-    "microTips": [
-      "深呼吸练习有助于缓解压力，建议每天进行",
-      "睡前 1 小时避免使用电子设备",
-      "严重睡眠不足时请考虑咨询专业医生"
-    ]
+  "en": {
+    "profile-a": {
+      "summary": "Based on your data analysis, overall health is in good shape. Continue maintaining your current routine and exercise habits.",
+      "chartTokens": ["HRV_7DAYS", "ACTIVITY_7DAYS"],
+      "microTips": [
+        "Keep up at least 150 minutes of moderate-intensity exercise per week",
+        "Continue monitoring sleep quality and aim for 7-8 hours of restful sleep"
+      ]
+    },
+    "profile-b": {
+      "summary": "Based on your data analysis, consider paying more attention to sleep quality and physical activity. Recent data shows some fluctuation that warrants closer monitoring.",
+      "chartTokens": ["SLEEP_7DAYS", "STRESS_LOAD_7DAYS"],
+      "microTips": [
+        "Avoid using electronic devices 1 hour before bedtime",
+        "Adding 3,000 daily steps can effectively improve overall health",
+        "Moderate aerobic exercise can help improve sleep quality"
+      ]
+    },
+    "profile-c": {
+      "summary": "Based on your data analysis, there are clear signs of excessive stress and insufficient sleep. Prioritize adjusting your routine and stress management strategies.",
+      "chartTokens": ["STRESS_LOAD_7DAYS", "SLEEP_STAGE_LAST_NIGHT"],
+      "microTips": [
+        "Deep breathing exercises can help relieve stress — try practicing daily",
+        "Avoid using electronic devices 1 hour before bedtime",
+        "If sleep deprivation persists, consider consulting a healthcare professional"
+      ]
+    }
   }
 }

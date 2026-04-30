@@ -1,14 +1,14 @@
 {
   "profile": {
     "profileId": "profile-c",
-    "name": "孙焦虑",
+    "name": { "zh": "孙焦虑", "en": "Sun Jiaolv" },
     "age": 26,
     "gender": "female",
     "avatar": "avatar-e.png",
     "tags": [
-      "偏瘦",
-      "短睡眠",
-      "高压力"
+      { "zh": "偏瘦", "en": "Underweight" },
+      { "zh": "短睡眠", "en": "Short sleep" },
+      { "zh": "高压力", "en": "High stress" }
     ],
     "baseline": {
       "restingHr": 78,

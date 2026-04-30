@@ -1,14 +1,14 @@
 {
   "profile": {
     "profileId": "profile-d",
-    "name": "周社交",
+    "name": { "zh": "周社交", "en": "Zhou Shejiao" },
     "age": 31,
     "gender": "male",
     "avatar": "avatar-f.png",
     "tags": [
-      "有氧运动",
-      "社交饮酒",
-      "恢复赤字"
+      { "zh": "有氧运动", "en": "Aerobic exercise" },
+      { "zh": "社交饮酒", "en": "Social drinking" },
+      { "zh": "恢复赤字", "en": "Recovery deficit" }
     ],
     "baseline": {
       "restingHr": 58,
