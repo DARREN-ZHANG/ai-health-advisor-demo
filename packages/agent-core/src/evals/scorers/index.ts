@@ -8,6 +8,7 @@ export { safetyScorer } from './safety-scorer';
 export { missingDataScorer } from './missing-data-scorer';
 export { memoryScorer } from './memory-scorer';
 export { taskScorer } from './task-scorer';
+export { languageMatchScorer } from './language-match-scorer';
 
 import type { EvalCheckResult, EvalScorerInput } from '../types';
 import { protocolScorer } from './protocol-scorer';
@@ -20,6 +21,7 @@ import { safetyScorer } from './safety-scorer';
 import { missingDataScorer } from './missing-data-scorer';
 import { memoryScorer } from './memory-scorer';
 import { taskScorer } from './task-scorer';
+import { languageMatchScorer } from './language-match-scorer';
 
 // ── Scorer 接口 ──────────────────────────────────────────
 
@@ -41,4 +43,5 @@ export const DEFAULT_SCORERS: EvalScorer[] = [
   missingDataScorer,
   memoryScorer,
   taskScorer,
+  languageMatchScorer,
 ];

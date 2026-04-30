@@ -563,8 +563,8 @@ describe('tokenScorer', () => {
 // ── DEFAULT_SCORERS 测试 ──────────────────────────────────
 
 describe('DEFAULT_SCORERS', () => {
-  it('应包含 10 个 scorer', () => {
-    expect(DEFAULT_SCORERS).toHaveLength(10);
+  it('应包含 11 个 scorer', () => {
+    expect(DEFAULT_SCORERS).toHaveLength(11);
   });
 
   it('每个 scorer 应有 id 和 score 方法', () => {
