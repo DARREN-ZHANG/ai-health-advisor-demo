@@ -2,15 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { HomeIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 
 const navItems = [
-  { href: '/', label: '首页', icon: HomeIcon },
-  { href: '/data-center', label: '数据', icon: ChartBarIcon },
+  { href: '/', labelKey: 'home' as const, icon: HomeIcon },
+  { href: '/data-center', labelKey: 'dataCenterShort' as const, icon: ChartBarIcon },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const t = useTranslations('nav');
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 pb-safe">
@@ -27,7 +29,7 @@ export function BottomNav() {
               }`}
             >
               <Icon className="w-6 h-6" />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span className="text-[10px] font-medium">{t(item.labelKey)}</span>
               {isActive && (
                 <div className="absolute bottom-1 w-1 h-1 rounded-full bg-blue-500" />
               )}

@@ -1,6 +1,7 @@
 import type { EChartsOption } from 'echarts';
 import { ChartTokenId } from '@health-advisor/shared';
 import type { StandardTimeSeries } from '../utils/normalize';
+import type { ChartBuilderOptions } from '../builders/chart-builders';
 import {
   buildHrv7Days,
   buildSleep7Days,
@@ -12,7 +13,7 @@ import {
   buildHrvSleep14DaysCompare,
 } from '../builders/chart-builders';
 
-export type ChartBuilder = (data: StandardTimeSeries) => EChartsOption;
+export type ChartBuilder = (data: StandardTimeSeries, options?: ChartBuilderOptions) => EChartsOption;
 
 /**
  * ChartTokenId -> Builder 映射注册表

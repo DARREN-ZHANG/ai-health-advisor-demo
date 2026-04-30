@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import {
   ChartTokenId,
   CHART_TOKEN_META,
+  localize,
   type DataCenterResponse,
   type DataTab,
   type StressTimelineResponse,
@@ -15,6 +16,8 @@ import {
   type ChartDataPoint,
   type StandardTimeSeries,
 } from '@health-advisor/charts';
+import { useLocale } from 'next-intl';
+import type { Locale } from '@health-advisor/shared';
 
 const TAB_TOKEN_MAP: Partial<Record<DataTab, ChartTokenId>> = {
   hrv: ChartTokenId.HRV_7DAYS,
@@ -29,6 +32,8 @@ export function useDataChartOption(
   tab: DataTab,
   data: DataCenterResponse | StressTimelineResponse | null | undefined
 ) {
+  const locale = useLocale() as Locale;
+
   return useMemo<EChartsOption | null>(() => {
     if (!data) return null;
 
@@ -37,8 +42,12 @@ export function useDataChartOption(
     const builder = getChartBuilder(tokenId);
     if (!builder) return null;
 
-    return builder(toStandardTimeSeries(tab, data));
-  }, [tab, data]);
+    const meta = CHART_TOKEN_META[tokenId];
+    return builder(toStandardTimeSeries(tab, data), {
+      label: localize(meta.label, locale),
+      unit: localize(meta.unit, locale),
+    });
+  }, [tab, data, locale]);
 }
 
 function toStandardTimeSeries(

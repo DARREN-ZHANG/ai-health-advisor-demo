@@ -3,6 +3,7 @@
 import { Card, statusColors } from '@health-advisor/ui';
 import type { StatusColor } from '@health-advisor/ui';
 import { m } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 
 interface MorningBriefCardProps {
   status: StatusColor;
@@ -20,6 +21,7 @@ export function MorningBriefCard({
   isLoading = false,
 }: MorningBriefCardProps) {
   const statusColor = statusColors[status];
+  const t = useTranslations('homepage');
 
   if (isLoading) {
     return (
@@ -58,7 +60,7 @@ export function MorningBriefCard({
             <div className="space-y-3 pt-4 border-t border-slate-800/50">
               <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <span className="w-1 h-3 bg-blue-500 rounded-full" />
-                智能洞察
+                {t('smartInsights')}
               </p>
               <div className="flex flex-wrap gap-2">
                 {microTips.map((tip, index) => (

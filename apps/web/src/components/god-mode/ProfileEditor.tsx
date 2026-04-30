@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useProfileStore } from '@/stores/profile.store';
 import { useProfileActions } from '@/hooks/use-profile-actions';
 import { useGodModeState } from '@/hooks/use-god-mode-actions';
+import { localize, DEFAULT_LOCALE } from '@health-advisor/shared';
+import { useTranslations } from 'next-intl';
 
 export function ProfileEditor() {
   const { currentProfile } = useProfileStore();
@@ -18,6 +20,8 @@ export function ProfileEditor() {
     resetProfile,
     isResettingProfile,
   } = useProfileActions();
+  const t = useTranslations('godMode.profile');
+  const tCommon = useTranslations('common');
 
   const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
   const [newProfileId, setNewProfileId] = useState('');
@@ -94,7 +98,7 @@ export function ProfileEditor() {
 
   const handleDelete = async () => {
     const confirmed = window.confirm(
-      `确定删除 Profile「${currentProfile.name}」？此操作不可恢复。`,
+      t('deleteConfirm', { name: localize(currentProfile.name, DEFAULT_LOCALE) })
     );
     if (!confirmed) return;
     try {
@@ -106,7 +110,7 @@ export function ProfileEditor() {
 
   const handleReset = async () => {
     const confirmed = window.confirm(
-      `确定恢复 Profile「${currentProfile.name}」到默认状态？将重新生成历史数据。`,
+      t('resetConfirm', { name: localize(currentProfile.name, DEFAULT_LOCALE) })
     );
     if (!confirmed) return;
     try {
@@ -125,33 +129,33 @@ export function ProfileEditor() {
           disabled={isBusy}
           className="px-3 py-1.5 text-xs rounded-lg bg-slate-900 border-2 border-slate-800 text-slate-400 hover:border-slate-700 transition-all disabled:opacity-50"
         >
-          + 复制新建
+          {t('cloneNew')}
         </button>
         <button
           onClick={handleReset}
           disabled={isBusy}
           className="px-3 py-1.5 text-xs rounded-lg bg-slate-900 border-2 border-slate-800 text-slate-400 hover:border-slate-700 transition-all disabled:opacity-50"
         >
-          {isResettingProfile ? '恢复中...' : '恢复默认'}
+          {isResettingProfile ? t('resetting') : t('resetToDefault')}
         </button>
       </div>
 
       {/* 基本信息 */}
       <div className="space-y-3">
-        <div className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">基本信息</div>
+        <div className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">{t('basicInfo')}</div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] text-slate-500">姓名</label>
+            <label className="text-[10px] text-slate-500">{t('name')}</label>
             <input
-              key={currentProfile.profileId + currentProfile.name}
-              defaultValue={currentProfile.name}
+              key={currentProfile.profileId + localize(currentProfile.name, DEFAULT_LOCALE)}
+              defaultValue={localize(currentProfile.name, DEFAULT_LOCALE)}
               onBlur={(e) => handleBlur('name', e.target.value)}
               disabled={isBusy}
               className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:border-blue-500 focus:outline-none disabled:opacity-50"
             />
           </div>
           <div>
-            <label className="text-[10px] text-slate-500">年龄</label>
+            <label className="text-[10px] text-slate-500">{t('age')}</label>
             <input
               key={currentProfile.profileId + currentProfile.age}
               type="number"
@@ -163,7 +167,7 @@ export function ProfileEditor() {
           </div>
         </div>
         <div>
-          <label className="text-[10px] text-slate-500">性别</label>
+          <label className="text-[10px] text-slate-500">{t('gender')}</label>
           <select
             key={currentProfile.profileId + currentProfile.gender}
             defaultValue={currentProfile.gender}
@@ -171,8 +175,8 @@ export function ProfileEditor() {
             disabled={isBusy}
             className="w-full px-2 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:border-blue-500 focus:outline-none disabled:opacity-50"
           >
-            <option value="male">男</option>
-            <option value="female">女</option>
+            <option value="male">{tCommon('male')}</option>
+            <option value="female">{tCommon('female')}</option>
           </select>
         </div>
       </div>
@@ -180,13 +184,13 @@ export function ProfileEditor() {
       {/* 基线指标 — 全局 */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">基线指标</div>
-          <span className="text-[9px] text-amber-500/70">修改将重生成 30 天数据</span>
+          <div className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">{t('baselineMetrics')}</div>
+          <span className="text-[9px] text-amber-500/70">{t('baselineWarning')}</span>
         </div>
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] text-slate-500">静息心率 (bpm)</label>
+              <label className="text-[10px] text-slate-500">{t('restingHr')}</label>
               <input
                 key={currentProfile.profileId + currentProfile.baseline.restingHr}
                 type="number"
@@ -197,7 +201,7 @@ export function ProfileEditor() {
               />
             </div>
             <div>
-              <label className="text-[10px] text-slate-500">HRV (ms)</label>
+              <label className="text-[10px] text-slate-500">{t('hrv')}</label>
               <input
                 key={currentProfile.profileId + currentProfile.baseline.hrv}
                 type="number"
@@ -210,7 +214,7 @@ export function ProfileEditor() {
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="text-[10px] text-slate-500">血氧 (%)</label>
+              <label className="text-[10px] text-slate-500">{t('spo2')}</label>
               <input
                 key={currentProfile.profileId + currentProfile.baseline.spo2}
                 type="number"
@@ -221,7 +225,7 @@ export function ProfileEditor() {
               />
             </div>
             <div>
-              <label className="text-[10px] text-slate-500">睡眠 (分钟)</label>
+              <label className="text-[10px] text-slate-500">{t('sleepMinutes')}</label>
               <input
                 key={currentProfile.profileId + currentProfile.baseline.avgSleepMinutes}
                 type="number"
@@ -232,7 +236,7 @@ export function ProfileEditor() {
               />
             </div>
             <div>
-              <label className="text-[10px] text-slate-500">步数</label>
+              <label className="text-[10px] text-slate-500">{t('steps')}</label>
               <input
                 key={currentProfile.profileId + currentProfile.baseline.avgSteps}
                 type="number"
@@ -249,13 +253,13 @@ export function ProfileEditor() {
       {/* 基线指标 — 近一周 */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">近一周基线指标</div>
-          <span className="text-[9px] text-blue-500/70">修改将重生成最近 7 天数据</span>
+          <div className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">{t('weeklyBaseline')}</div>
+          <span className="text-[9px] text-blue-500/70">{t('weeklyBaselineWarning')}</span>
         </div>
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] text-slate-500">静息心率 (bpm)</label>
+              <label className="text-[10px] text-slate-500">{t('restingHr')}</label>
               <input
                 key={currentProfile.profileId + (currentProfile.weeklyBaseline?.restingHr ?? '')}
                 type="number"
@@ -270,7 +274,7 @@ export function ProfileEditor() {
               />
             </div>
             <div>
-              <label className="text-[10px] text-slate-500">HRV (ms)</label>
+              <label className="text-[10px] text-slate-500">{t('hrv')}</label>
               <input
                 key={currentProfile.profileId + (currentProfile.weeklyBaseline?.hrv ?? '')}
                 type="number"
@@ -287,7 +291,7 @@ export function ProfileEditor() {
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="text-[10px] text-slate-500">血氧 (%)</label>
+              <label className="text-[10px] text-slate-500">{t('spo2')}</label>
               <input
                 key={currentProfile.profileId + (currentProfile.weeklyBaseline?.spo2 ?? '')}
                 type="number"
@@ -302,7 +306,7 @@ export function ProfileEditor() {
               />
             </div>
             <div>
-              <label className="text-[10px] text-slate-500">睡眠 (分钟)</label>
+              <label className="text-[10px] text-slate-500">{t('sleepMinutes')}</label>
               <input
                 key={currentProfile.profileId + (currentProfile.weeklyBaseline?.avgSleepMinutes ?? '')}
                 type="number"
@@ -317,7 +321,7 @@ export function ProfileEditor() {
               />
             </div>
             <div>
-              <label className="text-[10px] text-slate-500">步数</label>
+              <label className="text-[10px] text-slate-500">{t('steps')}</label>
               <input
                 key={currentProfile.profileId + (currentProfile.weeklyBaseline?.avgSteps ?? '')}
                 type="number"
@@ -338,13 +342,13 @@ export function ProfileEditor() {
       {/* 基线指标 — 近24h */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">近24h基线指标</div>
-          <span className="text-[9px] text-emerald-500/70">修改将重生成最近 24h 数据</span>
+          <div className="text-[10px] text-slate-500 uppercase tracking-wide font-bold">{t('dailyBaseline')}</div>
+          <span className="text-[9px] text-emerald-500/70">{t('dailyBaselineWarning')}</span>
         </div>
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] text-slate-500">静息心率 (bpm)</label>
+              <label className="text-[10px] text-slate-500">{t('restingHr')}</label>
               <input
                 key={currentProfile.profileId + (currentProfile.dailyBaseline?.restingHr ?? '')}
                 type="number"
@@ -359,7 +363,7 @@ export function ProfileEditor() {
               />
             </div>
             <div>
-              <label className="text-[10px] text-slate-500">HRV (ms)</label>
+              <label className="text-[10px] text-slate-500">{t('hrv')}</label>
               <input
                 key={currentProfile.profileId + (currentProfile.dailyBaseline?.hrv ?? '')}
                 type="number"
@@ -376,7 +380,7 @@ export function ProfileEditor() {
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="text-[10px] text-slate-500">血氧 (%)</label>
+              <label className="text-[10px] text-slate-500">{t('spo2')}</label>
               <input
                 key={currentProfile.profileId + (currentProfile.dailyBaseline?.spo2 ?? '')}
                 type="number"
@@ -391,7 +395,7 @@ export function ProfileEditor() {
               />
             </div>
             <div>
-              <label className="text-[10px] text-slate-500">睡眠 (分钟)</label>
+              <label className="text-[10px] text-slate-500">{t('sleepMinutes')}</label>
               <input
                 key={currentProfile.profileId + (currentProfile.dailyBaseline?.avgSleepMinutes ?? '')}
                 type="number"
@@ -406,7 +410,7 @@ export function ProfileEditor() {
               />
             </div>
             <div>
-              <label className="text-[10px] text-slate-500">步数</label>
+              <label className="text-[10px] text-slate-500">{t('steps')}</label>
               <input
                 key={currentProfile.profileId + (currentProfile.dailyBaseline?.avgSteps ?? '')}
                 type="number"
@@ -430,21 +434,21 @@ export function ProfileEditor() {
         disabled={isBusy || profileCount <= 1}
         className="w-full px-3 py-2 text-xs rounded-lg bg-red-950/30 border-2 border-red-900/30 text-red-400 hover:border-red-800 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
       >
-        {isDeletingProfile ? '删除中...' : `删除此 Profile${profileCount <= 1 ? '（至少保留 1 个）' : ''}`}
+        {isDeletingProfile ? t('deleting') : `${t('deleteButton')}${profileCount <= 1 ? t('deleteAtLeastOne') : ''}`}
       </button>
 
       {/* 克隆对话框 */}
       {cloneDialogOpen && (
         <div className="p-3 rounded-xl bg-slate-900/80 border-2 border-slate-700 space-y-2">
-          <div className="text-xs text-slate-400 font-bold">复制新建</div>
+          <div className="text-xs text-slate-400 font-bold">{t('cloneDialogTitle')}</div>
           <input
-            placeholder="新 Profile ID（小写字母/数字/连字符）"
+            placeholder={t('newProfileIdPlaceholder')}
             value={newProfileId}
             onChange={(e) => setNewProfileId(e.target.value)}
             className="w-full px-2 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-slate-300 focus:border-blue-500 focus:outline-none"
           />
           <input
-            placeholder="名称（可选）"
+            placeholder={t('newProfileNamePlaceholder')}
             value={newProfileName}
             onChange={(e) => setNewProfileName(e.target.value)}
             className="w-full px-2 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-slate-300 focus:border-blue-500 focus:outline-none"
@@ -455,7 +459,7 @@ export function ProfileEditor() {
               disabled={isCloningProfile || !newProfileId.trim()}
               className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-all disabled:opacity-50"
             >
-              {isCloningProfile ? '创建中...' : '创建'}
+              {isCloningProfile ? t('creating') : tCommon('create')}
             </button>
             <button
               onClick={() => {
@@ -465,7 +469,7 @@ export function ProfileEditor() {
               }}
               className="px-3 py-1.5 text-xs rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 transition-all"
             >
-              取消
+              {tCommon('cancel')}
             </button>
           </div>
         </div>

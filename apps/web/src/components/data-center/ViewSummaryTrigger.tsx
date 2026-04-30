@@ -3,6 +3,7 @@
 import { Button } from '@health-advisor/ui';
 import { m } from 'framer-motion';
 import { SparklesIcon } from '@heroicons/react/24/outline';
+import { useTranslations } from 'next-intl';
 
 interface ViewSummaryTriggerProps {
   onClick: () => void;
@@ -10,6 +11,8 @@ interface ViewSummaryTriggerProps {
 }
 
 export function ViewSummaryTrigger({ onClick, isLoading = false }: ViewSummaryTriggerProps) {
+  const t = useTranslations('common');
+
   return (
     <div className="fixed bottom-44 right-6 z-40 md:bottom-28 md:right-6">
       <m.div
@@ -30,7 +33,7 @@ export function ViewSummaryTrigger({ onClick, isLoading = false }: ViewSummaryTr
           ) : (
             <>
               <SparklesIcon className="w-5 h-5 text-yellow-400" />
-              <span className="font-bold">总结当前视图</span>
+              <span className="font-bold">{t('summarizeView')}</span>
             </>
           )}
         </Button>

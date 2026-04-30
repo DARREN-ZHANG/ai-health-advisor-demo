@@ -16,6 +16,8 @@ import { useMemo } from 'react';
 import {
   CHART_TOKEN_META,
   ChartTokenId,
+  localize,
+  DEFAULT_LOCALE,
   type AgentResponseEnvelope,
   type DataCenterResponse,
   type DataTab,
@@ -23,25 +25,27 @@ import {
 } from '@health-advisor/shared';
 import type { StandardTimeSeries } from '@health-advisor/charts';
 import { SparklesIcon } from '@heroicons/react/24/outline';
+import { useTranslations } from 'next-intl';
 
-const tabLabels: Record<string, string> = {
-  overview: '核心指标概览',
-  sleep: '睡眠分析',
-  hrv: 'HRV 趋势',
-  'resting-hr': '静息心率',
-  activity: '活动分布',
-  spo2: '血氧饱和度',
-  stress: '压力负荷',
+/** tab 到翻译键的映射 */
+const TAB_TITLE_KEYS: Record<string, string> = {
+  overview: 'tabOverview',
+  sleep: 'tabSleep',
+  hrv: 'tabHrv',
+  'resting-hr': 'tabRestingHr',
+  activity: 'tabActivity',
+  spo2: 'tabSpo2',
+  stress: 'tabStress',
 };
 
 /** 趋势卡片配置（6 项核心指标） */
 const TREND_TOKEN_CONFIGS = [
-  { id: 'hrv', label: 'HRV', tokenId: ChartTokenId.HRV_7DAYS, metricKey: 'hrv', formatValue: (v: number) => Math.round(v) },
-  { id: 'sleep', label: '睡眠', tokenId: ChartTokenId.SLEEP_7DAYS, metricKey: 'sleep.totalMinutes', formatValue: (v: number) => (v / 60).toFixed(1) },
-  { id: 'resting-hr', label: '静息心率', tokenId: ChartTokenId.RESTING_HR_7DAYS, metricKey: 'hr', formatValue: (v: number) => Math.round(v) },
-  { id: 'activity', label: '活动', tokenId: ChartTokenId.ACTIVITY_7DAYS, metricKey: 'activity.steps', formatValue: (v: number) => Math.round(v).toLocaleString() },
-  { id: 'spo2', label: '血氧', tokenId: ChartTokenId.SPO2_7DAYS, metricKey: 'spo2', formatValue: (v: number) => `${Math.round(v)}%` },
-  { id: 'stress', label: '压力', tokenId: ChartTokenId.STRESS_LOAD_7DAYS, metricKey: 'stress.load', formatValue: (v: number) => Math.round(v) },
+  { id: 'hrv', labelKey: 'trendHrv', tokenId: ChartTokenId.HRV_7DAYS, metricKey: 'hrv', formatValue: (v: number) => Math.round(v) },
+  { id: 'sleep', labelKey: 'trendSleep', tokenId: ChartTokenId.SLEEP_7DAYS, metricKey: 'sleep.totalMinutes', formatValue: (v: number) => (v / 60).toFixed(1) },
+  { id: 'resting-hr', labelKey: 'trendRestingHr', tokenId: ChartTokenId.RESTING_HR_7DAYS, metricKey: 'hr', formatValue: (v: number) => Math.round(v) },
+  { id: 'activity', labelKey: 'trendActivity', tokenId: ChartTokenId.ACTIVITY_7DAYS, metricKey: 'activity.steps', formatValue: (v: number) => Math.round(v).toLocaleString() },
+  { id: 'spo2', labelKey: 'trendSpo2', tokenId: ChartTokenId.SPO2_7DAYS, metricKey: 'spo2', formatValue: (v: number) => `${Math.round(v)}%` },
+  { id: 'stress', labelKey: 'trendStress', tokenId: ChartTokenId.STRESS_LOAD_7DAYS, metricKey: 'stress.load', formatValue: (v: number) => Math.round(v) },
 ] as const;
 
 /** 所有趋势 token 的 ID 列表 */
@@ -51,6 +55,7 @@ export default function DataCenterPage() {
   const { activeTab, timeframe, setActiveTab } = useDataCenterStore();
   const { currentProfileId } = useProfileStore();
   const isOverview = activeTab === 'overview';
+  const t = useTranslations('dataCenter');
 
   // 获取主图表数据（仅非概览 tab）
   const { data: chartData, isLoading, isFetching, error } = useDataCenterQuery(
@@ -72,9 +77,9 @@ export default function DataCenterPage() {
     if (!trendDataByToken) {
       return TREND_TOKEN_CONFIGS.map((config) => ({
         id: config.id,
-        label: config.label,
+        label: t(config.labelKey),
         value: '--',
-        unit: CHART_TOKEN_META[config.tokenId].unit,
+        unit: localize(CHART_TOKEN_META[config.tokenId].unit, DEFAULT_LOCALE),
         accentColor: CHART_TOKEN_META[config.tokenId].color,
         isLoading: true,
       }));
@@ -83,7 +88,7 @@ export default function DataCenterPage() {
     return TREND_TOKEN_CONFIGS.map((config) =>
       buildTrendItem({
         id: config.id,
-        label: config.label,
+        label: t(config.labelKey),
         tokenId: config.tokenId,
         metricKey: config.metricKey,
         data: trendDataByToken[config.tokenId],
@@ -91,7 +96,7 @@ export default function DataCenterPage() {
         formatValue: config.formatValue,
       })
     );
-  }, [trendDataByToken, isTrendLoading]);
+  }, [trendDataByToken, isTrendLoading, t]);
 
   const isAnyLoading = isLoading || isFetching;
 
@@ -118,14 +123,15 @@ export default function DataCenterPage() {
   return (
     <Container className="py-6 space-y-6 relative pb-24">
       <header>
-        <h1 className="text-2xl font-bold text-slate-100">数据中心</h1>
-        <p className="text-slate-400 text-sm">{getSubtitle(timeframe)}</p>
+        <h1 className="text-2xl font-bold text-slate-100">{t('pageTitle')}</h1>
+        <p className="text-slate-400 text-sm">{getSubtitle(timeframe, t)}</p>
       </header>
 
       {/* AI 总结置顶 */}
       <AISummarySection
         summaryData={summaryData}
         isLoading={isSummaryLoading || isSummaryFetching}
+        t={t}
       />
 
       {/* 控制区域：Tab 切换与时间窗 */}
@@ -146,10 +152,10 @@ export default function DataCenterPage() {
       {!isOverview && (
         <Section className="space-y-4">
           <ChartContainer
-            title={tabLabels[activeTab] || '数据指标'}
+            title={t(TAB_TITLE_KEYS[activeTab] || 'dataMetric')}
             isLoading={isAnyLoading}
             isEmpty={isChartEmpty}
-            error={error ? '加载失败，请重试' : undefined}
+            error={error ? t('loadFailedRetry') : undefined}
           >
             {chartOption && <ChartRoot option={chartOption} height={350} />}
           </ChartContainer>
@@ -173,9 +179,11 @@ export default function DataCenterPage() {
 function AISummarySection({
   summaryData,
   isLoading,
+  t,
 }: {
   summaryData: AgentResponseEnvelope | null | undefined;
   isLoading: boolean;
+  t: (key: string) => string;
 }) {
   if (isLoading) {
     return (
@@ -205,7 +213,7 @@ function AISummarySection({
               <div className="flex items-center gap-1.5">
                 <SparklesIcon className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                  建议动作
+                  {t('suggestedActions')}
                 </span>
               </div>
               <div className="grid grid-cols-1 gap-2">
@@ -230,16 +238,16 @@ function AISummarySection({
 /*  辅助函数                                                     */
 /* ────────────────────────────────────────────────────────────── */
 
-function getSubtitle(timeframe: string): string {
+function getSubtitle(timeframe: string, t: (key: string) => string): string {
   switch (timeframe) {
     case 'day':
-      return '近24小时概览';
+      return t('subtitleDay');
     case 'week':
-      return '近7日概览';
+      return t('subtitleWeek');
     case 'month':
-      return '近30日概览';
+      return t('subtitleMonth');
     default:
-      return '近期概览';
+      return t('subtitleDefault');
   }
 }
 
@@ -274,7 +282,7 @@ function buildTrendItem({
     id,
     label,
     value: current == null ? '--' : formatValue(current),
-    unit: meta.unit,
+    unit: localize(meta.unit, DEFAULT_LOCALE),
     change: calculateChange(current, previous),
     accentColor: meta.color,
     chartOption: createCompactChartOption(tokenId, data),

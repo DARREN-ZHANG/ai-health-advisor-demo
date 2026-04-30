@@ -9,12 +9,15 @@ import { useMorningBrief, useRefetchBrief } from '@/hooks/use-ai-query';
 import { useUIStore } from '@/stores/ui.store';
 import { useEffect } from 'react';
 import type { StatusColor } from '@health-advisor/ui';
+import { useTranslations } from 'next-intl';
 
 export default function HomePage() {
   const { currentProfileId } = useProfileStore();
   const { showToast } = useUIStore();
   const { data, isLoading, error, isFetching } = useMorningBrief(currentProfileId);
   const refetchBrief = useRefetchBrief(currentProfileId);
+  const t = useTranslations('homepage');
+  const tCommon = useTranslations('common');
 
   const isAnyLoading = isLoading || isFetching || refetchBrief.isPending;
 
@@ -22,15 +25,18 @@ export default function HomePage() {
     if (error) {
       const isTimeout = error instanceof Error && 'code' in error && (error as { code: string }).code === 'TIMEOUT';
       if (!isTimeout) {
-        showToast('获取简报失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
+        showToast(
+          t('briefFetchFailed', { error: error instanceof Error ? error.message : t('unknownError') }),
+          'error'
+        );
       }
     }
-  }, [error, showToast]);
+  }, [error, showToast, t]);
 
   const briefData = {
     status: mapApiStatusToUi(data?.statusColor, data?.meta.finishReason),
-    title: '实时简报',
-    summary: data?.summary || (error ? '无法获取简报数据，请检查网络连接。' : '正在为您准备实时健康简报...'),
+    title: t('realtimeBrief'),
+    summary: data?.summary || (error ? t('briefNetworkError') : t('briefPreparing')),
     microTips: data?.microTips || [],
   };
 
@@ -41,7 +47,7 @@ export default function HomePage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-100">AI Health Advisor</h1>
           <p className="text-slate-400 text-sm">
-            {describeBriefSource(data?.source)}
+            {describeBriefSource(data?.source, t)}
           </p>
         </div>
         <Button
@@ -50,7 +56,7 @@ export default function HomePage() {
           disabled={isAnyLoading}
           className="text-xs text-slate-500 h-auto py-1 px-2"
         >
-          {refetchBrief.isPending ? '正在刷新...' : '手动刷新'}
+          {refetchBrief.isPending ? t('refreshing') : t('manualRefresh')}
         </Button>
       </header>
 
@@ -58,7 +64,7 @@ export default function HomePage() {
       <ActiveSensingBanner />
 
       {/* 晨报部分 */}
-      <Section title="实时简报" className="space-y-4">
+      <Section title={t('realtimeBrief')} className="space-y-4">
         <MorningBriefCard
           {...briefData}
           isLoading={isAnyLoading}
@@ -75,16 +81,16 @@ export default function HomePage() {
   );
 }
 
-function describeBriefSource(source?: string) {
+function describeBriefSource(source: string | undefined, t: (key: string) => string) {
   if (source === 'fallback') {
-    return '运行在离线受限模式';
+    return t('sourceFallback');
   }
 
   if (source === 'llm') {
-    return '智能健康顾问';
+    return t('sourceLLM');
   }
 
-  return '智能健康顾问';
+  return t('sourceLLM');
 }
 
 /**

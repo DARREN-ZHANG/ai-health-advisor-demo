@@ -3,9 +3,11 @@
 import { m } from 'framer-motion';
 import { useUIStore } from '@/stores/ui.store';
 import { ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/outline';
+import { useTranslations } from 'next-intl';
 
 export function AIAdvisorTrigger() {
   const { toggleAdvisorDrawer, isAdvisorDrawerOpen } = useUIStore();
+  const t = useTranslations('common');
 
   if (isAdvisorDrawerOpen) return null;
 
@@ -16,7 +18,7 @@ export function AIAdvisorTrigger() {
         whileTap={{ scale: 0.9 }}
         onClick={() => toggleAdvisorDrawer(true)}
         className="w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/40 flex items-center justify-center text-2xl border-2 border-blue-400/30 hover:bg-blue-500 transition-colors"
-        aria-label="打开 AI 顾问"
+        aria-label={t('openAIAdvisor')}
       >
         <ChatBubbleOvalLeftEllipsisIcon className="w-7 h-7" />
         <m.div

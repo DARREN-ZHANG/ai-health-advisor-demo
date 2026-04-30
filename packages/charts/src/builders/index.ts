@@ -7,3 +7,4 @@ export {
   buildSpo27Days,
   buildStressLoad7Days,
 } from './chart-builders';
+export type { ChartBuilderOptions } from './chart-builders';

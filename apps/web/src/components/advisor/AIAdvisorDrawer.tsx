@@ -16,23 +16,25 @@ import type { SmartPromptOption } from './SmartPrompts';
 import { PhysiologicalTags } from './PhysiologicalTags';
 import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 import { PaperAirplaneIcon, SparklesIcon, TrashIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline';
+import { useTranslations } from 'next-intl';
 
 export function AIAdvisorDrawer() {
   const pathname = usePathname();
   const { isAdvisorDrawerOpen, toggleAdvisorDrawer } = useUIStore();
-  const { 
-    messages, 
-    isLoading, 
-    composerValue, 
-    setComposerValue, 
-    addMessage, 
-    setLoading, 
+  const {
+    messages,
+    isLoading,
+    composerValue,
+    setComposerValue,
+    addMessage,
+    setLoading,
     clearMessages,
     pendingPrompt,
     setPendingPrompt
   } = useAIAdvisorStore();
   const { currentProfileId } = useProfileStore();
   const { activeTab, timeframe } = useDataCenterStore();
+  const t = useTranslations('advisor');
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -55,7 +57,7 @@ export function AIAdvisorDrawer() {
 
   const handleClose = () => toggleAdvisorDrawer(false);
   const handleClearChat = () => {
-    if (window.confirm('确定要清除所有对话记录并重置 AI 会话吗？')) {
+    if (window.confirm(t('clearConfirm'))) {
       clearMessages();
       clearSessionId();
     }
@@ -63,20 +65,20 @@ export function AIAdvisorDrawer() {
 
   const Title = (
     <span className="font-bold flex items-center gap-2">
-      AI Health Advisor 
-      <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded uppercase">BETA</span>
+      {t('title')}
+      <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded uppercase">{t('beta')}</span>
     </span>
   );
 
   const HeaderActions = (
     <div className="relative">
-      <IconButton 
+      <IconButton
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         className="text-slate-500 hover:text-slate-100 p-2.5 hover:bg-slate-800 rounded-2xl transition-all active:scale-90"
       >
         <EllipsisVerticalIcon className="w-6 h-6 stroke-[2.5]" />
       </IconButton>
-      
+
       <AnimatePresence>
         {isMenuOpen && (
           <>
@@ -96,7 +98,7 @@ export function AIAdvisorDrawer() {
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold text-slate-300 hover:bg-red-500/10 hover:text-red-400 transition-colors disabled:opacity-30 disabled:pointer-events-none"
               >
                 <TrashIcon className="w-4 h-4" />
-                Clear Chat
+                {t('clearChat')}
               </button>
             </m.div>
           </>
@@ -156,17 +158,17 @@ export function AIAdvisorDrawer() {
         meta: response.meta,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '发送失败，请检查网络连接';
+      const errorMessage = error instanceof Error ? error.message : t('networkError');
       addMessage({
         role: 'system',
-        content: `发送失败: ${errorMessage}`,
+        content: t('sendFailedDetail', { error: errorMessage }),
       });
     } finally {
       clearTimeout(uiTimeoutTimer);
       setLoading(false);
       setIsTimeoutHint(false);
     }
-  }, [composerValue, isLoading, currentProfileId, pathname, activeTab, timeframe, addMessage, setComposerValue, setLoading, sendChatRequest]);
+  }, [composerValue, isLoading, currentProfileId, pathname, activeTab, timeframe, addMessage, setComposerValue, setLoading, sendChatRequest, t]);
 
   const Content = (
     <div className="flex flex-col h-[70dvh] bg-slate-950">
@@ -182,8 +184,8 @@ export function AIAdvisorDrawer() {
           <div className="flex flex-col items-center justify-center h-full text-center p-8 gap-4 opacity-50">
             <SparklesIcon className="w-10 h-10 text-blue-400" />
             <div>
-              <p className="text-sm font-medium text-slate-100">我是你的 AI 健康顾问</p>
-              <p className="text-xs text-slate-400 mt-1">你可以问我关于运动、睡眠或任何生理指标的问题</p>
+              <p className="text-sm font-medium text-slate-100">{t('welcomeTitle')}</p>
+              <p className="text-xs text-slate-400 mt-1">{t('welcomeSubtitle')}</p>
             </div>
           </div>
         ) : (
@@ -196,7 +198,7 @@ export function AIAdvisorDrawer() {
               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
               <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               {isTimeoutHint && (
-                <span className="text-[10px] text-yellow-500/80 ml-2">仔细分析中...</span>
+                <span className="text-[10px] text-yellow-500/80 ml-2">{t('analyzing')}</span>
               )}
             </div>
           </div>
@@ -213,7 +215,7 @@ export function AIAdvisorDrawer() {
               rows={1}
               value={composerValue}
               onChange={(e) => setComposerValue(e.target.value)}
-              placeholder="问我点什么..."
+              placeholder={t('composerPlaceholder')}
               className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all resize-none min-h-[44px] max-h-32"
               onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {

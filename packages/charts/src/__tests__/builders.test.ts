@@ -101,7 +101,7 @@ describe('buildSleepStageLastNight', () => {
     const option = buildSleepStageLastNight(mockData);
     const series = option.series as Array<{ name: string; type: string }>;
     expect(series).toHaveLength(4);
-    expect(series.map((s) => s.name)).toEqual(['深睡', '浅睡', 'REM', '清醒']);
+    expect(series.map((s) => s.name)).toEqual(['Deep', 'Light', 'REM', 'Awake']);
   });
 
   it('所有 series 使用 bar 类型', () => {
@@ -124,7 +124,7 @@ describe('buildHrvSleep14DaysCompare', () => {
     const series = option.series as Array<{ name: string }>;
     expect(series).toHaveLength(2);
     expect(series[0]!.name).toBe('HRV');
-    expect(series[1]!.name).toBe('睡眠');
+    expect(series[1]!.name).toBe('Sleep');
   });
 
   it('使用双 Y 轴', () => {

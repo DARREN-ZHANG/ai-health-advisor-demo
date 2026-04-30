@@ -1,6 +1,6 @@
 'use client';
 
-import { CHART_TOKEN_META, ChartTokenId } from '@health-advisor/shared';
+import { CHART_TOKEN_META, ChartTokenId, localize, DEFAULT_LOCALE } from '@health-advisor/shared';
 import {
   MicroChart,
   getChartBuilder,
@@ -9,6 +9,7 @@ import { Card } from '@health-advisor/ui';
 import { useChartDataQuery } from '@/hooks/use-data-query';
 import { useProfileStore } from '@/stores/profile.store';
 import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface ChartTokenRendererProps {
   tokenId: ChartTokenId;
@@ -38,6 +39,7 @@ export function ChartTokenRenderer({ tokenId }: ChartTokenRendererProps) {
   const { currentProfileId } = useProfileStore();
   const { data, isLoading } = useChartDataQuery(currentProfileId, [tokenId]);
   const tokenMeta = CHART_TOKEN_META[tokenId];
+  const t = useTranslations('common');
 
   const option = useMemo(() => {
     if (!data) return null;
@@ -65,10 +67,10 @@ export function ChartTokenRenderer({ tokenId }: ChartTokenRendererProps) {
     <Card className="bg-slate-900 border-slate-700 p-4 flex flex-col gap-3 w-full">
       <div className="flex justify-between items-center">
         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-slate-700 pl-2">
-          {tokenMeta?.label || tokenId}
+          {tokenMeta ? localize(tokenMeta.label, DEFAULT_LOCALE) : tokenId}
         </span>
         <button className="text-[10px] text-blue-500 font-bold hover:text-blue-400 transition-colors bg-blue-500/5 px-2 py-1 rounded">
-          详情 →
+          {t('viewDetail')}
         </button>
       </div>
       <div className="h-32 w-full bg-slate-950/40 rounded-lg flex items-center justify-center overflow-hidden border border-slate-800/50">
@@ -84,7 +86,7 @@ export function ChartTokenRenderer({ tokenId }: ChartTokenRendererProps) {
           <MicroChart option={option} height={110} />
         ) : (
           <span className="text-xs text-slate-600 font-medium">
-            {!getChartBuilder(tokenId) ? '暂未注册渲染器' : '无数据'}
+            {!getChartBuilder(tokenId) ? t('noRenderer') : t('noDataShort')}
           </span>
         )}
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { m } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 
 export interface SmartPromptOption {
   id: string;
@@ -11,14 +12,21 @@ interface SmartPromptsProps {
   onSelect: (prompt: SmartPromptOption) => void;
 }
 
-const prompts: SmartPromptOption[] = [
-  { id: 'sleep-analysis', text: '分析我昨晚的睡眠质量' },
-  { id: 'hrv-trends', text: '我最近的 HRV 趋势如何？' },
-  { id: 'exercise-advice', text: '给我的运动计划提点建议' },
-  { id: 'stress-inquiry', text: '为什么我最近感觉压力很大？' },
-];
+const PROMPT_KEYS = [
+  { id: 'sleep-analysis', textKey: 'sleepAnalysis' as const },
+  { id: 'hrv-trends', textKey: 'hrvTrends' as const },
+  { id: 'exercise-advice', textKey: 'exerciseAdvice' as const },
+  { id: 'stress-inquiry', textKey: 'stressInquiry' as const },
+] as const;
 
 export function SmartPrompts({ onSelect }: SmartPromptsProps) {
+  const t = useTranslations('advisor.smartPrompts');
+
+  const prompts: SmartPromptOption[] = PROMPT_KEYS.map((item) => ({
+    id: item.id,
+    text: t(item.textKey),
+  }));
+
   return (
     <div className="flex flex-wrap gap-2 py-2">
       {prompts.map((prompt, index) => (

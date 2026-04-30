@@ -1,30 +1,40 @@
 'use client';
 
 import { Pill } from '@health-advisor/ui';
+import { localize, DEFAULT_LOCALE } from '@health-advisor/shared';
 import { usePathname } from 'next/navigation';
 import { useProfileStore } from '@/stores/profile.store';
 import { useDataCenterStore } from '@/stores/data-center.store';
+import { useTranslations } from 'next-intl';
+
+/** data-center tab 到翻译键的映射 */
+const TAB_KEY_MAP: Record<string, string> = {
+  sleep: 'physTagSleep',
+  hrv: 'physTagHrv',
+  'resting-hr': 'physTagRestingHr',
+  activity: 'physTagActivity',
+  spo2: 'physTagSpo2',
+  stress: 'physTagStress',
+};
+
+const TIMEFRAME_KEY_MAP: Record<string, string> = {
+  day: 'physTagDay',
+  week: 'physTagWeek',
+  month: 'physTagMonth',
+  year: 'physTagYear',
+};
 
 export function PhysiologicalTags() {
   const pathname = usePathname();
   const { currentProfile, currentProfileId } = useProfileStore();
   const { activeTab, timeframe } = useDataCenterStore();
+  const t = useTranslations('dataCenter');
+  const tCommon = useTranslations('common');
 
-  const labels: Record<string, string> = {
-    sleep: '睡眠',
-    hrv: 'HRV',
-    'resting-hr': '心率',
-    activity: '活动',
-    spo2: '血氧',
-    stress: '压力',
-    day: '今日',
-    week: '本周',
-    month: '本月',
-    year: '今年',
-  };
-
-  const displayName = currentProfile?.name ?? currentProfileId;
-  const tags = currentProfile?.tags.slice(0, 2) ?? [];
+  const displayName = currentProfile ? localize(currentProfile.name, DEFAULT_LOCALE) : currentProfileId;
+  const tags = currentProfile
+    ? currentProfile.tags.slice(0, 2).map((tag) => localize(tag, DEFAULT_LOCALE))
+    : [];
   const isDataCenterPage = pathname === '/data-center';
 
   return (
@@ -43,19 +53,19 @@ export function PhysiologicalTags() {
       {isDataCenterPage ? (
         <>
           <Pill className="bg-slate-800 text-slate-400 border border-slate-700 text-[10px] py-0">
-            📍 {labels[activeTab]}
+            📍 {t(TAB_KEY_MAP[activeTab] || activeTab)}
           </Pill>
           <Pill className="bg-slate-800 text-slate-400 border border-slate-700 text-[10px] py-0">
-            📅 {labels[timeframe]}
+            📅 {t(TIMEFRAME_KEY_MAP[timeframe] || timeframe)}
           </Pill>
         </>
       ) : (
         <Pill className="bg-slate-800 text-slate-400 border border-slate-700 text-[10px] py-0">
-          🏠 首页上下文
+          🏠 {tCommon('homepageContext')}
         </Pill>
       )}
       <Pill className="bg-green-500/10 text-green-400 border border-green-500/20 text-[10px] py-0">
-        ● 实时连接
+        ● {tCommon('realTimeConnection')}
       </Pill>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { Card, Skeleton, EmptyState } from '@health-advisor/ui';
 import { m, AnimatePresence } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 
 interface ChartContainerProps {
   title: string;
@@ -18,6 +19,8 @@ export function ChartContainer({
   error = null,
   children,
 }: ChartContainerProps) {
+  const t = useTranslations('common');
+
   return (
     <Card className="flex flex-col gap-4 min-h-[400px]">
       <div className="flex items-center justify-between">
@@ -46,7 +49,7 @@ export function ChartContainer({
               className="absolute inset-0 flex items-center justify-center"
             >
               <div className="text-center space-y-2">
-                <p className="text-red-400 font-medium">加载失败</p>
+                <p className="text-red-400 font-medium">{t('loadFailed')}</p>
                 <p className="text-slate-500 text-sm">{error}</p>
               </div>
             </m.div>
@@ -58,7 +61,7 @@ export function ChartContainer({
               exit={{ opacity: 0 }}
               className="absolute inset-0"
             >
-              <EmptyState message="暂无数据" className="h-full" />
+              <EmptyState message={t('noData')} className="h-full" />
             </m.div>
           ) : (
             <m.div

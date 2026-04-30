@@ -4,6 +4,7 @@ import type { EChartsOption } from 'echarts';
 import { Card } from '@health-advisor/ui';
 import { MicroChart } from '@health-advisor/charts';
 import { m } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 
 interface TrendItem {
   id: string;
@@ -23,6 +24,8 @@ interface HistoricalTrendsGridProps {
 }
 
 export function HistoricalTrendsGrid({ trends, onTrendClick, showChange = true }: HistoricalTrendsGridProps) {
+  const t = useTranslations('common');
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {trends.map((trend, index) => (
@@ -43,7 +46,7 @@ export function HistoricalTrendsGrid({ trends, onTrendClick, showChange = true }
               </span>
               {showChange && trend.change !== undefined && (
                 <div className="flex items-center gap-1">
-                  <span className="text-xs text-slate-400">较昨日</span>
+                  <span className="text-xs text-slate-400">{t('comparedToYesterday')}</span>
                   <span
                     className={`text-xs px-1.5 py-0.5 rounded ${
                       trend.change >= 0 ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'
@@ -70,7 +73,7 @@ export function HistoricalTrendsGrid({ trends, onTrendClick, showChange = true }
                 />
               ) : (
                 <div className="w-full h-full rounded border border-dashed border-slate-800 text-[10px] text-slate-600 flex items-center justify-center">
-                  无数据
+                  {t('noDataShort')}
                 </div>
               )}
             </div>

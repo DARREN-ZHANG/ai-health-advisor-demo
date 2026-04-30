@@ -7,6 +7,7 @@ import {
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import type { DeviceSyncOverview } from '@/hooks/use-device-sync';
+import { useTranslations } from 'next-intl';
 
 interface DeviceStatusBarProps {
   deviceData: DeviceSyncOverview | null | undefined;
@@ -15,6 +16,9 @@ interface DeviceStatusBarProps {
 }
 
 export function DeviceStatusBar({ deviceData, isLoading, error }: DeviceStatusBarProps) {
+  const t = useTranslations('dataCenter');
+  const tCommon = useTranslations('common');
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-800 animate-pulse">
@@ -28,7 +32,7 @@ export function DeviceStatusBar({ deviceData, isLoading, error }: DeviceStatusBa
     return (
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/5 border border-red-500/10">
         <ExclamationTriangleIcon className="w-4 h-4 text-red-400 shrink-0" />
-        <span className="text-xs font-medium text-red-400">连接异常</span>
+        <span className="text-xs font-medium text-red-400">{t('deviceError')}</span>
       </div>
     );
   }
@@ -45,7 +49,7 @@ export function DeviceStatusBar({ deviceData, isLoading, error }: DeviceStatusBa
   const statusConfig = {
     connected: {
       icon: SignalIcon,
-      label: '设备已连接',
+      labelKey: 'deviceConnected' as const,
       color: 'text-emerald-400',
       bg: 'bg-emerald-500/5',
       border: 'border-emerald-500/10',
@@ -53,7 +57,7 @@ export function DeviceStatusBar({ deviceData, isLoading, error }: DeviceStatusBa
     },
     pending: {
       icon: ArrowPathIcon,
-      label: '同步中',
+      labelKey: 'deviceSyncing' as const,
       color: 'text-yellow-400',
       bg: 'bg-yellow-500/5',
       border: 'border-yellow-500/10',
@@ -61,7 +65,7 @@ export function DeviceStatusBar({ deviceData, isLoading, error }: DeviceStatusBa
     },
     disconnected: {
       icon: ExclamationTriangleIcon,
-      label: '未连接',
+      labelKey: 'deviceDisconnected' as const,
       color: 'text-red-400',
       bg: 'bg-red-500/5',
       border: 'border-red-500/10',
@@ -86,10 +90,10 @@ export function DeviceStatusBar({ deviceData, isLoading, error }: DeviceStatusBa
           )}
         </div>
         <div className="flex flex-col min-w-0">
-          <span className={`text-xs font-semibold ${config.color}`}>{config.label}</span>
+          <span className={`text-xs font-semibold ${config.color}`}>{t(config.labelKey)}</span>
           {lastSynced && (
             <span className="text-[10px] text-slate-500 truncate">
-              最后同步 {formatRelativeTime(lastSynced)}
+              {t('lastSync', { time: formatRelativeTime(lastSynced, tCommon) })}
             </span>
           )}
         </div>
@@ -97,14 +101,14 @@ export function DeviceStatusBar({ deviceData, isLoading, error }: DeviceStatusBa
 
       {hasPending && (
         <span className="shrink-0 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-yellow-400/10 text-yellow-400 text-[10px] font-bold">
-          {deviceData.pendingDeviceSamples} 待同步
+          {t('pendingSync', { count: deviceData.pendingDeviceSamples })}
         </span>
       )}
     </m.div>
   );
 }
 
-function formatRelativeTime(isoString: string): string {
+function formatRelativeTime(isoString: string, t: (key: string, params?: { count?: number }) => string): string {
   const date = new Date(isoString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -112,12 +116,12 @@ function formatRelativeTime(isoString: string): string {
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
 
-  if (diffMin < 1) return '刚刚';
-  if (diffMin < 60) return `${diffMin}分钟前`;
-  if (diffHour < 24) return `${diffHour}小时前`;
-  if (diffDay < 7) return `${diffDay}天前`;
+  if (diffMin < 1) return t('justNow');
+  if (diffMin < 60) return t('minutesAgo', { count: diffMin });
+  if (diffHour < 24) return t('hoursAgo', { count: diffHour });
+  if (diffDay < 7) return t('daysAgo', { count: diffDay });
 
-  return date.toLocaleDateString('zh-CN', {
+  return date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',

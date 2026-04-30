@@ -7,13 +7,15 @@ import { useUIStore } from '@/stores/ui.store';
 import { useAIAdvisorStore } from '@/stores/ai-advisor.store';
 import type { ActiveSensingBanner as ActiveSensingBannerPayload } from '@/stores/active-sensing.store';
 import { XMarkIcon, CpuChipIcon } from '@heroicons/react/24/outline';
+import { useTranslations } from 'next-intl';
 
-const EVENT_PROMPTS: Record<string, string> = {
-  sport_detected: '我现在在运动，有什么注意事项和运动建议？',
-  late_night_work: '我现在还在熬夜加班，能给我一些保持状态或者健康方面的建议吗？',
-  high_stress: '我感觉现在的压力有点大，该怎么调节一下？',
-  poor_sleep: '我昨晚没睡好，今天该注意些什么？',
-  sedentary: '我已经坐了很久了，现在该做些什么运动或者拉伸？',
+/** 事件类型到翻译键的映射 */
+const EVENT_PROMPT_KEYS: Record<string, string> = {
+  sport_detected: 'sportDetected',
+  late_night_work: 'lateNightWork',
+  high_stress: 'highStress',
+  poor_sleep: 'poorSleep',
+  sedentary: 'sedentary',
 };
 
 export function ActiveSensingBanner() {
@@ -21,6 +23,8 @@ export function ActiveSensingBanner() {
   const { toggleAdvisorDrawer } = useUIStore();
   const { setPendingPrompt } = useAIAdvisorStore();
   const [renderedBanner, setRenderedBanner] = useState<ActiveSensingBannerPayload | null>(null);
+  const t = useTranslations('advisor.activeSensing');
+  const tCommon = useTranslations('common');
 
   useEffect(() => {
     if (activeBanner) {
@@ -36,8 +40,9 @@ export function ActiveSensingBanner() {
     if (banner?.events && banner.events.length > 0) {
       const event = banner.events[0];
       if (!event) return;
-      const prompt = EVENT_PROMPTS[event] || `关于”${banner.title}”，我需要一些建议。`;
-      
+      const promptKey = EVENT_PROMPT_KEYS[event];
+      const prompt = promptKey ? t(promptKey) : t('genericPrompt', { title: banner.title });
+
       setPendingPrompt(prompt);
     }
 
@@ -65,7 +70,7 @@ export function ActiveSensingBanner() {
                   <XMarkIcon className="w-5 h-5" />
                 </button>
               </div>
-              
+
               <div>
                 <h4 className="text-sm font-bold text-white">{banner.title}</h4>
                 <p className="text-xs text-blue-100 mt-1 leading-relaxed">
@@ -74,11 +79,11 @@ export function ActiveSensingBanner() {
               </div>
 
               <div className="flex justify-end gap-2 mt-2">
-                <button 
+                <button
                   onClick={handleAction}
                   className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-blue-600 hover:bg-blue-50 transition-colors shadow-sm"
                 >
-                  查看详情并对话
+                  {tCommon('viewDetailAndChat')}
                 </button>
               </div>
             </div>
