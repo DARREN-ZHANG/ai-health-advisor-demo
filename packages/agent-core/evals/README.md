@@ -17,16 +17,16 @@
 | Suite | 用途 | Case 数量 | 说明 |
 |-------|------|-----------|------|
 | **smoke** | P0 冒烟测试 | 15 | 覆盖所有主要任务类型（homepage / view-summary / chat / cross-cutting），每个 case 验证核心路径 |
-| **core** | P1 核心 Fixture 场景 | 55 | 覆盖更多边界条件和细分场景，按 category 组织子目录。使用 fake provider + fixture answer，用于框架健壮性回归 |
+| **core** | P1 核心 Fixture 场景 | 54 | 覆盖更多边界条件和细分场景，按 category 组织子目录。使用 fake provider + fixture answer，用于框架健壮性回归 |
 | **quality** | 真实 Agent 质量基线 | 23 | 使用 real provider 调用真实 LLM，禁止 fixture answer（`--disallow-fixtures`），用于评估 Agent 实际生成质量 |
-| **regression** | 回归锁定 | 暂无 | 用于锁定已修复的 bug，防止复发。从真实 bug 报告沉淀 |
+| **regression** | Scorer 验证 | 5 | 验证 scorer 能正确检测已知的错误输出（spo2/activity/multi-metric 编造、药物建议、诊断声明）。Hard failure 为预期行为，无 `--fail-on-hard` 门控 |
 
 ### Suite 运行策略
 
 - **smoke**：CI 必跑，`--fail-on-hard` 硬失败门禁
 - **core**（fixture）：本地全量回归，合并前验证框架健壮性，基线命名为 `framework-sanity-baseline-v1`
 - **quality**：真实 Agent 质量基线，使用 real provider，基线命名为 `baseline-v1-real-single-call-agent`
-- **regression**：按需运行，锁定已知 bug
+- **regression**：scorer 验证套件，hard failure 为预期行为，无 `--fail-on-hard` 门控
 
 ---
 
@@ -73,7 +73,7 @@
 pnpm --filter @health-advisor/agent-core eval:agent:smoke
 ```
 
-### 运行 Core Fixture Suite（55 个 P1 case，fake provider）
+### 运行 Core Fixture Suite（54 个 P1 case，fake provider）
 
 ```bash
 pnpm --filter @health-advisor/agent-core eval:agent:core:fixture
@@ -147,7 +147,7 @@ Markdown 报告包含：
 
 | 原因 | 说明 |
 |------|------|
-| **成本** | 每次运行需调用 LLM API，55 个 core case 反复执行会产生可观费用 |
+| **成本** | 每次运行需调用 LLM API，54 个 core case 反复执行会产生可观费用 |
 | **稳定性** | LLM 输出具有非确定性，相同 prompt 可能产生不同响应，导致结果 flaky |
 | **延迟** | 真实调用耗时较长，不适合作为 CI 快速门禁 |
 | **可重复性** | Deterministic eval 使用 Fake Provider，保证同样的 case 始终得到同样的分数 |
@@ -169,7 +169,7 @@ packages/agent-core/evals/
 ├── README.md              # 本文档
 ├── cases/
 │   ├── smoke/             # 15 个 P0 冒烟 case
-│   ├── core/              # 55 个 P1 核心 case（按 category 分目录）
+│   ├── core/              # 54 个 P1 核心 case（按 category 分目录）
 │   │   ├── homepage/
 │   │   ├── view-summary/
 │   │   ├── advisor-chat/
@@ -179,6 +179,6 @@ packages/agent-core/evals/
 │   │   ├── homepage/      # 6 个：正常、运动叠加、HRV 下降、血氧、缺失数据、evidence
 │   │   ├── view-summary/  # 6 个：总览、HRV、睡眠缺失、活动、缺失 tab、evidence
 │   │   └── cross-cutting/ # 2 个：多指标缺失、profile 泄露
-│   └── regression/        # 回归锁定 case（按需沉淀）
+│   └── regression/        # 5 个 scorer 验证 case（hard failure 为预期行为）
 └── reports/               # 运行报告（gitignored）
 ```
