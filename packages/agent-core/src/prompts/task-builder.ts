@@ -51,7 +51,7 @@ export function buildTaskPrompt(
     sections.push(t(
       locale,
       `- 摘要长度严格控制在 80-${maxLen} 字之间`,
-      `- Summary length must be strictly between 80-${maxLen} characters`,
+      `- Summary length must be strictly between 80-${maxLen} words`,
     ));
   } else {
     sections.push(t(

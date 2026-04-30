@@ -1,4 +1,4 @@
-import { AgentTaskType } from '@health-advisor/shared';
+import { AgentTaskType, type Locale } from '@health-advisor/shared';
 import type { EvalCheckResult, EvalScorerInput } from '../types';
 
 // ── Length Scorer ────────────────────────────────────────
@@ -9,14 +9,14 @@ const HOMEPAGE_DEFAULT_LENGTH = { min: 80, max: 120 } as const;
 /**
  * 摘要长度检查：
  * - 使用 expectations.summary.length.min/max 进行范围校验
- * - homepage 类型默认 80-120 字（除非 case 显式覆盖）
+ * - homepage 类型默认 80-120（中文按字符，英文按单词）
  * - microTips 单条长度暂不作为 hard check
  */
 export const lengthScorer = {
   id: 'length',
 
   score(input: EvalScorerInput): EvalCheckResult[] {
-    const { evalCase, envelope } = input;
+    const { evalCase, envelope, artifacts } = input;
     const summary = evalCase.expectations.summary;
     const results: EvalCheckResult[] = [];
 
@@ -28,7 +28,8 @@ export const lengthScorer = {
     // 摘要长度检查
     const lengthConfig = getEffectiveLengthConfig(evalCase);
     if (lengthConfig !== undefined && envelope?.summary !== undefined) {
-      results.push(checkSummaryLength(evalCase.id, envelope.summary, lengthConfig));
+      const locale = artifacts.context?.locale ?? 'zh';
+      results.push(checkSummaryLength(evalCase.id, envelope.summary, lengthConfig, locale));
     }
 
     return results;
@@ -40,6 +41,21 @@ export const lengthScorer = {
 /** 计算文本字符数（正确处理中文等多字节字符） */
 function countChars(text: string): number {
   return [...text.trim()].length;
+}
+
+/** 计算英文单词数 */
+function countWords(text: string): number {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return 0;
+  return trimmed.split(/\s+/).length;
+}
+
+/** 根据语言选择计数方式：英文按单词，中文按字符 */
+function countLength(text: string, locale: Locale): { count: number; unit: string } {
+  if (locale === 'en') {
+    return { count: countWords(text), unit: 'words' };
+  }
+  return { count: countChars(text), unit: '字' };
 }
 
 /**
@@ -69,21 +85,22 @@ function checkSummaryLength(
   caseId: string,
   summaryText: string,
   lengthConfig: { min?: number; max?: number },
+  locale: Locale,
 ): EvalCheckResult {
-  const charCount = countChars(summaryText);
+  const { count, unit } = countLength(summaryText, locale);
   const { min, max } = lengthConfig;
 
-  const tooShort = min !== undefined && charCount < min;
-  const tooLong = max !== undefined && charCount > max;
+  const tooShort = min !== undefined && count < min;
+  const tooLong = max !== undefined && count > max;
   const passed = !tooShort && !tooLong;
 
   let message: string;
   if (tooShort) {
-    message = `摘要过短: ${charCount} 字, 期望至少 ${min} 字`;
+    message = `摘要过短: ${count} ${unit}, 期望至少 ${min} ${unit}`;
   } else if (tooLong) {
-    message = `摘要过长: ${charCount} 字, 期望最多 ${max} 字`;
+    message = `摘要过长: ${count} ${unit}, 期望最多 ${max} ${unit}`;
   } else {
-    message = `摘要长度合法: ${charCount} 字`;
+    message = `摘要长度合法: ${count} ${unit}`;
   }
 
   return {
@@ -93,6 +110,6 @@ function checkSummaryLength(
     score: passed ? 1 : 0,
     maxScore: 1,
     message,
-    details: { charCount, min, max },
+    details: { count, unit, min, max },
   };
 }
