@@ -225,11 +225,16 @@ function detectAnxietyConfound(responseBuckets: TimeBucket[], baselineAvgStress:
   return stdDev(motionValues) > 0.8 && stdDev(hrValues) > 8;
 }
 
-/** 检查睡眠重叠：baseline + gap 窗口内有 sleepStage 事件 */
-function detectSleepOverlap(baselineBuckets: TimeBucket[], gapBuckets: TimeBucket[]): boolean {
-  const allBuckets = [...baselineBuckets, ...gapBuckets];
-  const sleepStages = allBuckets.flatMap((b) => b.sleepStages);
-  return sleepStages.length > 0;
+/**
+ * 检查 t0 时刻是否正在睡眠
+ * 只检查 t0 到 t0+5 分钟是否有 sleepStage（摄入时刻正在睡眠）
+ * 不检查 baseline 窗口的历史睡眠——用户可能刚从睡眠中醒来
+ */
+function detectSleepAtT0(buckets: TimeBucket[], t0Offset: number): boolean {
+  const atT0 = buckets.filter(
+    (b) => b.minuteOffset >= t0Offset && b.minuteOffset <= t0Offset + 5,
+  );
+  return atT0.some((b) => b.sleepStages.length > 0);
 }
 
 // ============================================================
@@ -279,6 +284,8 @@ export function detectPossibleCaffeineIntake(
 
   // 限制候选锚点范围：RMSSD 首次出现前 5 分钟到首次出现后 5 分钟
   // m=0 基线事件确保 RMSSD onset ≈ 实际摄入时间，±5 容忍微小时间偏移
+  // ⚠ 设计局限性：此约束依赖"当前仅 caffeine generator 产出 hrvRmssd"这一事实，
+  // 不是通用的传感器推导策略。若后续有其他场景也产出 5 分钟 RMSSD，需重新设计锚点定位。
   const minBucketOffset = buckets[0]!.minuteOffset;
   const maxBucketOffset = buckets[buckets.length - 1]!.minuteOffset;
   const minT0 = Math.max(minBucketOffset + 60, rmssdOnset - 5);
@@ -328,8 +335,8 @@ function analyzeCandidate(
     (b) => b.minuteOffset >= t0Offset + 15 && b.minuteOffset <= t0Offset + 120,
   );
 
-  // 睡眠排除：如果在 baseline 或吸收延迟窗口有睡眠事件，排除
-  if (detectSleepOverlap(baselineBuckets, pseudoBaselineBuckets)) return null;
+  // 睡眠排除：仅在 t0 时刻用户正在睡眠时排除（不排除历史睡眠）
+  if (detectSleepAtT0(buckets, t0Offset)) return null;
 
   // 需要足够的基线和响应数据
   if (baselineBuckets.length < 3 || responseBuckets.length < 6) return null;
