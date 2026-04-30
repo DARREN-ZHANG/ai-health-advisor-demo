@@ -586,6 +586,20 @@ function generateRelaxationEvents(segment: ActivitySegment): DeviceEvent[] {
 }
 
 // ============================================================
+// 生成器: caffeine_intake（咖啡因摄入 — 占位，任务 B 完整实现）
+// ============================================================
+
+/** 咖啡因摄入事件生成（占位版本，任务 B 完整实现） */
+function generateCaffeineIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  let idx = 0;
+  events.push(makeEvent(segment, 0, 'wearState', true, idx++));
+  events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
+  return events;
+}
+
+// ============================================================
 // 公共调度函数
 // ============================================================
 
@@ -601,6 +615,7 @@ const GENERATOR_MAP: Record<ActivitySegmentType, (segment: ActivitySegment) => D
   anxiety_episode: generateAnxietyEpisodeEvents,
   breathing_pause: generateBreathingPauseEvents,
   alcohol_intake: generateAlcoholIntakeEvents,
+  caffeine_intake: generateCaffeineIntakeEvents,
   nightmare: generateNightmareEvents,
   relaxation: generateRelaxationEvents,
 };
@@ -629,6 +644,7 @@ export {
   generateAnxietyEpisodeEvents,
   generateBreathingPauseEvents,
   generateAlcoholIntakeEvents,
+  generateCaffeineIntakeEvents,
   generateNightmareEvents,
   generateRelaxationEvents,
 };

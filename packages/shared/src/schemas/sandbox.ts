@@ -18,6 +18,7 @@ export const ActivitySegmentTypeSchema = z.enum([
   'anxiety_episode',
   'breathing_pause',
   'alcohol_intake',
+  'caffeine_intake',
   'nightmare',
   'relaxation',
 ]);
@@ -46,6 +47,8 @@ export const DeviceMetricSchema = z.enum([
   'motion',
   'sleepStage',
   'wearState',
+  'hrvRmssd',
+  'stressLoad',
 ]);
 
 export const DeviceEventSchema = z.object({
@@ -78,7 +81,10 @@ export const SyncSessionSchema = z.object({
   uploadedEventCount: z.number().int().min(0),
 });
 
-export const RecognizedEventTypeSchema = ActivitySegmentTypeSchema;
+export const RecognizedEventTypeSchema = z.union([
+  ActivitySegmentTypeSchema,
+  z.literal('possible_caffeine_intake'),
+]);
 
 export const RecognizedEventSchema = z.object({
   recognizedEventId: z.string().min(1),
