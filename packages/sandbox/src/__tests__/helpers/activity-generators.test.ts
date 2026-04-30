@@ -8,6 +8,7 @@ import {
   generateIntermittentExerciseEvents,
   generateWalkEvents,
   generateSleepEvents,
+  generateCaffeineIntakeEvents,
 } from '../../helpers/activity-generators';
 
 // ============================================================
@@ -438,6 +439,241 @@ describe('activity-generators', () => {
       for (const e of events) {
         expect(e.measuredAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
       }
+    });
+  });
+
+  // ============================================================
+  // 咖啡因摄入生成器测试
+  // ============================================================
+
+  describe('generateCaffeineIntakeEvents', () => {
+    const baseSegment = {
+      segmentId: 'seg-caffeine-1',
+      type: 'caffeine_intake' as const,
+      start: '2026-04-16T08:00',
+      end: '2026-04-16T12:00',
+    };
+
+    it('should generate 48 five-minute data points for 240 minutes', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateCaffeineIntakeEvents(segment);
+      // 5~240 每 5 分钟 = 48 个点 × 6 指标 = 288，加上 2 wearState = 290
+      const dataEvents = events.filter((e) => e.metric !== 'wearState');
+      expect(dataEvents.length).toBe(48 * 6);
+      expect(events.filter((e) => e.metric === 'wearState').length).toBe(2);
+    });
+
+    it('should generate events at 5-minute intervals', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateCaffeineIntakeEvents(segment);
+      const hrEvents = events.filter((e) => e.metric === 'heartRate');
+      const offsets = hrEvents.map((e) => {
+        const time = e.measuredAt;
+        const start = segment.start;
+        const diff = (new Date(`${time}:00`).getTime() - new Date(`${start}:00`).getTime()) / 60000;
+        return diff;
+      });
+      // 所有偏移量应该是 5 的倍数
+      for (const offset of offsets) {
+        expect(offset % 5).toBe(0);
+      }
+      // 第一个点在 m=5，最后一个在 m=240
+      expect(offsets[0]).toBe(5);
+      expect(offsets[offsets.length - 1]).toBe(240);
+    });
+
+    it('should produce all required metrics per 5-minute point', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateCaffeineIntakeEvents(segment);
+      const metrics = new Set(events.filter((e) => e.metric !== 'wearState').map((e) => e.metric));
+      expect(metrics).toContain('heartRate');
+      expect(metrics).toContain('hrvRmssd');
+      expect(metrics).toContain('stressLoad');
+      expect(metrics).toContain('spo2');
+      expect(metrics).toContain('motion');
+      expect(metrics).toContain('steps');
+    });
+
+    describe('moderate dose', () => {
+      it('should have peak HR elevation in the 45-75min window', () => {
+        const segment = makeSegment(baseSegment);
+        const events = generateCaffeineIntakeEvents(segment);
+        const hrEvents = events.filter((e) => e.metric === 'heartRate');
+        const hrBaseline = 68;
+
+        // 找到 peak window (45~75min) 的 HR 值
+        const peakHrs = hrEvents.filter((e) => {
+          const diff = (new Date(`${e.measuredAt}:00`).getTime() - new Date(`${segment.start}:00`).getTime()) / 60000;
+          return diff >= 45 && diff <= 75;
+        }).map((e) => e.value as number);
+
+        const avgPeakHr = peakHrs.reduce((a, b) => a + b, 0) / peakHrs.length;
+        // moderate: HR baseline + 8~14 => peak 应在 76~82+
+        expect(avgPeakHr).toBeGreaterThan(hrBaseline + 7);
+      });
+
+      it('should have RMSSD drop in expected range during peak', () => {
+        const segment = makeSegment(baseSegment);
+        const events = generateCaffeineIntakeEvents(segment);
+        const rmssdEvents = events.filter((e) => e.metric === 'hrvRmssd');
+        const rmssdBaseline = 50;
+
+        const peakRmssds = rmssdEvents.filter((e) => {
+          const diff = (new Date(`${e.measuredAt}:00`).getTime() - new Date(`${segment.start}:00`).getTime()) / 60000;
+          return diff >= 45 && diff <= 75;
+        }).map((e) => e.value as number);
+
+        const avgPeakRmssd = peakRmssds.reduce((a, b) => a + b, 0) / peakRmssds.length;
+        // moderate: RMSSD baseline * (1 - 0.15~0.30) => 应显著低于基线
+        expect(avgPeakRmssd).toBeLessThan(rmssdBaseline * 0.9);
+      });
+
+      it('should have stress elevation during peak', () => {
+        const segment = makeSegment(baseSegment);
+        const events = generateCaffeineIntakeEvents(segment);
+        const stressEvents = events.filter((e) => e.metric === 'stressLoad');
+        const stressBaseline = 25;
+
+        const peakStress = stressEvents.filter((e) => {
+          const diff = (new Date(`${e.measuredAt}:00`).getTime() - new Date(`${segment.start}:00`).getTime()) / 60000;
+          return diff >= 45 && diff <= 75;
+        }).map((e) => e.value as number);
+
+        const avgPeakStress = peakStress.reduce((a, b) => a + b, 0) / peakStress.length;
+        // moderate: stress baseline + 10~20 => 应高于基线
+        expect(avgPeakStress).toBeGreaterThan(stressBaseline + 8);
+      });
+    });
+
+    describe('high_or_sensitive dose', () => {
+      it('should have stronger HR response than moderate', () => {
+        const modSegment = makeSegment(baseSegment);
+        const highSegment = makeSegment({
+          ...baseSegment,
+          segmentId: 'seg-caffeine-high',
+          params: { dose: 'high_or_sensitive' },
+        });
+
+        const modEvents = generateCaffeineIntakeEvents(modSegment);
+        const highEvents = generateCaffeineIntakeEvents(highSegment);
+
+        const getPeakHr = (events: typeof modEvents, segment: typeof modSegment) => {
+          return events
+            .filter((e) => e.metric === 'heartRate')
+            .filter((e) => {
+              const diff = (new Date(`${e.measuredAt}:00`).getTime() - new Date(`${segment.start}:00`).getTime()) / 60000;
+              return diff >= 45 && diff <= 75;
+            })
+            .map((e) => e.value as number)
+            .reduce((a, b) => a + b, 0);
+        };
+
+        const modPeakHr = getPeakHr(modEvents, modSegment);
+        const highPeakHr = getPeakHr(highEvents, highSegment);
+        expect(highPeakHr).toBeGreaterThan(modPeakHr);
+      });
+
+      it('should have stronger RMSSD drop than moderate', () => {
+        const modSegment = makeSegment(baseSegment);
+        const highSegment = makeSegment({
+          ...baseSegment,
+          segmentId: 'seg-caffeine-high',
+          params: { dose: 'high_or_sensitive' },
+        });
+
+        const getPeakRmssd = (segment: typeof modSegment) => {
+          const all = generateCaffeineIntakeEvents(segment);
+          return all
+            .filter((e) => e.metric === 'hrvRmssd')
+            .filter((e) => {
+              const diff = (new Date(`${e.measuredAt}:00`).getTime() - new Date(`${segment.start}:00`).getTime()) / 60000;
+              return diff >= 45 && diff <= 75;
+            })
+            .map((e) => e.value as number)
+            .reduce((a, b) => a + b, 0);
+        };
+
+        const modPeak = getPeakRmssd(modSegment);
+        const highPeak = getPeakRmssd(highSegment);
+        // high 的 RMSSD 下降更多，所以值更低
+        expect(highPeak).toBeLessThan(modPeak);
+      });
+    });
+
+    describe('light dose', () => {
+      it('should have weaker response than moderate', () => {
+        const modSegment = makeSegment(baseSegment);
+        const lightSegment = makeSegment({
+          ...baseSegment,
+          segmentId: 'seg-caffeine-light',
+          params: { dose: 'light' },
+        });
+
+        const modEvents = generateCaffeineIntakeEvents(modSegment);
+        const lightEvents = generateCaffeineIntakeEvents(lightSegment);
+
+        const getPeakHr = (events: typeof modEvents, segment: typeof modSegment) => {
+          return events
+            .filter((e) => e.metric === 'heartRate')
+            .filter((e) => {
+              const diff = (new Date(`${e.measuredAt}:00`).getTime() - new Date(`${segment.start}:00`).getTime()) / 60000;
+              return diff >= 45 && diff <= 75;
+            })
+            .map((e) => e.value as number)
+            .reduce((a, b) => a + b, 0);
+        };
+
+        const modPeakHr = getPeakHr(modEvents, modSegment);
+        const lightPeakHr = getPeakHr(lightEvents, lightSegment);
+        expect(lightPeakHr).toBeLessThan(modPeakHr);
+      });
+    });
+
+    it('should keep SpO2 stable near baseline', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateCaffeineIntakeEvents(segment);
+      const spo2Events = events.filter((e) => e.metric === 'spo2');
+      for (const e of spo2Events) {
+        expect(e.value as number).toBeGreaterThanOrEqual(95);
+        expect(e.value as number).toBeLessThanOrEqual(99);
+      }
+    });
+
+    it('should keep motion and steps low activity', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateCaffeineIntakeEvents(segment);
+      const motionEvents = events.filter((e) => e.metric === 'motion');
+      const stepsEvents = events.filter((e) => e.metric === 'steps');
+      for (const e of motionEvents) {
+        expect(e.value as number).toBeLessThan(2.0);
+      }
+      // 累计 steps 每段不超过 20*49=980，但验证低活动
+      const lastSteps = stepsEvents[stepsEvents.length - 1];
+      expect(lastSteps.value as number).toBeLessThan(1000);
+    });
+
+    it('should be deterministic', () => {
+      const segment = makeSegment(baseSegment);
+      const events1 = generateCaffeineIntakeEvents(segment);
+      const events2 = generateCaffeineIntakeEvents(segment);
+      expect(events1).toEqual(events2);
+    });
+
+    it('should produce events within segment time range', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateCaffeineIntakeEvents(segment);
+      assertEventsInRange(events, segment.start, segment.end);
+    });
+
+    it('should produce wearState events at start and end', () => {
+      const segment = makeSegment(baseSegment);
+      const events = generateCaffeineIntakeEvents(segment);
+      const wearState = events.filter((e) => e.metric === 'wearState');
+      expect(wearState.length).toBe(2);
+      expect(wearState[0].value).toBe(true);
+      expect(wearState[0].measuredAt).toBe(segment.start);
+      expect(wearState[1].value).toBe(false);
+      expect(wearState[1].measuredAt).toBe(segment.end);
     });
   });
 });
