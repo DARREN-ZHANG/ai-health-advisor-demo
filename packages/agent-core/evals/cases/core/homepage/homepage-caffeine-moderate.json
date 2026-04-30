@@ -1,0 +1,58 @@
+{
+  "id": "H-CAF-001",
+  "title": "首页摘要 - 检测到可能的咖啡因摄入响应",
+  "suite": "core",
+  "category": "homepage",
+  "priority": "P1",
+  "tags": [
+    "homepage",
+    "caffeine",
+    "probability",
+    "event"
+  ],
+  "setup": {
+    "profileId": "profile-a",
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"最近可能摄入了含咖啡因饮品，心率出现持续升高，同时心率变异性有所下降，压力指标轻度上升。建议今天避免高强度运动，多补充水分，若感到心悸或焦虑加重可适当休息。本周整体状态尚可，建议继续关注睡眠质量。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"可能摄入咖啡因后的2-4小时内避免剧烈运动\"]}"
+    },
+    "referenceDate": "2026-04-30"
+  },
+  "request": {
+    "requestId": "core-hcaf001",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "length": {
+        "min": 80,
+        "max": 120
+      },
+      "mustMention": ["可能"],
+      "mustNotMention": ["确认摄入咖啡因", "你喝了咖啡", "确诊"]
+    },
+    "status": {
+      "allowedStatusColors": ["warning", "good"]
+    },
+    "chartTokens": {
+      "maxCount": 3
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true,
+      "forbidTreatmentPromise": true
+    }
+  }
+}

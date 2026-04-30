@@ -3,6 +3,7 @@ import type {
   RecognizedEvent,
   RecognizedEventType,
 } from '@health-advisor/shared';
+import { detectPossibleCaffeineIntake } from './caffeine-detector';
 
 // ============================================================
 // 事件识别器：根据同步后的 DeviceEvent 识别活动事件
@@ -79,6 +80,14 @@ export function recognizeEvents(
     );
     results.push(...windowResults);
   }
+
+  // 咖啡因摄入检测：基于所有已同步事件（不依赖 segmentId）
+  const caffeineResults = detectPossibleCaffeineIntake(
+    profileEvents,
+    profileId,
+    currentTime,
+  );
+  results.push(...caffeineResults);
 
   return results;
 }

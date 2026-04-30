@@ -390,7 +390,7 @@ describe('ActivitySegmentTypeSchema', () => {
       'meal_intake', 'steady_cardio', 'prolonged_sedentary',
       'intermittent_exercise', 'walk', 'sleep',
       'deep_focus', 'anxiety_episode', 'breathing_pause',
-      'alcohol_intake', 'nightmare', 'relaxation',
+      'alcohol_intake', 'caffeine_intake', 'nightmare', 'relaxation',
     ];
     types.forEach((t) => {
       expect(ActivitySegmentTypeSchema.parse(t)).toBe(t);
@@ -445,6 +445,11 @@ describe('ActivitySegmentSchema', () => {
     expect(ActivitySegmentSchema.parse(segment)).toEqual(segment);
   });
 
+  it('accepts caffeine_intake segment type', () => {
+    const segment = { ...validSegment, type: 'caffeine_intake' as const };
+    expect(ActivitySegmentSchema.parse(segment)).toEqual(segment);
+  });
+
   it('accepts god_mode source', () => {
     expect(ActivitySegmentSchema.parse({ ...validSegment, source: 'god_mode' })).toEqual({
       ...validSegment,
@@ -459,7 +464,7 @@ describe('ActivitySegmentSchema', () => {
 
 describe('DeviceMetricSchema', () => {
   it('accepts all valid metrics', () => {
-    const metrics = ['heartRate', 'steps', 'spo2', 'motion', 'sleepStage', 'wearState'];
+    const metrics = ['heartRate', 'steps', 'spo2', 'motion', 'sleepStage', 'wearState', 'hrvRmssd', 'stressLoad'];
     metrics.forEach((m) => {
       expect(DeviceMetricSchema.parse(m)).toBe(m);
     });
@@ -491,6 +496,16 @@ describe('DeviceEventSchema', () => {
 
   it('accepts valid event with boolean value', () => {
     const event = { ...validEvent, metric: 'wearState' as const, value: true };
+    expect(DeviceEventSchema.parse(event)).toEqual(event);
+  });
+
+  it('accepts valid event with hrvRmssd metric', () => {
+    const event = { ...validEvent, metric: 'hrvRmssd' as const, value: 45.2 };
+    expect(DeviceEventSchema.parse(event)).toEqual(event);
+  });
+
+  it('accepts valid event with stressLoad metric', () => {
+    const event = { ...validEvent, metric: 'stressLoad' as const, value: 35 };
     expect(DeviceEventSchema.parse(event)).toEqual(event);
   });
 
@@ -566,11 +581,19 @@ describe('RecognizedEventTypeSchema', () => {
       'meal_intake', 'steady_cardio', 'prolonged_sedentary',
       'intermittent_exercise', 'walk', 'sleep',
       'deep_focus', 'anxiety_episode', 'breathing_pause',
-      'alcohol_intake', 'nightmare', 'relaxation',
+      'alcohol_intake', 'caffeine_intake', 'nightmare', 'relaxation',
     ];
     types.forEach((t) => {
       expect(RecognizedEventTypeSchema.parse(t)).toBe(t);
     });
+  });
+
+  it('accepts possible_caffeine_intake', () => {
+    expect(RecognizedEventTypeSchema.parse('possible_caffeine_intake')).toBe('possible_caffeine_intake');
+  });
+
+  it('rejects invalid recognized event type', () => {
+    expect(() => RecognizedEventTypeSchema.parse('invalid')).toThrow();
   });
 });
 
@@ -606,6 +629,11 @@ describe('RecognizedEventSchema', () => {
     // evidence 数组中的元素必须是非空字符串，min(1) 约束
     const event = { ...validEvent, evidence: [''] };
     expect(() => RecognizedEventSchema.parse(event)).toThrow();
+  });
+
+  it('accepts possible_caffeine_intake event type', () => {
+    const event = { ...validEvent, type: 'possible_caffeine_intake' as const };
+    expect(RecognizedEventSchema.parse(event)).toEqual(event);
   });
 
   it('accepts confidence boundary value 1', () => {

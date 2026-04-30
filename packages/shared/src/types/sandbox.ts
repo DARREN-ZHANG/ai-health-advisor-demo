@@ -16,6 +16,7 @@ export type ActivitySegmentType =
   | 'anxiety_episode'
   | 'breathing_pause'
   | 'alcohol_intake'
+  | 'caffeine_intake'
   | 'nightmare'
   | 'relaxation';
 
@@ -48,7 +49,9 @@ export type DeviceMetric =
   | 'spo2'
   | 'motion'
   | 'sleepStage'
-  | 'wearState';
+  | 'wearState'
+  | 'hrvRmssd'
+  | 'stressLoad';
 
 /** 设备原始事件 */
 export interface DeviceEvent {
@@ -81,8 +84,8 @@ export interface SyncSession {
   uploadedEventCount: number;
 }
 
-/** 已识别事件类型 — 与 ActivitySegmentType 值相同 */
-export type RecognizedEventType = ActivitySegmentType;
+/** 已识别事件类型 — 包含活动片段和概率推导事件 */
+export type RecognizedEventType = ActivitySegmentType | 'possible_caffeine_intake';
 
 /** 已识别事件 */
 export interface RecognizedEvent {

@@ -586,6 +586,96 @@ function generateRelaxationEvents(segment: ActivitySegment): DeviceEvent[] {
 }
 
 // ============================================================
+// 生成器: caffeine_intake（咖啡因摄入）
+// ============================================================
+
+/** 咖啡因剂量等级 */
+type CaffeineDose = 'light' | 'moderate' | 'high_or_sensitive';
+
+/** 咖啡因响应曲线因子（0~1，在指定时间点的目标响应强度） */
+function caffeineResponseFactor(minuteOffset: number): number {
+  if (minuteOffset <= 0) return 0;
+  if (minuteOffset <= 15) return 0.2 * (minuteOffset / 15);
+  if (minuteOffset <= 45) return 0.2 + 0.8 * ((minuteOffset - 15) / 30);
+  if (minuteOffset <= 75) return 1.0;
+  if (minuteOffset <= 120) return 1.0 - 0.5 * ((minuteOffset - 75) / 45);
+  if (minuteOffset <= 240) return 0.5 * (1 - (minuteOffset - 120) / 120);
+  return 0;
+}
+
+/** 各剂量对应的生理响应范围 */
+const CAFFEINE_DOSE_RANGES: Record<CaffeineDose, {
+  hrDeltaMin: number; hrDeltaMax: number;
+  rmssdDropMin: number; rmssdDropMax: number;
+  stressDeltaMin: number; stressDeltaMax: number;
+}> = {
+  light: { hrDeltaMin: 5, hrDeltaMax: 8, rmssdDropMin: 0.08, rmssdDropMax: 0.15, stressDeltaMin: 5, stressDeltaMax: 10 },
+  moderate: { hrDeltaMin: 8, hrDeltaMax: 14, rmssdDropMin: 0.15, rmssdDropMax: 0.30, stressDeltaMin: 10, stressDeltaMax: 20 },
+  high_or_sensitive: { hrDeltaMin: 15, hrDeltaMax: 25, rmssdDropMin: 0.25, rmssdDropMax: 0.45, stressDeltaMin: 20, stressDeltaMax: 35 },
+};
+
+/** 咖啡因摄入事件生成（5 分钟间隔，4 小时窗口） */
+function generateCaffeineIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const params = segment.params ?? {};
+  const doseRaw = params.dose;
+  const dose: CaffeineDose =
+    doseRaw === 'light' || doseRaw === 'high_or_sensitive' ? doseRaw : 'moderate';
+  const ranges = CAFFEINE_DOSE_RANGES[dose];
+
+  // 基线值：使用 profile 典型值
+  const hrBaseline = 68;
+  const rmssdBaseline = 50;
+  const stressBaseline = 25;
+  const spo2Baseline = 97;
+
+  let idx = 0;
+  let cumulativeSteps = 0;
+
+  events.push(makeEvent(segment, 0, 'wearState', true, idx++));
+  events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
+
+  // 5 分钟间隔生成
+  for (let m = 5; m <= totalMin; m += 5) {
+    const factor = caffeineResponseFactor(m);
+    const d = deterministic(42, m);
+    const noise = d * 0.3 + 0.85; // 0.85~1.15 的微噪声
+
+    // HR：随 factor 上升
+    const hrDelta = ranges.hrDeltaMin + (ranges.hrDeltaMax - ranges.hrDeltaMin) * factor;
+    const hr = Math.round(hrBaseline + hrDelta * noise);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    // RMSSD：随 factor 下降（RMSSD 越低越差）
+    const rmssdDrop = ranges.rmssdDropMin + (ranges.rmssdDropMax - ranges.rmssdDropMin) * factor;
+    const rmssd = Math.round((rmssdBaseline * (1 - rmssdDrop * noise)) * 10) / 10;
+    events.push(makeEvent(segment, m, 'hrvRmssd', rmssd, idx++));
+
+    // stressLoad：随 factor 上升
+    const stressDelta = ranges.stressDeltaMin + (ranges.stressDeltaMax - ranges.stressDeltaMin) * factor;
+    const stress = Math.round(stressBaseline + stressDelta * noise);
+    events.push(makeEvent(segment, m, 'stressLoad', stress, idx++));
+
+    // SpO2：保持稳定 ±1%
+    const spo2Noise = deterministic(73, m) * 2 - 1; // -1~1
+    const spo2 = Math.round(spo2Baseline + spo2Noise);
+    events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
+
+    // motion：低活动 0.2~1.5
+    const motion = Math.round((0.2 + deterministic(91, m) * 1.3) * 100) / 100;
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+
+    // steps：每 5 分钟 0~20 步
+    const stepsDelta = Math.round(deterministic(17, m) * 20);
+    cumulativeSteps += stepsDelta;
+    events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
+  }
+
+  return events;
+}
+
+// ============================================================
 // 公共调度函数
 // ============================================================
 
@@ -601,6 +691,7 @@ const GENERATOR_MAP: Record<ActivitySegmentType, (segment: ActivitySegment) => D
   anxiety_episode: generateAnxietyEpisodeEvents,
   breathing_pause: generateBreathingPauseEvents,
   alcohol_intake: generateAlcoholIntakeEvents,
+  caffeine_intake: generateCaffeineIntakeEvents,
   nightmare: generateNightmareEvents,
   relaxation: generateRelaxationEvents,
 };
@@ -629,6 +720,7 @@ export {
   generateAnxietyEpisodeEvents,
   generateBreathingPauseEvents,
   generateAlcoholIntakeEvents,
+  generateCaffeineIntakeEvents,
   generateNightmareEvents,
   generateRelaxationEvents,
 };
