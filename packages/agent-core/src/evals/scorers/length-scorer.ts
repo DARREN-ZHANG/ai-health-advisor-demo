@@ -3,13 +3,16 @@ import type { EvalCheckResult, EvalScorerInput } from '../types';
 
 // ── Length Scorer ────────────────────────────────────────
 
-/** homepage 默认摘要长度范围 */
-const HOMEPAGE_DEFAULT_LENGTH = { min: 80, max: 120 } as const;
+/** homepage 中文默认摘要长度范围（按字符计数） */
+const HOMEPAGE_DEFAULT_LENGTH_ZH = { min: 80, max: 120 } as const;
+
+/** homepage 英文默认摘要长度范围（按单词计数） */
+const HOMEPAGE_DEFAULT_LENGTH_EN = { min: 50, max: 100 } as const;
 
 /**
  * 摘要长度检查：
  * - 使用 expectations.summary.length.min/max 进行范围校验
- * - homepage 类型默认 80-120（中文按字符，英文按单词）
+ * - homepage 类型默认：中文 80-120 字符，英文 50-100 单词
  * - microTips 单条长度暂不作为 hard check
  */
 export const lengthScorer = {
@@ -26,9 +29,9 @@ export const lengthScorer = {
     }
 
     // 摘要长度检查
-    const lengthConfig = getEffectiveLengthConfig(evalCase);
+    const locale = artifacts.context?.locale ?? 'zh';
+    const lengthConfig = getEffectiveLengthConfig(evalCase, locale);
     if (lengthConfig !== undefined && envelope?.summary !== undefined) {
-      const locale = artifacts.context?.locale ?? 'zh';
       results.push(checkSummaryLength(evalCase.id, envelope.summary, lengthConfig, locale));
     }
 
@@ -61,10 +64,10 @@ function countLength(text: string, locale: Locale): { count: number; unit: strin
 /**
  * 获取有效的长度配置。
  * - 如果 case 显式配置了 summary.length，优先使用
- * - 否则如果是 homepage 类型，使用默认 80-120
+ * - 否则如果是 homepage 类型，根据 locale 使用默认范围
  * - 其他类型无默认值，返回 undefined
  */
-function getEffectiveLengthConfig(evalCase: EvalScorerInput['evalCase']) {
+function getEffectiveLengthConfig(evalCase: EvalScorerInput['evalCase'], locale: Locale = 'zh') {
   const explicitLength = evalCase.expectations.summary?.length;
 
   // case 显式配置优先
@@ -72,9 +75,9 @@ function getEffectiveLengthConfig(evalCase: EvalScorerInput['evalCase']) {
     return explicitLength;
   }
 
-  // homepage 默认范围
+  // homepage 默认范围（按语言区分）
   if (evalCase.request.taskType === AgentTaskType.HOMEPAGE_SUMMARY) {
-    return HOMEPAGE_DEFAULT_LENGTH;
+    return locale === 'en' ? HOMEPAGE_DEFAULT_LENGTH_EN : HOMEPAGE_DEFAULT_LENGTH_ZH;
   }
 
   return undefined;
