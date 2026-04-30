@@ -84,6 +84,7 @@ export const SyncSessionSchema = z.object({
 export const RecognizedEventTypeSchema = z.union([
   ActivitySegmentTypeSchema,
   z.literal('possible_caffeine_intake'),
+  z.literal('possible_alcohol_intake'),
 ]);
 
 export const RecognizedEventSchema = z.object({

@@ -85,7 +85,7 @@ export interface SyncSession {
 }
 
 /** 已识别事件类型 — 包含活动片段和概率推导事件 */
-export type RecognizedEventType = ActivitySegmentType | 'possible_caffeine_intake';
+export type RecognizedEventType = ActivitySegmentType | 'possible_caffeine_intake' | 'possible_alcohol_intake';
 
 /** 已识别事件 */
 export interface RecognizedEvent {
