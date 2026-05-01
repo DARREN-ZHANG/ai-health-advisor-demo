@@ -68,7 +68,7 @@ export async function executeAgent(
   const fallbackKey: FallbackLookupKey = {
     profileId: request.profileId,
     pageContext: request.pageContext,
-    tab: request.tab,
+    tab: request.tab ?? ('dataTab' in request.pageContext ? (request.pageContext as { dataTab?: string }).dataTab : undefined),
   };
 
   try {

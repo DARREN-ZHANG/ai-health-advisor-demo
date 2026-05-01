@@ -45,8 +45,10 @@ export function buildAgentContext(
   // 6. 检测缺失字段
   const missingFields = detectMissingFields(windowedRecords, DATA_METRICS);
 
-  // 7. 计算 signals
-  const lowData = windowedRecords.length < LOW_DATA_THRESHOLD;
+  // 7. 计算 signals（短时间窗口应降低阈值，避免误判低数据）
+  const effectiveTf = request.timeframe ?? request.pageContext.timeframe;
+  const effectiveThreshold = effectiveTf === 'day' ? 1 : LOW_DATA_THRESHOLD;
+  const lowData = windowedRecords.length < effectiveThreshold;
   const signals: AgentContext['signals'] = {
     overallStatus: computeDefaultStatus(lowData, missingFields),
     anomalies: [],
