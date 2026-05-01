@@ -1,5 +1,5 @@
 import type { AgentRequest } from '../types/agent-request';
-import type { AgentResponseEnvelope, AgentTaskType, Locale } from '@health-advisor/shared';
+import type { AgentResponseEnvelope, AgentTaskType, DataTab, Locale } from '@health-advisor/shared';
 import { AgentTaskType as AT, DEFAULT_LOCALE } from '@health-advisor/shared';
 import type { ContextBuilderDeps } from '../context/context-types';
 import type { HealthAgent } from '../executor/create-agent';
@@ -68,7 +68,7 @@ export async function executeAgent(
   const fallbackKey: FallbackLookupKey = {
     profileId: request.profileId,
     pageContext: request.pageContext,
-    tab: request.tab ?? ('dataTab' in request.pageContext ? (request.pageContext as { dataTab?: string }).dataTab : undefined),
+    tab: request.tab ?? ('dataTab' in request.pageContext ? (request.pageContext as { dataTab?: DataTab }).dataTab : undefined),
   };
 
   try {
