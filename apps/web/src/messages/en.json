@@ -35,7 +35,11 @@
     "homepageContext": "Homepage Context",
     "openAIAdvisor": "Open AI Advisor",
     "summarizeView": "Summarize View",
-    "viewDetailAndChat": "View Details & Chat"
+    "viewDetailAndChat": "View Details & Chat",
+    "goToChat": "Go to Chat",
+    "yes": "Yes",
+    "no": "No",
+    "processing": "Processing..."
   },
   "nav": {
     "home": "Home",
@@ -134,6 +138,8 @@
       "highStress": "I feel quite stressed right now. How can I manage it?",
       "poorSleep": "I didn't sleep well last night. What should I pay attention to today?",
       "sedentary": "I've been sitting for a long time. What exercises or stretches should I do?",
+      "possibleAlcoholIntake": "I confirm I recently had alcohol. Can you give me some personalized health advice based on my data?",
+      "possibleCaffeineIntake": "Yes, I recently had a caffeinated drink. I'd like to understand how this might affect my health.",
       "genericPrompt": "I need some advice about \"{title}\"."
     }
   },
@@ -156,7 +162,7 @@
       "mealIntake": "Meal",
       "steadyCardio": "Cardio",
       "prolongedSedentary": "Sedentary",
-      "intermittentExercise": "Intervals",
+      "intermittentExercise": "HIIT",
       "walk": "Walk",
       "sleep": "Sleep",
       "deepFocus": "Focus",

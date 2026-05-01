@@ -35,7 +35,11 @@
     "homepageContext": "首页上下文",
     "openAIAdvisor": "打开 AI 顾问",
     "summarizeView": "总结当前视图",
-    "viewDetailAndChat": "查看详情并对话"
+    "viewDetailAndChat": "查看详情并对话",
+    "goToChat": "进入聊天",
+    "yes": "是的",
+    "no": "没有",
+    "processing": "处理中..."
   },
   "nav": {
     "home": "首页",
@@ -134,6 +138,8 @@
       "highStress": "我感觉现在的压力有点大，该怎么调节一下？",
       "poorSleep": "我昨晚没睡好，今天该注意些什么？",
       "sedentary": "我已经坐了很久了，现在该做些什么运动或者拉伸？",
+      "possibleAlcoholIntake": "我确认最近喝了酒，能根据我的健康数据给我一些针对性的建议吗？",
+      "possibleCaffeineIntake": "是的，我最近喝了含咖啡因的饮品，想了解一下这对我的健康有什么影响。",
       "genericPrompt": "关于「{title}」，我需要一些建议。"
     }
   },
@@ -156,7 +162,7 @@
       "mealIntake": "进餐",
       "steadyCardio": "有氧",
       "prolongedSedentary": "久坐",
-      "intermittentExercise": "间歇运动",
+      "intermittentExercise": "HIIT 运动",
       "walk": "散步",
       "sleep": "睡眠",
       "deepFocus": "专注",
