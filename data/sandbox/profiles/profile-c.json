@@ -1,14 +1,26 @@
 {
   "profile": {
     "profileId": "profile-c",
-    "name": { "zh": "孙焦虑", "en": "Sun Jiaolv" },
+    "name": {
+      "zh": "孙焦虑",
+      "en": "Sun Jiaolv"
+    },
     "age": 26,
     "gender": "female",
     "avatar": "avatar-e.png",
     "tags": [
-      { "zh": "偏瘦", "en": "Underweight" },
-      { "zh": "短睡眠", "en": "Short sleep" },
-      { "zh": "高压力", "en": "High stress" }
+      {
+        "zh": "偏瘦",
+        "en": "Underweight"
+      },
+      {
+        "zh": "短睡眠",
+        "en": "Short sleep"
+      },
+      {
+        "zh": "高压力",
+        "en": "High stress"
+      }
     ],
     "baseline": {
       "restingHr": 78,
@@ -18,7 +30,7 @@
       "avgSteps": 4000
     }
   },
-  "initialDemoTime": "2026-04-30T06:45",
+  "initialDemoTime": "2026-05-01T06:45",
   "historyRef": {
     "file": "history/profile-c-daily-records.json"
   },

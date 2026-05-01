@@ -1,14 +1,26 @@
 {
   "profile": {
     "profileId": "profile-d",
-    "name": { "zh": "周社交", "en": "Zhou Shejiao" },
+    "name": {
+      "zh": "周社交",
+      "en": "Zhou Shejiao"
+    },
     "age": 31,
     "gender": "male",
     "avatar": "avatar-f.png",
     "tags": [
-      { "zh": "有氧运动", "en": "Aerobic exercise" },
-      { "zh": "社交饮酒", "en": "Social drinking" },
-      { "zh": "恢复赤字", "en": "Recovery deficit" }
+      {
+        "zh": "有氧运动",
+        "en": "Aerobic exercise"
+      },
+      {
+        "zh": "社交饮酒",
+        "en": "Social drinking"
+      },
+      {
+        "zh": "恢复赤字",
+        "en": "Recovery deficit"
+      }
     ],
     "baseline": {
       "restingHr": 58,
@@ -18,7 +30,7 @@
       "avgSteps": 10000
     }
   },
-  "initialDemoTime": "2026-04-30T07:15",
+  "initialDemoTime": "2026-05-01T07:15",
   "historyRef": {
     "file": "history/profile-d-daily-records.json"
   },

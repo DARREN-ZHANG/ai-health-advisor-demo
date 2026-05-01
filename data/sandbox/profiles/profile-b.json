@@ -1,14 +1,26 @@
 {
   "profile": {
     "profileId": "profile-b",
-    "name": { "zh": "赵沉睡", "en": "Zhao Chenshui" },
+    "name": {
+      "zh": "赵沉睡",
+      "en": "Zhao Chenshui"
+    },
     "age": 42,
     "gender": "male",
     "avatar": "avatar-d.png",
     "tags": [
-      { "zh": "偏胖", "en": "Overweight" },
-      { "zh": "睡眠呼吸暂停", "en": "Sleep apnea" },
-      { "zh": "慢性疲劳", "en": "Chronic fatigue" }
+      {
+        "zh": "偏胖",
+        "en": "Overweight"
+      },
+      {
+        "zh": "睡眠呼吸暂停",
+        "en": "Sleep apnea"
+      },
+      {
+        "zh": "慢性疲劳",
+        "en": "Chronic fatigue"
+      }
     ],
     "baseline": {
       "restingHr": 72,
@@ -18,7 +30,7 @@
       "avgSteps": 3000
     }
   },
-  "initialDemoTime": "2026-04-30T07:30",
+  "initialDemoTime": "2026-05-01T07:30",
   "historyRef": {
     "file": "history/profile-b-daily-records.json"
   },
