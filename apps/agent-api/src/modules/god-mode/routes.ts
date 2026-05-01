@@ -75,6 +75,14 @@ interface CloneProfileBody {
   overrides?: Record<string, unknown>;
 }
 
+/** 概率事件类型：注入这些事件时不应触发简报缓存失效，
+ *  只有用户确认（追加 timeline）后才更新简报 */
+const PROBABILISTIC_EVENT_TYPES = new Set([
+  'possible_alcohol_intake',
+  'possible_caffeine_intake',
+  'probabilistic_dismissed',
+]);
+
 export async function godModeRoutes(app: FastifyInstance) {
   const service = new GodModeService(app.runtime);
   const invalidateBriefCache = () => {
@@ -113,7 +121,10 @@ export async function godModeRoutes(app: FastifyInstance) {
 
     const targetProfileId = profileId ?? app.runtime.overrideStore.getCurrentProfileId();
     const result = service.injectEvent(targetProfileId, parsed.data as EventInjectPayload, request.ctx?.sessionId);
-    invalidateBriefCache();
+    // 概率事件在用户确认前不应触发简报更新
+    if (!PROBABILISTIC_EVENT_TYPES.has(parsed.data.eventType)) {
+      invalidateBriefCache();
+    }
     return createSuccessResponse(result, buildMeta(request));
   });
 

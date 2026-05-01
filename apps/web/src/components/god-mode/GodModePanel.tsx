@@ -4,6 +4,7 @@ import { Drawer, Button, Section } from '@health-advisor/ui';
 import type { TimelineAppendPayload } from '@health-advisor/shared';
 import { useGodModeStore } from '@/stores/god-mode.store';
 import { useProfileStore } from '@/stores/profile.store';
+import { useActiveSensingStore } from '@/stores/active-sensing.store';
 import { useGodModeActions, useGodModeState } from '@/hooks/use-god-mode-actions';
 import { useTranslations } from 'next-intl';
 
@@ -24,6 +25,13 @@ const TIMELINE_SEGMENT_KEYS: { type: TimelineAppendPayload['segmentType']; label
   { type: 'relaxation', labelKey: 'relaxation', icon: '📖', params: { activity: 'reading' } },
 ];
 
+const PROBABILISTIC_SEGMENT_TYPES = new Set(['alcohol_intake', 'caffeine_intake']);
+
+const EVENT_TYPE_MAP: Record<string, string> = {
+  alcohol_intake: 'possible_alcohol_intake',
+  caffeine_intake: 'possible_caffeine_intake',
+};
+
 export function GodModePanel() {
   const { isEnabled } = useGodModeStore();
 
@@ -37,9 +45,10 @@ export function GodModePanel() {
 function GodModePanelContent() {
   const { isOpen, toggleOpen } = useGodModeStore();
   const { currentProfileId } = useProfileStore();
+  const { setPendingProbabilisticAction } = useActiveSensingStore();
   const {
-    injectEvent, isInjectingEvent,
     appendTimeline, isAppendingTimeline,
+    injectEvent, isInjectingEvent,
     triggerSync, isTriggeringSync,
     advanceClock, isAdvancingClock,
     resetTimeline, isResettingTimeline,
@@ -52,31 +61,26 @@ function GodModePanelContent() {
 
   const handleClose = () => toggleOpen(false);
 
-  const isTimelineBusy = isAppendingTimeline || isTriggeringSync || isAdvancingClock || isResettingTimeline || isInjectingEvent;
-
-  const SPORT_SEGMENT_TYPES = new Set(['steady_cardio', 'intermittent_exercise', 'walk']);
+  const isTimelineBusy = isAppendingTimeline || isInjectingEvent || isTriggeringSync || isAdvancingClock || isResettingTimeline;
 
   const handleAppendTimeline = async (segment: typeof TIMELINE_SEGMENT_KEYS[number]) => {
     try {
-      await appendTimeline({ segmentType: segment.type, params: segment.params });
-
-      // 运动类片段追加后，同时注入即时运动事件以触发 Active Sensing Banner
-      if (SPORT_SEGMENT_TYPES.has(segment.type)) {
-        const sportTypeMap: Record<string, string> = {
-          steady_cardio: 'Running',
-          intermittent_exercise: 'IntervalTraining',
-          walk: 'Walking',
-        };
-        await injectEvent({
-          eventType: 'sport_detected',
-          data: {
-            type: sportTypeMap[segment.type],
-            durationMinutes: segment.params?.durationMinutes ?? 30,
-            intensity: 'medium',
-            calories: 300,
-          },
-          timestamp: new Date().toISOString(),
-        });
+      if (PROBABILISTIC_SEGMENT_TYPES.has(segment.type)) {
+        // 概率事件：先只注入事件触发 Banner 询问，不真正追加 timeline
+        const eventType = EVENT_TYPE_MAP[segment.type];
+        if (eventType) {
+          await injectEvent({
+            eventType,
+            data: { source: segment.type, confidence: 0.75 },
+          });
+          setPendingProbabilisticAction({
+            segmentType: segment.type as 'alcohol_intake' | 'caffeine_intake',
+            params: segment.params ?? {},
+          });
+        }
+      } else {
+        // 非概率事件：直接追加 timeline，后端自动注入对应 Active Sensing 事件
+        await appendTimeline({ segmentType: segment.type, params: segment.params });
       }
     } catch (error) {
       console.error('Failed to append timeline segment:', error);

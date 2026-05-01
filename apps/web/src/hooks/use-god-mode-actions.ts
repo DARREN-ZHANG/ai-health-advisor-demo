@@ -58,6 +58,13 @@ export function useGodModeActions() {
     },
   });
 
+  /** 概率事件类型：这些事件在用户确认前不应触发简报更新 */
+  const PROBABILISTIC_EVENT_TYPES = new Set([
+    'possible_alcohol_intake',
+    'possible_caffeine_intake',
+    'probabilistic_dismissed',
+  ]);
+
   /**
    * GM-003: Inject Event
    */
@@ -65,13 +72,16 @@ export function useGodModeActions() {
     mutationFn: async (payload: EventInjectPayload & { profileId?: string }) => {
       return apiClient.post<GodModeStateResponse>('/god-mode/inject-event', payload);
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       setProfileId(data.currentProfileId);
       syncActiveSensingBanner(data.activeSensing);
 
-      // 注入事件后，数据通常会发生变化，失效相关查询
-      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
+      // 概率事件在用户确认前不应触发简报更新，仅刷新 godMode 状态以显示/隐藏 Banner
+      const isProbabilistic = PROBABILISTIC_EVENT_TYPES.has(variables.eventType);
+      if (!isProbabilistic) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
     },
   });

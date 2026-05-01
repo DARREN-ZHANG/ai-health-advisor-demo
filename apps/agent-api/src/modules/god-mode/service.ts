@@ -17,6 +17,7 @@ import type {
   EventInjectPayload,
   GodModeStateResponse,
   MetricOverridePayload,
+  RecognizedEvent,
   ResetPayload,
   UpdateProfilePayload,
 } from '@health-advisor/shared';
@@ -98,6 +99,24 @@ export class GodModeService {
   ): GodModeStateResponse {
     const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
     this.registry.overrideStore.appendSegment(currentProfileId, segmentType, params, offsetMinutes, options);
+
+    // 同步注入 Active Sensing 事件，使 deriveActiveSensing 能反映最新操作
+    const bannerEventType = GodModeService.TIMELINE_TO_BANNER_EVENT[segmentType];
+    if (bannerEventType) {
+      this.registry.overrideStore.injectEvent(currentProfileId, {
+        date: new Date().toISOString(),
+        type: bannerEventType,
+        data: { source: segmentType, ...(params ?? {}) },
+      });
+    } else {
+      // 非白名单事件也要注入，用于"覆盖"之前的状态
+      this.registry.overrideStore.injectEvent(currentProfileId, {
+        date: new Date().toISOString(),
+        type: segmentType,
+        data: params ?? {},
+      });
+    }
+
     this.invalidateSessionAnalytical(sessionId);
     return this.getStateForProfile(currentProfileId);
   }
@@ -155,14 +174,30 @@ export class GodModeService {
     };
   }
 
+  /** 时间轴片段类型到 Banner 事件类型的映射 */
+  private static readonly TIMELINE_TO_BANNER_EVENT: Record<string, string> = {
+    steady_cardio: 'sport_detected',
+    intermittent_exercise: 'sport_detected',
+    alcohol_intake: 'possible_alcohol_intake',
+    caffeine_intake: 'possible_caffeine_intake',
+  };
+
+  /** 允许触发 Active Sensing Banner 的事件白名单 */
+  private static readonly BANNER_EVENT_TYPES = new Set([
+    'sport_detected',
+    'possible_alcohol_intake',
+    'possible_caffeine_intake',
+  ]);
+
   private deriveActiveSensing(currentProfileId: string): ActiveSensingState | null {
     const injectedEvents = this.registry.overrideStore.getInjectedEvents(currentProfileId);
     if (injectedEvents.length === 0) {
       return null;
     }
 
-    const latestEvent = injectedEvents[injectedEvents.length - 1];
-    if (!latestEvent) {
+    // 只响应最近一次注入的事件；不在白名单中则不显示 Banner
+    const latestEvent = injectedEvents[injectedEvents.length - 1]!;
+    if (!GodModeService.BANNER_EVENT_TYPES.has(latestEvent.type)) {
       return null;
     }
 
