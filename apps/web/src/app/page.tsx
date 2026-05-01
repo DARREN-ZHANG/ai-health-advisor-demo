@@ -17,7 +17,6 @@ export default function HomePage() {
   const { data, isLoading, error, isFetching } = useMorningBrief(currentProfileId);
   const refetchBrief = useRefetchBrief(currentProfileId);
   const t = useTranslations('homepage');
-  const tCommon = useTranslations('common');
 
   const isAnyLoading = isLoading || isFetching || refetchBrief.isPending;
 

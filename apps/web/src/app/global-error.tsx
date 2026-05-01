@@ -1,6 +1,5 @@
 'use client';
 
-import { NextIntlClientProvider } from 'next-intl';
 import { useState, useEffect } from 'react';
 import zhMessages from '../messages/zh.json';
 import enMessages from '../messages/en.json';
