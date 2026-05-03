@@ -48,6 +48,25 @@ const TREND_TOKEN_CONFIGS = [
   { id: 'stress', labelKey: 'trendStress', tokenId: ChartTokenId.STRESS_LOAD_7DAYS, metricKey: 'stress.load', formatValue: (v: number) => Math.round(v) },
 ] as const;
 
+/** tab 到 ChartTokenId 的映射 */
+const TAB_TOKEN_ID: Partial<Record<DataTab, ChartTokenId>> = {
+  hrv: ChartTokenId.HRV_7DAYS,
+  sleep: ChartTokenId.SLEEP_7DAYS,
+  'resting-hr': ChartTokenId.RESTING_HR_7DAYS,
+  activity: ChartTokenId.ACTIVITY_7DAYS,
+  spo2: ChartTokenId.SPO2_7DAYS,
+  stress: ChartTokenId.STRESS_LOAD_7DAYS,
+};
+
+/** tab 到数据指标 key 的映射（用于从 DataCenterResponse.timeline 提取数据） */
+const TAB_METRIC_KEY: Record<string, string> = {
+  sleep: 'sleep.totalMinutes',
+  hrv: 'hrv',
+  'resting-hr': 'hr',
+  activity: 'activity.steps',
+  spo2: 'spo2',
+};
+
 /** 所有趋势 token 的 ID 列表 */
 const TREND_TOKEN_IDS = TREND_TOKEN_CONFIGS.map((c) => c.tokenId);
 
@@ -113,6 +132,12 @@ export default function DataCenterPage() {
       : (chartData as DataCenterResponse).timeline?.length === 0
   );
 
+  // 日均值（仅日级别详情 tab 使用）
+  const dailyAvg = useMemo(() => {
+    if (timeframe !== 'day' || isOverview) return null;
+    return computeDailyAverage(activeTab, chartData);
+  }, [timeframe, isOverview, activeTab, chartData]);
+
   // 设备同步状态
   const {
     data: deviceData,
@@ -148,7 +173,7 @@ export default function DataCenterPage() {
         </Section>
       )}
 
-      {/* 详情 Tab：当前 tab 主图 */}
+      {/* 详情 Tab：日级别显示 24h 均值，周/月显示图表 */}
       {!isOverview && (
         <Section className="space-y-4">
           <ChartContainer
@@ -157,7 +182,20 @@ export default function DataCenterPage() {
             isEmpty={isChartEmpty}
             error={error ? t('loadFailedRetry') : undefined}
           >
-            {chartOption && <ChartRoot option={chartOption} height={350} />}
+            {timeframe === 'day'
+              ? dailyAvg != null && (
+                  <DailyAverageDisplay
+                    value={formatDailyValue(activeTab, dailyAvg)}
+                    unit={
+                      TAB_TOKEN_ID[activeTab as DataTab]
+                        ? localize(CHART_TOKEN_META[TAB_TOKEN_ID[activeTab as DataTab]!].unit, DEFAULT_LOCALE)
+                        : ''
+                    }
+                    label={t('avg24h')}
+                  />
+                )
+              : chartOption && <ChartRoot option={chartOption} height={350} />
+            }
           </ChartContainer>
         </Section>
       )}
@@ -232,6 +270,70 @@ function AISummarySection({
       </div>
     </div>
   );
+}
+
+/* ────────────────────────────────────────────────────────────── */
+/*  24h 均值展示                                                 */
+/* ────────────────────────────────────────────────────────────── */
+
+function DailyAverageDisplay({
+  value,
+  unit,
+  label,
+}: {
+  value: string;
+  unit: string;
+  label: string;
+}) {
+  return (
+    <div className="h-full w-full flex items-center justify-center">
+      <div className="text-center space-y-3">
+        <p className="text-6xl font-bold text-slate-100 tabular-nums">
+          {value}
+        </p>
+        <p className="text-slate-400 text-sm">
+          {unit} · {label}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** 计算 24h 均值 */
+function computeDailyAverage(
+  tab: string,
+  data: DataCenterResponse | StressTimelineResponse | null | undefined
+): number | null {
+  if (!data) return null;
+
+  // 压力数据使用后端汇总
+  if (tab === 'stress') {
+    const stressData = data as StressTimelineResponse;
+    return stressData.summary?.average ?? null;
+  }
+
+  const standardData = data as DataCenterResponse;
+  const metricKey = TAB_METRIC_KEY[tab];
+  if (!metricKey) return null;
+
+  const values = standardData.timeline
+    ?.map((point) => point.values[metricKey])
+    .filter((v): v is number => v !== null) ?? [];
+
+  if (values.length === 0) return null;
+  return values.reduce((sum, v) => sum + v, 0) / values.length;
+}
+
+/** 格式化日均值显示 */
+function formatDailyValue(tab: string, value: number): string {
+  switch (tab) {
+    case 'sleep':
+      return (value / 60).toFixed(1);
+    case 'activity':
+      return Math.round(value).toLocaleString();
+    default:
+      return Math.round(value).toString();
+  }
 }
 
 /* ────────────────────────────────────────────────────────────── */

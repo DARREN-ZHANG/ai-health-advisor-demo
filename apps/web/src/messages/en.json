@@ -92,6 +92,7 @@
     "tabSpo2": "Blood Oxygen Saturation",
     "tabStress": "Stress Load",
     "dataMetric": "Data Metric",
+    "avg24h": "24h Average",
     "trendHrv": "HRV",
     "trendSleep": "Sleep",
     "trendRestingHr": "Resting HR",

@@ -92,6 +92,7 @@
     "tabSpo2": "血氧饱和度",
     "tabStress": "压力负荷",
     "dataMetric": "数据指标",
+    "avg24h": "24h 均值",
     "trendHrv": "HRV",
     "trendSleep": "睡眠",
     "trendRestingHr": "静息心率",
