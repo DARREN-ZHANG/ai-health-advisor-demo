@@ -88,6 +88,61 @@ export class ProfileManager {
     return keys.some((key) => oldBaseline[key] !== newBaseline[key]);
   }
 
+  /** 用 dailyBaseline 精确值覆盖生成记录中的抖动数据 */
+  private patchRecordWithDailyBaseline(
+    record: DailyRecord,
+    dailyBaseline: Partial<BaselineMetrics>,
+  ): void {
+    // 睡眠：精确覆盖 totalMinutes 并按比例重算 stages 和时间窗口
+    if (dailyBaseline.avgSleepMinutes != null && record.sleep) {
+      const exact = dailyBaseline.avgSleepMinutes;
+      const old = record.sleep.totalMinutes || exact;
+      const ratio = old > 0 ? exact / old : 1;
+      const deep = Math.round(record.sleep.stages.deep * ratio);
+      const rem = Math.round(record.sleep.stages.rem * ratio);
+      const awake = Math.max(1, Math.round(record.sleep.stages.awake * ratio));
+      const light = Math.max(0, exact - deep - rem - awake);
+
+      // 重算睡眠时间窗口
+      const wakeHour = 6;
+      const wakeMin = exact >= 400 ? 10 : exact >= 280 ? 5 : 0;
+      const wakeTotalMin = wakeHour * 60 + wakeMin;
+      let bedTotalMin = wakeTotalMin - exact;
+      if (bedTotalMin < 0) bedTotalMin += 24 * 60;
+
+      record.sleep = {
+        ...record.sleep,
+        totalMinutes: exact,
+        stages: { deep, light, rem, awake },
+        score: Math.max(5, Math.min(98, Math.round((exact / 480) * 90))),
+        startTime: `${String(Math.floor(bedTotalMin / 60) % 24).padStart(2, '0')}:${String(bedTotalMin % 60).padStart(2, '0')}`,
+        endTime: `${String(wakeHour).padStart(2, '0')}:${String(wakeMin).padStart(2, '0')}`,
+      };
+    }
+
+    // HRV：直接覆盖
+    if (dailyBaseline.hrv != null) {
+      record.hrv = dailyBaseline.hrv;
+    }
+
+    // 静息心率：保持各采样点的相对偏移量不变，整体平移
+    if (dailyBaseline.restingHr != null && record.hr && record.hr.length >= 2) {
+      const oldResting = record.hr[1]!;
+      const delta = dailyBaseline.restingHr - oldResting;
+      record.hr = record.hr.map((v) => Math.round(v + delta));
+    }
+
+    // SpO2：直接覆盖
+    if (dailyBaseline.spo2 != null) {
+      record.spo2 = dailyBaseline.spo2;
+    }
+
+    // 步数：直接覆盖
+    if (dailyBaseline.avgSteps != null && record.activity) {
+      record.activity = { ...record.activity, steps: dailyBaseline.avgSteps };
+    }
+  }
+
   /** 增量替换 history 记录：用新记录覆盖现有记录中相同日期的条目 */
   private patchHistoryRecords(
     existing: DailyRecord[],
@@ -236,6 +291,14 @@ export class ProfileManager {
         };
         const config = buildProfileConfig({ ...validated.data, baseline: mergedBaseline });
         const newHistory = generateHistory(config, startDate, endDate);
+
+        // 用 dailyBaseline 精确值覆盖生成数据中的抖动
+        if (newHistory.records.length > 0) {
+          this.patchRecordWithDailyBaseline(
+            newHistory.records[newHistory.records.length - 1]!,
+            validated.data.dailyBaseline!,
+          );
+        }
 
         // 读取现有 history 文件并增量替换
         const existingHistory = loadHistoryRecords(this.deps.dataDir, profileFile.historyRef);
