@@ -12,6 +12,7 @@ import { profileRoutes } from './modules/profiles/routes.js';
 import { dataRoutes } from './modules/data/routes.js';
 import { aiRoutes } from './modules/ai/routes.js';
 import { godModeRoutes } from './modules/god-mode/routes.js';
+import { GodModeService } from './modules/god-mode/service.js';
 import { BriefCache } from './services/brief-cache.js';
 
 export async function buildApp() {
@@ -70,6 +71,30 @@ export async function buildApp() {
   // God-Mode 路由受 ENABLE_GOD_MODE 环境变量保护
   if (config.ENABLE_GOD_MODE) {
     await app.register(godModeRoutes);
+
+    // 自动校准：启动时检测并校准过期的演示数据，之后每小时检查一次
+    const godModeService = new GodModeService(registry);
+    const startupResult = godModeService.autoCalibrate();
+    app.log.info(`[auto-calibration] startup: ${startupResult.reason}`);
+    if (startupResult.recalibrated) {
+      briefCache.clearAll();
+    }
+
+    const calibrationTimer = setInterval(() => {
+      try {
+        const result = godModeService.autoCalibrate();
+        if (result.recalibrated) {
+          briefCache.clearAll();
+          app.log.info(`[auto-calibration] scheduled: ${result.reason}`);
+        }
+      } catch (err) {
+        app.log.error(err, '[auto-calibration] scheduled check failed');
+      }
+    }, 60 * 60 * 1000);
+
+    app.addHook('onClose', () => {
+      clearInterval(calibrationTimer);
+    });
   }
 
   return app;

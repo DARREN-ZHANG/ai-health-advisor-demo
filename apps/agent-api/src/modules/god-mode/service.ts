@@ -271,6 +271,31 @@ export class GodModeService {
     return this.getState();
   }
 
+  /** 检测演示数据是否过期（initialDemoTime 不是今天） */
+  isDataStale(): boolean {
+    const dataDir = this.registry.config.dataDir;
+    const manifest = loadManifest(dataDir);
+    if (manifest.profiles.length === 0) return false;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const firstEntry = manifest.profiles[0]!;
+    const firstProfilePath = join(dataDir, firstEntry.file);
+    const profileData = JSON.parse(readFileSync(firstProfilePath, 'utf-8'));
+    const profileDate = String(profileData.initialDemoTime).slice(0, 10);
+
+    return profileDate !== today;
+  }
+
+  /** 自动校准：仅在数据过期时执行 recalibrate */
+  autoCalibrate(): { recalibrated: boolean; reason: string } {
+    if (!this.isDataStale()) {
+      return { recalibrated: false, reason: 'demo data is up-to-date' };
+    }
+
+    this.recalibrate();
+    return { recalibrated: true, reason: 'demo data was stale, recalibrated' };
+  }
+
   /** 更新 profile 字段（局部更新） */
   updateProfile(profileId: string, changes: UpdateProfilePayload) {
     return this.registry.profileManager.updateProfile(profileId, changes);
