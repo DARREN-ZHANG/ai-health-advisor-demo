@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import path from 'node:path';
-import { cpSync, mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { buildApp } from '../../../app.js';
 import type { FastifyInstance } from 'fastify';
@@ -91,6 +91,37 @@ describe('Profile CRUD Routes', () => {
       });
 
       expect(response.statusCode).toBe(400);
+    });
+
+    test('更新 dailyBaseline.avgSleepMinutes 后 history 中睡眠时长精确匹配', async () => {
+      const targetSleep = 420;
+
+      // 1. 更新 dailyBaseline
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/god-mode/profiles/profile-c',
+        payload: { dailyBaseline: { avgSleepMinutes: targetSleep } },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      expect(body.data.profile.dailyBaseline.avgSleepMinutes).toBe(targetSleep);
+      expect(body.data.regenerated).toBe(true);
+
+      // 2. 读取 history 文件，验证今天记录的 sleep.totalMinutes 精确匹配
+      const historyPath = path.join(dataDir, 'history/profile-c-daily-records.json');
+      const historyData = JSON.parse(readFileSync(historyPath, 'utf-8'));
+      const today = new Date().toISOString().slice(0, 10);
+      const todayRecord = historyData.records.find((r: { date: string }) => r.date === today);
+      expect(todayRecord).toBeDefined();
+      expect(todayRecord.sleep.totalMinutes).toBe(targetSleep);
+
+      // 恢复
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/profiles/profile-c/reset',
+      });
     });
   });
 

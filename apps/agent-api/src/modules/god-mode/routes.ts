@@ -253,7 +253,7 @@ export async function godModeRoutes(app: FastifyInstance) {
       }
 
       try {
-        const result = service.updateProfile(request.params.profileId, parsed.data as UpdateProfilePayload);
+        const result = service.updateProfile(request.params.profileId, parsed.data as UpdateProfilePayload, request.ctx?.sessionId);
         invalidateBriefCache();
         return createSuccessResponse(result, buildMeta(request));
       } catch (error) {
@@ -325,7 +325,7 @@ export async function godModeRoutes(app: FastifyInstance) {
     '/god-mode/profiles/:profileId/reset',
     async (request, reply) => {
       try {
-        const result = service.resetProfile(request.params.profileId);
+        const result = service.resetProfile(request.params.profileId, request.ctx?.sessionId);
         invalidateBriefCache();
         return createSuccessResponse(result, buildMeta(request));
       } catch (error) {

@@ -12,7 +12,7 @@
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { generateTimelineScript } from '../packages/sandbox/src/generators/timeline-script';
+import { generateTimelineScript, deriveSleepConfig } from '../packages/sandbox/src/generators/timeline-script';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, 'sandbox');
@@ -26,6 +26,9 @@ interface SlimProfile {
       spo2: number;
       avgSleepMinutes: number;
       avgSteps: number;
+    };
+    dailyBaseline?: {
+      avgSleepMinutes?: number;
     };
   };
   initialDemoTime: string;
@@ -89,7 +92,14 @@ function main(): void {
     const offset = DEMO_TIME_OFFSETS[profileId] ?? { hour: 7, min: 0 };
     const initialDemoTime = `${date}T${String(offset.hour).padStart(2, '0')}:${String(offset.min).padStart(2, '0')}`;
 
-    const script = generateTimelineScript(profileId, date, initialDemoTime);
+    // 从 profile 文件读取实际 avgSleepMinutes
+    const profilePath = join(DATA_DIR, 'profiles', `${profileId}.json`);
+    const profileJson = existsSync(profilePath) ? readJson<SlimProfile>(profilePath) : undefined;
+    const avgSleepMinutes = profileJson?.profile?.dailyBaseline?.avgSleepMinutes
+      ?? profileJson?.profile.baseline.avgSleepMinutes
+      ?? 420;
+    const sleepConfig = deriveSleepConfig(avgSleepMinutes, { hour: offset.hour, min: offset.min });
+    const script = generateTimelineScript(profileId, date, initialDemoTime, sleepConfig);
     const outputPath = join(outputDir, `${profileId}-day-1.json`);
     writeFileSync(outputPath, JSON.stringify(script, null, 2) + '\n', 'utf-8');
     console.log(`[ok] ${profileId}: ${script.segments.length} segments -> ${outputPath}`);

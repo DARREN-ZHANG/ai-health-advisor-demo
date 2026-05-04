@@ -26,6 +26,16 @@ export interface ProfileManagerDeps {
   reloadProfiles: () => void;
 }
 
+/** 从 initialDemoTime "YYYY-MM-DDTHH:mm" 提取 { hour, min } */
+function parseWakeTime(initialDemoTime: string): { hour: number; min: number } {
+  const timePart = initialDemoTime.split('T')[1];
+  if (timePart) {
+    const [h, m] = timePart.split(':');
+    return { hour: parseInt(h!, 10), min: parseInt(m!, 10) };
+  }
+  return { hour: 6, min: 0 };
+}
+
 export class ProfileManager {
   private originalSnapshots = new Map<string, string>();
 
@@ -92,6 +102,7 @@ export class ProfileManager {
   private patchRecordWithDailyBaseline(
     record: DailyRecord,
     dailyBaseline: Partial<BaselineMetrics>,
+    demoTime?: string,
   ): void {
     // 睡眠：精确覆盖 totalMinutes 并按比例重算 stages 和时间窗口
     if (dailyBaseline.avgSleepMinutes != null && record.sleep) {
@@ -103,9 +114,17 @@ export class ProfileManager {
       const awake = Math.max(1, Math.round(record.sleep.stages.awake * ratio));
       const light = Math.max(0, exact - deep - rem - awake);
 
-      // 重算睡眠时间窗口
-      const wakeHour = 6;
-      const wakeMin = exact >= 400 ? 10 : exact >= 280 ? 5 : 0;
+      // 从 demoTime 推导起床时间
+      let wakeHour = 6;
+      let wakeMin = 0;
+      if (demoTime) {
+        const timePart = demoTime.split('T')[1];
+        if (timePart) {
+          const [h, m] = timePart.split(':');
+          wakeHour = parseInt(h!, 10);
+          wakeMin = parseInt(m!, 10);
+        }
+      }
       const wakeTotalMin = wakeHour * 60 + wakeMin;
       let bedTotalMin = wakeTotalMin - exact;
       if (bedTotalMin < 0) bedTotalMin += 24 * 60;
@@ -252,7 +271,7 @@ export class ProfileManager {
         writeHistoryFile(this.deps.dataDir, profileFile.historyRef.file, history);
 
         // 重生成 timeline script
-        const sleepConfig = deriveSleepConfig(validated.data.baseline.avgSleepMinutes);
+        const sleepConfig = deriveSleepConfig(validated.data.baseline.avgSleepMinutes, parseWakeTime(profileFile.initialDemoTime));
         const script = generateTimelineScript(
           profileId,
           endDate,
@@ -297,6 +316,7 @@ export class ProfileManager {
           this.patchRecordWithDailyBaseline(
             newHistory.records[newHistory.records.length - 1]!,
             validated.data.dailyBaseline!,
+            profileFile.initialDemoTime,
           );
         }
 
@@ -310,7 +330,7 @@ export class ProfileManager {
         });
 
         // 重生成 timeline script
-        const sleepConfig = deriveSleepConfig(mergedBaseline.avgSleepMinutes);
+        const sleepConfig = deriveSleepConfig(mergedBaseline.avgSleepMinutes, parseWakeTime(profileFile.initialDemoTime));
         const script = generateTimelineScript(
           profileId,
           endDate,
@@ -390,7 +410,7 @@ export class ProfileManager {
     writeHistoryFile(this.deps.dataDir, newFile.historyRef.file, history);
 
     // 生成 timeline script
-    const sleepConfig = deriveSleepConfig(validated.baseline.avgSleepMinutes);
+    const sleepConfig = deriveSleepConfig(validated.baseline.avgSleepMinutes, parseWakeTime(newFile.initialDemoTime));
     const script = generateTimelineScript(
       newProfileId,
       endDate,
@@ -499,7 +519,7 @@ export class ProfileManager {
     writeHistoryFile(this.deps.dataDir, originalFile.historyRef.file, history);
 
     // 重生成 timeline script
-    const sleepConfig = deriveSleepConfig(originalProfile.baseline.avgSleepMinutes);
+    const sleepConfig = deriveSleepConfig(originalProfile.baseline.avgSleepMinutes, parseWakeTime(originalFile.initialDemoTime));
     const script = generateTimelineScript(
       profileId,
       endDate,

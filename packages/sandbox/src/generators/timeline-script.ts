@@ -89,13 +89,14 @@ export function generateTimelineScript(
   };
 }
 
-/** 根据日均睡眠分钟数推导睡眠时间配置 */
-export function deriveSleepConfig(avgSleepMinutes: number): SleepConfig {
-  if (avgSleepMinutes >= 420) {
-    return { bedHour: 22, bedMin: 30, wakeHour: 6, wakeMin: 0 };
-  } else if (avgSleepMinutes >= 300) {
-    return { bedHour: 0, bedMin: 0, wakeHour: 6, wakeMin: 0 };
-  } else {
-    return { bedHour: 1, bedMin: 30, wakeHour: 6, wakeMin: 0 };
-  }
+/** 根据日均睡眠分钟数推导睡眠时间配置，保留精确时长 */
+export function deriveSleepConfig(avgSleepMinutes: number, wakeTime?: { hour: number; min: number }): SleepConfig {
+  const wakeHour = wakeTime?.hour ?? 6;
+  const wakeMin = wakeTime?.min ?? 0;
+  const wakeTotalMin = wakeHour * 60 + wakeMin;
+  let bedTotalMin = wakeTotalMin - avgSleepMinutes;
+  if (bedTotalMin < 0) bedTotalMin += 24 * 60;
+  const bedHour = Math.floor(bedTotalMin / 60) % 24;
+  const bedMin = bedTotalMin % 60;
+  return { bedHour, bedMin, wakeHour, wakeMin };
 }

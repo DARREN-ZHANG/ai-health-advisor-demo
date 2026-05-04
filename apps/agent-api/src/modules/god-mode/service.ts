@@ -9,6 +9,7 @@ import {
   generateHistory,
   PROFILE_CONFIGS,
   generateTimelineScript,
+  deriveSleepConfig,
 } from '@health-advisor/sandbox';
 import type {
   ActiveSensingState,
@@ -247,8 +248,12 @@ export class GodModeService {
       profileData.initialDemoTime = initialDemoTime;
       writeFileSync(profilePath, JSON.stringify(profileData, null, 2) + '\n', 'utf-8');
 
-      // 3. 生成并写入 timeline script
-      const script = generateTimelineScript(entry.profileId, endDate, initialDemoTime);
+      // 3. 生成并写入 timeline script（使用 profile 实际的 avgSleepMinutes 和 demo 时间偏移）
+      const avgSleepMinutes = profileData.profile?.dailyBaseline?.avgSleepMinutes
+        ?? profileData.profile?.baseline?.avgSleepMinutes
+        ?? config.baseline.avgSleepMinutes;
+      const sleepConfig = deriveSleepConfig(avgSleepMinutes, { hour: offset.hour, min: offset.min });
+      const script = generateTimelineScript(entry.profileId, endDate, initialDemoTime, sleepConfig);
       const scriptPath = join(dataDir, 'timeline-scripts', `${entry.profileId}-day-1.json`);
       writeFileSync(scriptPath, JSON.stringify(script, null, 2) + '\n', 'utf-8');
     }
@@ -297,8 +302,19 @@ export class GodModeService {
   }
 
   /** 更新 profile 字段（局部更新） */
-  updateProfile(profileId: string, changes: UpdateProfilePayload) {
-    return this.registry.profileManager.updateProfile(profileId, changes);
+  updateProfile(profileId: string, changes: UpdateProfilePayload, sessionId?: string) {
+    const result = this.registry.profileManager.updateProfile(profileId, changes);
+
+    // baseline 变更后 timeline script 已重新写入磁盘，但 override store 的
+    // demo state 仍持有旧的 synced events，导致 LLM 通过 recognizeEvents
+    // 读到过期数据。需要重置 timeline 并重新同步。
+    if (result.regenerated) {
+      this.registry.overrideStore.resetProfileTimeline(profileId);
+      this.registry.overrideStore.performSync(profileId, 'manual_refresh');
+    }
+
+    this.invalidateSessionAnalytical(sessionId);
+    return result;
   }
 
   /** 克隆创建新 profile */
@@ -323,8 +339,15 @@ export class GodModeService {
   }
 
   /** 恢复 profile 到原始模板 */
-  resetProfile(profileId: string) {
-    return this.registry.profileManager.resetProfile(profileId);
+  resetProfile(profileId: string, sessionId?: string) {
+    const result = this.registry.profileManager.resetProfile(profileId);
+
+    // resetProfile 重写了 timeline script，需要同步重置 override store 的 demo state
+    this.registry.overrideStore.resetProfileTimeline(profileId);
+    this.registry.overrideStore.performSync(profileId, 'manual_refresh');
+
+    this.invalidateSessionAnalytical(sessionId);
+    return result;
   }
 
   /** 数据变更后失效 session 的 analytical memory，防止 AI 请求用过期上下文 */

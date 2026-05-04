@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import type { ProfileData } from '@health-advisor/shared';
+import type { ProfileData, BaselineMetrics, DailyRecord } from '@health-advisor/shared';
 import type { AgentRuntimeDeps } from '@health-advisor/agent-core';
 import type { TimelineSyncContext } from '@health-advisor/agent-core';
 import {
@@ -28,6 +28,69 @@ import { createOverrideStore, type OverrideStoreService } from './override-store
 
 import { ProfileManager } from '../modules/god-mode/profile-manager.js';
 import type { MetricsStore } from '../plugins/metrics.js';
+
+/**
+ * 用 dailyBaseline 精确值覆盖记录中的抖动数据。
+ * 确保 demo 模式下聚合记录与用户设置的 dailyBaseline 完全一致。
+ */
+function patchRecordWithDailyBaseline(
+  record: DailyRecord,
+  dailyBaseline: Partial<BaselineMetrics>,
+  demoTime?: string,
+): DailyRecord {
+  const patched = { ...record };
+
+  // 睡眠：精确覆盖 totalMinutes 并按比例重算 stages 和时间窗口
+  if (dailyBaseline.avgSleepMinutes != null && record.sleep) {
+    const exact = dailyBaseline.avgSleepMinutes;
+    const old = record.sleep.totalMinutes || exact;
+    const ratio = old > 0 ? exact / old : 1;
+    const deep = Math.round(record.sleep.stages.deep * ratio);
+    const rem = Math.round(record.sleep.stages.rem * ratio);
+    const awake = Math.max(1, Math.round(record.sleep.stages.awake * ratio));
+    const light = Math.max(0, exact - deep - rem - awake);
+
+    // 从 demoTime 推导起床时间
+    let wakeHour = 6;
+    let wakeMin = 0;
+    if (demoTime) {
+      const timePart = demoTime.split('T')[1];
+      if (timePart) {
+        const [h, m] = timePart.split(':');
+        wakeHour = parseInt(h!, 10);
+        wakeMin = parseInt(m!, 10);
+      }
+    }
+    const wakeTotalMin = wakeHour * 60 + wakeMin;
+    let bedTotalMin = wakeTotalMin - exact;
+    if (bedTotalMin < 0) bedTotalMin += 24 * 60;
+
+    patched.sleep = {
+      ...record.sleep,
+      totalMinutes: exact,
+      stages: { deep, light, rem, awake },
+      score: Math.max(5, Math.min(98, Math.round((exact / 480) * 90))),
+      startTime: `${String(Math.floor(bedTotalMin / 60) % 24).padStart(2, '0')}:${String(bedTotalMin % 60).padStart(2, '0')}`,
+      endTime: `${String(wakeHour).padStart(2, '0')}:${String(wakeMin).padStart(2, '0')}`,
+    };
+  }
+
+  if (dailyBaseline.hrv != null) patched.hrv = dailyBaseline.hrv;
+
+  if (dailyBaseline.restingHr != null && record.hr && record.hr.length >= 2) {
+    const oldResting = record.hr[1]!;
+    const delta = dailyBaseline.restingHr - oldResting;
+    patched.hr = record.hr.map((v) => Math.round(v + delta));
+  }
+
+  if (dailyBaseline.spo2 != null) patched.spo2 = dailyBaseline.spo2;
+
+  if (dailyBaseline.avgSteps != null && record.activity) {
+    patched.activity = { ...record.activity, steps: dailyBaseline.avgSteps };
+  }
+
+  return patched;
+}
 
 export interface RuntimeRegistry extends AgentRuntimeDeps {
   config: AppConfig;
@@ -109,7 +172,12 @@ export function createRuntimeRegistry(
     const syncedEvents = overrideStore.getSyncedEvents(profileId);
     if (syncedEvents.length > 0) {
       const aggregatedRecord = aggregateCurrentDayRecord(syncedEvents, clock.currentTime);
-      const currentDayRecord = mergeCurrentDayRecord(historicalCurrentDay, aggregatedRecord);
+      let currentDayRecord = mergeCurrentDayRecord(historicalCurrentDay, aggregatedRecord);
+
+      // 用 dailyBaseline 精确值覆盖聚合数据中的抖动/偏差
+      if (raw.profile.dailyBaseline) {
+        currentDayRecord = patchRecordWithDailyBaseline(currentDayRecord, raw.profile.dailyBaseline, clock.currentTime);
+      }
 
       return { ...raw, records: [...historicalRecords, currentDayRecord] };
     }
