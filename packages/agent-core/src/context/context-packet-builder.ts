@@ -332,6 +332,7 @@ function buildLatest24hPacket(
     const evidenceId = `latest24h_${metric}_${date}`;
     let status: Latest24hMetric['status'] = 'normal';
     let deltaPctVsBaseline: number | undefined;
+    let clinicalNote: string | undefined;
 
     if (value === undefined) {
       status = 'missing';
@@ -339,6 +340,22 @@ function buildLatest24hPacket(
       deltaPctVsBaseline = Math.round(((value - baseline) / baseline) * 100);
       if (Math.abs(deltaPctVsBaseline) > 20) {
         status = 'attention';
+      }
+    }
+
+    // SpO2 绝对临床阈值判定（覆盖相对偏差逻辑）
+    // 依据：Wikipedia Oxygen saturation / Hypoxemia
+    // 正常 96-100%，应 ≥94%；<90% 为低氧血症；<80% 可能损害器官功能
+    if (metric === 'spo2' && value !== undefined) {
+      if (value < 85) {
+        status = 'critical';
+        clinicalNote = '严重低氧血症，可能危及器官功能，建议立即就医';
+      } else if (value < 90) {
+        status = 'critical';
+        clinicalNote = '低氧血症，建议尽快就医';
+      } else if (value < 95) {
+        status = 'attention';
+        clinicalNote = '血氧偏低，需关注';
       }
     }
 
@@ -361,6 +378,7 @@ function buildLatest24hPacket(
       baseline,
       deltaPctVsBaseline,
       status,
+      clinicalNote,
       evidenceId: value !== undefined ? evidenceId : undefined,
     });
   };

@@ -199,7 +199,9 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string
     if (m.status === 'missing') {
       lines.push(`- ${m.metric}${c}${t(locale, '数据缺失', 'data missing')}`);
     } else if (isHomepageInterpretationOnlyMetric(m.metric)) {
-      lines.push(`- ${m.metric}${c}${formatLatest24hStatus(m.status, locale)}，${t(locale, '用于解读状态与建议，不输出具体数值或参考关系', 'for status interpretation and recommendations only; do not output specific values or reference relationships')}`);
+      const statusText = formatLatest24hStatus(m.status, locale);
+      const noteSuffix = m.clinicalNote ? `（${m.clinicalNote}）` : '';
+      lines.push(`- ${m.metric}${c}${statusText}${noteSuffix}，${t(locale, '用于解读状态与建议，不输出具体数值或参考关系', 'for status interpretation and recommendations only; do not output specific values or reference relationships')}`);
     } else {
       const parts: string[] = [`- ${m.metric}${c}${m.value}${m.unit}`];
       if (m.baseline !== undefined && m.deltaPctVsBaseline !== undefined) {
@@ -207,6 +209,7 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string
         parts.push(`（${t(locale, '相对平时', 'vs usual')} ${sign}${m.deltaPctVsBaseline}%）`);
       }
       if (m.status === 'attention') parts.push(`[${t(locale, '注意', 'attention')}]`);
+      if (m.status === 'critical') parts.push(`[${t(locale, '异常', 'critical')}${m.clinicalNote ? `: ${m.clinicalNote}` : ''}]`);
       lines.push(parts.join(''));
     }
   }
@@ -392,8 +395,10 @@ function isHomepageInterpretationOnlyMetric(metric?: string): boolean {
   return metric !== undefined && HOMEPAGE_INTERPRETATION_ONLY_METRICS.has(metric);
 }
 
-function formatLatest24hStatus(status: 'normal' | 'attention' | 'missing', locale: Locale): string {
+function formatLatest24hStatus(status: 'normal' | 'attention' | 'critical' | 'missing', locale: Locale): string {
   switch (status) {
+    case 'critical':
+      return t(locale, '异常', 'critical');
     case 'attention':
       return t(locale, '需要关注', 'attention needed');
     case 'missing':

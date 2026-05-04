@@ -133,7 +133,9 @@ export interface Latest24hMetric {
   unit: string;
   baseline?: number;
   deltaPctVsBaseline?: number;
-  status: 'normal' | 'attention' | 'missing';
+  status: 'normal' | 'attention' | 'critical' | 'missing';
+  /** 临床严重程度说明（如 SpO2 绝对阈值触发的分级描述） */
+  clinicalNote?: string;
   evidenceId?: string;
 }
 

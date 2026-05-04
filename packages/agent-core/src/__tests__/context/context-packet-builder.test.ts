@@ -412,4 +412,95 @@ describe('buildTaskContextPacket', () => {
     );
     expect(hasEvidence).toBe(true);
   });
+
+  describe('SpO2 绝对临床阈值', () => {
+    it('SpO2 ≥ 95% 为 normal', () => {
+      const ctx = makeContext({
+        dataWindow: {
+          start: '2026-04-10',
+          end: '2026-04-10',
+          records: [makeRecord('2026-04-10', { spo2: 97 })],
+          missingFields: [],
+        },
+      });
+      const packet = buildTaskContextPacket(ctx, emptyRules);
+      const spo2Metric = packet.homepage!.latest24h.metrics.find((m) => m.metric === 'spo2');
+      expect(spo2Metric).toBeDefined();
+      expect(spo2Metric!.status).toBe('normal');
+      expect(spo2Metric!.clinicalNote).toBeUndefined();
+    });
+
+    it('SpO2 90-94% 为 attention', () => {
+      const ctx = makeContext({
+        dataWindow: {
+          start: '2026-04-10',
+          end: '2026-04-10',
+          records: [makeRecord('2026-04-10', { spo2: 92 })],
+          missingFields: [],
+        },
+      });
+      const packet = buildTaskContextPacket(ctx, emptyRules);
+      const spo2Metric = packet.homepage!.latest24h.metrics.find((m) => m.metric === 'spo2');
+      expect(spo2Metric).toBeDefined();
+      expect(spo2Metric!.status).toBe('attention');
+      expect(spo2Metric!.clinicalNote).toContain('偏低');
+    });
+
+    it('SpO2 85-89% 为 critical（低氧血症）', () => {
+      const ctx = makeContext({
+        dataWindow: {
+          start: '2026-04-10',
+          end: '2026-04-10',
+          records: [makeRecord('2026-04-10', { spo2: 85 })],
+          missingFields: [],
+        },
+      });
+      const packet = buildTaskContextPacket(ctx, emptyRules);
+      const spo2Metric = packet.homepage!.latest24h.metrics.find((m) => m.metric === 'spo2');
+      expect(spo2Metric).toBeDefined();
+      expect(spo2Metric!.status).toBe('critical');
+      expect(spo2Metric!.clinicalNote).toContain('低氧血症');
+    });
+
+    it('SpO2 < 85% 为 critical（严重低氧血症）', () => {
+      const ctx = makeContext({
+        dataWindow: {
+          start: '2026-04-10',
+          end: '2026-04-10',
+          records: [makeRecord('2026-04-10', { spo2: 78 })],
+          missingFields: [],
+        },
+      });
+      const packet = buildTaskContextPacket(ctx, emptyRules);
+      const spo2Metric = packet.homepage!.latest24h.metrics.find((m) => m.metric === 'spo2');
+      expect(spo2Metric).toBeDefined();
+      expect(spo2Metric!.status).toBe('critical');
+      expect(spo2Metric!.clinicalNote).toContain('严重低氧血症');
+    });
+
+    it('SpO2 85% 即使 baseline 也是 85%，状态仍为 critical（非 normal）', () => {
+      // 这是原始 bug 的复现：dailyBaseline.spo2 = 85 时 baseline = value = 85
+      const ctx = makeContext({
+        profile: {
+          profileId: 'profile-a',
+          name: '张健康',
+          age: 32,
+          tags: [],
+          baselines: { restingHR: 62, hrv: 58, spo2: 85, avgSleepMinutes: 420, avgSteps: 8500 },
+        },
+        dataWindow: {
+          start: '2026-04-10',
+          end: '2026-04-10',
+          records: [makeRecord('2026-04-10', { spo2: 85 })],
+          missingFields: [],
+        },
+      });
+      const packet = buildTaskContextPacket(ctx, emptyRules);
+      const spo2Metric = packet.homepage!.latest24h.metrics.find((m) => m.metric === 'spo2');
+      expect(spo2Metric).toBeDefined();
+      // 绝对阈值应覆盖相对偏差逻辑（deviation = 0%，但 SpO2=85 < 90）
+      expect(spo2Metric!.status).toBe('critical');
+      expect(spo2Metric!.clinicalNote).toContain('低氧血症');
+    });
+  });
 });
