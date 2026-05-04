@@ -24,13 +24,20 @@
     ],
     "baseline": {
       "restingHr": 78,
-      "hrv": 15,
+      "hrv": 75,
       "spo2": 97,
       "avgSleepMinutes": 330,
       "avgSteps": 4000
+    },
+    "dailyBaseline": {
+      "avgSleepMinutes": 600,
+      "hrv": 35,
+      "spo2": 85,
+      "avgSteps": 2000,
+      "restingHr": 45
     }
   },
-  "initialDemoTime": "2026-05-03T06:45",
+  "initialDemoTime": "2026-05-04T06:45",
   "historyRef": {
     "file": "history/profile-c-daily-records.json"
   },
