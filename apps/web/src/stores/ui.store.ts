@@ -9,11 +9,9 @@ export interface Toast {
 
 interface UIState {
   isAdvisorDrawerOpen: boolean;
-  isGodModePanelOpen: boolean;
   activeDrawer: string | null;
   toasts: Toast[];
   toggleAdvisorDrawer: (open?: boolean) => void;
-  toggleGodModePanel: (open?: boolean) => void;
   openDrawer: (id: string) => void;
   closeDrawer: () => void;
   showToast: (message: string, type?: Toast['type'], duration?: number) => void;
@@ -22,16 +20,11 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   isAdvisorDrawerOpen: false,
-  isGodModePanelOpen: false,
   activeDrawer: null,
   toasts: [],
   toggleAdvisorDrawer: (open) =>
     set((state) => ({
       isAdvisorDrawerOpen: open ?? !state.isAdvisorDrawerOpen,
-    })),
-  toggleGodModePanel: (open) =>
-    set((state) => ({
-      isGodModePanelOpen: open ?? !state.isGodModePanelOpen,
     })),
   openDrawer: (id) => set({ activeDrawer: id }),
   closeDrawer: () => set({ activeDrawer: null }),

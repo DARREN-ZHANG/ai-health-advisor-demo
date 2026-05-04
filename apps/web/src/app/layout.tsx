@@ -5,7 +5,6 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { ToastContainer } from '@/components/layout/ToastContainer';
 import { AIAdvisorTrigger } from '@/components/advisor/AIAdvisorTrigger';
 import { AIAdvisorDrawer } from '@/components/advisor/AIAdvisorDrawer';
-import { GodModePanel } from '@/components/god-mode/GodModePanel';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -26,7 +25,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <BottomNav />
             <AIAdvisorTrigger />
             <AIAdvisorDrawer />
-            <GodModePanel />
             <ToastContainer />
           </div>
         </Providers>

@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Container, Button } from '@health-advisor/ui';
-import { useGodModeStore } from '@/stores/god-mode.store';
+import { Container } from '@health-advisor/ui';
 import { HeartIcon } from '@heroicons/react/24/solid';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
@@ -16,8 +15,6 @@ const NAV_KEYS = [
 export function Navbar() {
   const pathname = usePathname();
   const t = useTranslations('nav');
-  const { isEnabled, toggleOpen } = useGodModeStore();
-
   return (
     <nav className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
       <Container className="h-14 flex items-center justify-between">
@@ -47,15 +44,6 @@ export function Navbar() {
 
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
-          {isEnabled && (
-            <Button
-              variant="ghost"
-              onClick={() => toggleOpen()}
-              className="text-xs text-yellow-500/60 hover:text-yellow-500 hover:bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 h-auto"
-            >
-              GOD MODE
-            </Button>
-          )}
         </div>
       </Container>
     </nav>
