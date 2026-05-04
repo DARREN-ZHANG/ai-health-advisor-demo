@@ -2,56 +2,54 @@ import { expect, test } from '@playwright/test';
 
 test.describe('God-Mode E2E', () => {
   test.beforeEach(async ({ page }) => {
-    // 假设默认开启 GOD MODE 以便测试
     await page.goto('/');
   });
 
-  test('should open God-Mode panel and switch profile', async ({ page }) => {
-    // 1. 检查 Navbar 中是否存在 GOD MODE 按钮并点击
-    const godModeBtn = page.getByRole('button', { name: 'GOD MODE' });
-    if (!(await godModeBtn.isVisible())) {
+  test('should switch profile from homepage config area', async ({ page }) => {
+    // 1. 检查首页是否存在 Profile Switch 区域
+    const profileSection = page.getByRole('button', { name: /用户 B/ });
+    if (!(await profileSection.isVisible().catch(() => false))) {
       test.skip(true, 'God-Mode is not enabled in this environment');
       return;
     }
-    await godModeBtn.click();
 
-    // 2. 检查面板是否打开
-    await expect(page.getByText('GOD MODE ADMIN')).toBeVisible();
+    // 2. 点击切换 Profile (切换到 Profile B)
+    await profileSection.click();
 
-    // 3. 点击切换 Profile (切换到 Profile B)
-    const profileBtn = page.getByRole('button', { name: '🏃 用户 B (运动型)' });
-    await expect(profileBtn).toBeVisible();
-    await profileBtn.click();
+    // 3. 检查按钮是否呈现选中状态
+    await expect(profileSection).toHaveClass(/bg-blue-600/);
 
-    // 4. 检查按钮是否呈现选中状态 (通过 class 检查)
-    // 实际项目中可能通过文字内容或 ID 检查更稳健
-    await expect(profileBtn).toHaveClass(/bg-blue-600/);
-
-    // 5. 检查首页数据是否触发刷新 (isAnyLoading 状态)
-    // 因为是 Mock 或 Dev 环境，可能很快，但我们至少能看到页面内容依然存在
-    await expect(page.getByText('实时简报')).toBeVisible();
+    // 4. 检查首页数据是否触发刷新
+    await expect(page.getByText('实时简报').or(page.getByText('Live Briefing'))).toBeVisible();
   });
 
-  test('should inject sport event and show active sensing banner', async ({ page }) => {
-    await page.getByRole('button', { name: 'GOD MODE' }).click();
+  test('should append timeline segment and show active sensing banner', async ({ page }) => {
+    // 移动端需要先打开配置抽屉；桌面端直接可见
+    const configButton = page.getByRole('button', { name: 'Config' }).or(page.getByLabel('Config'));
+    if (await configButton.isVisible().catch(() => false)) {
+      await configButton.click();
+    }
 
-    // 点击注入运动事件
-    const injectBtn = page.getByRole('button', { name: '⚡ 注入即时运动事件' });
-    await expect(injectBtn).toBeVisible();
-    await injectBtn.click();
+    // 点击追加运动片段
+    const cardioBtn = page.getByRole('button', { name: '🏃' });
+    await expect(cardioBtn).toBeVisible();
+    await cardioBtn.click();
 
     // 检查 Active Sensing 横幅是否出现
     await expect(page.getByText('AI Proactive Insight')).toBeVisible();
   });
 
-  test('should reset all overrides', async ({ page }) => {
-    await page.getByRole('button', { name: 'GOD MODE' }).click();
+  test('should reset timeline from homepage config area', async ({ page }) => {
+    const configButton = page.getByRole('button', { name: 'Config' }).or(page.getByLabel('Config'));
+    if (await configButton.isVisible().catch(() => false)) {
+      await configButton.click();
+    }
 
-    const resetBtn = page.getByRole('button', { name: '🧪 重置所有 Overrides' });
+    const resetBtn = page.getByRole('button', { name: /reset/i });
     await expect(resetBtn).toBeVisible();
     await resetBtn.click();
 
-    // 检查重置后状态 (这里比较难直接观察，除非有 toast 提示)
-    // 如果实现了 toast，可以检查 toast 内容
+    // 重置后页面应仍然正常
+    await expect(page.getByText('实时简报').or(page.getByText('Live Briefing'))).toBeVisible();
   });
 });

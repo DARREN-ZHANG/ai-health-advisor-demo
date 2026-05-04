@@ -59,7 +59,9 @@
     "sourceFallback": "Running in offline limited mode",
     "sourceLLM": "Smart Health Advisor",
     "manualRefresh": "Refresh",
-    "refreshing": "Refreshing..."
+    "refreshing": "Refreshing...",
+    "openConfig": "Config",
+    "configTitle": "Configuration"
   },
   "dataCenter": {
     "overview": "Overview",
@@ -155,10 +157,7 @@
     "neverSynced": "Never synced",
     "sync": "Sync",
     "reset": "Reset",
-    "calibrating": "Calibrating...",
-    "calibrateData": "Calibrate Demo Data",
-    "calibrateConfirm": "Will use {today} as the demo day and regenerate demo data from {start} to {today}.\n\nThis will overwrite all history and timeline scripts. Continue?",
-    "hint": "Hint: God Mode operations will trigger full-pipeline data revalidation in real time.",
+    "hint": "Hint: Timeline Control operations will trigger full-pipeline data revalidation in real time.",
     "segments": {
       "mealIntake": "Meal",
       "steadyCardio": "Cardio",
@@ -201,7 +200,9 @@
       "resetConfirm": "Reset Profile \"{name}\" to default? History data will be regenerated.",
       "newProfileIdPlaceholder": "New Profile ID (lowercase letters/numbers/hyphens)",
       "newProfileNamePlaceholder": "Name (optional)",
-      "creating": "Creating..."
+      "creating": "Creating...",
+      "applyChanges": "Apply Changes",
+      "applying": "Applying..."
     }
   },
   "errors": {

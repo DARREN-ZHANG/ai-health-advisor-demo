@@ -59,7 +59,9 @@
     "sourceFallback": "运行在离线受限模式",
     "sourceLLM": "智能健康顾问",
     "manualRefresh": "手动刷新",
-    "refreshing": "正在刷新..."
+    "refreshing": "正在刷新...",
+    "openConfig": "配置",
+    "configTitle": "配置面板"
   },
   "dataCenter": {
     "overview": "概览",
@@ -155,10 +157,7 @@
     "neverSynced": "未同步",
     "sync": "同步",
     "reset": "重置",
-    "calibrating": "校准中...",
-    "calibrateData": "校准演示数据",
-    "calibrateConfirm": "将以 {today} 为演示日，重新生成 {start} ~ {today} 的演示数据。\n\n此操作会覆盖所有历史记录和时间轴脚本，是否继续？",
-    "hint": "提示：God Mode 操作会实时触发全链路数据重验证。",
+    "hint": "提示：Timeline Control 操作会实时触发全链路数据重验证。",
     "segments": {
       "mealIntake": "进餐",
       "steadyCardio": "有氧",
@@ -201,7 +200,9 @@
       "resetConfirm": "确定恢复 Profile「{name}」到默认状态？将重新生成历史数据。",
       "newProfileIdPlaceholder": "新 Profile ID（小写字母/数字/连字符）",
       "newProfileNamePlaceholder": "名称（可选）",
-      "creating": "创建中..."
+      "creating": "创建中...",
+      "applyChanges": "应用修改",
+      "applying": "应用中..."
     }
   },
   "errors": {
