@@ -28,6 +28,9 @@
       "spo2": 99,
       "avgSleepMinutes": 465,
       "avgSteps": 12000
+    },
+    "dailyBaseline": {
+      "avgSleepMinutes": 600
     }
   },
   "initialDemoTime": "2026-05-04T07:05",

@@ -30,11 +30,11 @@
       "avgSteps": 4000
     },
     "dailyBaseline": {
-      "avgSleepMinutes": 600,
-      "hrv": 35,
-      "spo2": 85,
+      "avgSleepMinutes": 300,
+      "hrv": 64,
+      "spo2": 98,
       "avgSteps": 2000,
-      "restingHr": 45
+      "restingHr": 70
     }
   },
   "initialDemoTime": "2026-05-04T06:45",
