@@ -3,6 +3,8 @@ import type { AgentResponseEnvelope } from '@health-advisor/shared';
 import type { AgentContext } from '../types/agent-context';
 import type { RuleEvaluationResult } from '../rules/types';
 import type { TaskContextPacket } from '../context/context-packet';
+import type { VerificationReport } from '../output/verification-report';
+import type { ReflectionArtifact } from '../output/reflection-types';
 
 // ── 枚举类型 ──────────────────────────────────────────
 
@@ -213,6 +215,10 @@ export interface EvalArtifacts {
   envelope?: AgentResponseEnvelope;
   parseError?: string;
   thrownError?: string;
+  /** P0: verifier 产出的验证报告 */
+  verificationReport?: VerificationReport;
+  /** P0: async reflection 产出的审核工件 */
+  reflectionArtifact?: ReflectionArtifact;
 }
 
 export interface EvalCaseResult {

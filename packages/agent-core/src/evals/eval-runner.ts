@@ -181,6 +181,12 @@ function createArtifactObserver(evalCase: AgentEvalCase): {
     onFallback() {
       // fallback 事件记录，不影响 artifacts
     },
+    onVerified(report) {
+      artifacts.verificationReport = report;
+    },
+    onReflected(artifact) {
+      artifacts.reflectionArtifact = artifact;
+    },
   };
 
   return {

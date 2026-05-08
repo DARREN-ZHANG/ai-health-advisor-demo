@@ -19,6 +19,11 @@ import { withTimeout, TimeoutError } from './timeout-controller';
 import { AGENT_SLA_TIMEOUT_MS } from '../constants/limits';
 import { buildTaskContextPacket } from '../context/context-packet-builder';
 import type { TaskContextPacket } from '../context/context-packet';
+import { verifyOutput } from '../output/verifier';
+import type { VerifierInput } from '../output/verifier';
+import type { VerificationReport } from '../output/verification-report';
+import { ReflectionObserver } from '../output/reflection-observer';
+import type { ReflectionArtifact } from '../output/reflection-types';
 
 export interface AgentRuntimeDeps extends ContextBuilderDeps {
   agent: HealthAgent;
@@ -26,6 +31,8 @@ export interface AgentRuntimeDeps extends ContextBuilderDeps {
   fallbackEngine: FallbackEngine;
   /** 可选的参考日期，用于固定 eval 数据窗口（格式：YYYY-MM-DD） */
   referenceDate?: string;
+  /** P0 新增：异步 reflection observer（可选） */
+  reflectionObserver?: ReflectionObserver;
 }
 
 /**
@@ -40,6 +47,10 @@ export interface AgentRuntimeObserver {
   onModelOutput?(raw: string): void;
   onParsed?(envelope: AgentResponseEnvelope): void;
   onFallback?(reason: 'low_data' | 'invalid_output' | 'timeout' | 'provider_error'): void;
+  /** P0 新增：确定性验证完成后触发 */
+  onVerified?(report: VerificationReport): void;
+  /** P0 新增：异步 reflection 完成后触发 */
+  onReflected?(artifact: ReflectionArtifact): void;
 }
 
 /**
@@ -151,6 +162,41 @@ export async function executeAgent(
 
     // 11. 写回 analytical memory
     writeAnalyticalMemory(deps, request, context, result.summary, rulesResult);
+
+    // P0: 确定性验证（同步，不阻断输出，但产生观测 artifact）
+    const verifierInput: VerifierInput = {
+      envelope: result,
+      context,
+      rulesResult,
+      packet,
+      parseResult: { success: true },
+    };
+    const verificationReport = verifyOutput(verifierInput);
+    tryNotify(() => observer?.onVerified?.(verificationReport));
+
+    // P0: 异步 reflection（不阻断，后台执行）
+    if (deps.reflectionObserver) {
+      deps.reflectionObserver.observeAsync({
+        envelope: result,
+        report: verificationReport,
+        context: {
+          task: { type: context.task.type, userMessage: context.task.userMessage },
+          dataWindow: { missingFields: context.dataWindow.missingFields },
+          signals: { overallStatus: context.signals.overallStatus, anomalies: context.signals.anomalies },
+        },
+        packet: {
+          evidence: packet.evidence,
+          missingData: packet.missingData,
+          visibleCharts: packet.visibleCharts,
+        },
+        systemPrompt,
+        taskPrompt,
+      }).then((artifact) => {
+        tryNotify(() => observer?.onReflected?.(artifact));
+      }).catch(() => {
+        // reflection 失败不得影响生产
+      });
+    }
 
     tryNotify(() => observer?.onParsed?.(result));
 
