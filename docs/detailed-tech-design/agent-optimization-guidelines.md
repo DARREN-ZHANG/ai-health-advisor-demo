@@ -14,7 +14,7 @@
 本指南应与以下文档配合使用：
 
 - `docs/detailed-tech-design/agent-quality-evaluation-design.md`
-- `docs/ops/agent-eval-baseline-runbook.md`
+- `docs/test/agent-eval-baseline-runbook.md`
 - `docs/superpowers/plans/2026-04-26-agent-eval-quality-baseline-hardening.md`
 
 ## 2. 核心判断

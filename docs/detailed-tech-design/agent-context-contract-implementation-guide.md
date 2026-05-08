@@ -19,7 +19,7 @@
 
 - `docs/detailed-tech-design/agent-optimization-guidelines.md`
 - `docs/detailed-tech-design/agent-quality-evaluation-design.md`
-- `docs/ops/agent-eval-baseline-runbook.md`
+- `docs/test/agent-eval-baseline-runbook.md`
 - `docs/INDEX.md`
 
 ## 2. 背景问题

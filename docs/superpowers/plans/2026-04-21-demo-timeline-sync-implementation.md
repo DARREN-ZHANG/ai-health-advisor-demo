@@ -622,7 +622,7 @@ git commit -m "feat(web): merge homepage trends into data center"
 **Files:**
 
 - Modify: `docs/ops/demo-rehearsal-checklist.md`
-- Modify: `docs/ops/smoke-runbook.md`
+- Modify: `docs/test/smoke-runbook.md`
 - Modify: `docs/ops/offline-demo-runbook.md` 如有影响
 
 - [ ] 更新彩排步骤

@@ -85,7 +85,7 @@ pnpm --filter @health-advisor/agent-core eval:agent:quality \
 
 - Modify: `packages/agent-core/package.json`
 - Modify: `packages/agent-core/evals/README.md`
-- Modify: `docs/ops/agent-eval-baseline-runbook.md`
+- Modify: `docs/test/agent-eval-baseline-runbook.md`
 
 ### Step 1: 区分 fixture core 与 quality core
 
@@ -131,7 +131,7 @@ pnpm --filter @health-advisor/agent-core eval:agent:core:fixture
 ### Step 4: Commit
 
 ```bash
-git add packages/agent-core/package.json packages/agent-core/evals/README.md docs/ops/agent-eval-baseline-runbook.md
+git add packages/agent-core/package.json packages/agent-core/evals/README.md docs/test/agent-eval-baseline-runbook.md
 git commit -m "chore(agent): distinguish fixture and quality eval scripts"
 ```
 
@@ -494,7 +494,7 @@ git commit -m "fix(agent): preserve eval case categories in reports"
 
 **Files:**
 
-- Modify: `docs/ops/agent-eval-baseline-runbook.md`
+- Modify: `docs/test/agent-eval-baseline-runbook.md`
 - Modify: `packages/agent-core/evals/README.md`
 
 ### Step 1: 明确两个 baseline
@@ -536,7 +536,7 @@ pnpm --filter @health-advisor/agent-core eval:agent:quality \
 ### Step 4: Commit
 
 ```bash
-git add docs/ops/agent-eval-baseline-runbook.md packages/agent-core/evals/README.md
+git add docs/test/agent-eval-baseline-runbook.md packages/agent-core/evals/README.md
 git commit -m "docs(agent): clarify real quality baseline workflow"
 ```
 
