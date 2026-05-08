@@ -13,11 +13,20 @@ export interface UpdateProfilePayload {
   dailyBaseline?: Partial<BaselineMetrics>;
 }
 
+export interface CloneProfileOverrides {
+  name?: string;
+  age?: number;
+  gender?: 'male' | 'female';
+  avatar?: string;
+  tags?: string[];
+  baseline?: Partial<BaselineMetrics>;
+}
+
 /** 克隆 profile 请求载荷 */
 export interface CloneProfilePayload {
   sourceProfileId: string;
   newProfileId: string;
-  overrides?: Partial<SandboxProfile>;
+  overrides?: CloneProfileOverrides;
 }
 
 /** PUT /god-mode/profiles/:profileId 响应 */

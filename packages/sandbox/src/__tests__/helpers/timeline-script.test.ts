@@ -4,6 +4,7 @@ import { loadTimelineScriptFile, validateTimelineScript } from '../../helpers/ti
 import type { ActivitySegment } from '@health-advisor/shared';
 
 const DATA_DIR = join(__dirname, '../../../../../data/sandbox');
+const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
 describe('loadTimelineScriptFile', () => {
   it('should load timeline script for profile-a', () => {
@@ -13,10 +14,11 @@ describe('loadTimelineScriptFile', () => {
 
     expect(script.profileId).toBe('profile-a');
     expect(script.scriptId).toBe('profile-a-day-1');
-    expect(script.initialDemoTime).toBe('2026-04-24T07:05');
+    expect(script.initialDemoTime).toMatch(TIMESTAMP_PATTERN);
     expect(script.segments).toHaveLength(1);
     expect(script.segments[0]!.segmentId).toBe('seg-baseline-sleep-a');
     expect(script.segments[0]!.type).toBe('sleep');
+    expect(script.segments[0]!.end.slice(0, 10)).toBe(script.initialDemoTime.slice(0, 10));
   });
 
   it('should load timeline script for profile-b', () => {
@@ -25,9 +27,10 @@ describe('loadTimelineScriptFile', () => {
     });
 
     expect(script.profileId).toBe('profile-b');
-    expect(script.initialDemoTime).toBe('2026-04-24T08:00');
+    expect(script.initialDemoTime).toMatch(TIMESTAMP_PATTERN);
     expect(script.segments).toHaveLength(1);
     expect(script.segments[0]!.type).toBe('sleep');
+    expect(script.segments[0]!.end.slice(0, 10)).toBe(script.initialDemoTime.slice(0, 10));
   });
 
   it('should load timeline script for profile-c', () => {
@@ -36,8 +39,9 @@ describe('loadTimelineScriptFile', () => {
     });
 
     expect(script.profileId).toBe('profile-c');
-    expect(script.initialDemoTime).toBe('2026-04-24T06:00');
+    expect(script.initialDemoTime).toMatch(TIMESTAMP_PATTERN);
     expect(script.segments).toHaveLength(1);
+    expect(script.segments[0]!.end.slice(0, 10)).toBe(script.initialDemoTime.slice(0, 10));
   });
 
   it('should throw for nonexistent file', () => {

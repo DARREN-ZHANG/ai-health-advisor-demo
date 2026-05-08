@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import path from 'node:path';
 import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -11,25 +11,24 @@ describe('Profile CRUD Routes', () => {
   let app: FastifyInstance;
   let dataDir: string;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     // 复制数据目录到临时目录，避免测试修改原始数据
     dataDir = mkdtempSync(path.join(tmpdir(), 'profile-crud-test-'));
     cpSync(SOURCE_DATA_DIR, dataDir, { recursive: true });
 
-    process.env.FALLBACK_ONLY_MODE = 'true';
-    process.env.ENABLE_GOD_MODE = 'true';
-    process.env.NODE_ENV = 'test';
-    process.env.DATA_DIR = dataDir;
-    app = await buildApp();
+    app = await buildApp({
+      env: {
+        FALLBACK_ONLY_MODE: 'true',
+        ENABLE_GOD_MODE: 'true',
+        NODE_ENV: 'test',
+        DATA_DIR: dataDir,
+      },
+    });
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await app.close();
     rmSync(dataDir, { recursive: true, force: true });
-    delete process.env.FALLBACK_ONLY_MODE;
-    delete process.env.ENABLE_GOD_MODE;
-    delete process.env.NODE_ENV;
-    delete process.env.DATA_DIR;
   });
 
   describe('PUT /god-mode/profiles/:profileId', () => {
@@ -43,14 +42,8 @@ describe('Profile CRUD Routes', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.success).toBe(true);
-      expect(body.data.profile.name).toBe('测试用户');
+      expect(body.data.profile.name).toEqual({ zh: '测试用户', en: '测试用户' });
       expect(body.data.regenerated).toBe(false);
-
-      // 恢复
-      await app.inject({
-        method: 'POST',
-        url: '/god-mode/profiles/profile-a/reset',
-      });
     });
 
     test('更新 baseline 触发 history 重生成', async () => {
@@ -65,12 +58,6 @@ describe('Profile CRUD Routes', () => {
       expect(body.success).toBe(true);
       expect(body.data.profile.baseline.restingHr).toBe(70);
       expect(body.data.regenerated).toBe(true);
-
-      // 恢复
-      await app.inject({
-        method: 'POST',
-        url: '/god-mode/profiles/profile-a/reset',
-      });
     });
 
     test('不存在的 profile 返回 404', async () => {
@@ -116,28 +103,10 @@ describe('Profile CRUD Routes', () => {
       const todayRecord = historyData.records.find((r: { date: string }) => r.date === today);
       expect(todayRecord).toBeDefined();
       expect(todayRecord.sleep.totalMinutes).toBe(targetSleep);
-
-      // 恢复
-      await app.inject({
-        method: 'POST',
-        url: '/god-mode/profiles/profile-c/reset',
-      });
     });
   });
 
   describe('POST /god-mode/profiles', () => {
-    afterEach(async () => {
-      // 清理可能创建的测试 profile
-      try {
-        await app.inject({
-          method: 'DELETE',
-          url: '/god-mode/profiles/test-clone',
-        });
-      } catch {
-        // 忽略清理失败
-      }
-    });
-
     test('克隆 profile 返回 200', async () => {
       const response = await app.inject({
         method: 'POST',
@@ -153,7 +122,7 @@ describe('Profile CRUD Routes', () => {
       const body = response.json();
       expect(body.success).toBe(true);
       expect(body.data.profileId).toBe('test-clone');
-      expect(body.data.name).toBe('克隆用户');
+      expect(body.data.name).toEqual({ zh: '克隆用户', en: '克隆用户' });
 
       // 验证 manifest 中存在新 profile
       const stateResponse = await app.inject({
@@ -246,16 +215,15 @@ describe('Profile CRUD Routes', () => {
     });
 
     test('删除最后一个 profile 返回 400', async () => {
-      // 删除到只剩 1 个
-      await app.inject({
-        method: 'DELETE',
-        url: '/god-mode/profiles/profile-c',
-      });
-
-      await app.inject({
-        method: 'DELETE',
-        url: '/god-mode/profiles/profile-b',
-      });
+      const stateResponse = await app.inject({ method: 'GET', url: '/god-mode/state' });
+      const state = stateResponse.json();
+      const profileIds = state.data.availableProfiles.map((profile: { profileId: string }) => profile.profileId);
+      for (const profileId of profileIds.filter((id: string) => id !== 'profile-a')) {
+        await app.inject({
+          method: 'DELETE',
+          url: `/god-mode/profiles/${profileId}`,
+        });
+      }
 
       // 此时只剩 1 个
       const response = await app.inject({
@@ -285,7 +253,7 @@ describe('Profile CRUD Routes', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.success).toBe(true);
-      expect(body.data.profile.name).toBe('张健康');
+      expect(body.data.profile.name.zh).toBe('林巅峰');
       expect(body.data.regenerated).toBe(true);
     });
 

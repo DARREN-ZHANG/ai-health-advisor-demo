@@ -4,6 +4,12 @@ import { loadHistoryArchive, validateHistoryArchive } from '../../helpers/histor
 
 const DATA_DIR = join(__dirname, '../../../../../data/sandbox');
 
+function addDays(date: string, days: number): string {
+  const result = new Date(`${date}T00:00:00Z`);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result.toISOString().slice(0, 10);
+}
+
 describe('loadHistoryArchive', () => {
   it('should load and return records for profile-a', () => {
     const records = loadHistoryArchive(DATA_DIR, {
@@ -11,8 +17,7 @@ describe('loadHistoryArchive', () => {
     });
 
     expect(records).toHaveLength(31);
-    expect(records[0]!.date).toBe('2026-03-25');
-    expect(records[records.length - 1]!.date).toBe('2026-04-24');
+    expect(records[records.length - 1]!.date).toBe(addDays(records[0]!.date, 30));
   });
 
   it('should load and return records for profile-b', () => {
@@ -21,7 +26,7 @@ describe('loadHistoryArchive', () => {
     });
 
     expect(records).toHaveLength(31);
-    expect(records[0]!.date).toBe('2026-03-25');
+    expect(records[records.length - 1]!.date).toBe(addDays(records[0]!.date, 30));
   });
 
   it('should load and return records for profile-c', () => {

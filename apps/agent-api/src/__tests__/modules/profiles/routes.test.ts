@@ -9,17 +9,17 @@ describe('Profile Routes', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
-    process.env.FALLBACK_ONLY_MODE = 'true';
-    process.env.NODE_ENV = 'test';
-    process.env.DATA_DIR = DATA_DIR;
-    app = await buildApp();
+    app = await buildApp({
+      env: {
+        FALLBACK_ONLY_MODE: 'true',
+        NODE_ENV: 'test',
+        DATA_DIR,
+      },
+    });
   });
 
   afterAll(async () => {
     await app.close();
-    delete process.env.FALLBACK_ONLY_MODE;
-    delete process.env.NODE_ENV;
-    delete process.env.DATA_DIR;
   });
 
   describe('GET /profiles', () => {
@@ -59,7 +59,7 @@ describe('Profile Routes', () => {
       const body = response.json();
       expect(body.success).toBe(true);
       expect(body.data.profile.profileId).toBe('profile-a');
-      expect(body.data.profile.name).toBe('张健康');
+      expect(body.data.profile.name.zh).toBe('林巅峰');
       expect(Array.isArray(body.data.records)).toBe(true);
       expect(body.data.records.length).toBeGreaterThan(0);
     });

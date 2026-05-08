@@ -33,8 +33,8 @@ describe('RuntimeRegistry', () => {
   it('getProfile 返回有效的 profile 数据', () => {
     const data = registry.getProfile('profile-a');
     expect(data.profile.profileId).toBe('profile-a');
-    expect(typeof data.profile.name).toBe('string');
-    expect(data.profile.name.length).toBeGreaterThan(0);
+    expect(data.profile.name.zh.length).toBeGreaterThan(0);
+    expect(data.profile.name.en.length).toBeGreaterThan(0);
     expect(data.records.length).toBeGreaterThan(0);
   });
 

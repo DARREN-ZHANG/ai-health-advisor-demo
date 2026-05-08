@@ -18,6 +18,7 @@ import {
   SandboxProfileSchema,
   type SandboxProfile,
   type BaselineMetrics,
+  type CloneProfileOverrides,
 } from '@health-advisor/shared';
 import type { DailyRecord } from '@health-advisor/sandbox';
 
@@ -355,7 +356,7 @@ export class ProfileManager {
   cloneProfile(
     sourceProfileId: string,
     newProfileId: string,
-    overrides?: Partial<SandboxProfile>,
+    overrides?: CloneProfileOverrides,
   ): SandboxProfile {
     const manifest = loadManifest(this.deps.dataDir);
 
@@ -382,12 +383,24 @@ export class ProfileManager {
     const sourceFile = JSON.parse(sourceContent) as ProfileFileV2;
 
     // 构建新 profile 文件
+    const profile: SandboxProfile = {
+      ...sourceFile.profile,
+      profileId: newProfileId,
+    };
+    if (overrides?.name !== undefined) profile.name = { zh: overrides.name, en: overrides.name };
+    if (overrides?.age !== undefined) profile.age = overrides.age;
+    if (overrides?.gender !== undefined) profile.gender = overrides.gender;
+    if (overrides?.avatar !== undefined) profile.avatar = overrides.avatar;
+    if (overrides?.tags !== undefined) profile.tags = overrides.tags.map((tag) => ({ zh: tag, en: tag }));
+    if (overrides?.baseline !== undefined) {
+      profile.baseline = {
+        ...profile.baseline,
+        ...overrides.baseline,
+      };
+    }
+
     const newFile: ProfileFileV2 = {
-      profile: {
-        ...sourceFile.profile,
-        profileId: newProfileId,
-        ...(overrides ?? {}),
-      },
+      profile,
       initialDemoTime: sourceFile.initialDemoTime,
       historyRef: { file: `history/${newProfileId}-daily-records.json` },
       timelineScriptRef: { file: `timeline-scripts/${newProfileId}-day-1.json` },

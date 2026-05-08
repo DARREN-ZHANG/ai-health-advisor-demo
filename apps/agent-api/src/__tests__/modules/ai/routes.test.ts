@@ -42,20 +42,19 @@ describe('AI Routes', () => {
     dataDir = mkdtempSync(path.join(tmpdir(), 'health-advisor-ai-routes-'));
     cpSync(SOURCE_DATA_DIR, dataDir, { recursive: true });
 
-    process.env.FALLBACK_ONLY_MODE = 'true';
-    process.env.ENABLE_GOD_MODE = 'true';
-    process.env.NODE_ENV = 'test';
-    process.env.DATA_DIR = dataDir;
-    app = await buildApp();
+    app = await buildApp({
+      env: {
+        FALLBACK_ONLY_MODE: 'true',
+        ENABLE_GOD_MODE: 'true',
+        NODE_ENV: 'test',
+        DATA_DIR: dataDir,
+      },
+    });
   });
 
   afterAll(async () => {
     await app.close();
     rmSync(dataDir, { recursive: true, force: true });
-    delete process.env.FALLBACK_ONLY_MODE;
-    delete process.env.ENABLE_GOD_MODE;
-    delete process.env.NODE_ENV;
-    delete process.env.DATA_DIR;
   });
 
   describe('POST /ai/morning-brief', () => {

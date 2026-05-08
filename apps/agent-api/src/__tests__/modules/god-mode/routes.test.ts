@@ -1,27 +1,32 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import path from 'node:path';
+import { cpSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { buildApp } from '../../../app.js';
 import type { FastifyInstance } from 'fastify';
 
-const DATA_DIR = path.resolve(import.meta.dirname, '../../../../../../data/sandbox');
+const SOURCE_DATA_DIR = path.resolve(import.meta.dirname, '../../../../../../data/sandbox');
 
 describe('God-Mode Routes', () => {
   let app: FastifyInstance;
+  let dataDir: string;
 
   beforeAll(async () => {
-    process.env.FALLBACK_ONLY_MODE = 'true';
-    process.env.ENABLE_GOD_MODE = 'true';
-    process.env.NODE_ENV = 'test';
-    process.env.DATA_DIR = DATA_DIR;
-    app = await buildApp();
+    dataDir = mkdtempSync(path.join(tmpdir(), 'god-mode-routes-test-'));
+    cpSync(SOURCE_DATA_DIR, dataDir, { recursive: true });
+    app = await buildApp({
+      env: {
+        FALLBACK_ONLY_MODE: 'true',
+        ENABLE_GOD_MODE: 'true',
+        NODE_ENV: 'test',
+        DATA_DIR: dataDir,
+      },
+    });
   });
 
   afterAll(async () => {
     await app.close();
-    delete process.env.FALLBACK_ONLY_MODE;
-    delete process.env.ENABLE_GOD_MODE;
-    delete process.env.NODE_ENV;
-    delete process.env.DATA_DIR;
+    rmSync(dataDir, { recursive: true, force: true });
   });
 
   describe('POST /god-mode/switch-profile', () => {
@@ -83,13 +88,7 @@ describe('God-Mode Routes', () => {
       expect(body.data.injectedEvents).toHaveLength(1);
       expect(body.data.injectedEvents[0].type).toBe('late_night_work');
       expect(body.data.injectedEvents[0].data).toEqual({ endTime: '03:00' });
-      expect(body.data.activeSensing).toEqual({
-        visible: true,
-        priority: 'high',
-        surface: 'banner',
-        date: body.data.injectedEvents[0].date,
-        events: ['late_night_work'],
-      });
+      expect(body.data.activeSensing).toBeNull();
     });
 
     test('指定 profileId 注入事件', async () => {

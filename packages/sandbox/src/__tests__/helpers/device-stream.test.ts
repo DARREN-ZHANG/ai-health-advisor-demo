@@ -26,36 +26,27 @@ describe('device-stream helpers', () => {
     // 构造一个带有 device syncSessions 的 ProfileData 用于测试
     function makeProfileWithSync(): ProfileData {
       const base = loadProfile(DATA_DIR, 'profiles/profile-a.json');
+      const samples = materializeDeviceSamples(base);
+      const chunkSize = Math.ceil(samples.length / 4);
+      const syncSessions = Array.from({ length: 4 }, (_, index) => {
+        const startIndex = index * chunkSize;
+        const endIndex = Math.min((index + 1) * chunkSize - 1, samples.length - 1);
+        const start = samples[startIndex]!.timestamp;
+        const end = samples[endIndex]!.timestamp;
+
+        return {
+          syncId: `sync-a-${String(index + 1).padStart(3, '0')}`,
+          connectedAt: start,
+          disconnectedAt: end,
+          uploadedRange: { start, end },
+        };
+      });
+
       return {
         ...base,
         device: {
           samplingIntervalMinutes: 1,
-          syncSessions: [
-            {
-              syncId: 'sync-a-001',
-              connectedAt: '2026-03-23T22:30',
-              disconnectedAt: '2026-03-30T23:59',
-              uploadedRange: { start: '2026-03-23T22:30', end: '2026-03-30T23:59' },
-            },
-            {
-              syncId: 'sync-a-002',
-              connectedAt: '2026-03-31T00:00',
-              disconnectedAt: '2026-04-06T23:59',
-              uploadedRange: { start: '2026-03-31T00:00', end: '2026-04-06T23:59' },
-            },
-            {
-              syncId: 'sync-a-003',
-              connectedAt: '2026-04-07T00:00',
-              disconnectedAt: '2026-04-13T23:59',
-              uploadedRange: { start: '2026-04-07T00:00', end: '2026-04-13T23:59' },
-            },
-            {
-              syncId: 'sync-a-004',
-              connectedAt: '2026-04-14T00:00',
-              disconnectedAt: '2026-04-23T23:59',
-              uploadedRange: { start: '2026-04-14T00:00', end: '2026-04-23T23:59' },
-            },
-          ],
+          syncSessions,
         },
       };
     }
@@ -73,10 +64,11 @@ describe('device-stream helpers', () => {
     it('returns samples for a specific sync session', () => {
       const profile = makeProfileWithSync();
       const samples = getSamplesForSyncSession(profile, 'sync-a-001');
+      const session = profile.device!.syncSessions[0]!;
 
       expect(samples.length).toBeGreaterThan(0);
-      expect(samples[0]?.timestamp >= '2026-03-23T22:30').toBe(true);
-      expect(samples[samples.length - 1]?.timestamp <= '2026-03-30T23:59').toBe(true);
+      expect(samples[0]?.timestamp >= session.uploadedRange.start).toBe(true);
+      expect(samples[samples.length - 1]?.timestamp <= session.uploadedRange.end).toBe(true);
     });
 
     it('has no pending samples when all upload windows cover the full history', () => {

@@ -53,11 +53,11 @@ function createTestDir(structure: {
 const validProfile = {
   profile: {
     profileId: 'test-profile',
-    name: 'Test',
+    name: { zh: '测试用户', en: 'Test' },
     age: 30,
     gender: 'male',
     avatar: 'avatar-1',
-    tags: ['测试'],
+    tags: [{ zh: '测试', en: 'Test' }],
     baseline: { restingHr: 65, hrv: 45, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
   },
   records: Array.from({ length: 14 }, (_, i) => ({
@@ -67,7 +67,7 @@ const validProfile = {
 
 const validManifest = {
   version: '1',
-  profiles: [{ profileId: 'test-profile', name: 'Test', file: 'profiles/test-profile.json' }],
+  profiles: [{ profileId: 'test-profile', name: { zh: '测试用户', en: 'Test' }, file: 'profiles/test-profile.json' }],
 };
 
 const validFallbackEntry = {

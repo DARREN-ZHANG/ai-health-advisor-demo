@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import path from 'node:path';
+import { cpSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { buildApp } from '../../app.js';
 import type { FastifyInstance } from 'fastify';
 import type { AgentResponseEnvelope, PageContext } from '@health-advisor/shared';
@@ -15,7 +17,7 @@ vi.mock('@health-advisor/agent-core', async (importOriginal) => {
 import { executeAgent } from '@health-advisor/agent-core';
 const mockedExecuteAgent = vi.mocked(executeAgent);
 
-const DATA_DIR = path.resolve(process.cwd(), '../../data/sandbox');
+const SOURCE_DATA_DIR = path.resolve(process.cwd(), '../../data/sandbox');
 
 const defaultPageContext: PageContext = {
   profileId: 'profile-a',
@@ -42,21 +44,24 @@ const mockAgentResponse: AgentResponseEnvelope = {
  */
 describe('API Response Envelope Consistency', () => {
   let app: FastifyInstance;
+  let dataDir: string;
 
   beforeAll(async () => {
-    process.env.FALLBACK_ONLY_MODE = 'true';
-    process.env.ENABLE_GOD_MODE = 'true';
-    process.env.NODE_ENV = 'test';
-    process.env.DATA_DIR = DATA_DIR;
-    app = await buildApp();
+    dataDir = mkdtempSync(path.join(tmpdir(), 'api-consistency-test-'));
+    cpSync(SOURCE_DATA_DIR, dataDir, { recursive: true });
+    app = await buildApp({
+      env: {
+        FALLBACK_ONLY_MODE: 'true',
+        ENABLE_GOD_MODE: 'true',
+        NODE_ENV: 'test',
+        DATA_DIR: dataDir,
+      },
+    });
   });
 
   afterAll(async () => {
     await app.close();
-    delete process.env.FALLBACK_ONLY_MODE;
-    delete process.env.ENABLE_GOD_MODE;
-    delete process.env.NODE_ENV;
-    delete process.env.DATA_DIR;
+    rmSync(dataDir, { recursive: true, force: true });
   });
 
   /** 断言 success envelope 结构 */

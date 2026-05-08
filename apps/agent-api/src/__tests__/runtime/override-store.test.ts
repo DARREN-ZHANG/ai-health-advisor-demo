@@ -1,10 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { createOverrideStore } from '../../runtime/override-store';
 import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
 
 // vitest 从 apps/agent-api 运行，需要回溯到 monorepo 根
 const DATA_DIR = path.resolve(process.cwd(), '../../data/sandbox');
+
+function loadInitialDemoTime(profileId: string): string {
+  const raw = readFileSync(path.join(DATA_DIR, `timeline-scripts/${profileId}-day-1.json`), 'utf-8');
+  return (JSON.parse(raw) as { initialDemoTime: string }).initialDemoTime;
+}
 
 // ============================================================
 // 现有能力测试（向后兼容）
@@ -324,8 +330,7 @@ describe('OverrideStore — dataDir 初始化', () => {
   it('从 timeline script 加载 profile-a 初始时钟', () => {
     const store = createOverrideStore('profile-a', { dataDir: DATA_DIR });
     const clock = store.getDemoClock('profile-a');
-    // profile-a-day-1.json 定义 initialDemoTime = 2026-04-16T07:05
-    expect(clock.currentTime).toBe('2026-04-16T07:05');
+    expect(clock.currentTime).toBe(loadInitialDemoTime('profile-a'));
     expect(clock.profileId).toBe('profile-a');
     expect(clock.timezone).toBe('Asia/Shanghai');
   });
@@ -410,7 +415,7 @@ describe('OverrideStore — dataDir 初始化', () => {
     store.resetProfileTimeline('profile-a');
 
     // 时钟回到 timeline script 定义的时刻
-    expect(store.getDemoClock('profile-a').currentTime).toBe('2026-04-16T07:05');
+    expect(store.getDemoClock('profile-a').currentTime).toBe(loadInitialDemoTime('profile-a'));
     // segments 恢复为 baseline
     const segments = store.getSegments('profile-a');
     expect(segments.length).toBe(1);
@@ -426,14 +431,9 @@ describe('OverrideStore — dataDir 初始化', () => {
   it('不同 profile 从各自的 timeline script 初始化', () => {
     const store = createOverrideStore('profile-a', { dataDir: DATA_DIR });
 
-    // profile-a: initialDemoTime = 2026-04-16T07:05
-    expect(store.getDemoClock('profile-a').currentTime).toBe('2026-04-16T07:05');
-
-    // profile-b: initialDemoTime = 2026-04-16T07:30
-    expect(store.getDemoClock('profile-b').currentTime).toBe('2026-04-16T07:30');
-
-    // profile-c: initialDemoTime = 2026-04-16T06:45
-    expect(store.getDemoClock('profile-c').currentTime).toBe('2026-04-16T06:45');
+    expect(store.getDemoClock('profile-a').currentTime).toBe(loadInitialDemoTime('profile-a'));
+    expect(store.getDemoClock('profile-b').currentTime).toBe(loadInitialDemoTime('profile-b'));
+    expect(store.getDemoClock('profile-c').currentTime).toBe(loadInitialDemoTime('profile-c'));
 
     // 各有 1 个 baseline sleep segment
     expect(store.getSegments('profile-a')).toHaveLength(1);

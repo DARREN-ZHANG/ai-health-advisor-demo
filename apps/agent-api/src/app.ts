@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import { loadConfig } from './config/env.js';
+import { loadConfig, type AppConfig } from './config/env.js';
 import { requestContextPlugin } from './plugins/request-context.js';
 import { langPlugin } from './plugins/lang-plugin.js';
 import { errorHandlerPlugin } from './plugins/error-handler.js';
@@ -15,8 +15,13 @@ import { godModeRoutes } from './modules/god-mode/routes.js';
 import { GodModeService } from './modules/god-mode/service.js';
 import { BriefCache } from './services/brief-cache.js';
 
-export async function buildApp() {
-  const config = loadConfig();
+export interface BuildAppOptions {
+  env?: Record<string, string | undefined>;
+  config?: AppConfig;
+}
+
+export async function buildApp(options: BuildAppOptions = {}) {
+  const config = options.config ?? loadConfig(options.env);
 
   // 启动时资产校验
   const validation = validateStartupAssets(config.dataDir);

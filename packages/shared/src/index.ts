@@ -75,6 +75,7 @@ export type {
 // Types — profile-crud
 export type {
   UpdateProfilePayload,
+  CloneProfileOverrides,
   CloneProfilePayload,
   UpdateProfileResponse,
   CloneProfileResponse,

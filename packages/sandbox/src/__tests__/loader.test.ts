@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { join } from 'node:path';
 import { loadManifest, loadProfile, loadAllProfiles, buildInitialProfileState } from '../loader';
+import { loadTimelineScriptFile } from '../helpers/timeline-script';
 
 const DATA_DIR = join(__dirname, '../../../../data/sandbox');
 
@@ -91,6 +92,7 @@ describe('loadAllProfiles', () => {
 describe('buildInitialProfileState', () => {
   it('should build complete initial state for profile-a', () => {
     const state = buildInitialProfileState(DATA_DIR, 'profile-a');
+    const script = loadTimelineScriptFile(DATA_DIR, { file: 'timeline-scripts/profile-a-day-1.json' });
 
     // ProfileData
     expect(state.profileData.profile.profileId).toBe('profile-a');
@@ -98,7 +100,7 @@ describe('buildInitialProfileState', () => {
 
     // DemoClock
     expect(state.demoClock.profileId).toBe('profile-a');
-    expect(state.demoClock.currentTime).toBe('2026-04-24T07:05');
+    expect(state.demoClock.currentTime).toBe(script.initialDemoTime);
     expect(state.demoClock.timezone).toBe('Asia/Shanghai');
 
     // Segments
@@ -116,18 +118,20 @@ describe('buildInitialProfileState', () => {
 
   it('should build complete initial state for profile-b', () => {
     const state = buildInitialProfileState(DATA_DIR, 'profile-b');
+    const script = loadTimelineScriptFile(DATA_DIR, { file: 'timeline-scripts/profile-b-day-1.json' });
 
     expect(state.profileData.profile.profileId).toBe('profile-b');
-    expect(state.demoClock.currentTime).toBe('2026-04-24T08:00');
+    expect(state.demoClock.currentTime).toBe(script.initialDemoTime);
     expect(state.segments.length).toBeGreaterThan(0);
     expect(state.deviceBuffer.lastSyncedMeasuredAt).toBeNull();
   });
 
   it('should build complete initial state for profile-c', () => {
     const state = buildInitialProfileState(DATA_DIR, 'profile-c');
+    const script = loadTimelineScriptFile(DATA_DIR, { file: 'timeline-scripts/profile-c-day-1.json' });
 
     expect(state.profileData.profile.profileId).toBe('profile-c');
-    expect(state.demoClock.currentTime).toBe('2026-04-24T06:00');
+    expect(state.demoClock.currentTime).toBe(script.initialDemoTime);
     expect(state.deviceBuffer.lastSyncedMeasuredAt).toBeNull();
   });
 
