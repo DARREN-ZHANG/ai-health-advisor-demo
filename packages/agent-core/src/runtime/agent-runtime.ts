@@ -1,6 +1,6 @@
 import type { AgentRequest } from '../types/agent-request';
 import type { AgentResponseEnvelope, AgentTaskType, DataTab, Locale } from '@health-advisor/shared';
-import { AgentTaskType as AT, DEFAULT_LOCALE } from '@health-advisor/shared';
+import { AgentTaskType, DEFAULT_LOCALE } from '@health-advisor/shared';
 import type { ContextBuilderDeps } from '../context/context-types';
 import type { HealthAgent } from '../executor/create-agent';
 import type { PromptLoader } from '../prompts/prompt-loader';
@@ -24,6 +24,10 @@ import type { VerifierInput } from '../output/verifier';
 import type { VerificationReport } from '../output/verification-report';
 import { ReflectionObserver } from '../output/reflection-observer';
 import type { ReflectionArtifact } from '../output/reflection-types';
+import type { PlanBuilderDeps } from '../planner/advisor-plan-builder';
+import { buildAnalysisPlanWithRetry } from '../planner/advisor-plan-builder';
+import type { AnalysisPlan } from '../planner/analysis-plan';
+import type { PlanVerificationResult } from '../planner/analysis-plan';
 
 export interface AgentRuntimeDeps extends ContextBuilderDeps {
   agent: HealthAgent;
@@ -33,6 +37,8 @@ export interface AgentRuntimeDeps extends ContextBuilderDeps {
   referenceDate?: string;
   /** P0 新增：异步 reflection observer（可选） */
   reflectionObserver?: ReflectionObserver;
+  /** P1 新增：planner 依赖（可选，不设置时 ADVISOR_CHAT 退化为原有单次调用模式） */
+  planBuilder?: PlanBuilderDeps;
 }
 
 /**
@@ -51,6 +57,12 @@ export interface AgentRuntimeObserver {
   onVerified?(report: VerificationReport): void;
   /** P0 新增：异步 reflection 完成后触发 */
   onReflected?(artifact: ReflectionArtifact): void;
+  /** P1 新增：plan 生成后触发 */
+  onPlanBuilt?(plan: AnalysisPlan): void;
+  /** P1 新增：plan 失败时触发 */
+  onPlanFailed?(reason: 'parse_error' | 'verification_failed' | 'invocation_error'): void;
+  /** P1 新增：clarification 响应触发 */
+  onClarification?(question: string): void;
 }
 
 /**
@@ -101,9 +113,55 @@ export async function executeAgent(
     const packet = buildTaskContextPacket(context, rulesResult);
     tryNotify(() => observer?.onPacketBuilt?.(packet));
 
+    // P1: ADVISOR_CHAT planner 链路
+    let analysisPlan: AnalysisPlan | undefined;
+    if (request.taskType === AgentTaskType.ADVISOR_CHAT && deps.planBuilder) {
+      const planResult = await buildAnalysisPlanWithRetry(
+        deps.planBuilder,
+        {
+          userMessage: request.userMessage ?? '',
+          pageContext: request.pageContext,
+          basePacket: packet,
+          supportedMetrics: getSupportedMetrics(),
+          availableDateRange: {
+            start: context.dataWindow.start,
+            end: context.dataWindow.end,
+          },
+        },
+      );
+
+      if (!planResult.success) {
+        // Plan 失败：确定失败原因并通知 observer
+        const reason = planResult.parseError
+          ? (planResult.parseError.includes('调用失败') ? 'invocation_error' : 'parse_error')
+          : 'verification_failed';
+        tryNotify(() => observer?.onPlanFailed?.(reason));
+
+        // 返回安全响应（不绕过 planner 直接回答复杂问题）
+        return toClarificationOrSafeResponse(
+          deps.fallbackEngine, request, planResult, fallbackKey, locale,
+        );
+      }
+
+      analysisPlan = planResult.plan!;
+
+      if (analysisPlan.userIntent.needsClarification) {
+        tryNotify(() => observer?.onClarification?.(analysisPlan!.userIntent.clarificationQuestion ?? ''));
+        return toClarificationResponse(request, analysisPlan);
+      }
+
+      tryNotify(() => observer?.onPlanBuilt?.(analysisPlan!));
+    }
+
     // 5. 构建 prompts（传入 packet）
     const systemPrompt = buildSystemPrompt(context, deps.promptLoader, packet.missingData);
-    const taskPrompt = buildTaskPrompt(context, deps.promptLoader, rulesResult, packet);
+    let taskPrompt = buildTaskPrompt(context, deps.promptLoader, rulesResult, packet);
+
+    // P1: 如有 plan，将 plan 上下文追加到 task prompt
+    if (analysisPlan) {
+      taskPrompt = appendPlanContextToPrompt(taskPrompt, analysisPlan, packet);
+    }
+
     tryNotify(() => observer?.onPromptBuilt?.({ systemPrompt, taskPrompt }));
 
     // 6. 带超时调用 LLM，超时时通过 AbortSignal 真正中断底层调用
@@ -225,9 +283,9 @@ export async function executeAgent(
 
 function evaluateRules(context: AgentContext): RuleEvaluationResult {
   switch (context.task.type) {
-    case AT.HOMEPAGE_SUMMARY:
+    case AgentTaskType.HOMEPAGE_SUMMARY:
       return evaluateHomepageRules(context);
-    case AT.VIEW_SUMMARY:
+    case AgentTaskType.VIEW_SUMMARY:
       return evaluateViewSummaryRules(context);
     default:
       return {
@@ -271,10 +329,10 @@ function writeAnalyticalMemory(
   const { sessionId, profileId, taskType } = request;
 
   switch (taskType) {
-    case AT.HOMEPAGE_SUMMARY:
+    case AgentTaskType.HOMEPAGE_SUMMARY:
       deps.analyticalMemory.setHomepageBrief(sessionId, profileId, summary);
       break;
-    case AT.VIEW_SUMMARY: {
+    case AgentTaskType.VIEW_SUMMARY: {
       const scope = context.task.tab && context.task.timeframe
         ? `${context.task.tab}:${context.task.timeframe}`
         : undefined;
@@ -341,4 +399,92 @@ function toEnvelopeStatusColor(
   if (value === 'red') return 'error';
   if (value === 'yellow') return 'warning';
   return 'good';
+}
+
+/** 获取支持的指标列表 */
+function getSupportedMetrics(): string[] {
+  return ['hrv', 'sleep', 'activity', 'stress', 'spo2', 'resting-hr'];
+}
+
+/** 将 AnalysisPlan 上下文追加到 task prompt */
+function appendPlanContextToPrompt(
+  taskPrompt: string,
+  plan: AnalysisPlan,
+  _packet: TaskContextPacket,
+): string {
+  const sections: string[] = [taskPrompt];
+
+  sections.push('');
+  sections.push('## 分析计划');
+
+  // 证据需求
+  if (plan.evidenceNeeds.length > 0) {
+    sections.push('### 需要引用的证据');
+    for (const need of plan.evidenceNeeds) {
+      const status = need.required ? '[必需]' : '[可选]';
+      sections.push(`- ${status} ${need.metric} (${need.timeScope}): ${need.reason}`);
+    }
+  }
+
+  // 安全约束
+  if (plan.safetyConstraints.length > 0) {
+    sections.push('### 安全约束');
+    for (const constraint of plan.safetyConstraints) {
+      sections.push(`- ${constraint}`);
+    }
+  }
+
+  // 回答格式
+  sections.push('### 回答格式要求');
+  sections.push(`- 语气: ${plan.answerShape.tone === 'concise' ? '简洁' : '详细解释'}`);
+  sections.push(`- 最大长度: ${plan.answerShape.maxSummaryLength} 字`);
+  if (plan.answerShape.includeMissingDataDisclosure) {
+    sections.push('- 必须披露数据不足的情况');
+  }
+  if (plan.answerShape.includeChartTokens) {
+    sections.push('- 包含相关图表引用');
+  }
+
+  return sections.join('\n');
+}
+
+/** 构造 clarification 响应（用户意图不明确时） */
+function toClarificationResponse(
+  request: AgentRequest,
+  plan: AnalysisPlan,
+): AgentResponseEnvelope {
+  const question = plan.userIntent.clarificationQuestion ?? '能否更具体地描述您的问题？';
+  return {
+    summary: `为了更好地帮助您，我需要更多信息：${question}`,
+    source: 'planner',
+    statusColor: 'good',
+    chartTokens: [],
+    microTips: [],
+    meta: {
+      taskType: request.taskType,
+      pageContext: request.pageContext,
+      finishReason: 'complete',
+      sessionId: request.sessionId,
+    },
+  };
+}
+
+/** Plan 失败时返回安全响应 */
+function toClarificationOrSafeResponse(
+  engine: FallbackEngine,
+  request: AgentRequest,
+  planResult: { success: false; parseError?: string; verificationResult?: PlanVerificationResult },
+  key: FallbackLookupKey,
+  locale: Locale,
+): AgentResponseEnvelope {
+  // 如果有 verification result 但 plan 不合法，返回 fallback
+  const fallback = engine.getFallback(request.taskType, key, locale);
+  return {
+    ...fallback,
+    summary: '抱歉，我暂时无法理解您的问题，请尝试更具体地描述您的健康数据问题。',
+    meta: {
+      ...fallback.meta,
+      finishReason: 'fallback',
+    },
+  };
 }

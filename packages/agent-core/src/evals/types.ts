@@ -5,6 +5,8 @@ import type { RuleEvaluationResult } from '../rules/types';
 import type { TaskContextPacket } from '../context/context-packet';
 import type { VerificationReport } from '../output/verification-report';
 import type { ReflectionArtifact } from '../output/reflection-types';
+import type { AnalysisPlan } from '../planner/analysis-plan';
+import type { PlanVerificationResult } from '../planner/analysis-plan';
 
 // ── 枚举类型 ──────────────────────────────────────────
 
@@ -219,6 +221,10 @@ export interface EvalArtifacts {
   verificationReport?: VerificationReport;
   /** P0: async reflection 产出的审核工件 */
   reflectionArtifact?: ReflectionArtifact;
+  /** P1: planner 产出的 plan */
+  analysisPlan?: AnalysisPlan;
+  /** P1: plan verifier 产出的校验结果 */
+  planVerificationResult?: PlanVerificationResult;
 }
 
 export interface EvalCaseResult {

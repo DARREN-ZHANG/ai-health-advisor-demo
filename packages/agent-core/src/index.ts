@@ -166,3 +166,20 @@ export { withTimeout, TimeoutError } from './runtime/timeout-controller';
 export type { TimeoutController } from './runtime/timeout-controller';
 export { executeAgent } from './runtime/agent-runtime';
 export type { AgentRuntimeDeps, AgentRuntimeObserver } from './runtime/agent-runtime';
+
+// Planner (P1)
+export {
+  AnalysisPlanSchema,
+  MetricType,
+  TimeScope,
+  ActionIntent,
+  SafetyConstraint,
+} from './planner/analysis-plan';
+export type {
+  AnalysisPlan,
+  PlanVerificationResult,
+} from './planner/analysis-plan';
+export { verifyAnalysisPlan } from './planner/analysis-plan-verifier';
+export type { PlanVerifierContext } from './planner/analysis-plan-verifier';
+export { buildAnalysisPlan, buildAnalysisPlanWithRetry } from './planner/advisor-plan-builder';
+export type { PlanBuilderDeps, PlanBuilderInput, PlanBuilderResult } from './planner/advisor-plan-builder';
