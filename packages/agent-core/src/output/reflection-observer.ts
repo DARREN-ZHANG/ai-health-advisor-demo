@@ -1,5 +1,7 @@
+import type { AgentResponseEnvelope } from '@health-advisor/shared';
 import type { HealthAgent } from '../executor/create-agent';
 import type { ReflectionArtifact, ReviewResult } from './reflection-types';
+import type { VerificationReport } from './verification-report';
 
 // ── 依赖注入接口 ──────────────────────────────────────
 
@@ -181,7 +183,7 @@ function extractJsonBlock(raw: string): string {
 
   // 尝试匹配 ```json ... ``` 格式
   const codeBlockMatch = trimmed.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-  if (codeBlockMatch) {
+  if (codeBlockMatch?.[1]) {
     return codeBlockMatch[1].trim();
   }
 

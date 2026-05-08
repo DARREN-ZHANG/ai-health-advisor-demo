@@ -86,8 +86,9 @@ function buildExpectationsFromViolations(
       .filter((v) => v.ruleId.includes(':no_claim:'))
       .map((v) => {
         const parts = v.ruleId.split(':');
-        return parts[parts.length - 1];
-      });
+        return parts[parts.length - 1] ?? '';
+      })
+      .filter((s) => s !== '');
     expectations.missingData = {
       missingMetrics,
       mustDiscloseInsufficientData: missingDataViolations.some(
