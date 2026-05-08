@@ -14,3 +14,6 @@ playwright-report
 .kimi
 .github
 docs/superpowers/*
+
+.DS_Store
+**/.DS_Store
