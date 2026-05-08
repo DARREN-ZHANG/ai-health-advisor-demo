@@ -154,7 +154,7 @@ function buildReviewerUserPrompt(input: ReflectionObserverInput): string {
  * 解析 reviewer LLM 返回的 JSON。
  * 容错处理：JSON 解析失败时返回安全的默认值。
  */
-export function parseReflectionResponse(raw: string): ReviewResult {
+function parseReflectionResponse(raw: string): ReviewResult {
   try {
     // 尝试从文本中提取 JSON 块
     const jsonStr = extractJsonBlock(raw);

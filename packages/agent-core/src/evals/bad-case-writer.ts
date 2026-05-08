@@ -41,8 +41,8 @@ export function convertToBadCase(
     id: `bad-case-${Date.now()}`,
     title: buildTitle(issues, violations),
     suite: 'regression' as EvalSuite,
-    category: inferCategory(request) as EvalCategory,
-    priority: inferPriority(issues, violations) as EvalPriority,
+    category: inferCategory(request),
+    priority: inferPriority(issues, violations),
     tags: ['auto-generated', 'bad-case'],
     setup: { profileId: request.profileId },
     request,
@@ -131,7 +131,7 @@ function buildTitle(issues: ReflectionIssue[], violations: QualityViolation[]): 
 }
 
 /** 从 request 推断 eval category */
-function inferCategory(request: AgentRequest): string {
+function inferCategory(request: AgentRequest): EvalCategory {
   const taskType = request.taskType;
   if (taskType === 'homepage_summary') return 'homepage';
   if (taskType === 'view_summary') return 'view-summary';
@@ -140,7 +140,7 @@ function inferCategory(request: AgentRequest): string {
 }
 
 /** 从 issues 和 violations 推断优先级 */
-function inferPriority(issues: ReflectionIssue[], violations: QualityViolation[]): string {
+function inferPriority(issues: ReflectionIssue[], violations: QualityViolation[]): EvalPriority {
   // 有 high severity 问题或 hard failure → P0
   const hasHighSeverity = issues.some((i) => i.severity === 'high');
   const hasHardFailure = violations.some((v) => !v.passed && v.severity === 'hard');
