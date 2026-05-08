@@ -12,18 +12,18 @@
 - 每一阶段的交付门槛和 handoff 条件
 - 如何用最小返工完成一个可演示、可联调、可 fallback 的 Web Demo
 
-本文档应与以下四份模块文档配套使用：
+本文档应与以下四份模块文档配套使用（均已归档，仅作历史参考）：
 
-1. `agent-detailed-implementation-plan.md`
-2. `backend-detailed-implementation-plan.md`
-3. `frontend-detailed-implementation-plan.md`
-4. `others-detailed-implementation-plan.md`
+1. `docs/archive/early-wave-designs/agent-detailed-implementation-plan.md`
+2. `docs/archive/early-wave-designs/backend-detailed-implementation-plan.md`
+3. `docs/archive/early-wave-designs/frontend-detailed-implementation-plan.md`
+4. `docs/archive/early-wave-designs/others-detailed-implementation-plan.md`
 
 补充说明：
 
 - 若本轮评审主题是“主时间轴推进、设备缓存/同步、God Mode 片段注入”，应额外阅读 `demo-timeline-device-sync-plan.md`
 - 若本轮评审主题是“首页实时简报避免向用户暴露 baseline/基线术语”，应额外阅读 `homepage-baseline-language-implementation-guide.md`
-- 若本轮评审主题是“基于传感器时序响应推导可能咖啡因摄入”，应额外阅读 `caffeine-intake-detection-design.md`，并按 `../execute-plans/caffeine-intake-detection-implementation-plan.md` 执行
+- 若本轮评审主题是“基于传感器时序响应推导可能咖啡因摄入”，应额外阅读 `caffeine-intake-detection-design.md`，并按 `docs/archive/completed-plans/caffeine-intake-detection-implementation-plan.md` 执行（已归档）
 
 ---
 
@@ -35,10 +35,10 @@
 
 1. `docs/source-of-truth/ARCHITECTURE.md`
 2. `docs/source-of-truth/PRD.md`
-3. `agent-detailed-implementation-plan.md`
-4. `backend-detailed-implementation-plan.md`
-5. `frontend-detailed-implementation-plan.md`
-6. `others-detailed-implementation-plan.md`
+3. `docs/archive/early-wave-designs/agent-detailed-implementation-plan.md`（历史归档）
+4. `docs/archive/early-wave-designs/backend-detailed-implementation-plan.md`（历史归档）
+5. `docs/archive/early-wave-designs/frontend-detailed-implementation-plan.md`（历史归档）
+6. `docs/archive/early-wave-designs/others-detailed-implementation-plan.md`（历史归档）
 7. `implementation-index.md`（本文）
 
 这个顺序用于建立认知。
