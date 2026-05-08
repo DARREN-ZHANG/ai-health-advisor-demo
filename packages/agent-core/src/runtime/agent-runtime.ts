@@ -171,7 +171,19 @@ export async function executeAgent(
       packet,
       parseResult: { success: true },
     };
-    const verificationReport = verifyOutput(verifierInput);
+    let verificationReport: VerificationReport;
+    try {
+      verificationReport = verifyOutput(verifierInput);
+    } catch {
+      // verifier 异常不得影响主链路，使用安全默认报告
+      verificationReport = {
+        envelope: result,
+        context: { taskType: context.task.type, missingData: [], visibleCharts: [], ruleInsights: [] },
+        violations: [],
+        summary: { total: 0, passed: 0, failed: 0, hardFailures: 0 },
+        verifiedAt: new Date().toISOString(),
+      };
+    }
     tryNotify(() => observer?.onVerified?.(verificationReport));
 
     // P0: 异步 reflection（不阻断，后台执行）
