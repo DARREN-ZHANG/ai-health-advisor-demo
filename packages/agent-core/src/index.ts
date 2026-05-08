@@ -9,7 +9,7 @@ export type {
   SessionConversationMemory,
   AnalyticalMemory,
 } from './types/memory';
-export type { LlmProvider, ModelRuntimeConfig, ResolvedProviderConfig } from './types/provider';
+export type { LlmProvider, ModelRuntimeConfig, ResolvedProviderConfig, LlmRole, ResolvedLlmConfig } from './types/provider';
 
 // Schemas
 export { AgentRequestSchema } from './types/agent-request';
@@ -21,14 +21,14 @@ export { validateTaskRequest } from './routing/task-validator';
 export type { TaskValidationResult } from './routing/task-validator';
 
 // Provider
-export { resolveProviderConfig } from './provider/provider-config';
-export { createChatModel } from './provider/model-factory';
+export { resolveProviderConfig, resolveAllLlmConfigs } from './provider/provider-config';
+export { createChatModel, createChatModelForRole } from './provider/model-factory';
 export { FakeChatModel } from './provider/fake-chat-model';
 
 // Executor
 export { createHealthAgent } from './executor/create-agent';
 export type { AgentConfig, HealthAgent, AgentInvokeInput, AgentInvokeOutput } from './executor/create-agent';
-export { initializeAgent } from './executor/agent-initializer';
+export { initializeAgent, initializeAgents } from './executor/agent-initializer';
 
 // Memory
 export { InMemorySessionMemoryStore } from './memory/session-memory-store';
@@ -110,6 +110,7 @@ export {
   DEFAULT_TIMEOUT_MS,
   DEFAULT_TEMPERATURE,
   DEFAULT_MAX_RETRIES,
+  ROLE_DEFAULTS,
 } from './constants/defaults';
 
 // Internal helpers
@@ -135,6 +136,26 @@ export { validateChartTokens } from './output/token-validator';
 export type { TokenValidationResult } from './output/token-validator';
 export { cleanSafetyIssues } from './output/safety-cleaner';
 export type { SafetyCleanResult, SafetyFlag } from './output/safety-cleaner';
+
+// Verification (P0)
+export { verifyOutput } from './output/verifier';
+export type { VerifierInput } from './output/verifier';
+export type { QualityViolation, VerificationReport, ViolationSeverity } from './output/verification-report';
+
+// Reflection (P0)
+export { ReflectionObserver } from './output/reflection-observer';
+export type { ReflectionObserverDeps, ReflectionObserverInput } from './output/reflection-observer';
+export type {
+  ReflectionArtifact,
+  ReflectionIssue,
+  ReviewResult,
+  IssueCategory,
+  IssueSeverity,
+} from './output/reflection-types';
+
+// Bad Case Writer (P0)
+export { convertToBadCase } from './evals/bad-case-writer';
+export type { BadCaseArtifact } from './evals/bad-case-writer';
 
 // Fallback (AGT-018)
 export { createFallbackEngine } from './fallback/fallback-engine';
