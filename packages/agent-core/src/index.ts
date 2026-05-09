@@ -183,3 +183,24 @@ export { verifyAnalysisPlan } from './planner/analysis-plan-verifier';
 export type { PlanVerifierContext } from './planner/analysis-plan-verifier';
 export { buildAnalysisPlan, buildAnalysisPlanWithRetry } from './planner/advisor-plan-builder';
 export type { PlanBuilderDeps, PlanBuilderInput, PlanBuilderResult } from './planner/advisor-plan-builder';
+
+// Tools (P2)
+export type {
+  ToolDefinition,
+  ToolExecutionContext,
+  ToolResult,
+  ToolError,
+  ReActStep,
+} from './tools/tool-types';
+export { queryMetricSummaryTool } from './tools/query-metric-summary';
+export { queryVisibleChartFactsTool } from './tools/query-visible-chart-facts';
+export { queryMissingDataTool } from './tools/query-missing-data';
+export { queryTimelineEventsTool } from './tools/query-timeline-events';
+
+// Evidence Resolver (P2)
+export { resolveEvidenceByPlan } from './planner/evidence-resolver';
+export type { EvidenceResolutionResult } from './planner/evidence-resolver';
+
+// ReAct Loop (P2)
+export { runConstrainedReAct } from './executor/react-loop';
+export type { ReActLoopDeps, ReActLoopInput, ReActLoopResult } from './executor/react-loop';

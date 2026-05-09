@@ -1,0 +1,101 @@
+import type { AnalysisPlan } from './analysis-plan';
+import type { TaskContextPacket } from '../context/context-packet';
+
+/** 证据解析结果 */
+export interface EvidenceResolutionResult {
+  /** 已解析的 evidence needs */
+  resolved: Array<{
+    need: AnalysisPlan['evidenceNeeds'][number];
+    evidence: { data: unknown; evidenceIds: string[] };
+  }>;
+  /** 未满足的 required needs（需要进入 ReAct） */
+  unresolved: AnalysisPlan['evidenceNeeds'][number][];
+}
+
+/**
+ * 基于 AnalysisPlan 的 evidenceNeeds，从 TaskContextPacket 中解析证据。
+ * 按优先级解析：
+ * 1. 从 packet.evidence 中查找匹配 metric 的 EvidenceFact
+ * 2. 从 packet.visibleCharts 中查找匹配 metric 的图表数据
+ * 3. 从 packet.homepage?.trend7d 中查找匹配 metric 的趋势数据
+ * 4. 未满足的 required needs 返回为 unresolved
+ */
+export function resolveEvidenceByPlan(
+  plan: AnalysisPlan,
+  packet: TaskContextPacket,
+): EvidenceResolutionResult {
+  const resolved: EvidenceResolutionResult['resolved'] = [];
+  const unresolved: EvidenceResolutionResult['unresolved'] = [];
+
+  for (const need of plan.evidenceNeeds) {
+    const resolvedEvidence = tryResolveFromPacket(need, packet);
+
+    if (resolvedEvidence) {
+      resolved.push({ need, evidence: resolvedEvidence });
+    } else if (need.required) {
+      unresolved.push(need);
+    }
+    // optional 且未找到 → 不加入任何列表（可选证据缺失不影响流程）
+  }
+
+  return { resolved, unresolved };
+}
+
+/** 尝试从 packet 中解析单个 evidence need */
+function tryResolveFromPacket(
+  need: AnalysisPlan['evidenceNeeds'][number],
+  packet: TaskContextPacket,
+): { data: unknown; evidenceIds: string[] } | null {
+  // 1. 从 evidence 中查找
+  const matchingEvidence = packet.evidence.filter(
+    (e) => e.metric === need.metric && e.source === 'daily_records',
+  );
+  if (matchingEvidence.length > 0) {
+    return {
+      data: matchingEvidence.map((e) => ({
+        id: e.id,
+        metric: e.metric,
+        value: e.value,
+        unit: e.unit,
+        derivation: e.derivation,
+      })),
+      evidenceIds: matchingEvidence.map((e) => e.id),
+    };
+  }
+
+  // 2. 从 visibleCharts 中查找
+  const matchingChart = packet.visibleCharts.find(
+    (vc) => vc.metric === need.metric,
+  );
+  if (matchingChart) {
+    return {
+      data: {
+        chartToken: matchingChart.chartToken,
+        metric: matchingChart.metric,
+        trend: matchingChart.dataSummary.trendDirection,
+        latest: matchingChart.dataSummary.latest,
+        average: matchingChart.dataSummary.average,
+      },
+      evidenceIds: matchingChart.evidenceIds,
+    };
+  }
+
+  // 3. 从 homepage.trend7d 中查找
+  const matchingTrend = packet.homepage?.trend7d?.find(
+    (ms) => ms.metric === need.metric,
+  );
+  if (matchingTrend) {
+    return {
+      data: {
+        metric: matchingTrend.metric,
+        trend: matchingTrend.trendDirection,
+        latest: matchingTrend.latest,
+        average: matchingTrend.average,
+        deltaPctVsBaseline: matchingTrend.deltaPctVsBaseline,
+      },
+      evidenceIds: matchingTrend.evidenceIds,
+    };
+  }
+
+  return null;
+}
