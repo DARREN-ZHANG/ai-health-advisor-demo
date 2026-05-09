@@ -28,6 +28,10 @@ import type { PlanBuilderDeps } from '../planner/advisor-plan-builder';
 import { buildAnalysisPlanWithRetry } from '../planner/advisor-plan-builder';
 import type { AnalysisPlan } from '../planner/analysis-plan';
 import type { PlanVerificationResult } from '../planner/analysis-plan';
+import type { SyncReflectionReviewer } from '../output/reflection-reviewer';
+import { runSyncReflectionGate } from '../output/sync-reflection-gate';
+import type { SyncGateResult } from '../output/sync-reflection-gate';
+import type { ReflectionReviewResult } from '../output/reflection-schema';
 
 export interface AgentRuntimeDeps extends ContextBuilderDeps {
   agent: HealthAgent;
@@ -39,6 +43,8 @@ export interface AgentRuntimeDeps extends ContextBuilderDeps {
   reflectionObserver?: ReflectionObserver;
   /** P1 新增：planner 依赖（可选，不设置时 ADVISOR_CHAT 退化为原有单次调用模式） */
   planBuilder?: PlanBuilderDeps;
+  /** P3 新增：同步审核 reviewer（可选，不设置时高风险请求走 P0 异步观测不阻断） */
+  syncReviewer?: SyncReflectionReviewer;
 }
 
 /**
@@ -63,6 +69,10 @@ export interface AgentRuntimeObserver {
   onPlanFailed?(reason: 'parse_error' | 'verification_failed' | 'invocation_error'): void;
   /** P1 新增：clarification 响应触发 */
   onClarification?(question: string): void;
+  /** P3 新增：sync gate 审核完成后触发 */
+  onSyncGate?(result: SyncGateResult): void;
+  /** P3 新增：安全边界响应触发 */
+  onSafetyBoundary?(violations: ReflectionReviewResult['violations']): void;
 }
 
 /**
@@ -243,6 +253,75 @@ export async function executeAgent(
       };
     }
     tryNotify(() => observer?.onVerified?.(verificationReport));
+
+    // P3: 同步审核闸门（仅高风险场景 + syncReviewer 已配置时触发）
+    if (deps.syncReviewer && shouldTriggerSyncGate(analysisPlan, verificationReport, context, request.userMessage)) {
+      const gateResult = await runSyncReflectionGate(
+        {
+          reviewer: deps.syncReviewer,
+          verifierInput,
+          plan: analysisPlan,
+          collectedEvidence: undefined, // P2 evidence 通过 packet 已注入 prompt
+        },
+        result,
+      );
+      tryNotify(() => observer?.onSyncGate?.(gateResult));
+
+      if (!gateResult.approved) {
+        // 重生成一次：基于原始 prompt（已有 plan 上下文）重新调用 solver
+        const regeneratedRaw = await withTimeout(
+          (signal) => deps.agent.invoke({ systemPrompt, userPrompt: taskPrompt, signal }),
+          timeoutMs,
+        );
+        const regeneratedParsed = parseAgentResponse(regeneratedRaw.content, {
+          taskType: request.taskType,
+          pageContext: request.pageContext,
+          defaultStatusColor: toEnvelopeStatusColor(rulesResult.statusColor),
+        });
+
+        if (regeneratedParsed.success) {
+          const regeneratedTokens = validateChartTokens(
+            regeneratedParsed.envelope.chartTokens,
+            Array.from(allowedTokens),
+          );
+          const regeneratedCleaned = cleanSafetyIssues(
+            regeneratedParsed.envelope.summary,
+            context.dataWindow.missingFields,
+            regeneratedParsed.envelope.microTips,
+          );
+          const regenerated: AgentResponseEnvelope = {
+            ...regeneratedParsed.envelope,
+            chartTokens: regeneratedTokens.valid,
+            summary: regeneratedCleaned.cleaned,
+            microTips: regeneratedCleaned.cleanedTips,
+            meta: { ...regeneratedParsed.envelope.meta, finishReason: 'complete' },
+          };
+
+          // 重生成后再审核一次
+          const reVerifierInput: VerifierInput = {
+            envelope: regenerated, context, rulesResult, packet, parseResult: { success: true },
+          };
+          const reGateResult = await runSyncReflectionGate(
+            { reviewer: deps.syncReviewer, verifierInput: reVerifierInput, plan: analysisPlan },
+            regenerated,
+          );
+
+          if (reGateResult.approved) {
+            // 重生成通过
+            tryNotify(() => observer?.onSyncGate?.(reGateResult));
+            tryNotify(() => observer?.onParsed?.(regenerated));
+            // 注意：重生成的结果也需要写回 memory
+            writeSessionMemory(deps, request, regenerated.summary);
+            writeAnalyticalMemory(deps, request, context, regenerated.summary, rulesResult);
+            return regenerated;
+          }
+        }
+
+        // 重生成仍不通过或解析失败：返回安全边界说明
+        tryNotify(() => observer?.onSafetyBoundary?.(gateResult.reviewResult?.violations ?? []));
+        return toSafetyBoundaryResponse(request, gateResult.reviewResult?.violations ?? []);
+      }
+    }
 
     // P0: 异步 reflection（不阻断，后台执行）
     if (deps.reflectionObserver) {
@@ -485,6 +564,64 @@ function toClarificationOrSafeResponse(
     meta: {
       ...fallback.meta,
       finishReason: 'fallback',
+    },
+  };
+}
+
+/** 高风险话题模式：运动准备度、诊断、用药、治疗承诺 */
+const HIGH_RISK_TOPIC_PATTERNS = [
+  /能.?运动|能.?跑|能.?锻炼|可以运动|可以跑|适合运动|能否锻炼/,
+  /诊断|确诊|患有|生了.*病/,
+  /服药|用药|吃药|药物|药方/,
+  /治疗|治愈|保证恢复|一定会好/,
+];
+
+/** 判断是否应触发同步审核闸门 */
+function shouldTriggerSyncGate(
+  plan: AnalysisPlan | undefined,
+  report: VerificationReport,
+  context: AgentContext,
+  userMessage: string | undefined,
+): boolean {
+  // 条件 1: plan.riskLevel === 'safety_boundary'
+  if (plan?.userIntent.riskLevel === 'safety_boundary') return true;
+  // 条件 2: 用户询问运动准备度、诊断、用药、治疗承诺
+  if (userMessage && HIGH_RISK_TOPIC_PATTERNS.some((p) => p.test(userMessage))) return true;
+  // 条件 3: 输出状态为严重异常（overallStatus === 'red'）
+  if (context.signals.overallStatus === 'red') return true;
+  // 条件 4: verifier 出现 hard violation
+  if (report.summary.hardFailures > 0) return true;
+  // 条件 5: Planner 或 verifier 判断存在缺失数据高风险误导
+  if (plan?.safetyConstraints.includes('disclose_missing_data') && hasMissingDataRisk(context)) return true;
+  return false;
+}
+
+/** 检查是否存在缺失数据导致高风险误导的可能 */
+function hasMissingDataRisk(context: AgentContext): boolean {
+  const missingCount = context.dataWindow.missingFields?.length ?? 0;
+  return missingCount >= 2;
+}
+
+/** 构造安全边界响应（sync gate 两次都不通过时使用） */
+function toSafetyBoundaryResponse(
+  request: AgentRequest,
+  violations: ReflectionReviewResult['violations'],
+): AgentResponseEnvelope {
+  const violationSummary = violations.length > 0
+    ? violations.map((v) => v.description).join('；')
+    : '回复未通过安全审核';
+
+  return {
+    summary: `为了您的安全，建议咨询专业医生获取准确的健康建议。本次回复因安全原因未通过审核：${violationSummary}`,
+    source: 'sync-gate',
+    statusColor: 'warning',
+    chartTokens: [],
+    microTips: ['建议咨询专业医生获取更准确的健康评估'],
+    meta: {
+      taskType: request.taskType,
+      pageContext: request.pageContext,
+      finishReason: 'fallback',
+      sessionId: request.sessionId,
     },
   };
 }

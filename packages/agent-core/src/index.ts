@@ -204,3 +204,11 @@ export type { EvidenceResolutionResult } from './planner/evidence-resolver';
 // ReAct Loop (P2)
 export { runConstrainedReAct } from './executor/react-loop';
 export type { ReActLoopDeps, ReActLoopInput, ReActLoopResult } from './executor/react-loop';
+
+// Sync Reflection (P3)
+export type { ReflectionReviewInput, ReflectionReviewResult, ReflectionViolation } from './output/reflection-schema';
+export { ReflectionReviewResultSchema } from './output/reflection-schema';
+export { SyncReflectionReviewer } from './output/reflection-reviewer';
+export type { SyncReflectionReviewerDeps } from './output/reflection-reviewer';
+export { runSyncReflectionGate } from './output/sync-reflection-gate';
+export type { SyncGateDeps, SyncGateResult } from './output/sync-reflection-gate';
