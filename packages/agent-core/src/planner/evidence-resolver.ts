@@ -46,9 +46,11 @@ function tryResolveFromPacket(
   need: AnalysisPlan['evidenceNeeds'][number],
   packet: TaskContextPacket,
 ): { data: unknown; evidenceIds: string[] } | null {
-  // 1. 从 evidence 中查找（H-5: 移除 source 过滤，按 metric 匹配即可）
+  // 1. 从 evidence 中查找（H-5: 移除 source 过滤，按 metric 匹配; H-4: 加入 timeScope 过滤）
   const matchingEvidence = packet.evidence.filter(
-    (e) => e.metric === need.metric,
+    (e) => e.metric === need.metric
+      && (!need.timeScope || !e.dateRange
+        || isTimeScopeCompatible(need.timeScope, e.dateRange.start, e.dateRange.end)),
   );
   if (matchingEvidence.length > 0) {
     return {
@@ -101,11 +103,27 @@ function tryResolveFromPacket(
     };
   }
 
+  // 4. H-2: 从 advisorChat.relevantFacts 中查找（ADVISOR_CHAT 场景的精确数据源）
+  const matchingFacts = packet.advisorChat?.relevantFacts?.filter(
+    (f) => (f.factType === 'metric' || f.factType === 'trend' || f.factType === 'chart')
+      && f.summary.includes(need.metric),
+  );
+  if (matchingFacts && matchingFacts.length > 0) {
+    return {
+      data: matchingFacts.map((f) => ({
+        label: f.label,
+        factType: f.factType,
+        summary: f.summary,
+      })),
+      evidenceIds: matchingFacts.flatMap((f) => f.evidenceIds),
+    };
+  }
+
   return null;
 }
 
-/** 判断 need 的 timeScope 与 chart 的 timeframe 是否兼容 */
-function isTimeScopeCompatible(needScope: string, chartTimeframe: string): boolean {
+/** 判断 need 的 timeScope 与数据源的 timeframe/dateRange 是否兼容 */
+function isTimeScopeCompatible(needScope: string, chartTimeframe: string, _dateRangeEnd?: string): boolean {
   // timeScope → 可兼容的 timeframe 值列表（含别名）
   const scopeToTimeframe: Record<string, string[]> = {
     today: ['day', '1d', '24h'],

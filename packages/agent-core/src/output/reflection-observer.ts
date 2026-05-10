@@ -92,7 +92,7 @@ export class ReflectionObserver {
  * 将 envelope、verificationReport violations、context 构建为 reviewer 可读的 prompt。
  */
 function buildReviewerUserPrompt(input: ReflectionObserverInput): string {
-  const { envelope, report, context, packet } = input;
+  const { envelope, report, context, packet, systemPrompt } = input;
 
   const sections: string[] = [];
 
@@ -110,6 +110,16 @@ function buildReviewerUserPrompt(input: ReflectionObserverInput): string {
   sections.push(`- 状态颜色: ${envelope.statusColor}`);
   if (envelope.microTips.length > 0) {
     sections.push(`- 微建议: ${envelope.microTips.join('; ')}`);
+  }
+
+  // H-11: 注入原始系统指令中的安全规则摘要
+  const safetyRules = extractSafetyRules(systemPrompt);
+  if (safetyRules.length > 0) {
+    sections.push(``);
+    sections.push(`## 原始安全指令`);
+    for (const rule of safetyRules) {
+      sections.push(`- ${rule}`);
+    }
   }
 
   // 验证结果
@@ -227,6 +237,36 @@ function parseIssues(issues: unknown): ReviewResult['issues'] {
 function parseSuggestions(suggestions: unknown): string[] {
   if (!Array.isArray(suggestions)) return [];
   return suggestions.filter((s): s is string => typeof s === 'string');
+}
+
+/**
+ * H-11: 从 systemPrompt 中提取安全相关规则摘要。
+ * 匹配常见的安全指令模式（禁止诊断、禁止用药建议等）。
+ */
+function extractSafetyRules(systemPrompt: string): string[] {
+  const rules: string[] = [];
+  const lines = systemPrompt.split('\n');
+
+  // 安全关键词匹配
+  const safetyKeywords = [
+    '不要诊断', '不做诊断', '禁止诊断', '不得诊断',
+    '不要推荐药物', '不要用药', '禁止用药建议', '不得推荐药物',
+    '不要承诺', '不做承诺', '禁止治疗承诺',
+    '必须披露', '数据不足', '缺失数据',
+    '建议就医', '咨询医生', '专业医生',
+  ];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.startsWith('#')) continue;
+    if (safetyKeywords.some((kw) => trimmed.includes(kw))) {
+      // 截取前 100 字符避免过长
+      rules.push(trimmed.length > 100 ? `${trimmed.slice(0, 100)}...` : trimmed);
+      if (rules.length >= 10) break; // 最多提取 10 条
+    }
+  }
+
+  return rules;
 }
 
 /** 构建错误态 ReflectionArtifact */

@@ -144,6 +144,12 @@ function buildPlannerUserPrompt(input: PlanBuilderInput): string {
   // 可用数据时间范围
   sections.push(`## 可用数据时间范围\n${input.availableDateRange.start} ~ ${input.availableDateRange.end}`);
 
+  // H-1: 加入 basePacket 关键数据上下文，避免 planner 为无数据指标生成 evidenceNeed
+  const packetSummary = buildPacketSummary(input.basePacket);
+  if (packetSummary.length > 0) {
+    sections.push(`## 当前数据概况\n${packetSummary.join('\n')}`);
+  }
+
   // 重试时的 violations 修正指引
   if (input.previousViolations && input.previousViolations.length > 0) {
     const violationLines = input.previousViolations.map(
@@ -221,4 +227,30 @@ function extractAvailableMetrics(packet: TaskContextPacket): string[] {
   }
 
   return [...metrics];
+}
+
+/**
+ * H-1: 从 TaskContextPacket 中提取关键数据上下文摘要，供 planner 了解数据可用性
+ */
+function buildPacketSummary(packet: TaskContextPacket): string[] {
+  const lines: string[] = [];
+
+  // 有数据的 metric 列表
+  const availableMetrics = extractAvailableMetrics(packet);
+  if (availableMetrics.length > 0) {
+    lines.push(`- 有数据的指标: ${availableMetrics.join(', ')}`);
+  }
+
+  // 数据窗口完整度
+  if (packet.dataWindow) {
+    lines.push(`- 数据窗口: ${packet.dataWindow.start} ~ ${packet.dataWindow.end}, 记录数: ${packet.dataWindow.recordCount}, 完整度: ${packet.dataWindow.completenessPct}%`);
+  }
+
+  // 当前可见图表
+  if (packet.visibleCharts && packet.visibleCharts.length > 0) {
+    const chartMetrics = packet.visibleCharts.map((vc) => vc.metric);
+    lines.push(`- 可见图表指标: ${chartMetrics.join(', ')}`);
+  }
+
+  return lines;
 }

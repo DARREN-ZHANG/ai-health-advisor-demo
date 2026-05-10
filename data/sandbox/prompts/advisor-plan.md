@@ -18,7 +18,7 @@
   "taskType": "advisor_chat",
   "userIntent": {
     "action": "<status_summary|explain_chart|ask_why|exercise_readiness|compare_periods|general>",
-    "riskLevel": "<general|safety_boundary>",
+    "riskLevel": "<general|potential_risk|safety_boundary>",
     "needsClarification": false,
     "clarificationQuestion": null
   },
@@ -31,7 +31,7 @@
       "required": true
     }
   ],
-  "safetyConstraints": ["no_diagnosis", "no_medication_advice", ...],
+  "safetyConstraints": ["no_diagnosis", "no_medication_advice", "no_treatment_promise", "disclose_missing_data", "recommend_doctor_when_critical"],
   "answerShape": {
     "includeMissingDataDisclosure": true,
     "includeChartTokens": false,
@@ -47,5 +47,11 @@
 2. dateRange 不能超过 availableDateRange
 3. 如果用户问题模糊，设置 needsClarification: true 并提供 clarificationQuestion
 4. 涉及运动准备度、诊断、用药意图时，riskLevel 设为 safety_boundary
-5. 不要生成回答内容，只规划分析步骤
-6. 所有 safetyConstraints 根据用户意图自动添加
+5. 指标异常趋势或中等风险场景（如数据偏离基线但未达安全边界），riskLevel 设为 potential_risk
+6. 不要生成回答内容，只规划分析步骤
+7. 所有 safetyConstraints 根据用户意图自动添加：
+   - no_diagnosis: 始终添加，禁止诊断性结论
+   - no_medication_advice: 始终添加，禁止药物建议
+   - no_treatment_promise: 始终添加，禁止治疗承诺
+   - disclose_missing_data: 数据不完整时添加，要求披露缺失数据
+   - recommend_doctor_when_critical: 检测到 critical 状态时添加，建议就医

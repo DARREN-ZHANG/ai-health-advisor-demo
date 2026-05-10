@@ -63,7 +63,7 @@ export async function runConstrainedReAct(
   // H-4: 强制最大步骤不超过 3（设计文档要求）
   const effectiveMaxSteps = Math.min(input.maxSteps, 3);
   const steps: ReActStep[] = [];
-  const collectedEvidence: Array<{ data: unknown; evidenceIds: string[] }> = [];
+  const collectedEvidence: Array<{ data: unknown; evidenceIds: string[]; metric?: string }> = [];
   const remainingNeeds = [...input.unresolvedNeeds];
 
   for (let step = 0; step < effectiveMaxSteps && remainingNeeds.length > 0; step++) {
@@ -74,8 +74,8 @@ export async function runConstrainedReAct(
     const toolCallResult = await selectTool(deps, remainingNeeds, steps, input.signal);
 
     if (!toolCallResult.success) {
-      // planner 无法选择 tool → 终止循环
-      break;
+      // H-5: planner 无法选择 tool → 跳过当前 need，继续尝试下一个
+      continue;
     }
 
     const { toolName, toolInput } = toolCallResult;
@@ -83,10 +83,32 @@ export async function runConstrainedReAct(
     // 2. 获取 tool（selectTool 内部已做白名单校验，此处 tool 必然存在）
     const tool = deps.tools.get(toolName)!;
 
-    // 3. 执行 tool
+    // H-10: 执行前用 inputSchema 验证 toolInput（防御性检查 schema 是否存在）
+    const schemaCheck = tool.inputSchema?.safeParse
+      ? tool.inputSchema.safeParse(toolInput)
+      : { success: true as const, data: toolInput };
+    if (!schemaCheck.success) {
+      // schema 校验失败：跳过本次，记录失败步骤
+      steps.push({
+        stepNumber: step + 1,
+        toolName,
+        input: toolInput,
+        output: {
+          success: false,
+          error: {
+            code: 'invalid_tool_input',
+            message: `输入参数校验失败: ${schemaCheck.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')}`,
+          },
+        },
+        timestamp: new Date().toISOString(),
+      });
+      continue;
+    }
+
+    // 3. 执行 tool（使用校验后的输入）
     let toolOutput: ToolResult<unknown>;
     try {
-      toolOutput = await tool.execute(toolInput, input.context);
+      toolOutput = await tool.execute(schemaCheck.data, input.context);
     } catch (error) {
       toolOutput = {
         success: false,
@@ -166,11 +188,19 @@ async function selectTool(
     const result = ToolCallSchema.safeParse(parsed);
 
     if (!result.success) {
+      // H-8: 记录 schema 校验失败的诊断信息
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[react-loop] ToolCall schema 校验失败:', result.error.errors.map((e) => e.message).join('; '));
+      }
       return { success: false };
     }
 
     // 验证 tool 在白名单中
     if (!deps.tools.has(result.data.toolName)) {
+      // H-8: 记录白名单校验失败
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn(`[react-loop] tool "${result.data.toolName}" 不在白名单中`);
+      }
       return { success: false };
     }
 
@@ -179,7 +209,11 @@ async function selectTool(
       toolName: result.data.toolName,
       toolInput: result.data.input,
     };
-  } catch {
+  } catch (error) {
+    // H-8: 记录异常诊断信息
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn('[react-loop] selectTool 异常:', error instanceof Error ? error.message : String(error));
+    }
     return { success: false };
   }
 }
@@ -208,7 +242,12 @@ function buildToolSelectionPrompt(
   sections.push('');
   sections.push('## 可用工具');
   for (const [name, tool] of tools) {
+    // H-6: 包含 input schema 字段信息，帮助 LLM 正确构造 input
+    const schemaInfo = formatInputSchema(tool.inputSchema);
     sections.push(`- ${name}: ${tool.description}`);
+    if (schemaInfo) {
+      sections.push(`  参数: ${schemaInfo}`);
+    }
   }
 
   sections.push('');
@@ -218,6 +257,48 @@ function buildToolSelectionPrompt(
   sections.push('```');
 
   return sections.join('\n');
+}
+
+/** H-6: 从 Zod schema 中提取字段名和类型摘要 */
+function formatInputSchema(schema: z.ZodSchema<unknown>): string {
+  try {
+    // 尝试从 ZodObject 中提取 shape
+    if ('shape' in schema && typeof (schema as z.ZodObject<z.ZodRawShape>).shape === 'object') {
+      const shape = (schema as z.ZodObject<z.ZodRawShape>).shape;
+      const fields = Object.entries(shape).map(([key, value]) => {
+        const typeName = getZodTypeName(value as z.ZodTypeAny);
+        const isOptional = isZodOptional(value as z.ZodTypeAny);
+        return `${key}: ${typeName}${isOptional ? ' (可选)' : ''}`;
+      });
+      return fields.join(', ');
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
+
+/** 获取 Zod 类型的简短名称 */
+function getZodTypeName(type: z.ZodTypeAny): string {
+  const def = type._def;
+  if (!def) return 'unknown';
+  switch (def.typeName) {
+    case 'ZodString': return 'string';
+    case 'ZodNumber': return 'number';
+    case 'ZodBoolean': return 'boolean';
+    case 'ZodEnum': return `enum(${(def as { values: string[] }).values?.join('|') ?? ''})`;
+    case 'ZodOptional': return getZodTypeName(def.innerType);
+    case 'ZodDefault': return getZodTypeName(def.innerType);
+    case 'ZodObject': return 'object';
+    default: return 'value';
+  }
+}
+
+/** 判断 Zod 类型是否可选 */
+function isZodOptional(type: z.ZodTypeAny): boolean {
+  const def = type._def;
+  if (!def) return false;
+  return def.typeName === 'ZodOptional' || def.typeName === 'ZodDefault';
 }
 
 /** 从文本中提取 JSON */

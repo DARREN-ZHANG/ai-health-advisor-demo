@@ -189,16 +189,24 @@ export async function executeAgent(
     // P2: Evidence Resolver + ReAct Loop（仅在 plan 成功后执行）
     let resolvedEvidence: EvidenceResolutionResult['resolved'] | undefined;
     if (analysisPlan && analysisPlan.evidenceNeeds.length > 0) {
-      const resolutionResult = resolveEvidenceByPlan(analysisPlan, packet);
-      tryNotify(() => observer?.onEvidenceResolved?.(resolutionResult));
-
-      resolvedEvidence = resolutionResult.resolved;
+      // C-3: 包裹 try-catch，P2 失败不应阻断主链路
+      let resolutionResult: EvidenceResolutionResult;
+      try {
+        resolutionResult = resolveEvidenceByPlan(analysisPlan, packet);
+        tryNotify(() => observer?.onEvidenceResolved?.(resolutionResult));
+        resolvedEvidence = resolutionResult.resolved;
+      } catch {
+        // evidence 解析异常：resolvedEvidence 保持 undefined，solver 仅基于 prompt 工作
+        resolutionResult = { resolved: [], unresolved: [] };
+      }
 
       // 有未满足的 required evidence 且配置了 reactLoop → 运行受限 ReAct
       if (resolutionResult.unresolved.length > 0 && deps.reactLoop) {
         // C-3: 创建 AbortController 将整体超时传递给 ReAct 循环
         const reactController = new AbortController();
         const reactTimeout = setTimeout(() => reactController.abort(), timeoutMs);
+        // C-5: 记录是否被中断
+        let reactAborted = false;
         try {
           const reactResult = await runConstrainedReAct(deps.reactLoop, {
             unresolvedNeeds: resolutionResult.unresolved,
@@ -212,19 +220,29 @@ export async function executeAgent(
           tryNotify(() => observer?.onReActStep?.(step));
         }
 
-        // H-2: 使用 metric 精确匹配 evidence 和 need
-        resolvedEvidence = [
-          ...resolvedEvidence,
-          ...reactResult.collectedEvidence.map((e) => {
-            const matchedNeed = e.metric
-              ? resolutionResult.unresolved.find((n) => n.metric === e.metric)
-              : undefined;
-            return {
-              need: matchedNeed ?? resolutionResult.unresolved[0]!,
-              evidence: e,
-            };
-          }),
-        ];
+        // C-5: 被中断时不追加不完整 evidence，避免错误关联
+        if (!reactAborted) {
+          // H-2: 使用 metric 精确匹配 evidence 和 need
+          resolvedEvidence = [
+            ...(resolvedEvidence ?? []),
+            ...reactResult.collectedEvidence.map((e) => {
+              const matchedNeed = e.metric
+                ? resolutionResult.unresolved.find((n) => n.metric === e.metric)
+                : undefined;
+              return {
+                need: matchedNeed ?? resolutionResult.unresolved[0]!,
+                evidence: e,
+              };
+            }),
+          ];
+        }
+        } catch (error) {
+          // ReAct 异常：检查是否是 abort 导致的
+          if (reactController.signal.aborted) {
+            reactAborted = true;
+            // 超时中断，不追加不完整 evidence
+          }
+          // 其他异常静默处理，不影响主链路
         } finally {
           clearTimeout(reactTimeout);
         }
@@ -327,6 +345,11 @@ export async function executeAgent(
 
     // P3: 同步审核闸门（仅高风险场景 + syncReviewer 已配置时触发）
     if (deps.syncReviewer && shouldTriggerSyncGate(analysisPlan, verificationReport, context, request.userMessage)) {
+      // H-9: 整个 Sync Gate 流程共享 AbortController，控制总超时预算
+      const gateController = new AbortController();
+      const gateTimeout = setTimeout(() => gateController.abort(), timeoutMs);
+
+      try {
       const gateResult = await runSyncReflectionGate(
         {
           reviewer: deps.syncReviewer,
@@ -334,6 +357,7 @@ export async function executeAgent(
           plan: analysisPlan,
           collectedEvidence: undefined, // P2 evidence 通过 packet 已注入 prompt
           precomputedVerificationReport: verificationReport, // H-6: 复用已计算的 verifier 结果
+          signal: gateController.signal, // H-9: 传递共享 signal
         },
         result,
       );
@@ -349,10 +373,11 @@ export async function executeAgent(
           : taskPrompt;
 
         // 重生成一次：基于原始 prompt + rejection 反馈重新调用 solver
-        const regeneratedRaw = await withTimeout(
-          (signal) => deps.agent.invoke({ systemPrompt, userPrompt: regeneratedTaskPrompt, signal }),
-          timeoutMs,
-        );
+        const regeneratedRaw = await deps.agent.invoke({
+          systemPrompt,
+          userPrompt: regeneratedTaskPrompt,
+          signal: gateController.signal, // H-9: 使用共享 signal 控制剩余时间
+        });
         const regeneratedParsed = parseAgentResponse(regeneratedRaw.content, {
           taskType: request.taskType,
           pageContext: request.pageContext,
@@ -385,7 +410,12 @@ export async function executeAgent(
             envelope: regenerated, context, rulesResult, packet, parseResult: { success: true },
           };
           reGateResult = await runSyncReflectionGate(
-            { reviewer: deps.syncReviewer, verifierInput: reVerifierInput, plan: analysisPlan },
+            {
+              reviewer: deps.syncReviewer,
+              verifierInput: reVerifierInput,
+              plan: analysisPlan,
+              signal: gateController.signal, // H-9: 传递共享 signal
+            },
             regenerated,
           );
 
@@ -414,6 +444,9 @@ export async function executeAgent(
           ?? [];
         tryNotify(() => observer?.onSafetyBoundary?.(effectiveViolations));
         return toSafetyBoundaryResponse(request, effectiveViolations);
+      }
+      } finally {
+        clearTimeout(gateTimeout);
       }
     }
 

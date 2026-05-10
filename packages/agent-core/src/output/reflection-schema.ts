@@ -9,6 +9,8 @@ export interface ReflectionReviewInput {
   verificationReport: VerificationReport;
   plan?: AnalysisPlan;
   collectedEvidence?: unknown[];
+  /** H-9: 共享 AbortSignal，控制审核调用的超时 */
+  signal?: AbortSignal;
 }
 
 /** Sync reflection 审核结果中的违规项 */

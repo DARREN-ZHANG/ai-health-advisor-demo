@@ -23,9 +23,11 @@ export class SyncReflectionReviewer {
   async review(input: ReflectionReviewInput): Promise<ReflectionReviewResult> {
     try {
       const userPrompt = buildGateUserPrompt(input);
+      // H-9: 传递 signal 以支持共享超时控制
       const response = await this.deps.reviewerAgent.invoke({
         systemPrompt: this.deps.gatePrompt,
         userPrompt,
+        signal: input.signal,
       });
       return parseReviewResponse(response.content);
     } catch (error) {

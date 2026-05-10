@@ -14,6 +14,8 @@ export interface SyncGateDeps {
   collectedEvidence?: unknown[];
   /** H-6: 预计算的 verificationReport，存在时跳过内部 verifier */
   precomputedVerificationReport?: VerificationReport;
+  /** H-9: 共享 AbortSignal，控制整个 Sync Gate 流程的超时预算 */
+  signal?: AbortSignal;
 }
 
 /** Sync Gate 结果 */
@@ -52,12 +54,13 @@ export async function runSyncReflectionGate(
     }
   }
 
-  // 2. 运行 sync reviewer（LLM 审核）
+  // 2. 运行 sync reviewer（LLM 审核）—— H-9: 传递共享 signal
   const review = await deps.reviewer.review({
     envelope,
     verificationReport: report,
     plan: deps.plan,
     collectedEvidence: deps.collectedEvidence,
+    signal: deps.signal,
   });
 
   if (review.approved) {

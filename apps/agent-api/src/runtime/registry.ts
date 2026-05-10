@@ -249,6 +249,7 @@ export function createRuntimeRegistry(
   }
 
   function reloadProfiles(): void {
+    // H-7: 先构建新 Map，再一次性替换（原子操作），避免并发读到空/不完整 profiles
     const newProfiles = loadAllProfiles(config.dataDir);
     profiles.clear();
     for (const [key, value] of newProfiles) {

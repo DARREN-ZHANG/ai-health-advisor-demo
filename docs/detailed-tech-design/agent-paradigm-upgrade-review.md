@@ -1,9 +1,10 @@
-# Agent 范式升级代码复审报告（第二轮）
+# Agent 范式升级代码复审报告（第四轮）
 
 > **审查日期**: 2026-05-09
-> **审查类型**: 独立复审（不以上轮结果为基线）
+> **审查类型**: 独立复审（不以前三轮结果为基线）
 > **审查范围**: T1–T11（P0–P3）全部代码
-> **审查 Agent**: 6 个并行 agent（配置链路、Runtime 集成、P0 输出层、P1-P2 planner+tools、P3 sync gate+交叉检查、测试质量）
+> **审查 Agent**: 5 个并行 agent（端到端数据流、错误路径韧性、Prompt 工程、状态安全与并发、跨包边界配置）
+> **已知延期项**: 第三轮 H-9（共享常量）、H-10（sync gate 测试）、H-11（独立单元测试）、H-13（SafetyConstraint 映射）
 
 ---
 
@@ -11,229 +12,212 @@
 
 | 统计 | 数量 |
 |------|------|
-| CRITICAL | 4 |
-| HIGH | 10 |
-| MEDIUM | 18 |
-| LOW | 14 |
+| CRITICAL | 5 |
+| HIGH | 11 |
+| MEDIUM | 10 |
+| LOW | 4 |
 
-**核心结论**: 代码架构设计清晰，P0/P1/P3 的核心实现质量良好。但存在 **4 个 CRITICAL 问题**阻塞生产可用性，其中最严重的是 **生产 Registry 未注入 P1-P3 依赖**，导致 planner、ReAct、sync gate 在生产环境完全不可用。
+**核心结论**: 本轮从全新维度审查，发现了之前所有轮次均未捕获的严重问题。最关键的是 **prompt 与代码之间的枚举不一致**：`advisor-plan.md` 中 `riskLevel` 缺少 `potential_risk` 选项、`SafetyConstraint` 使用省略号隐藏了 3 个关键约束。这些直接影响 LLM 的输出质量和安全审核的触发准确性。另外，`resolveEvidenceByPlan` 无 try-catch 保护，P2 失败会级联为整个请求 fallback。
 
 ---
 
 ## 2. CRITICAL 问题（必须修复）
 
-### C-1: 生产 Registry 未注入 P1/P2/P3 依赖
+### C-1: advisor-plan.md 中 riskLevel 枚举缺少 `potential_risk`
 
-- **发现者**: p3-cross-reviewer
-- **文件**: `apps/agent-api/src/runtime/registry.ts:254-279`
-- **问题**: `createRuntimeRegistry` 返回的 `AgentRuntimeDeps` 只设置了基础字段（agent、promptLoader、fallbackEngine），未注入 `planBuilder`（P1）、`reactLoop`（P2）、`syncReviewer`（P3）。生产环境中 ADVISOR_CHAT 任务退化为原有单次调用模式，**所有新能力均不生效**。
-- **修复**: 在 registry 中使用 `agents.plannerAgent` 和 `agents.reviewerAgent` 构建 `PlanBuilderDeps`、`ReActLoopDeps`、`SyncReflectionReviewer`，注入到返回的 deps 中。
+- **发现者**: Prompt 工程审查
+- **文件**: `data/sandbox/prompts/advisor-plan.md:21`
+- **问题**: prompt 中 `riskLevel` 仅列出 `<general|safety_boundary>` 两个值，但 Zod schema（`analysis-plan.ts:31`）定义了三个值（含 `potential_risk`）。`shouldTriggerSyncGate` 依赖 `potential_risk` 触发同步审核。
+- **影响**: LLM 无法输出 `potential_risk`，中间风险场景被错误标记为 `general`，高风险场景可能绕过安全审核。
+- **修复**: 将 prompt 改为 `<general|potential_risk|safety_boundary>`，增加 `potential_risk` 使用场景说明。
 
-### C-2: Eval 系统无法采集 P1-P3 数据
+### C-2: advisor-plan.md 中 SafetyConstraint 使用省略号，隐藏 3 个关键约束
 
-- **发现者**: p3-cross-reviewer + runtime-reviewer
-- **文件**: `packages/agent-core/src/evals/eval-runner.ts:157-191` + `packages/agent-core/src/evals/types.ts:204-228`
-- **问题**: (1) `EvalArtifacts` 缺少 P2/P3 字段（`evidenceResolutionResult`、`reactSteps`、`syncGateResult`、`safetyBoundaryViolations`）；(2) `createArtifactObserver` 只注册了 P0 的回调，缺少 `onPlanBuilt`/`onPlanFailed`/`onClarification`/`onEvidenceResolved`/`onReActStep`/`onSyncGate`/`onSafetyBoundary` 共 7 个回调。eval 系统无法获取 P1-P3 的运行时 artifacts。
-- **修复**: (1) 扩展 `EvalArtifacts` 类型；(2) 在 observer 中注册所有 P1-P3 回调。
+- **发现者**: Prompt 工程审查
+- **文件**: `data/sandbox/prompts/advisor-plan.md:34`
+- **问题**: prompt 示例为 `["no_diagnosis", "no_medication_advice", ...]`，使用 `...` 省略。实际 schema 有 5 个精确值，其中 `no_treatment_promise`、`disclose_missing_data`、`recommend_doctor_when_critical` 在 prompt 中完全缺失。
+- **影响**: `disclose_missing_data` 是 `shouldTriggerSyncGate` 条件 5 的触发依据。LLM 不知道这个约束存在，不会在 plan 中包含它，sync gate 条件 5 永远无法通过此路径触发。
+- **修复**: 完整列出所有 5 个枚举值，并为每个约束提供适用场景说明。
 
-### C-3: P3 重生成后 `onVerified` observer 遗漏
+### C-3: resolveEvidenceByPlan 无 try-catch，P2 失败级联为整体 fallback
 
-- **发现者**: runtime-reviewer
-- **文件**: `packages/agent-core/src/runtime/agent-runtime.ts:318-363`
-- **问题**: sync gate rejected 后重生成，重生成的 envelope 只经过了 sync gate 审核，但 `observer?.onVerified` 只在第一次原始结果上触发了一次。重生成的 verifier 结果未通知 observer，导致 P0 的 verifier observer 遗漏了重生成的验证结果。
-- **修复**: 重生成通过后，对重生成的结果补充调用 `tryNotify(() => observer?.onVerified?.(reVerificationReport))`。
+- **发现者**: 错误路径审查
+- **文件**: `packages/agent-core/src/runtime/agent-runtime.ts:192-193`
+- **问题**: `resolveEvidenceByPlan` 没有内部 try-catch。如果它抛出异常（如 `packet.evidence` 格式异常），异常传播到外层 catch（第 448 行），返回通用的 `provider_error` fallback。
+- **影响**: 本应只是缺少额外证据（P2 失败），solver 仍可基于已有 prompt 工作。但实际上整个请求被降级为 fallback 响应——从"稍差的分析"跳变为"完全无法分析"。
+- **修复**: 包裹 try-catch，捕获异常时将 `resolvedEvidence` 设为 undefined，让后续流程继续执行。P2 失败不应阻断主链路。
 
-### C-4: P2 ReAct 与 Runtime 集成测试完全缺失
+### C-4: ReAct collectedEvidence 类型声明缺少 metric 字段
 
-- **发现者**: test-quality-reviewer
-- **文件**: 不存在
-- **问题**: `agent-runtime.ts` 中已有 P2 ReAct 循环的集成代码（行 178-207），但没有任何 runtime 层测试验证。resolveEvidenceByPlan → runConstrainedReAct → appendPlanContextToPrompt → solver 的完整链路未经测试。
-- **修复**: 新建 `react-loop-integration.test.ts`，覆盖：plan 成功 + 有 unresolved → ReAct 触发、无 unresolved → 不触发、ReAct 失败后行为、observer 回调时序。
+- **发现者**: 错误路径审查
+- **文件**: `packages/agent-core/src/executor/react-loop.ts:66`
+- **问题**: `collectedEvidence` 类型声明为 `Array<{ data: unknown; evidenceIds: string[] }>`，不含 `metric`。但第 120 行实际 push 的对象包含 `metric: targetMetric`。runtime 层第 219 行访问 `e.metric` 依赖了类型系统中不存在的字段。
+- **影响**: 当 `targetMetric` 为 undefined（toolInput 中无 metric 字段）时，`e.metric` 为 undefined，精确匹配失败，回退到 `unresolved[0]!`，evidence 被错误关联。
+- **修复**: 修改类型声明为 `Array<{ data: unknown; evidenceIds: string[]; metric?: string }>`。
+
+### C-5: ReAct 超时中断后 evidence 可能处于不一致状态
+
+- **发现者**: 端到端数据流审查
+- **文件**: `packages/agent-core/src/runtime/agent-runtime.ts:200-230`
+- **问题**: ReAct 循环被 setTimeout 超时 abort 时，`collectedEvidence` 可能包含部分证据但 need 消除未完成。这些不完整证据仍被追加到 `resolvedEvidence`（第 216-227 行），且因 metric 可能缺失被关联到错误的 need。
+- **影响**: 被中断的 ReAct 循环产生的部分证据可能导致 solver 基于错误的证据关联给出不准确的分析。
+- **修复**: ReAct 被中断时不应将 `collectedEvidence` 追加到 `resolvedEvidence`，或在追加时验证 evidence 的完整性。
 
 ---
 
 ## 3. HIGH 问题（强烈建议修复）
 
-### H-1: P3 重生成仍不通过时 violations 使用了第一次审核的结果
+### H-1: planner prompt 缺少 basePacket 数据上下文
 
-- **发现者**: runtime-reviewer
-- **文件**: `packages/agent-core/src/runtime/agent-runtime.ts:367-368`
-- **问题**: `onSafetyBoundary` 使用的 `gateResult.reviewResult?.violations` 是第一次审核的 violations，而非重生成的 `reGateResult` 的 violations。用户看到的安全边界原因可能不适用于重生成的内容。
-- **修复**: 优先使用 `reGateResult.reviewResult?.violations`。
+- **发现者**: 端到端数据流审查
+- **文件**: `packages/agent-core/src/planner/advisor-plan-builder.ts:120-156`
+- **问题**: `buildPlannerUserPrompt` 只使用 `userMessage`、`pageContext`、`supportedMetrics`、`availableDateRange`。`basePacket`（TaskContextPacket）完全未传入 prompt。planner 不知道哪些指标有数据、数据完整度如何。
+- **影响**: planner 为无数据的指标生成 evidenceNeed，后续 verifier 规则 6 捕获并触发重试，浪费 LLM 调用。
+- **修复**: 在 prompt 中加入 basePacket 关键信息摘要：有数据的 metric 列表、数据窗口完整度、当前可见图表。
 
-### H-2: Plan Verifier 规则 6（required evidence 可解析性）是空实现
+### H-2: evidence-resolver 不利用 advisorChat.relevantFacts 数据源
 
-- **发现者**: p1p2-reviewer
-- **文件**: `packages/agent-core/src/planner/analysis-plan-verifier.ts:77-85`
-- **问题**: for 循环体内只有注释，没有任何实际校验逻辑。给了读者"检查存在"的假象。P2 evidence-resolver 已实现但此检查未补充。
-- **修复**: 注入 `TaskContextPacket` 引用做精确检查，或移除空壳循环。
+- **发现者**: 端到端数据流审查
+- **文件**: `packages/agent-core/src/planner/evidence-resolver.ts:45-105`
+- **问题**: resolver 只从 `packet.evidence`、`visibleCharts`、`homepage.trend7d` 三个路径查找。对 ADVISOR_CHAT 请求，`packet.advisorChat.relevantFacts` 是丰富的精确数据源，但完全被忽略。且 `homepage` 在 ADVISOR_CHAT 中为 undefined，第 3 路径永远无效。
+- **影响**: ADVISOR_CHAT 请求只有 2 个有效数据源路径，本可解析的证据被标记为 unresolved，不必要地触发 ReAct 循环。
+- **修复**: 增加第 4 数据源路径，从 `packet.advisorChat?.relevantFacts` 中查找匹配 metric 的事实。
 
-### H-3: queryMetricSummary 的 evidenceIds 来源需确认
+### H-3: verifier chart token 校验范围与 runtime 不一致
 
-- **发现者**: p1p2-reviewer
-- **文件**: `packages/agent-core/src/tools/query-metric-summary.ts:64-65`
-- **问题**: chartMatch 场景返回 `summary.evidenceIds`（MetricSummary 维度）而非 `chartMatch.evidenceIds`（图表维度）。`dataSummary.evidenceIds` 可能为空，丢失图表级别证据追溯。
-- **修复**: 合并两个来源 `[...new Set([...(summary.evidenceIds ?? []), ...(chartMatch.evidenceIds ?? [])])]`。
+- **发现者**: 端到端数据流审查
+- **文件**: `packages/agent-core/src/output/verifier.ts:152-188` vs `agent-runtime.ts:265-277`
+- **问题**: runtime 的 `allowedTokens` 包含 `visibleCharts` + `homepage.suggestedChartTokens` + `viewSummary.suggestedChartTokens` 三个来源，但 verifier 只检查 `visibleCharts`。来自 `suggestedChartTokens` 的合法 token 会被 verifier 标记为违规。
+- **影响**: 合法的 suggestedChartToken 产生 false positive hard violation，可能触发不必要的 sync gate 审核。
+- **修复**: 在 `checkChartTokens` 中使用与 runtime 一致的 allowed token 集合。
 
-### H-4: ReAct Loop 中 maxSteps 未强制上限为 3
+### H-4: evidence-resolver 第一路径不按 timeScope 过滤
 
-- **发现者**: p1p2-reviewer
-- **文件**: `packages/agent-core/src/executor/react-loop.ts:57`
-- **问题**: `maxSteps` 完全由调用方控制，ReAct 层无硬编码上限。设计文档要求"最大步骤固定为 3"。
-- **修复**: 在 `runConstrainedReAct` 内部 `const effectiveMaxSteps = Math.min(input.maxSteps, 3)`。
+- **发现者**: 端到端数据流审查
+- **文件**: `packages/agent-core/src/planner/evidence-resolver.ts:49-64`
+- **问题**: 第一个数据源路径只按 `e.metric === need.metric` 过滤，不考虑 `need.timeScope`。第二个路径（visibleCharts）正确加入了 `isTimeScopeCompatible` 检查，但第一个完全没有时间范围过滤。
+- **影响**: resolved evidence 可能包含不需要的时间范围数据。
+- **修复**: 在第一个路径中加入基于 `need.timeScope` 的过滤。
 
-### H-5: Evidence Resolver 只匹配 `daily_records` 源
+### H-5: selectTool 中空 toolName 导致 break 而非 continue
 
-- **发现者**: p1p2-reviewer
-- **文件**: `packages/agent-core/src/planner/evidence-resolver.ts:50-51`
-- **问题**: `tryResolveFromPacket` 过滤条件 `e.source === 'daily_records'` 忽略了 `timeline_sync`、`profile`、`rules`、`memory` 等有效来源。大量可用证据被错误地标记为 unresolved。
-- **修复**: 移除 source 过滤或按 metric 匹配即可。
+- **发现者**: Prompt 工程审查
+- **文件**: `packages/agent-core/src/executor/react-loop.ts:78` + `data/sandbox/prompts/react-tool-select.md:16`
+- **问题**: prompt 规则 4 告知 LLM"无合适工具时输出空 toolName"，但 `selectTool` 返回 `{ success: false }` 后循环直接 `break`，终止所有后续 need 处理。本应继续尝试下一个 need。
+- **影响**: 部分需要无法匹配工具时，所有剩余需要也被跳过，ReAct 循环过早终止。
+- **修复**: 将 `break` 改为 `continue`，跳过当前需要继续处理下一个。
 
-### H-6: P3 sync gate 内部重复运行 verifier
+### H-6: buildToolSelectionPrompt 不包含工具的 input schema 信息
 
-- **发现者**: runtime-reviewer
-- **文件**: `packages/agent-core/src/runtime/agent-runtime.ts:305` + `sync-reflection-gate.ts:37`
-- **问题**: runtime 已运行 verifier，sync gate 内部再次运行 verifier。每次触发 sync gate 时 verifier 被调用 2 次，重生成路径调用 3 次。
-- **修复**: 在 `SyncGateDeps` 中增加可选的 `precomputedVerificationReport`，跳过内部 verifier。
+- **发现者**: Prompt 工程审查
+- **文件**: `packages/agent-core/src/executor/react-loop.ts:208-213`
+- **问题**: prompt 只输出工具名和 description，没有告知 LLM 每个工具接受的 input 字段名和类型。LLM 不知道 `input` 里该填什么。
+- **影响**: LLM 输出错误的 input 字段名或遗漏必填字段，导致工具执行结果不对，需要无法被消除。
+- **修复**: 为每个工具输出 inputSchema 的字段名和类型摘要。
 
-### H-7: output 层反向依赖 planner 层
+### H-7: reloadProfiles 存在竞态条件
 
-- **发现者**: p3-cross-reviewer
-- **文件**: `reflection-schema.ts:4` + `sync-reflection-gate.ts:2`
-- **问题**: `output/reflection-schema.ts` 和 `output/sync-reflection-gate.ts` 直接 import `AnalysisPlan` from `../planner/analysis-plan`。output 层不应依赖 planner 层。
-- **修复**: 将 `AnalysisPlan` 核心类型抽到 `types/` 目录，或改为 `unknown` 类型 + 接口约束。
+- **发现者**: 状态安全审查
+- **文件**: `apps/agent-api/src/runtime/registry.ts:251-257`
+- **问题**: `reloadProfiles()` 先 `profiles.clear()` 再逐个 `profiles.set()`。在 clear 到重新填充完成之间的时间窗口，并发请求可能读到空或不完整的 profiles Map。
+- **影响**: 高并发场景下请求可能读到空 profiles，导致运行时错误或不正确的分析结果。
+- **修复**: 使用原子引用替换：先构建新 Map，再一次性替换引用。
 
-### H-8: model-factory 测试只检查 `toBeDefined()`
+### H-8: selectTool 静默吞掉 JSON 解析错误
 
-- **发现者**: test-quality-reviewer
-- **文件**: `packages/agent-core/src/__tests__/provider/model-factory.test.ts`
-- **问题**: `createChatModel` 和 `createChatModelForRole` 的所有测试只断言 `toBeDefined()`，任何实现都能通过（包括返回空对象）。
-- **修复**: 至少验证返回对象具有 `invoke` 方法。
+- **发现者**: 错误路径审查
+- **文件**: `packages/agent-core/src/executor/react-loop.ts:164-184`
+- **问题**: 空 `catch {}` 捕获所有 JSON 解析和 schema 校验异常，返回 `{ success: false }` 导致循环 break，无诊断信息。
+- **影响**: LLM 返回格式异常时 ReAct 循环立即终止且无诊断信息，调试困难。
+- **修复**: 在 catch 中记录错误信息到 steps 或新增 `abortedReason` 字段。
 
-### H-9: `shouldTriggerSyncGate` 中 `overallStatus === 'red'` 和 `missingDataRisk` 触发条件无测试
+### H-9: Sync Gate 超时预算失控
 
-- **发现者**: test-quality-reviewer
-- **文件**: `packages/agent-core/src/runtime/agent-runtime.ts:639-662`
-- **问题**: 5 个触发条件中 2 个（overallStatus=red、missingDataRisk）没有任何测试覆盖。
-- **修复**: 补充对应集成测试用例。
+- **发现者**: 错误路径审查 + 状态安全审查
+- **文件**: `packages/agent-core/src/runtime/agent-runtime.ts:329-417`
+- **问题**: Sync gate 流程包含最多 3 次额外 LLM 调用（审核 + 重生成 + 再审核），只有重生成有 `withTimeout`，reviewer 调用无超时控制。总耗时可达 `3 × timeoutMs`。
+- **影响**: 高风险请求处理时间可能大幅超出 SLA。
+- **修复**: 为整个 Sync Gate 流程创建共享 AbortController，传递剩余时间给每次调用。
 
-### H-10: Runtime 中存在魔法数字
+### H-10: ReAct tool input 无 schema 验证
 
-- **发现者**: p3-cross-reviewer + runtime-reviewer
-- **文件**: `agent-runtime.ts:190`（`maxSteps: 3`）和 `:661`（`missingCount >= 2`）
-- **修复**: 提取为命名常量（`MAX_REACT_STEPS`、`MISSING_DATA_HIGH_RISK_THRESHOLD`）。
+- **发现者**: 错误路径审查
+- **文件**: `packages/agent-core/src/executor/react-loop.ts:81-84`
+- **问题**: `ToolCallSchema` 只验证 toolName 和 input 是任意键值对。`ToolDefinition.inputSchema` 未在执行前调用 safeParse 验证。
+- **影响**: 格式错误的 tool input 可能导致工具执行异常。
+- **修复**: 在执行前增加 `tool.inputSchema.safeParse(toolInput)` 验证。
+
+### H-11: reflection prompt 缺少原始 systemPrompt 的安全规则
+
+- **发现者**: Prompt 工程审查
+- **文件**: `packages/agent-core/src/output/reflection-observer.ts:94-152`
+- **问题**: `buildReviewerUserPrompt` 不使用 `systemPrompt` 和 `taskPrompt` 字段（标注"预留"但从未使用）。reviewer 无法看到原始安全指令（如"不要做诊断"），无法判断回复是否违反了系统规则。
+- **影响**: reviewer 缺少判断"回复是否遵循了系统指令"的依据，审核维度不完整。
+- **修复**: 在 prompt 中注入 systemPrompt 的安全相关规则摘要。
 
 ---
 
 ## 4. MEDIUM 问题（建议修复）
 
-### M-1: FALLBACK_ONLY_MODE 下创建多余 agents
+### M-1: temperature 全局值覆盖角色默认值，与注释意图矛盾
 
-- **文件**: `registry.ts:133-142`
-- **问题**: `initializeAgents` 的返回值在 fallback 模式下被创建但未使用，浪费资源。
-- **修复**: fallback 分支跳过 `initializeAgents`。
+- **文件**: `packages/agent-core/src/provider/provider-config.ts:27-29`
+- **问题**: `resolveProviderConfig` 的 temperature fallback 链为 `{ROLE}_LLM_TEMPERATURE` → `LLM_TEMPERATURE` → `ROLE_DEFAULTS.temperature`。设置全局 `LLM_TEMPERATURE=0.3` 会覆盖 planner 的 0.1 和 reviewer 的 0.0。
+- **修复**: temperature 的 fallback 链应跳过 `LLM_TEMPERATURE`，直接使用 `ROLE_DEFAULTS`。
 
-### M-2: resolveProviderConfig truthiness 检查语义不清
+### M-2: Gemini provider 未传入 baseUrl 配置
 
-- **文件**: `provider-config.ts:24-29`
-- **问题**: 环境变量存在性用 truthiness 检查，对 `number` 类型的 `0` 值场景容易误解。当前因 env 值为字符串实际不会出 bug，但代码意图不清。
-- **修复**: 改为 `!= null` 显式检查。
+- **文件**: `packages/agent-core/src/provider/model-factory.ts:19-25`
+- **问题**: `ChatGoogleGenerativeAI` 支持 `baseUrl` 参数，但 gemini 分支没有传入。
+- **修复**: 添加 `...(config.baseUrl ? { baseUrl: config.baseUrl } : {})`。
 
-### M-3: toProviderEnv 中不同字段使用不一致的空值检查
+### M-3: evidence data 通过 JSON.stringify 注入 solver prompt，对 LLM 不友好
 
-- **文件**: `registry.ts:296-311`
-- **问题**: `TEMPERATURE`/`MAX_RETRIES` 用 `!= null`，`MODEL`/`PROVIDER` 用 truthiness。代码风格不一致。
-- **修复**: 统一空值检查策略。
+- **文件**: `packages/agent-core/src/runtime/agent-runtime.ts:608`
+- **问题**: 直接 `JSON.stringify(evidence.data)` 将完整嵌套对象注入 prompt，大量 JSON 占用 token 预算且 LLM 难以理解结构。
+- **修复**: 对 evidence data 做摘要提取，只保留关键字段。
 
-### M-4: ROLE_DEFAULTS 缺少 maxRetries 字段
+### M-4: sync-gate.md 缺少详细审核指引
 
-- **文件**: `defaults.ts:10-34`
-- **问题**: `maxRetries` 直接使用 `DEFAULT_MAX_RETRIES`，不经过 `ROLE_DEFAULTS`，与其他字段处理模式不一致。
-- **修复**: 在 `ROLE_DEFAULTS` 中增加 `maxRetries` 字段。
+- **文件**: `data/sandbox/prompts/sync-gate.md`
+- **问题**: 实际加载的 `sync-gate.md` 审核规则只有一行描述，而未使用的 `advisor-chat-gate.md` 有详细的"必须拒绝"和"可以通过"场景说明。
+- **修复**: 合并详细规则到 `sync-gate.md`，或 registry 改为加载 `advisor-chat-gate.md`。
 
-### M-5: P3 重生成缺少 rejection 反馈
+### M-5: appendPlanContextToPrompt 不含 plan 的推理链
 
-- **文件**: `agent-runtime.ts:318-321`
-- **问题**: 重生成时使用完全相同的 systemPrompt 和 taskPrompt，LLM 收不到"上次被拒绝"的反馈，大概率生成类似回复。
-- **修复**: 将 violations 的 `requiredChanges` 追加到 taskPrompt 中。
+- **文件**: `packages/agent-core/src/runtime/agent-runtime.ts:584-635`
+- **问题**: `AnalysisPlan` 没有 `reasoning` 字段，planner 的推理过程未传递给 solver，solver 可能偏离 plan 的分析意图。
+- **修复**: 在 `AnalysisPlan` schema 中增加 `reasoning?: string` 字段。
 
-### M-6: P1 plan 失败原因通过字符串匹配判断
+### M-6: appendPlanContextToPrompt 不使用 _packet 参数
 
-- **文件**: `agent-runtime.ts:156-158`
-- **问题**: `parseError.includes('调用失败')` 依赖硬编码中文文案，文案变更会错分错误类型。
-- **修复**: 在 `PlanBuilderResult` 中增加 `errorType` 结构化字段。
+- **文件**: `packages/agent-core/src/runtime/agent-runtime.ts:584`
+- **问题**: `_packet: TaskContextPacket` 参数完全未使用，`advisorChat.relevantFacts` 等关键数据未被注入到 plan context。
+- **修复**: 使用 packet 中的 advisorChat 数据丰富 plan context，或移除该参数。
 
-### M-7: executeAgent 函数超过 300 行
+### M-7: registry 返回的对象完全可变
 
-- **文件**: `agent-runtime.ts:105-408`
-- **问题**: P0-P3 所有逻辑集中在一个函数中，可读性和可维护性下降。
-- **修复**: 提取 `executePlannerPhase()`、`executeEvidencePhase()`、`executeSyncGatePhase()` 等内部函数。
+- **文件**: `apps/agent-api/src/runtime/registry.ts:305-337`
+- **问题**: 返回的对象无 `Object.freeze` 保护，调用者可修改 `syncReviewer`、`reactLoop.tools` 等关键依赖。
+- **修复**: 对返回对象和嵌套的敏感对象进行深度冻结。
 
-### M-8: highRiskActions 只包含 exercise_readiness
+### M-8: verifier 输入缺少 plan 信息
 
-- **文件**: `analysis-plan-verifier.ts:66`
-- **问题**: 与 `advisor-plan.md` 规则 4"涉及运动准备度、诊断、用药意图"不一致。
-- **修复**: 扩展检查逻辑，或通过 `safetyConstraints` 中是否包含 `no_diagnosis`/`no_medication_advice` 判断。
+- **文件**: `packages/agent-core/src/output/verifier.ts:7-13`
+- **问题**: `VerifierInput` 不含 `AnalysisPlan`，verifier 无法检查输出是否遵循 plan 的 `safetyConstraints`。
+- **修复**: 增加可选的 `plan?: AnalysisPlan` 字段。
 
-### M-9: advisor-plan.md 中 SafetyConstraint 枚举列表不完整
+### M-9: buildGateUserPrompt 不提供 evidence 内容
 
-- **文件**: `data/sandbox/prompts/advisor-plan.md`
-- **问题**: prompt 用 `...` 省略了部分枚举值，LLM 可能输出不在枚举中的值。
-- **修复**: 明确列出所有 5 个可选值。
+- **文件**: `packages/agent-core/src/output/reflection-reviewer.ts:88-91`
+- **问题**: gate prompt 只输出 evidence 数量（`可用证据数量: N 条`），不含具体内容。reviewer 无法判断数据引用是否与证据一致。
+- **修复**: 注入 evidence 的摘要信息（metric、值、时间范围）。
 
-### M-10: checkChartTokens 混合两种不同性质的违规
+### M-10: AnalysisPlan.evidenceNeeds.dateRange 未被 evidence-resolver 使用
 
-- **文件**: `verifier.ts:160-168`
-- **问题**: 非字符串 token 和越界 token 混入同一个 `invalid` 数组，错误消息无法区分。
-- **修复**: 分为两条 violation（`chart_tokens:invalid_type` + `chart_tokens:out_of_scope`）。
-
-### M-11: NEGATION_PREFIX_PATTERNS 与 safety-scorer 存在 drift 风险
-
-- **文件**: `verifier.ts:28-30` vs `safety-scorer.ts:22-32`
-- **问题**: 两处独立维护相同正则，safety-scorer 中有重复项。
-- **修复**: 提取到共享常量模块。
-
-### M-12: forbiddenPatterns 和 forbiddenClaimPatterns 始终为空数组
-
-- **文件**: `bad-case-writer.ts:80-81, 99`
-- **问题**: 自然语言 description 不适合作为正则，自动生成的 eval case 缺少自定义模式约束。
-- **修复**: 从 violation.details.matchedPatterns 提取正则源字符串。
-
-### M-13: convertToBadCase 在无质量问题时仍生成 bad case
-
-- **文件**: `bad-case-writer.ts:31-58`
-- **问题**: violations 全 passed + issues 为空时仍生成 eval case，但 expectations 无实质约束。
-- **修复**: 入口处检查，无质量问题时返回 null。
-
-### M-14: parseReviewResponse Zod 校验失败时返回空 violations
-
-- **文件**: `reflection-reviewer.ts:112-116`
-- **问题**: 返回 `{ approved: false, violations: [] }`，下游无法知道具体原因。
-- **修复**: Zod 校验失败时也返回包含描述信息的 violation。
-
-### M-15: checkPatterns 中重复创建 RegExp 丢失 flag
-
-- **文件**: `verifier.ts:253-271`
-- **问题**: `new RegExp(source)` 丢失原始正则的 flag（如 `/i`）。当前无实际 bug，但语义危险。
-- **修复**: 直接使用原始 patterns 的 `.test()` 方法。
-
-### M-16: ReAct need 消除策略在无 metric 信息时不准确
-
-- **文件**: `react-loop.ts:119-121`
-- **问题**: `queryMissingData` 等工具执行成功后 `shift()` 移除第一个 need，可能消除错误的 need。
-- **修复**: 让工具返回 `satisfiedMetrics`，或通过 ReAct 循环重新评估。
-
-### M-17: evidence-resolver timeScope 兼容性不完整
-
-- **文件**: `evidence-resolver.ts:110-116`
-- **问题**: `isTimeScopeCompatible` 未覆盖 `yesterday`/`custom`/`unknown`。
-- **修复**: 补充 `yesterday: ['day', '1d', '24h']` 映射。
-
-### M-18: 运行时测试中 mock 辅助函数在 4 个文件间大量重复
-
-- **文件**: agent-runtime.test.ts、p0-observer-integration.test.ts、sync-gate-integration.test.ts、advisor-chat-runtime.test.ts
-- **问题**: 约 300+ 行重复的 `makeRecord`、`makeDeps` 等辅助函数。
-- **修复**: 提取到共享测试工具文件。
+- **文件**: `packages/agent-core/src/planner/analysis-plan.ts:38` + `evidence-resolver.ts:45-105`
+- **问题**: `dateRange` 是可选字段但 resolver 完全不按 dateRange 过滤，只按 metric 和 timeScope 匹配。
+- **修复**: 在 `tryResolveFromPacket` 中加入 dateRange 过滤逻辑。
 
 ---
 
@@ -241,20 +225,10 @@
 
 | # | 问题 | 文件 |
 |---|------|------|
-| L-1 | Gemini provider 缺少 timeout 配置 | `model-factory.ts:19-25` |
-| L-2 | Anthropic provider 未实现但 enum 包含 | `model-factory.ts:27` |
-| L-3 | registry.test.ts 的 DATA_DIR 路径在 monorepo 中不可靠 | `registry.test.ts:11` |
-| L-4 | MetricType 与 MetricName 枚举重复定义 | `analysis-plan.ts:4-6` vs `context-packet.ts:7` |
-| L-5 | 4 个未使用的枚举类型导出别名 | `analysis-plan.ts:64-71` |
-| L-6 | appendPlanContextToPrompt 的 `_packet` 参数未使用 | `agent-runtime.ts:539` |
-| L-7 | extractJsonBlock 在 4 个文件中重复实现 | 多文件 |
-| L-8 | async reflection 使用 console.warn | `agent-runtime.ts:393-395` |
-| L-9 | clampScore 的 0 与合法范围 1-5 混淆 | `reflection-observer.ts:203-206` |
-| L-10 | verifier 测试未覆盖 medication_recommendation 区分和 treatment_promise | `verifier.test.ts` |
-| L-11 | bad-case-writer 无独立测试文件 | 缺失 |
-| L-12 | FakeChatModel 未覆盖空字符串和截断 JSON 场景 | 多个测试文件 |
-| L-13 | hasNumericClaims 正则缺少 mmHg、kg 等单位 | `verifier.ts:313-316` |
-| L-14 | HIGH_RISK_TOPIC_PATTERNS 正则中间字符只匹配单个 | `agent-runtime.ts:632-636` |
+| L-1 | env.ts 未验证跨 provider API key 一致性 | `apps/agent-api/src/config/env.ts:55-58` |
+| L-2 | required/optional need 未在 prompt 中排序，LLM 可能先处理 optional | `react-loop.ts:197` |
+| L-3 | planner 重试时 violations 格式为纯文本，LLM 可能重复犯错 | `advisor-plan-builder.ts:148-153` |
+| L-4 | FALLBACK_ONLY_MODE 下仍执行 toProviderEnv 无用计算 | `registry.ts:145-151` |
 
 ---
 
@@ -262,12 +236,12 @@
 
 | 阶段 | 验收状态 | 阻塞问题 |
 |------|---------|---------|
-| T1 基础设施 | **基本通过** | FALLBACK_ONLY_MODE 冗余创建（M-1）、ROLE_DEFAULTS 不一致（M-4） |
-| P0（T2-T4） | **通过** | checkChartTokens 混合违规（M-10）、正则 drift 风险（M-11） |
-| P1（T5-T7） | **有条件通过** | 规则 6 空实现（H-2）、highRiskActions 不完整（M-8） |
-| P2（T8-T9） | **未通过** | evidence 源过滤（H-5）、maxSteps 未强制（H-4）、need 消除（M-16）、集成测试缺失（C-4） |
-| P3（T10-T11） | **未通过** | 生产 registry 未注入依赖（C-1）、重生成 observer 遗漏（C-3）、violations 来源错误（H-1） |
-| 跨阶段 | **未通过** | eval 系统缺失（C-2）、反向依赖（H-7）、mock 重复（M-18） |
+| T1 基础设施 | **基本通过** | temperature 覆盖（M-1）、Gemini baseUrl（M-2）、reloadProfiles 竞态（H-7） |
+| P0（T2-T4） | **基本通过** | verifier chart token 范围不一致（H-3）、reflection prompt 缺少规则（H-11） |
+| P1（T5-T7） | **未通过** | prompt 枚举不完整（C-1, C-2）、planner 缺少数据上下文（H-1） |
+| P2（T8-T9） | **未通过** | resolveEvidenceByPlan 无保护（C-3）、evidence 数据源不全（H-2）、ReAct 多重缺陷（C-4, C-5, H-5, H-6, H-8, H-10） |
+| P3（T10-T11） | **未通过** | Sync Gate 超时失控（H-9）、gate prompt 不完整（M-4, M-9） |
+| 跨阶段 | **未通过** | prompt 枚举不一致（C-1, C-2）、evidence 流转缺陷（H-2, H-3, H-4） |
 
 ---
 
@@ -275,44 +249,46 @@
 
 ### 第一优先级（阻塞生产可用性）
 
-| # | 问题 | 类型 | 工作量估算 |
-|---|------|------|-----------|
-| C-1 | Registry 注入 P1-P3 依赖 | CRITICAL | 中 |
-| C-2 | EvalArtifacts + observer 补全 P1-P3 | CRITICAL | 中 |
-| C-3 | 重生成 onVerified observer | CRITICAL | 小 |
-| C-4 | P2 ReAct 集成测试 | CRITICAL | 中 |
+| # | 问题 | 类型 | 工作量 |
+|---|------|------|--------|
+| C-1 | advisor-plan.md 补充 potential_risk | CRITICAL | 小 |
+| C-2 | advisor-plan.md 完整列出 SafetyConstraint | CRITICAL | 小 |
+| C-3 | resolveEvidenceByPlan 增加 try-catch | CRITICAL | 小 |
+| C-4 | collectedEvidence 类型补充 metric | CRITICAL | 小 |
+| C-5 | ReAct 超时中断后跳过不完整 evidence | CRITICAL | 中 |
 
 ### 第二优先级（影响正确性）
 
-| # | 问题 | 类型 | 工作量估算 |
-|---|------|------|-----------|
-| H-1 | Safety boundary violations 来源 | HIGH | 小 |
-| H-2 | Plan verifier 规则 6 空实现 | HIGH | 小 |
-| H-3 | queryMetricSummary evidenceIds | HIGH | 小 |
-| H-4 | ReAct maxSteps 强制上限 | HIGH | 小 |
-| H-5 | Evidence resolver 源过滤 | HIGH | 小 |
-| H-6 | Sync gate 重复 verifier | HIGH | 小 |
-| H-9 | shouldTriggerSyncGate 测试补全 | HIGH | 中 |
+| # | 问题 | 类型 | 工作量 |
+|---|------|------|--------|
+| H-1 | planner prompt 加入 basePacket 上下文 | HIGH | 中 |
+| H-2 | evidence-resolver 增加 advisorChat 数据源 | HIGH | 中 |
+| H-3 | verifier chart token 范围对齐 | HIGH | 小 |
+| H-5 | 空 toolName 改 break 为 continue | HIGH | 小 |
+| H-6 | buildToolSelectionPrompt 加入 input schema | HIGH | 小 |
+| H-7 | reloadProfiles 改为原子引用替换 | HIGH | 小 |
+| H-8 | selectTool 添加诊断信息 | HIGH | 小 |
+| H-9 | Sync Gate 共享 AbortController | HIGH | 中 |
 
 ### 第三优先级（改进质量）
 
-- H-7 反向依赖、H-8 测试质量、H-10 魔法数字
 - 所有 MEDIUM 问题
 - LOW 问题可后续迭代
+- 第三轮延期项（H-9 共享常量、H-10 测试补全、H-11 独立单元测试、H-13 SafetyConstraint 映射）
 
 ---
 
-## 8. 测试质量评估
+## 8. 本轮与前几轮的差异说明
 
-**信心等级**: 中高（7/10）
+本轮从 5 个全新维度切入，发现之前所有轮次均未捕获的问题：
 
-**充分验证的模块**:
-- P0 Verifier + Reflection Observer -- 15 个集成测试，回调时序验证精确
-- P1 Planner 链路 -- 16 个集成测试 + 6 个 verifier 测试 + 14 个 builder 测试
-- P3 Sync Gate -- 14 个集成测试，覆盖 approved/rejected/重生成/异常
-- P2 单元测试 -- evidence-resolver 9 个、react-loop 7 个、4 个工具各 4 个
+| 本轮新发现 | 为何之前遗漏 |
+|-----------|--------------|
+| prompt 中 riskLevel 缺少 potential_risk（C-1） | 之前关注代码中枚举一致性，未深入审查 prompt 文件内容 |
+| SafetyConstraint 省略号问题（C-2） | 需要同时比对 prompt 文件和 Zod schema |
+| resolveEvidenceByPlan 无 try-catch（C-3） | 之前关注了 phase 级别的错误处理，但未检查具体函数的异常边界 |
+| evidence-resolver 不用 advisorChat 数据源（H-2） | 需要理解 ADVISOR_CHAT 和其他 taskType 的 packet 构建差异 |
+| reloadProfiles 竞态条件（H-7） | 需要从并发安全角度审查 registry 的运行时行为 |
+| temperature 覆盖角色默认值（M-1） | 需要完整追踪 fallback 链并与注释意图对比 |
 
-**关键缺口**:
-1. P2 ReAct 与 Runtime 的端到端集成测试（C-4）
-2. `shouldTriggerSyncGate` 2/5 触发条件未测试（H-9）
-3. model-factory / agent-initializer 测试质量低（H-8）
+**关键洞察**: Prompt 文件是系统行为的"隐式配置"，之前的审查主要集中在代码层面，对 prompt 与代码的一致性关注不足。本轮证明 prompt 文件需要与 Zod schema 一样严格的版本控制和一致性检查。

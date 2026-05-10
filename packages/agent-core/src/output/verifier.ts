@@ -151,19 +151,23 @@ function checkMissingDataDisclosure(input: VerifierInput): QualityViolation[] {
 
 function checkChartTokens(input: VerifierInput): QualityViolation[] {
   const tokens = input.envelope.chartTokens as string[];
-  const visibleChartTokens = input.packet.visibleCharts
-    .map((c) => c.chartToken)
-    .filter((t): t is string => typeof t === 'string');
+  // H-3: 与 runtime 一致，合并 visibleCharts + suggestedChartTokens 三个来源
+  const allowedTokens = new Set([
+    ...input.packet.visibleCharts
+      .map((c) => c.chartToken)
+      .filter((t): t is string => typeof t === 'string'),
+    ...(input.packet.homepage?.suggestedChartTokens ?? []),
+    ...(input.packet.viewSummary?.suggestedChartTokens ?? []),
+  ]);
 
   const violations: QualityViolation[] = [];
 
   // 检查非字符串 token
   const invalid = tokens.filter((t) => typeof t !== 'string' || t.length === 0);
 
-  // 如果有可见 chart 白名单，检查是否引用了白名单外的 token
-  if (visibleChartTokens.length > 0) {
-    const allowedSet = new Set(visibleChartTokens);
-    const outOfScope = tokens.filter((t) => typeof t === 'string' && !allowedSet.has(t));
+  // H-3: 使用与 runtime 一致的 allowed token 集合检查越界 token
+  if (allowedTokens.size > 0) {
+    const outOfScope = tokens.filter((t) => typeof t === 'string' && !allowedTokens.has(t));
     invalid.push(...outOfScope);
   }
 
