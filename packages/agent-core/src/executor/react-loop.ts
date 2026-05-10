@@ -58,11 +58,13 @@ export async function runConstrainedReAct(
   deps: ReActLoopDeps,
   input: ReActLoopInput,
 ): Promise<ReActLoopResult> {
+  // H-4: 强制最大步骤不超过 3（设计文档要求）
+  const effectiveMaxSteps = Math.min(input.maxSteps, 3);
   const steps: ReActStep[] = [];
   const collectedEvidence: Array<{ data: unknown; evidenceIds: string[] }> = [];
   const remainingNeeds = [...input.unresolvedNeeds];
 
-  for (let step = 0; step < input.maxSteps && remainingNeeds.length > 0; step++) {
+  for (let step = 0; step < effectiveMaxSteps && remainingNeeds.length > 0; step++) {
     // 1. 让 planner 选择下一步 tool
     const toolCallResult = await selectTool(deps, remainingNeeds, steps);
 

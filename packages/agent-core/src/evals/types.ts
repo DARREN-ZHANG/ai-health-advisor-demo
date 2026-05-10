@@ -7,6 +7,10 @@ import type { VerificationReport } from '../output/verification-report';
 import type { ReflectionArtifact } from '../output/reflection-types';
 import type { AnalysisPlan } from '../planner/analysis-plan';
 import type { PlanVerificationResult } from '../planner/analysis-plan';
+import type { EvidenceResolutionResult } from '../planner/evidence-resolver';
+import type { ReActStep } from '../tools/tool-types';
+import type { SyncGateResult } from '../output/sync-reflection-gate';
+import type { ReflectionReviewResult } from '../output/reflection-schema';
 
 // ── 枚举类型 ──────────────────────────────────────────
 
@@ -225,6 +229,14 @@ export interface EvalArtifacts {
   analysisPlan?: AnalysisPlan;
   /** P1: plan verifier 产出的校验结果 */
   planVerificationResult?: PlanVerificationResult;
+  /** P2: evidence resolver 结果 */
+  evidenceResolutionResult?: EvidenceResolutionResult;
+  /** P2: ReAct 循环步骤记录 */
+  reactSteps?: ReActStep[];
+  /** P3: sync gate 审核结果 */
+  syncGateResult?: SyncGateResult;
+  /** P3: 安全边界 violations */
+  safetyBoundaryViolations?: ReflectionReviewResult['violations'];
 }
 
 export interface EvalCaseResult {

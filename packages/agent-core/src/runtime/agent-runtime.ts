@@ -17,6 +17,12 @@ import { validateChartTokens } from '../output/token-validator';
 import { cleanSafetyIssues } from '../output/safety-cleaner';
 import { withTimeout, TimeoutError } from './timeout-controller';
 import { AGENT_SLA_TIMEOUT_MS } from '../constants/limits';
+
+/** H-10: ReAct 最大步骤数（设计文档要求固定为 3） */
+const MAX_REACT_STEPS = 3;
+
+/** H-10: 缺失数据高风险阈值（缺失字段数 >= 此值视为高风险） */
+const MISSING_DATA_HIGH_RISK_THRESHOLD = 2;
 import { buildTaskContextPacket } from '../context/context-packet-builder';
 import type { TaskContextPacket } from '../context/context-packet';
 import { verifyOutput } from '../output/verifier';
@@ -187,7 +193,7 @@ export async function executeAgent(
         const reactResult = await runConstrainedReAct(deps.reactLoop, {
           unresolvedNeeds: resolutionResult.unresolved,
           context: { packet, context },
-          maxSteps: 3,
+          maxSteps: MAX_REACT_STEPS,
         });
 
         // 通知 observer 每一步
@@ -308,6 +314,7 @@ export async function executeAgent(
           verifierInput,
           plan: analysisPlan,
           collectedEvidence: undefined, // P2 evidence 通过 packet 已注入 prompt
+          precomputedVerificationReport: verificationReport, // H-6: 复用已计算的 verifier 结果
         },
         result,
       );
@@ -324,6 +331,9 @@ export async function executeAgent(
           pageContext: request.pageContext,
           defaultStatusColor: toEnvelopeStatusColor(rulesResult.statusColor),
         });
+
+        // H-1: 跟踪重生成审核结果，用于安全边界 violations
+        let reGateResult: SyncGateResult | undefined;
 
         if (regeneratedParsed.success) {
           const regeneratedTokens = validateChartTokens(
@@ -347,15 +357,22 @@ export async function executeAgent(
           const reVerifierInput: VerifierInput = {
             envelope: regenerated, context, rulesResult, packet, parseResult: { success: true },
           };
-          const reGateResult = await runSyncReflectionGate(
+          reGateResult = await runSyncReflectionGate(
             { reviewer: deps.syncReviewer, verifierInput: reVerifierInput, plan: analysisPlan },
             regenerated,
           );
 
-          if (reGateResult.approved) {
+          if (reGateResult!.approved) {
             // 重生成通过
-            tryNotify(() => observer?.onSyncGate?.(reGateResult));
+            tryNotify(() => observer?.onSyncGate?.(reGateResult!));
             tryNotify(() => observer?.onParsed?.(regenerated));
+            // C-3: 对重生成的结果补充 verifier observer
+            try {
+              const reVerificationReport = verifyOutput(reVerifierInput);
+              tryNotify(() => observer?.onVerified?.(reVerificationReport));
+            } catch {
+              // verifier 异常不得影响重生成返回
+            }
             // 注意：重生成的结果也需要写回 memory
             writeSessionMemory(deps, request, regenerated.summary);
             writeAnalyticalMemory(deps, request, context, regenerated.summary, rulesResult);
@@ -364,8 +381,12 @@ export async function executeAgent(
         }
 
         // 重生成仍不通过或解析失败：返回安全边界说明
-        tryNotify(() => observer?.onSafetyBoundary?.(gateResult.reviewResult?.violations ?? []));
-        return toSafetyBoundaryResponse(request, gateResult.reviewResult?.violations ?? []);
+        // H-1: 优先使用重生成审核的 violations 而非第一次审核结果
+        const effectiveViolations = reGateResult?.reviewResult?.violations
+          ?? gateResult.reviewResult?.violations
+          ?? [];
+        tryNotify(() => observer?.onSafetyBoundary?.(effectiveViolations));
+        return toSafetyBoundaryResponse(request, effectiveViolations);
       }
     }
 
@@ -658,7 +679,7 @@ function shouldTriggerSyncGate(
 /** 检查是否存在缺失数据导致高风险误导的可能 */
 function hasMissingDataRisk(context: AgentContext): boolean {
   const missingCount = context.dataWindow.missingFields?.length ?? 0;
-  return missingCount >= 2;
+  return missingCount >= MISSING_DATA_HIGH_RISK_THRESHOLD;
 }
 
 /** 构造安全边界响应（sync gate 两次都不通过时使用） */

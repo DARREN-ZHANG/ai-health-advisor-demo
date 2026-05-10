@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
 import type { ProfileData, BaselineMetrics, DailyRecord } from '@health-advisor/shared';
 import type { AgentRuntimeDeps } from '@health-advisor/agent-core';
 import type { TimelineSyncContext } from '@health-advisor/agent-core';
@@ -12,6 +13,16 @@ import {
   createPromptLoader,
   InMemoryAnalyticalMemoryStore,
   createHealthAgent,
+  SyncReflectionReviewer,
+  queryMetricSummaryTool,
+  queryVisibleChartFactsTool,
+  queryMissingDataTool,
+  queryTimelineEventsTool,
+} from '@health-advisor/agent-core';
+import type {
+  PlanBuilderDeps,
+  ReActLoopDeps,
+  ToolDefinition,
 } from '@health-advisor/agent-core';
 import {
   loadAllProfiles,
@@ -251,6 +262,39 @@ export function createRuntimeRegistry(
     reloadProfiles,
   });
 
+  // C-1: 构建 P1/P2/P3 依赖（仅非 fallback 模式）
+  let planBuilder: PlanBuilderDeps | undefined;
+  let reactLoop: ReActLoopDeps | undefined;
+  let syncReviewer: SyncReflectionReviewer | undefined;
+
+  if (!config.FALLBACK_ONLY_MODE) {
+    const plannerPrompt = loadPromptFile(
+      join(config.dataDir, 'prompts', 'advisor-plan.md'),
+    );
+
+    planBuilder = {
+      plannerAgent: agents.plannerAgent,
+      plannerPrompt,
+    };
+
+    const reactTools = new Map<string, ToolDefinition<unknown, unknown>>();
+    reactTools.set(queryMetricSummaryTool.name, queryMetricSummaryTool as ToolDefinition<unknown, unknown>);
+    reactTools.set(queryVisibleChartFactsTool.name, queryVisibleChartFactsTool as ToolDefinition<unknown, unknown>);
+    reactTools.set(queryMissingDataTool.name, queryMissingDataTool as ToolDefinition<unknown, unknown>);
+    reactTools.set(queryTimelineEventsTool.name, queryTimelineEventsTool as ToolDefinition<unknown, unknown>);
+
+    reactLoop = {
+      plannerAgent: agents.plannerAgent,
+      tools: reactTools,
+      reactPrompt: loadPromptFile(join(config.dataDir, 'prompts', 'react-tool-select.md')),
+    };
+
+    syncReviewer = new SyncReflectionReviewer({
+      reviewerAgent: agents.reviewerAgent,
+      gatePrompt: loadPromptFile(join(config.dataDir, 'prompts', 'sync-gate.md')),
+    });
+  }
+
   return {
     config,
     metrics,
@@ -276,6 +320,11 @@ export function createRuntimeRegistry(
     agent,
     promptLoader,
     fallbackEngine,
+
+    // C-1: P1/P2/P3 依赖注入
+    planBuilder,
+    reactLoop,
+    syncReviewer,
   };
 }
 
@@ -311,4 +360,12 @@ export function toProviderEnv(config: AppConfig): Record<string, string> {
   if (config.REVIEWER_LLM_MAX_RETRIES != null) env.REVIEWER_LLM_MAX_RETRIES = String(config.REVIEWER_LLM_MAX_RETRIES);
 
   return env;
+}
+
+/** 从文件加载 prompt 文本，文件不存在时抛出明确错误 */
+function loadPromptFile(filePath: string): string {
+  if (!existsSync(filePath)) {
+    throw new Error(`Prompt 文件不存在: ${filePath}`);
+  }
+  return readFileSync(filePath, 'utf-8');
 }

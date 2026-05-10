@@ -46,9 +46,9 @@ function tryResolveFromPacket(
   need: AnalysisPlan['evidenceNeeds'][number],
   packet: TaskContextPacket,
 ): { data: unknown; evidenceIds: string[] } | null {
-  // 1. 从 evidence 中查找
+  // 1. 从 evidence 中查找（H-5: 移除 source 过滤，按 metric 匹配即可）
   const matchingEvidence = packet.evidence.filter(
-    (e) => e.metric === need.metric && e.source === 'daily_records',
+    (e) => e.metric === need.metric,
   );
   if (matchingEvidence.length > 0) {
     return {

@@ -23,6 +23,11 @@ import type {
 } from './types';
 import type { TaskContextPacket } from '../context/context-packet';
 import type { AgentResponseEnvelope } from '@health-advisor/shared';
+import type { AnalysisPlan } from '../planner/analysis-plan';
+import type { EvidenceResolutionResult } from '../planner/evidence-resolver';
+import type { ReActStep } from '../tools/tool-types';
+import type { SyncGateResult } from '../output/sync-reflection-gate';
+import type { ReflectionReviewResult } from '../output/reflection-schema';
 
 // ── Timeout 配置解析 ────────────────────────────────────────
 
@@ -186,6 +191,29 @@ function createArtifactObserver(evalCase: AgentEvalCase): {
     },
     onReflected(artifact) {
       artifacts.reflectionArtifact = artifact;
+    },
+    // C-2: P1-P3 observer 回调
+    onPlanBuilt(plan: AnalysisPlan) {
+      artifacts.analysisPlan = plan;
+    },
+    onPlanFailed() {
+      // plan 失败事件记录
+    },
+    onClarification() {
+      // clarification 事件记录
+    },
+    onEvidenceResolved(result: EvidenceResolutionResult) {
+      artifacts.evidenceResolutionResult = result;
+    },
+    onReActStep(step: ReActStep) {
+      if (!artifacts.reactSteps) artifacts.reactSteps = [];
+      artifacts.reactSteps.push(step);
+    },
+    onSyncGate(result: SyncGateResult) {
+      artifacts.syncGateResult = result;
+    },
+    onSafetyBoundary(violations: ReflectionReviewResult['violations']) {
+      artifacts.safetyBoundaryViolations = violations;
     },
   };
 

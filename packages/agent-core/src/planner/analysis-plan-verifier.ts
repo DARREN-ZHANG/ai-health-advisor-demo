@@ -75,14 +75,8 @@ export function verifyAnalysisPlan(
 
   // 6. required evidence 必须可从 TaskContextPacket 中解析
   // 注意：unsupported 的 metric 已由规则 2 报告，此处只检查 supported 但不可解析的情况
-  // TODO: P2 集成后可增加 packet 级别的 evidence 可用性检查
-  for (let i = 0; i < plan.evidenceNeeds.length; i++) {
-    const need = plan.evidenceNeeds[i];
-    if (need.required && ctx.supportedMetrics.includes(need.metric)) {
-      // 当前 verifier 无 packet 上下文，supported metric 暂视为可解析
-      // 未来可结合 packet.evidence 和 visibleCharts 做精确检查
-    }
-  }
+  // 当前 verifier 无 packet 上下文，supported metric 暂视为可解析
+  // H-2: 移除空壳循环，避免给读者"检查存在"的假象
 
   return { valid: violations.length === 0, violations };
 }
