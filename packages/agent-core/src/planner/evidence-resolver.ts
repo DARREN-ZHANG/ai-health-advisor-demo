@@ -63,9 +63,13 @@ function tryResolveFromPacket(
     };
   }
 
-  // 2. 从 visibleCharts 中查找
+  // 2. 从 visibleCharts 中查找（增加 timeframe 校验）
   const matchingChart = packet.visibleCharts.find(
-    (vc) => vc.metric === need.metric,
+    (vc) => vc.metric === need.metric && (
+      !need.timeScope || !vc.timeframe
+      || need.timeScope === vc.timeframe
+      || isTimeScopeCompatible(need.timeScope, vc.timeframe)
+    ),
   );
   if (matchingChart) {
     return {
@@ -98,4 +102,16 @@ function tryResolveFromPacket(
   }
 
   return null;
+}
+
+/** 判断 need 的 timeScope 与 chart 的 timeframe 是否兼容 */
+function isTimeScopeCompatible(needScope: string, chartTimeframe: string): boolean {
+  // timeScope → 可兼容的 timeframe 值列表（含别名）
+  const scopeToTimeframe: Record<string, string[]> = {
+    today: ['day', '1d', '24h'],
+    week: ['day', 'week', '7d', '1d'],
+    month: ['day', 'week', 'month', '30d', '7d'],
+  };
+  const compatible = scopeToTimeframe[needScope];
+  return compatible ? compatible.includes(chartTimeframe) : needScope === chartTimeframe;
 }

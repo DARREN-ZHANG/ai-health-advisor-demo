@@ -60,6 +60,8 @@ export const queryMetricSummaryTool: ToolDefinition<MetricSummaryInput, MetricSu
           trend: summary.trendDirection,
           dataPoints: summary.missing.totalCount - summary.missing.missingCount,
         },
+        // 使用 MetricSummary 维度的 evidenceIds（原始数据来源证据），
+        // 而非 chartMatch.evidenceIds（图表维度，指向图表展示而非底层数据）
         evidenceIds: summary.evidenceIds,
       };
     } catch (error) {

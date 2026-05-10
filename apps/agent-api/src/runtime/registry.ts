@@ -4,7 +4,9 @@ import type { AgentRuntimeDeps } from '@health-advisor/agent-core';
 import type { TimelineSyncContext } from '@health-advisor/agent-core';
 import {
   initializeAgent,
+  initializeAgents,
   resolveProviderConfig,
+  resolveAllLlmConfigs,
   FakeChatModel,
   createFallbackEngine,
   createPromptLoader,
@@ -126,10 +128,18 @@ export function createRuntimeRegistry(
   const promptLoader = createPromptLoader(undefined, join(config.dataDir, 'prompts'));
   const fallbackEngine = createFallbackEngine({}, join(config.dataDir, 'fallbacks'));
 
-  // 6. 创建 agent
+  // 6. 创建 agent（支持多角色配置）
+  const providerEnv = toProviderEnv(config);
+  const agents = config.FALLBACK_ONLY_MODE
+    ? initializeAgents({
+        solver: resolveProviderConfig(providerEnv, 'solver'),
+        planner: resolveProviderConfig(providerEnv, 'planner'),
+        reviewer: resolveProviderConfig(providerEnv, 'reviewer'),
+      })
+    : initializeAgents(resolveAllLlmConfigs(providerEnv));
   const agent = config.FALLBACK_ONLY_MODE
     ? createHealthAgent({ chatModel: new FakeChatModel('{"summary":"fallback","chartTokens":[],"microTips":[]}') })
-    : initializeAgent(resolveProviderConfig(toProviderEnv(config)));
+    : agents.solverAgent;
 
   // 7. getProfile 中间层：应用 override，并正确处理当前活动日
   function getProfileWithOverrides(profileId: string): ProfileData {
@@ -270,13 +280,35 @@ export function createRuntimeRegistry(
 }
 
 export function toProviderEnv(config: AppConfig): Record<string, string> {
-  return {
+  const env: Record<string, string> = {
     LLM_PROVIDER: config.LLM_PROVIDER,
     LLM_MODEL: config.LLM_MODEL,
     LLM_API_KEY: config.LLM_API_KEY,
     LLM_BASE_URL: config.LLM_BASE_URL,
-    LLM_TEMPERATURE: String(config.LLM_TEMPERATURE),
-    LLM_MAX_RETRIES: String(config.LLM_MAX_RETRIES),
     LLM_TIMEOUT_MS: String(config.LLM_TIMEOUT_MS),
   };
+
+  // 全局可选配置（有值时才传递，避免覆盖角色默认值）
+  if (config.LLM_TEMPERATURE != null) env.LLM_TEMPERATURE = String(config.LLM_TEMPERATURE);
+  if (config.LLM_MAX_RETRIES != null) env.LLM_MAX_RETRIES = String(config.LLM_MAX_RETRIES);
+
+  // Planner 角色独立配置
+  if (config.PLANNER_LLM_PROVIDER) env.PLANNER_LLM_PROVIDER = config.PLANNER_LLM_PROVIDER;
+  if (config.PLANNER_LLM_MODEL) env.PLANNER_LLM_MODEL = config.PLANNER_LLM_MODEL;
+  if (config.PLANNER_LLM_API_KEY) env.PLANNER_LLM_API_KEY = config.PLANNER_LLM_API_KEY;
+  if (config.PLANNER_LLM_BASE_URL) env.PLANNER_LLM_BASE_URL = config.PLANNER_LLM_BASE_URL;
+  if (config.PLANNER_LLM_TEMPERATURE != null) env.PLANNER_LLM_TEMPERATURE = String(config.PLANNER_LLM_TEMPERATURE);
+  if (config.PLANNER_LLM_TIMEOUT_MS != null) env.PLANNER_LLM_TIMEOUT_MS = String(config.PLANNER_LLM_TIMEOUT_MS);
+  if (config.PLANNER_LLM_MAX_RETRIES != null) env.PLANNER_LLM_MAX_RETRIES = String(config.PLANNER_LLM_MAX_RETRIES);
+
+  // Reviewer 角色独立配置
+  if (config.REVIEWER_LLM_PROVIDER) env.REVIEWER_LLM_PROVIDER = config.REVIEWER_LLM_PROVIDER;
+  if (config.REVIEWER_LLM_MODEL) env.REVIEWER_LLM_MODEL = config.REVIEWER_LLM_MODEL;
+  if (config.REVIEWER_LLM_API_KEY) env.REVIEWER_LLM_API_KEY = config.REVIEWER_LLM_API_KEY;
+  if (config.REVIEWER_LLM_BASE_URL) env.REVIEWER_LLM_BASE_URL = config.REVIEWER_LLM_BASE_URL;
+  if (config.REVIEWER_LLM_TEMPERATURE != null) env.REVIEWER_LLM_TEMPERATURE = String(config.REVIEWER_LLM_TEMPERATURE);
+  if (config.REVIEWER_LLM_TIMEOUT_MS != null) env.REVIEWER_LLM_TIMEOUT_MS = String(config.REVIEWER_LLM_TIMEOUT_MS);
+  if (config.REVIEWER_LLM_MAX_RETRIES != null) env.REVIEWER_LLM_MAX_RETRIES = String(config.REVIEWER_LLM_MAX_RETRIES);
+
+  return env;
 }

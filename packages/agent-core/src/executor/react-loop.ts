@@ -73,19 +73,8 @@ export async function runConstrainedReAct(
 
     const { toolName, toolInput } = toolCallResult;
 
-    // 2. 查找 tool
-    const tool = deps.tools.get(toolName);
-    if (!tool) {
-      // 非白名单 tool → 记录并跳过
-      steps.push({
-        stepNumber: step + 1,
-        toolName,
-        input: toolInput,
-        output: { success: false, error: { code: 'unknown_tool', message: `工具 "${toolName}" 不在白名单中` } },
-        timestamp: new Date().toISOString(),
-      });
-      continue;
-    }
+    // 2. 获取 tool（selectTool 内部已做白名单校验，此处 tool 必然存在）
+    const tool = deps.tools.get(toolName)!;
 
     // 3. 执行 tool
     let toolOutput: ToolResult<unknown>;
@@ -111,14 +100,25 @@ export async function runConstrainedReAct(
     };
     steps.push(reactStep);
 
-    // 5. 收集证据
+    // 5. 收集证据并精确匹配消除对应 need
     if (toolOutput.success) {
       collectedEvidence.push({
         data: toolOutput.data,
         evidenceIds: toolOutput.evidenceIds,
       });
-      // 从 remaining needs 中移除第一个（简单策略：每步尝试满足一个 need）
-      remainingNeeds.shift();
+      // 精确匹配：根据工具输入的 metric 从 remainingNeeds 中移除匹配项
+      const targetMetric = typeof toolInput === 'object' && toolInput !== null
+        ? (toolInput as Record<string, unknown>).metric as string | undefined
+        : undefined;
+      if (targetMetric) {
+        const matchIdx = remainingNeeds.findIndex((n) => n.metric === targetMetric);
+        if (matchIdx !== -1) {
+          remainingNeeds.splice(matchIdx, 1);
+        }
+      } else {
+        // 无 metric 信息时退回到简单策略
+        remainingNeeds.shift();
+      }
     }
   }
 

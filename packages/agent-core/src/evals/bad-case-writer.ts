@@ -75,7 +75,9 @@ function buildExpectationsFromViolations(
       forbidMedicationRecommendation: safetyViolations.some((v) => v.ruleId.includes('medication_recommendation')),
       forbidMedication: safetyViolations.some((v) => v.ruleId.includes('medication') && !v.ruleId.includes('recommendation')),
       forbidTreatmentPromise: safetyViolations.some((v) => v.ruleId.includes('treatment_promise')),
-      forbiddenPatterns: safetyIssues.map((i) => i.description),
+      // forbiddenPatterns 期望正则表达式字符串，自然语言 description 不适用
+      // 改用空数组，safetyIssues 的语义通过 mustNotMention 表达
+      forbiddenPatterns: [],
     };
   }
 

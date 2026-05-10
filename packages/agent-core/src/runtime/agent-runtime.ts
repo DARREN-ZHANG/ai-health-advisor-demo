@@ -32,6 +32,11 @@ import type { SyncReflectionReviewer } from '../output/reflection-reviewer';
 import { runSyncReflectionGate } from '../output/sync-reflection-gate';
 import type { SyncGateResult } from '../output/sync-reflection-gate';
 import type { ReflectionReviewResult } from '../output/reflection-schema';
+import { resolveEvidenceByPlan } from '../planner/evidence-resolver';
+import type { EvidenceResolutionResult } from '../planner/evidence-resolver';
+import { runConstrainedReAct } from '../executor/react-loop';
+import type { ReActLoopDeps, ReActLoopResult } from '../executor/react-loop';
+import type { ReActStep } from '../tools/tool-types';
 
 export interface AgentRuntimeDeps extends ContextBuilderDeps {
   agent: HealthAgent;
@@ -45,6 +50,8 @@ export interface AgentRuntimeDeps extends ContextBuilderDeps {
   planBuilder?: PlanBuilderDeps;
   /** P3 新增：同步审核 reviewer（可选，不设置时高风险请求走 P0 异步观测不阻断） */
   syncReviewer?: SyncReflectionReviewer;
+  /** P2 新增：ReAct 循环依赖（可选，不设置时 unresolved evidence 不会触发额外取证） */
+  reactLoop?: ReActLoopDeps;
 }
 
 /**
@@ -73,6 +80,10 @@ export interface AgentRuntimeObserver {
   onSyncGate?(result: SyncGateResult): void;
   /** P3 新增：安全边界响应触发 */
   onSafetyBoundary?(violations: ReflectionReviewResult['violations']): void;
+  /** P2 新增：证据解析完成后触发 */
+  onEvidenceResolved?(result: EvidenceResolutionResult): void;
+  /** P2 新增：ReAct 步骤完成后触发 */
+  onReActStep?(step: ReActStep): void;
 }
 
 /**
@@ -163,13 +174,45 @@ export async function executeAgent(
       tryNotify(() => observer?.onPlanBuilt?.(analysisPlan!));
     }
 
+    // P2: Evidence Resolver + ReAct Loop（仅在 plan 成功后执行）
+    let resolvedEvidence: EvidenceResolutionResult['resolved'] | undefined;
+    if (analysisPlan && analysisPlan.evidenceNeeds.length > 0) {
+      const resolutionResult = resolveEvidenceByPlan(analysisPlan, packet);
+      tryNotify(() => observer?.onEvidenceResolved?.(resolutionResult));
+
+      resolvedEvidence = resolutionResult.resolved;
+
+      // 有未满足的 required evidence 且配置了 reactLoop → 运行受限 ReAct
+      if (resolutionResult.unresolved.length > 0 && deps.reactLoop) {
+        const reactResult = await runConstrainedReAct(deps.reactLoop, {
+          unresolvedNeeds: resolutionResult.unresolved,
+          context: { packet, context },
+          maxSteps: 3,
+        });
+
+        // 通知 observer 每一步
+        for (const step of reactResult.steps) {
+          tryNotify(() => observer?.onReActStep?.(step));
+        }
+
+        // 将 ReAct 收集的证据追加到 resolvedEvidence
+        resolvedEvidence = [
+          ...resolvedEvidence,
+          ...reactResult.collectedEvidence.map((e, idx) => ({
+            need: resolutionResult.unresolved[idx] ?? resolutionResult.unresolved[0]!,
+            evidence: e,
+          })),
+        ];
+      }
+    }
+
     // 5. 构建 prompts（传入 packet）
     const systemPrompt = buildSystemPrompt(context, deps.promptLoader, packet.missingData);
     let taskPrompt = buildTaskPrompt(context, deps.promptLoader, rulesResult, packet);
 
     // P1: 如有 plan，将 plan 上下文追加到 task prompt
     if (analysisPlan) {
-      taskPrompt = appendPlanContextToPrompt(taskPrompt, analysisPlan, packet);
+      taskPrompt = appendPlanContextToPrompt(taskPrompt, analysisPlan, packet, resolvedEvidence);
     }
 
     tryNotify(() => observer?.onPromptBuilt?.({ systemPrompt, taskPrompt }));
@@ -224,6 +267,9 @@ export async function executeAgent(
         finishReason: 'complete',
       },
     };
+
+    // onParsed: 结构化输出已解析完成（时序: onParsed → onVerified → onSyncGate → onReflected）
+    tryNotify(() => observer?.onParsed?.(result));
 
     // 10. 写回 session memory
     writeSessionMemory(deps, request, result.summary);
@@ -342,12 +388,13 @@ export async function executeAgent(
         taskPrompt,
       }).then((artifact) => {
         tryNotify(() => observer?.onReflected?.(artifact));
-      }).catch(() => {
-        // reflection 失败不得影响生产
+      }).catch((err) => {
+        // reflection 失败不得影响生产，但至少记录 warning
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn('[agent-runtime] async reflection failed:', err instanceof Error ? err.message : String(err));
+        }
       });
     }
-
-    tryNotify(() => observer?.onParsed?.(result));
 
     return result;
   } catch (error) {
@@ -485,11 +532,12 @@ function getSupportedMetrics(): string[] {
   return ['hrv', 'sleep', 'activity', 'stress', 'spo2', 'resting-hr'];
 }
 
-/** 将 AnalysisPlan 上下文追加到 task prompt */
+/** 将 AnalysisPlan 上下文 + 已解析证据追加到 task prompt */
 function appendPlanContextToPrompt(
   taskPrompt: string,
   plan: AnalysisPlan,
   _packet: TaskContextPacket,
+  resolvedEvidence?: EvidenceResolutionResult['resolved'],
 ): string {
   const sections: string[] = [taskPrompt];
 
@@ -502,6 +550,17 @@ function appendPlanContextToPrompt(
     for (const need of plan.evidenceNeeds) {
       const status = need.required ? '[必需]' : '[可选]';
       sections.push(`- ${status} ${need.metric} (${need.timeScope}): ${need.reason}`);
+    }
+  }
+
+  // P2: 已解析的证据数据
+  if (resolvedEvidence && resolvedEvidence.length > 0) {
+    sections.push('### 已获取的证据数据');
+    for (const { need, evidence } of resolvedEvidence) {
+      sections.push(`- ${need.metric}: ${JSON.stringify(evidence.data)}`);
+      if (evidence.evidenceIds.length > 0) {
+        sections.push(`  证据ID: ${evidence.evidenceIds.join(', ')}`);
+      }
     }
   }
 

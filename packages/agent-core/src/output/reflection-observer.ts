@@ -10,6 +10,8 @@ export interface ReflectionObserverDeps {
   reviewerAgent: HealthAgent;
   /** reviewer prompt 文本（不使用 PromptLoader 接口，直接注入） */
   reviewerPrompt: string;
+  /** 实际使用的 reviewer 模型名称（用于可观测性） */
+  reviewerModelName: string;
 }
 
 // ── 输入接口 ──────────────────────────────────────────
@@ -72,7 +74,7 @@ export class ReflectionObserver {
         envelopeSnapshot: input.envelope,
         verificationReport: input.report,
         reviewResult,
-        reviewerModel: 'configured',
+        reviewerModel: this.deps.reviewerModelName,
         reflectedAt: new Date().toISOString(),
       };
     } catch (error) {
