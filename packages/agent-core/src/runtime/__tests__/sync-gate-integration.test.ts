@@ -270,9 +270,9 @@ describe('P3 Sync Gate 集成测试', () => {
       // onSafetyBoundary 不触发（因为重生成通过了）
       expect(onSafetyBoundary).not.toHaveBeenCalled();
 
-      // onParsed 触发一次（重生成通过的版本）
-      expect(onParsed).toHaveBeenCalledTimes(1);
-      expect(onParsed.mock.calls[0]![0].summary).toBe('建议您先咨询医生，确认身体状况适合运动后再开始。');
+      // onParsed 触发两次：第一次原始结果（在 onVerified 之前），第二次重生成结果
+      expect(onParsed).toHaveBeenCalledTimes(2);
+      expect(onParsed.mock.calls[1]![0].summary).toBe('建议您先咨询医生，确认身体状况适合运动后再开始。');
     });
   });
 
@@ -332,8 +332,9 @@ describe('P3 Sync Gate 集成测试', () => {
       expect(onSafetyBoundary).toHaveBeenCalledTimes(1);
       expect(onSafetyBoundary.mock.calls[0]![0]).toEqual(violations);
 
-      // onParsed 不触发（因为最终走安全边界）
-      expect(onParsed).not.toHaveBeenCalled();
+      // onParsed 触发一次（原始结果的解析通知，在 onVerified 之前）
+      expect(onParsed).toHaveBeenCalledTimes(1);
+      expect(onParsed.mock.calls[0]![0].summary).toBe('你的病一定会好的。');
     });
   });
 
@@ -622,7 +623,7 @@ describe('P3 Sync Gate 集成测试', () => {
       expect(onSafetyBoundary.mock.calls[0]![0]).toEqual(violations);
     });
 
-    it('observer 回调时序：onVerified → onSyncGate → onParsed（approved 场景）', async () => {
+    it('observer 回调时序：onParsed → onVerified → onSyncGate（approved 场景）', async () => {
       const { reviewer } = makeSyncReviewer([makeApprovedResult()]);
       const deps = makeDeps({}, reviewer);
 
@@ -635,10 +636,10 @@ describe('P3 Sync Gate 集成测试', () => {
 
       await executeAgent(highRiskRequest, deps, undefined, observer);
 
-      expect(callOrder).toEqual(['onVerified', 'onSyncGate', 'onParsed']);
+      expect(callOrder).toEqual(['onParsed', 'onVerified', 'onSyncGate']);
     });
 
-    it('observer 回调时序：onVerified → onSyncGate → onSafetyBoundary（rejected 场景）', async () => {
+    it('observer 回调时序：onParsed → onVerified → onSyncGate → onSafetyBoundary（rejected 场景）', async () => {
       const violations = [makeRejectedResult().violations[0]!];
       const { reviewer } = makeSyncReviewer([
         { approved: false, violations },
@@ -665,9 +666,10 @@ describe('P3 Sync Gate 集成测试', () => {
 
       const result = await executeAgent(highRiskRequest, deps, undefined, observer);
 
-      // 安全边界响应，onParsed 不触发
+      // 安全边界响应
       expect(result.source).toBe('sync-gate');
-      expect(callOrder).toEqual(['onVerified', 'onSyncGate', 'onSafetyBoundary']);
+      // onParsed 在 onVerified 之前触发（原始解析结果），安全边界时不会触发第二次
+      expect(callOrder).toEqual(['onParsed', 'onVerified', 'onSyncGate', 'onSafetyBoundary']);
     });
   });
 

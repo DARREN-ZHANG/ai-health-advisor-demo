@@ -7,7 +7,7 @@
  * 3. ADVISOR_CHAT + plan 失败 → 返回 fallback 响应 → solver 不被调用
  * 4. ADVISOR_CHAT + 无 planBuilder → 退化为原有模式 → solver 被直接调用
  * 5. HOMEPAGE_SUMMARY + planBuilder → 不受影响 → 不触发 planner
- * 6. Observer 回调时序：onPlanBuilt → onPromptBuilt → onModelOutput → onParsed
+ * 6. Observer 回调时序：onPlanBuilt → onPromptBuilt → onModelOutput → onParsed → onVerified
  * 7. Plan 失败 observer：onPlanFailed 被调用
  * 8. Clarification observer：onClarification 被调用
  */
@@ -74,6 +74,19 @@ function makeHomepageRequest(overrides: Partial<AgentRequest> = {}): AgentReques
     profileId: 'profile-a',
     taskType: AgentTaskType.HOMEPAGE_SUMMARY,
     pageContext: { profileId: 'profile-a', page: 'home', timeframe: 'week' },
+    ...overrides,
+  };
+}
+
+function makeViewSummaryRequest(overrides: Partial<AgentRequest> = {}): AgentRequest {
+  return {
+    requestId: 'req-view-1',
+    sessionId: 'sess-view-1',
+    profileId: 'profile-a',
+    taskType: AgentTaskType.VIEW_SUMMARY,
+    pageContext: { profileId: 'profile-a', page: 'view', timeframe: 'week', dataTab: 'hrv' },
+    tab: 'hrv',
+    timeframe: 'week',
     ...overrides,
   };
 }
@@ -445,8 +458,51 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
     });
   });
 
+  describe('VIEW_SUMMARY + planBuilder', () => {
+    it('不受影响，不触发 planner', async () => {
+      const plan = makeAnalysisPlan();
+      const solverInvoke = vi.fn(async () => ({
+        content: JSON.stringify({
+          summary: 'HRV 本周呈下降趋势。',
+          chartTokens: [ChartTokenId.HRV_7DAYS],
+          microTips: ['注意休息'],
+        }),
+      }));
+
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+
+      const runtimeDeps = makeDeps(
+        { invoke: solverInvoke },
+        planBuilder,
+      );
+
+      const onPlanBuilt = vi.fn();
+      const onPlanFailed = vi.fn();
+      const onPromptBuilt = vi.fn();
+
+      const result = await executeAgent(
+        makeViewSummaryRequest(),
+        runtimeDeps,
+        undefined,
+        { onPlanBuilt, onPlanFailed, onPromptBuilt },
+      );
+
+      // 正常 VIEW_SUMMARY 结果
+      expect(result.summary).toBe('HRV 本周呈下降趋势。');
+      expect(result.meta.finishReason).toBe('complete');
+
+      // planner observer 不触发
+      expect(onPlanBuilt).not.toHaveBeenCalled();
+      expect(onPlanFailed).not.toHaveBeenCalled();
+
+      // taskPrompt 不包含 plan 上下文
+      const promptInput = onPromptBuilt.mock.calls[0]![0];
+      expect(promptInput.taskPrompt).not.toContain('分析计划');
+    });
+  });
+
   describe('Observer 回调时序', () => {
-    it('成功路径：onPlanBuilt → onPromptBuilt → onModelOutput → onParsed 按顺序触发', async () => {
+    it('成功路径：onPlanBuilt → onPromptBuilt → onModelOutput → onParsed → onVerified 按顺序触发', async () => {
       const plan = makeAnalysisPlan();
       const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
       const runtimeDeps = makeDeps({}, planBuilder);
@@ -459,13 +515,13 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
         onPlanBuilt: () => { callOrder.push('onPlanBuilt'); },
         onPromptBuilt: () => { callOrder.push('onPromptBuilt'); },
         onModelOutput: () => { callOrder.push('onModelOutput'); },
-        onVerified: () => { callOrder.push('onVerified'); },
         onParsed: () => { callOrder.push('onParsed'); },
+        onVerified: () => { callOrder.push('onVerified'); },
       };
 
       await executeAgent(makeAdvisorChatRequest(), runtimeDeps, undefined, observer);
 
-      // 同步回调应按此顺序触发
+      // 同步回调应按此顺序触发（onParsed 在 onVerified 之前）
       expect(callOrder).toEqual([
         'onContextBuilt',
         'onRulesEvaluated',
@@ -473,8 +529,8 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
         'onPlanBuilt',
         'onPromptBuilt',
         'onModelOutput',
-        'onVerified',
         'onParsed',
+        'onVerified',
       ]);
     });
   });

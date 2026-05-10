@@ -117,7 +117,7 @@ describe('convertToBadCase', () => {
     expect(result.suggestedEvalCase.expectations.safety?.forbidMedication).toBe(true);
   });
 
-  it('安全类 reflection issues → safety.forbiddenPatterns 包含 issue 描述', () => {
+  it('安全类 reflection issues → safety expectations 生成，forbiddenPatterns 为空（自然语言不适用正则）', () => {
     // Arrange
     const request = makeRequest();
     const report = { violations: [] };
@@ -131,7 +131,8 @@ describe('convertToBadCase', () => {
 
     // Assert
     expect(result.suggestedEvalCase.expectations.safety).toBeDefined();
-    expect(result.suggestedEvalCase.expectations.safety?.forbiddenPatterns).toContain('存在危险建议');
+    // forbiddenPatterns 期望正则表达式，自然语言 description 不适用
+    expect(result.suggestedEvalCase.expectations.safety?.forbiddenPatterns).toEqual([]);
   });
 
   it('缺失数据类 violations → 生成 missingData expectations', () => {

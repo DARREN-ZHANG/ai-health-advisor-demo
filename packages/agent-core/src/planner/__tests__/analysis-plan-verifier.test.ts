@@ -139,7 +139,7 @@ describe('verifyAnalysisPlan', () => {
     );
   });
 
-  it('required evidence 指标不在可解析范围应产生 required_evidence_unresolvable violation', () => {
+  it('unsupported metric 只触发 unsupported_metric，不重复触发 required_evidence_unresolvable', () => {
     const plan = createValidPlan();
     // 使用类型断言模拟 required evidence 不可解析的情况
     const mutated = {
@@ -153,8 +153,14 @@ describe('verifyAnalysisPlan', () => {
     const result = verifyAnalysisPlan(mutated, ctx);
 
     expect(result.valid).toBe(false);
+    // 应只有 unsupported_metric，不应有 required_evidence_unresolvable（避免重复）
     expect(result.violations).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({ rule: 'unsupported_metric' }),
+      ]),
+    );
+    expect(result.violations).toEqual(
+      expect.not.arrayContaining([
         expect.objectContaining({ rule: 'required_evidence_unresolvable' }),
       ]),
     );

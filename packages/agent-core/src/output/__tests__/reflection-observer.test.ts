@@ -91,6 +91,7 @@ describe('ReflectionObserver', () => {
     const deps: ReflectionObserverDeps = {
       reviewerAgent,
       reviewerPrompt: REVIEWER_SYSTEM_PROMPT,
+      reviewerModelName: 'gpt-4o-test',
     };
     const observer = new ReflectionObserver(deps);
     const input = makeObserverInput();
@@ -106,7 +107,7 @@ describe('ReflectionObserver', () => {
     expect(result.envelopeSnapshot).toEqual(input.envelope);
     expect(result.verificationReport).toEqual(input.report);
     expect(result.reflectedAt).toBeTruthy();
-    expect(result.reviewerModel).toBe('configured');
+    expect(result.reviewerModel).toBe('gpt-4o-test');
   });
 
   it('Reviewer 返回有 issues 的结果 → approved: false，issues 正确解析', async () => {
@@ -125,6 +126,7 @@ describe('ReflectionObserver', () => {
     const observer = new ReflectionObserver({
       reviewerAgent,
       reviewerPrompt: REVIEWER_SYSTEM_PROMPT,
+      reviewerModelName: 'gpt-4o-test',
     });
     const input = makeObserverInput();
 
@@ -148,6 +150,7 @@ describe('ReflectionObserver', () => {
     const observer = new ReflectionObserver({
       reviewerAgent,
       reviewerPrompt: REVIEWER_SYSTEM_PROMPT,
+      reviewerModelName: 'gpt-4o-test',
     });
     const input = makeObserverInput();
 

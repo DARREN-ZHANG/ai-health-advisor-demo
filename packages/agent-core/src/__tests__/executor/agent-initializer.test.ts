@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { initializeAgent } from '../../executor/agent-initializer';
+import { initializeAgent, initializeAgents } from '../../executor/agent-initializer';
 
 describe('initializeAgent', () => {
   it('串联 provider config → chat model → health agent', async () => {
@@ -15,9 +15,6 @@ describe('initializeAgent', () => {
 
     expect(agent).toBeDefined();
     expect(typeof agent.invoke).toBe('function');
-
-    // 验证 invoke 能正常执行（使用 FakeChatModel 是在 createChatModel 内部，
-    // 但 initializeAgent 会创建真实 ChatOpenAI，所以此处验证接口即可）
   });
 
   it('返回的 agent 具有 invoke 方法', () => {
@@ -57,5 +54,44 @@ describe('initializeAgent', () => {
     });
 
     expect(agent1).not.toBe(agent2);
+  });
+});
+
+describe('initializeAgents', () => {
+  const baseConfig = {
+    provider: 'openai' as const,
+    model: 'gpt-4o-mini',
+    apiKey: 'test-key',
+    baseUrl: '',
+    timeoutMs: 5000,
+    temperature: 0,
+    maxRetries: 0,
+  };
+
+  it('返回三个独立 agent', () => {
+    const { solverAgent, plannerAgent, reviewerAgent } = initializeAgents({
+      solver: baseConfig,
+      planner: { ...baseConfig, temperature: 0.1 },
+      reviewer: { ...baseConfig, temperature: 0.0 },
+    });
+
+    expect(solverAgent).toBeDefined();
+    expect(plannerAgent).toBeDefined();
+    expect(reviewerAgent).toBeDefined();
+    expect(typeof solverAgent.invoke).toBe('function');
+    expect(typeof plannerAgent.invoke).toBe('function');
+    expect(typeof reviewerAgent.invoke).toBe('function');
+  });
+
+  it('三个 agent 是不同实例', () => {
+    const { solverAgent, plannerAgent, reviewerAgent } = initializeAgents({
+      solver: baseConfig,
+      planner: { ...baseConfig, temperature: 0.1 },
+      reviewer: { ...baseConfig, temperature: 0.0 },
+    });
+
+    expect(solverAgent).not.toBe(plannerAgent);
+    expect(plannerAgent).not.toBe(reviewerAgent);
+    expect(solverAgent).not.toBe(reviewerAgent);
   });
 });

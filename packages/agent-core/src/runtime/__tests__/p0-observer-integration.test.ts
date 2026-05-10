@@ -426,7 +426,7 @@ describe('P0 Observer 集成测试', () => {
   });
 
   describe('observer 回调时序', () => {
-    it('onVerified 在 onParsed 之前触发', async () => {
+    it('onParsed 在 onVerified 之前触发', async () => {
       const callOrder: string[] = [];
       const onVerified = vi.fn(() => { callOrder.push('onVerified'); });
       const onParsed = vi.fn(() => { callOrder.push('onParsed'); });
@@ -438,7 +438,7 @@ describe('P0 Observer 集成测试', () => {
         { onVerified, onParsed },
       );
 
-      expect(callOrder).toEqual(['onVerified', 'onParsed']);
+      expect(callOrder).toEqual(['onParsed', 'onVerified']);
     });
 
     it('成功路径完整的 observer 回调序列', async () => {
@@ -466,7 +466,7 @@ describe('P0 Observer 集成测试', () => {
 
       await executeAgent(makeRequest(), deps, undefined, observer);
 
-      // 同步回调的顺序
+      // 同步回调的顺序（onParsed 在 onVerified 之前，表示解析先于验证）
       const syncCalls = callOrder.filter((c) => c !== 'onReflected');
       expect(syncCalls).toEqual([
         'onContextBuilt',
@@ -474,8 +474,8 @@ describe('P0 Observer 集成测试', () => {
         'onPacketBuilt',
         'onPromptBuilt',
         'onModelOutput',
-        'onVerified',
         'onParsed',
+        'onVerified',
       ]);
 
       // onReflected 异步触发
