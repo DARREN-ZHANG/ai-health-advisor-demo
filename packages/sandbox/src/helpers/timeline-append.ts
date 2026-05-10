@@ -31,10 +31,8 @@ const DEFAULT_DURATION: Record<ActivitySegmentType, number> = {
   sleep: 480,
   deep_focus: 120,
   anxiety_episode: 30,
-  breathing_pause: 15,
   alcohol_intake: 180,
   caffeine_intake: 240,
-  nightmare: 30,
   relaxation: 30,
 };
 

@@ -14,10 +14,8 @@ export type ActivitySegmentType =
   | 'sleep'
   | 'deep_focus'
   | 'anxiety_episode'
-  | 'breathing_pause'
   | 'alcohol_intake'
   | 'caffeine_intake'
-  | 'nightmare'
   | 'relaxation';
 
 /** profile 当前演示时刻 */

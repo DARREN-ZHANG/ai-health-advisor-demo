@@ -145,8 +145,6 @@ export const MOTION_PATTERN_MAP: Record<ActivitySegmentType, MotionPattern> = {
   deep_focus:          'irregular_fidget',
   intermittent_exercise: 'intermittent_burst',
   anxiety_episode:     'irregular_restless',
-  breathing_pause:     'still_supine',
-  nightmare:           'irregular_sudden',
 };
 
 // ============================================================

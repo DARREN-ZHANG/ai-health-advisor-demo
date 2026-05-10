@@ -458,39 +458,6 @@ function generateAnxietyEpisodeEvents(segment: ActivitySegment): DeviceEvent[] {
 }
 
 // ============================================================
-// 生成器: breathing_pause（呼吸暂停）
-// ============================================================
-
-/** 呼吸暂停事件生成 */
-function generateBreathingPauseEvents(segment: ActivitySegment): DeviceEvent[] {
-  const events: DeviceEvent[] = [];
-  const totalMin = diffMinutes(segment.start, segment.end);
-  const params = segment.params ?? {};
-  const severityRaw = params.severity;
-  const severity = severityRaw === 'mild' || severityRaw === 'severe' ? severityRaw : 'moderate';
-  const spo2Base = severity === 'severe' ? 86 : severity === 'mild' ? 91 : 89;
-  let idx = 0;
-
-  events.push(makeEvent(segment, 0, 'wearState', true, idx++));
-  events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
-
-  for (let m = 0; m < totalMin; m += 1) {
-    const progress = m / totalMin;
-    const spo2Drop = Math.sin(progress * Math.PI) * 8;
-    const currentSpo2 = Math.round(spo2Base + 6 - spo2Drop);
-    const hrBase = progress < 0.6 ? 65 : 90;
-    const hr = rangeValue(Math.round(hrBase + (progress > 0.6 ? 10 : 0)), 12, m, 80);
-    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
-    events.push(makeEvent(segment, m, 'steps', 0, idx++));
-    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
-    const motion = aggregateMotion(imuSamples);
-    events.push(makeEvent(segment, m, 'motion', motion, idx++));
-    events.push(makeEvent(segment, m, 'spo2', Math.max(82, currentSpo2), idx++));
-  }
-  return events;
-}
-
-// ============================================================
 // 生成器: alcohol_intake（饮酒）
 // ============================================================
 
@@ -579,36 +546,6 @@ function generateAlcoholIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
   }
 
-  return events;
-}
-
-// ============================================================
-// 生成器: nightmare（噩梦）
-// ============================================================
-
-/** 噩梦事件生成 */
-function generateNightmareEvents(segment: ActivitySegment): DeviceEvent[] {
-  const events: DeviceEvent[] = [];
-  const totalMin = diffMinutes(segment.start, segment.end);
-  let idx = 0;
-
-  events.push(makeEvent(segment, 0, 'wearState', true, idx++));
-  events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
-
-  for (let m = 0; m < totalMin; m += 1) {
-    const progress = m / totalMin;
-    const intensity = Math.sin(progress * Math.PI);
-    const hr = rangeValue(Math.round(85 + intensity * 10), 10, m, 100);
-    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
-    events.push(makeEvent(segment, m, 'steps', 0, idx++));
-    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
-    const motion = aggregateMotion(imuSamples);
-    events.push(makeEvent(segment, m, 'motion', motion, idx++));
-    if (m % 5 === 0) {
-      const spo2 = rangeValue(96, 2, m, 103);
-      events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
-    }
-  }
   return events;
 }
 
@@ -752,10 +689,8 @@ const GENERATOR_MAP: Record<ActivitySegmentType, (segment: ActivitySegment) => D
   sleep: generateSleepEvents,
   deep_focus: generateDeepFocusEvents,
   anxiety_episode: generateAnxietyEpisodeEvents,
-  breathing_pause: generateBreathingPauseEvents,
   alcohol_intake: generateAlcoholIntakeEvents,
   caffeine_intake: generateCaffeineIntakeEvents,
-  nightmare: generateNightmareEvents,
   relaxation: generateRelaxationEvents,
 };
 
@@ -781,9 +716,7 @@ export {
   generateSleepEvents,
   generateDeepFocusEvents,
   generateAnxietyEpisodeEvents,
-  generateBreathingPauseEvents,
   generateAlcoholIntakeEvents,
   generateCaffeineIntakeEvents,
-  generateNightmareEvents,
   generateRelaxationEvents,
 };

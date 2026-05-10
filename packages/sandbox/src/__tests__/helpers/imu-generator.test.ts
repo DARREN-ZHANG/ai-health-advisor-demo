@@ -195,12 +195,12 @@ describe('imu-generator: ActivitySegmentType → MotionPattern 映射', () => {
       'walk', 'steady_cardio',
       'meal_intake', 'alcohol_intake', 'caffeine_intake',
       'deep_focus', 'intermittent_exercise',
-      'anxiety_episode', 'breathing_pause', 'nightmare',
+      'anxiety_episode',
     ];
     for (const type of segmentTypes) {
       expect(MOTION_PATTERN_MAP[type as keyof typeof MOTION_PATTERN_MAP]).toBeDefined();
     }
-    expect(Object.keys(MOTION_PATTERN_MAP).length).toBe(13);
+    expect(Object.keys(MOTION_PATTERN_MAP).length).toBe(11);
   });
 
   it('映射值全部是有效的 MotionPattern', () => {

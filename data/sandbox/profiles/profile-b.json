@@ -14,10 +14,6 @@
         "en": "Overweight"
       },
       {
-        "zh": "睡眠呼吸暂停",
-        "en": "Sleep apnea"
-      },
-      {
         "zh": "慢性疲劳",
         "en": "Chronic fatigue"
       }
@@ -30,7 +26,7 @@
       "avgSteps": 3000
     }
   },
-  "initialDemoTime": "2026-05-04T07:30",
+  "initialDemoTime": "2026-05-10T07:30",
   "historyRef": {
     "file": "history/profile-b-daily-records.json"
   },

@@ -389,8 +389,8 @@ describe('ActivitySegmentTypeSchema', () => {
     const types = [
       'meal_intake', 'steady_cardio', 'prolonged_sedentary',
       'intermittent_exercise', 'walk', 'sleep',
-      'deep_focus', 'anxiety_episode', 'breathing_pause',
-      'alcohol_intake', 'caffeine_intake', 'nightmare', 'relaxation',
+      'deep_focus', 'anxiety_episode',
+      'alcohol_intake', 'caffeine_intake', 'relaxation',
     ];
     types.forEach((t) => {
       expect(ActivitySegmentTypeSchema.parse(t)).toBe(t);
@@ -580,8 +580,8 @@ describe('RecognizedEventTypeSchema', () => {
     const types = [
       'meal_intake', 'steady_cardio', 'prolonged_sedentary',
       'intermittent_exercise', 'walk', 'sleep',
-      'deep_focus', 'anxiety_episode', 'breathing_pause',
-      'alcohol_intake', 'caffeine_intake', 'nightmare', 'relaxation',
+      'deep_focus', 'anxiety_episode',
+      'alcohol_intake', 'caffeine_intake', 'relaxation',
     ];
     types.forEach((t) => {
       expect(RecognizedEventTypeSchema.parse(t)).toBe(t);

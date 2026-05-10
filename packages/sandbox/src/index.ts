@@ -65,10 +65,8 @@ export {
   generateSleepEvents,
   generateDeepFocusEvents,
   generateAnxietyEpisodeEvents,
-  generateBreathingPauseEvents,
   generateAlcoholIntakeEvents,
   generateCaffeineIntakeEvents,
-  generateNightmareEvents,
   generateRelaxationEvents,
 } from './helpers/activity-generators';
 
