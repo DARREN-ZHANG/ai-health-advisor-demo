@@ -7,7 +7,7 @@ const validEnv: Record<string, string> = {
   LLM_PROVIDER: 'openai',
   LLM_MODEL: 'gpt-4o-mini',
   LLM_API_KEY: 'sk-test',
-  AI_TIMEOUT_MS: '6000',
+  AI_TIMEOUT_MS: '60000',
   ENABLE_GOD_MODE: 'true',
   FALLBACK_ONLY_MODE: 'false',
   LOG_LEVEL: 'debug',
@@ -20,7 +20,7 @@ describe('loadConfig', () => {
     expect(config.NODE_ENV).toBe('development');
     expect(config.LLM_PROVIDER).toBe('openai');
     expect(config.LLM_API_KEY).toBe('sk-test');
-    expect(config.LLM_TIMEOUT_MS).toBe(5000);
+    expect(config.LLM_TIMEOUT_MS).toBe(60000);
     expect(config.ENABLE_GOD_MODE).toBe(true);
     expect(config.FALLBACK_ONLY_MODE).toBe(false);
   });
@@ -30,8 +30,8 @@ describe('loadConfig', () => {
     expect(config.PORT).toBe(3002);
     expect(config.NODE_ENV).toBe('development');
     expect(config.LLM_MODEL).toBe('gpt-4o-mini');
-    expect(config.AI_TIMEOUT_MS).toBe(6000);
-    expect(config.LLM_TIMEOUT_MS).toBe(5000);
+    expect(config.AI_TIMEOUT_MS).toBe(60000);
+    expect(config.LLM_TIMEOUT_MS).toBe(60000);
     expect(config.LOG_LEVEL).toBe('info');
     expect(config.FALLBACK_ONLY_MODE).toBe(true);
   });

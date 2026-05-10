@@ -8,7 +8,7 @@ describe('initializeAgent', () => {
       model: 'gpt-4o-mini',
       apiKey: 'test-key',
       baseUrl: '',
-      timeoutMs: 5000,
+      timeoutMs: 60000,
       temperature: 0,
       maxRetries: 0,
     });
@@ -23,7 +23,7 @@ describe('initializeAgent', () => {
       model: 'gpt-4o-mini',
       apiKey: 'test-key',
       baseUrl: '',
-      timeoutMs: 5000,
+      timeoutMs: 60000,
       temperature: 0,
       maxRetries: 0,
     });
@@ -38,7 +38,7 @@ describe('initializeAgent', () => {
       model: 'gpt-4o-mini',
       apiKey: 'key-1',
       baseUrl: '',
-      timeoutMs: 5000,
+      timeoutMs: 60000,
       temperature: 0,
       maxRetries: 0,
     });
@@ -48,7 +48,7 @@ describe('initializeAgent', () => {
       model: 'gpt-4o-mini',
       apiKey: 'key-2',
       baseUrl: '',
-      timeoutMs: 5000,
+      timeoutMs: 60000,
       temperature: 0,
       maxRetries: 0,
     });
@@ -63,7 +63,7 @@ describe('initializeAgents', () => {
     model: 'gpt-4o-mini',
     apiKey: 'test-key',
     baseUrl: '',
-    timeoutMs: 5000,
+    timeoutMs: 60000,
     temperature: 0,
     maxRetries: 0,
   };

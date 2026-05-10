@@ -34,13 +34,13 @@ import type { ReflectionReviewResult } from '../output/reflection-schema';
 /** 合法 timeout 范围 */
 const MIN_TIMEOUT_MS = 1000;
 const MAX_TIMEOUT_MS = 120000;
-const DEFAULT_TIMEOUT_MS = 6000;
+const DEFAULT_TIMEOUT_MS = 60000;
 
 /**
  * 解析 LLM_TIMEOUT_MS 环境变量。
  *
  * 规则：
- * - 未配置时返回默认值 6000
+ * - 未配置时返回默认值 60000
  * - 非数字、0、负数、超出范围时返回错误对象
  */
 export function resolveEvalTimeoutMs(
@@ -254,7 +254,7 @@ async function runSingleCase(
   providerMode: EvalProviderMode,
   dataDir?: string,
   strictAssets?: boolean,
-  timeoutMs: number = 6000,
+  timeoutMs: number = 60000,
 ): Promise<EvalCaseResult> {
   // 创建 observer 采集 artifacts
   const { observer, getArtifacts } = createArtifactObserver(evalCase);

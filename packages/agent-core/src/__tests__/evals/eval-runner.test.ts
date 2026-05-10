@@ -813,7 +813,7 @@ describe('report writer', () => {
     const report = makeReport({
       runConfig: {
         gitDirty: true,
-        timeoutMs: 6000,
+        timeoutMs: 60000,
         caseRootDir: '/cases',
         dataDir: '/data',
       },
@@ -1365,7 +1365,7 @@ describe('eval runner — 报告 metadata', () => {
       const content = readFileSync(reportPath, 'utf-8');
       const report = JSON.parse(content);
       expect(report.runConfig).toBeDefined();
-      expect(report.runConfig.timeoutMs).toBe(6000);
+      expect(report.runConfig.timeoutMs).toBe(60000);
       expect(typeof report.runConfig.gitDirty).toBe('boolean');
       expect(report.runConfig.caseRootDir).toBe(tempCaseDir);
       expect(report.runConfig.dataDir).toBe(DATA_DIR);
@@ -1379,14 +1379,14 @@ describe('eval runner — 报告 metadata', () => {
 // ── resolveEvalTimeoutMs 单元测试 ──────────────────────────────
 
 describe('resolveEvalTimeoutMs', () => {
-  it('未配置时返回默认值 6000', () => {
+  it('未配置时返回默认值 60000', () => {
     const result = resolveEvalTimeoutMs({});
-    expect(result).toBe(6000);
+    expect(result).toBe(60000);
   });
 
-  it('空字符串时返回默认值 6000', () => {
+  it('空字符串时返回默认值 60000', () => {
     const result = resolveEvalTimeoutMs({ LLM_TIMEOUT_MS: '' });
-    expect(result).toBe(6000);
+    expect(result).toBe(60000);
   });
 
   it('合法值 60000 正常返回', () => {

@@ -50,7 +50,7 @@ describe('AiOrchestrator', () => {
     const orchestrator = new AiOrchestrator({
       registry: {} as unknown as import('../../runtime/registry').RuntimeRegistry,
       metrics,
-      timeoutMs: 6000,
+      timeoutMs: 60000,
     });
 
     const request: AgentRequest = {
@@ -131,7 +131,7 @@ describe('AiOrchestrator', () => {
     const orchestrator = new AiOrchestrator({
       registry: {} as unknown as import('../../runtime/registry').RuntimeRegistry,
       metrics,
-      timeoutMs: 6000,
+      timeoutMs: 60000,
       briefCache,
     });
 

@@ -7,7 +7,7 @@ describe('resolveProviderConfig', () => {
     expect(config.provider).toBe('openai');
     expect(config.model).toBe('gpt-4o-mini');
     expect(config.apiKey).toBe('');
-    expect(config.timeoutMs).toBe(5000);
+    expect(config.timeoutMs).toBe(60000);
     expect(config.temperature).toBe(0.3);
     expect(config.maxRetries).toBe(2);
   });

@@ -5,7 +5,7 @@ export const MAX_TURNS = 6;
 export const SESSION_TTL_MS = 30 * 60 * 1000;
 
 /** Agent 执行总 SLA 超时（毫秒） */
-export const AGENT_SLA_TIMEOUT_MS = 6000;
+export const AGENT_SLA_TIMEOUT_MS = 60000;
 
 /** 单次响应最大 chart token 数 */
 export const MAX_CHART_TOKENS = 2;

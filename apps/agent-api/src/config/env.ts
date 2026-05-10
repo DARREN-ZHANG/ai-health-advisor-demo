@@ -21,7 +21,7 @@ const AppConfigSchema = z.object({
   // 避免 LLM_TEMPERATURE=0.3 覆盖 planner 默认的 0.1 和 reviewer 默认的 0.0
   LLM_TEMPERATURE: z.coerce.number().min(0).max(2).optional(),
   LLM_MAX_RETRIES: z.coerce.number().int().min(0).max(5).optional(),
-  LLM_TIMEOUT_MS: z.coerce.number().positive().default(5000),
+  LLM_TIMEOUT_MS: z.coerce.number().positive().default(60000),
   // Planner 角色独立配置（可选，不设置时 fallback 到 LLM_*）
   PLANNER_LLM_PROVIDER: z.enum(['openai', 'anthropic', 'gemini']).optional(),
   PLANNER_LLM_MODEL: z.string().optional(),
@@ -38,7 +38,7 @@ const AppConfigSchema = z.object({
   REVIEWER_LLM_TEMPERATURE: z.coerce.number().min(0).max(2).optional(),
   REVIEWER_LLM_TIMEOUT_MS: z.coerce.number().positive().optional(),
   REVIEWER_LLM_MAX_RETRIES: z.coerce.number().int().min(0).max(5).optional(),
-  AI_TIMEOUT_MS: z.coerce.number().positive().default(6000),
+  AI_TIMEOUT_MS: z.coerce.number().positive().default(60000),
   ENABLE_GOD_MODE: envBool,
   FALLBACK_ONLY_MODE: envBool,
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
