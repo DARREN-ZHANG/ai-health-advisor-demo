@@ -38,6 +38,9 @@ export function aggregateDailyRecord(
   // 心率聚合
   const hr = aggregateHeartRate(dayEvents);
 
+  // HRV 聚合（从 hrvRmssd 事件取日级均值）
+  const hrv = aggregateHrv(dayEvents);
+
   // 睡眠聚合
   const sleep = aggregateSleep(dayEvents);
 
@@ -56,6 +59,7 @@ export function aggregateDailyRecord(
   return {
     date,
     ...(hr.length > 0 ? { hr } : {}),
+    ...(hrv !== undefined ? { hrv } : {}),
     ...(sleep ? { sleep } : {}),
     ...(activity ? { activity } : {}),
     ...(spo2 !== undefined ? { spo2 } : {}),
@@ -80,8 +84,8 @@ export function aggregateCurrentDayRecord(
 /**
  * 将当前日设备事件聚合结果覆盖到历史日记录上。
  *
- * 设备事件是当前日已同步事实，优先级高于历史记录；但 HRV 目前不是设备事件流
- * 可聚合的 metric，因此当聚合结果没有 HRV 时保留历史日记录里的 HRV。
+ * 设备事件是当前日已同步事实，优先级高于历史记录。
+ * 当聚合结果没有 HRV 时（无 hrvRmssd 事件），保留历史日记录里的 HRV 作为兜底。
  */
 export function mergeCurrentDayRecord(
   historicalRecord: DailyRecord | undefined,
@@ -134,6 +138,17 @@ export function mergeIntradayData(
     // overlay 有实际数据：优先使用聚合值
     return overlay;
   });
+}
+
+// ============================================================
+// HRV 聚合
+// ============================================================
+
+/** 从 hrvRmssd 事件中计算日级 HRV 均值（RMSSD） */
+function aggregateHrv(events: DeviceEvent[]): number | undefined {
+  const values = extractNumericValues(events, 'hrvRmssd');
+  if (values.length === 0) return undefined;
+  return Math.round(average(values));
 }
 
 // ============================================================

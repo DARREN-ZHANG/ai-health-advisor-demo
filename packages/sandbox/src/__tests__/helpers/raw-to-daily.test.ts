@@ -48,6 +48,53 @@ describe('raw-to-daily', () => {
       });
     });
 
+    describe('HRV 聚合', () => {
+      it('应从 hrvRmssd 事件计算日级 HRV 均值', () => {
+        const segment = makeSegment({
+          segmentId: 'seg-alcohol-hrv',
+          type: 'alcohol_intake',
+          start: '2026-04-16T20:00',
+          end: '2026-04-16T20:05',
+          params: { amount: 'moderate' },
+        });
+        const events = generateEventsForSegment(segment);
+        const record = aggregateDailyRecord(events, '2026-04-16');
+
+        expect(record.hrv).toBeDefined();
+        expect(record.hrv!).toBeGreaterThan(0);
+        // RMSSD 基线 50，饮酒后会下降但不会低于 5
+        expect(record.hrv!).toBeLessThanOrEqual(60);
+      });
+
+      it('无 hrvRmssd 事件时不应产生 HRV 字段', () => {
+        const segment = makeSegment({
+          segmentId: 'seg-walk-no-hrv',
+          type: 'walk',
+          start: '2026-04-16T08:00',
+          end: '2026-04-16T08:25',
+        });
+        const events = generateEventsForSegment(segment);
+        const record = aggregateDailyRecord(events, '2026-04-16');
+
+        expect(record.hrv).toBeUndefined();
+      });
+
+      it('咖啡因事件应产生 HRV 数据', () => {
+        const segment = makeSegment({
+          segmentId: 'seg-caffeine-hrv',
+          type: 'caffeine_intake',
+          start: '2026-04-16T09:00',
+          end: '2026-04-16T09:05',
+          params: { dose: 'moderate' },
+        });
+        const events = generateEventsForSegment(segment);
+        const record = aggregateDailyRecord(events, '2026-04-16');
+
+        expect(record.hrv).toBeDefined();
+        expect(record.hrv!).toBeGreaterThan(0);
+      });
+    });
+
     describe('睡眠数据', () => {
       it('应从睡眠阶段事件构建 SleepData', () => {
         const segment = makeSegment({
