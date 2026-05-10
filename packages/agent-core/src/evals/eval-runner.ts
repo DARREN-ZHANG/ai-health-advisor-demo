@@ -196,6 +196,10 @@ function createArtifactObserver(evalCase: AgentEvalCase): {
     onPlanBuilt(plan: AnalysisPlan) {
       artifacts.analysisPlan = plan;
     },
+    onPlanVerified(plan: AnalysisPlan) {
+      // H-7: 记录 plan 验证通过事件
+      (artifacts as any).planVerifiedAt = new Date().toISOString();
+    },
     onPlanFailed() {
       // plan 失败事件记录
     },

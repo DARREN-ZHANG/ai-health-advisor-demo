@@ -21,12 +21,14 @@ export interface ReActLoopInput {
   context: ToolExecutionContext;
   /** 最大步骤数 */
   maxSteps: number;
+  /** 中止信号（C-3: 允许外层超时控制中断 ReAct 循环） */
+  signal?: AbortSignal;
 }
 
 /** ReAct 循环结果 */
 export interface ReActLoopResult {
-  /** 收集到的证据 */
-  collectedEvidence: Array<{ data: unknown; evidenceIds: string[] }>;
+  /** 收集到的证据（H-2: 携带关联的 metric 信息） */
+  collectedEvidence: Array<{ data: unknown; evidenceIds: string[]; metric?: string }>;
   /** 执行步骤记录 */
   steps: ReActStep[];
   /** 是否仍有未满足的 required evidence */
@@ -65,8 +67,11 @@ export async function runConstrainedReAct(
   const remainingNeeds = [...input.unresolvedNeeds];
 
   for (let step = 0; step < effectiveMaxSteps && remainingNeeds.length > 0; step++) {
+    // C-3: 检查是否已中止
+    if (input.signal?.aborted) break;
+
     // 1. 让 planner 选择下一步 tool
-    const toolCallResult = await selectTool(deps, remainingNeeds, steps);
+    const toolCallResult = await selectTool(deps, remainingNeeds, steps, input.signal);
 
     if (!toolCallResult.success) {
       // planner 无法选择 tool → 终止循环
@@ -104,23 +109,31 @@ export async function runConstrainedReAct(
 
     // 5. 收集证据并精确匹配消除对应 need
     if (toolOutput.success) {
-      collectedEvidence.push({
-        data: toolOutput.data,
-        evidenceIds: toolOutput.evidenceIds,
-      });
-      // 精确匹配：根据工具输入的 metric 从 remainingNeeds 中移除匹配项
+      // H-2 + H-3: 提取 targetMetric，用于 evidence 关联和 need 消除
       const targetMetric = typeof toolInput === 'object' && toolInput !== null
         ? (toolInput as Record<string, unknown>).metric as string | undefined
         : undefined;
+
+      collectedEvidence.push({
+        data: toolOutput.data,
+        evidenceIds: toolOutput.evidenceIds,
+        metric: targetMetric, // H-2: 关联 metric 信息
+      });
+      // H-3 + H-12: 使用 filter 代替 splice，支持多 needs 同 metric 精确消除
       if (targetMetric) {
-        const matchIdx = remainingNeeds.findIndex((n) => n.metric === targetMetric);
-        if (matchIdx !== -1) {
-          remainingNeeds.splice(matchIdx, 1);
-        }
-      } else {
-        // 无 metric 信息时退回到简单策略
-        remainingNeeds.shift();
+        // 精确匹配：只移除第一个匹配 metric 的 need
+        let removed = false;
+        const updatedNeeds = remainingNeeds.filter((n) => {
+          if (!removed && n.metric === targetMetric) {
+            removed = true;
+            return false;
+          }
+          return true;
+        });
+        remainingNeeds.length = 0;
+        remainingNeeds.push(...updatedNeeds);
       }
+      // 无 metric 信息时不盲目移除（避免错误消除无关 need）
     }
   }
 
@@ -136,6 +149,7 @@ async function selectTool(
   deps: ReActLoopDeps,
   remainingNeeds: AnalysisPlan['evidenceNeeds'],
   previousSteps: ReActStep[],
+  signal?: AbortSignal,
 ): Promise<{ success: true; toolName: string; toolInput: Record<string, unknown> } | { success: false }> {
   try {
     const userPrompt = buildToolSelectionPrompt(remainingNeeds, previousSteps, deps.tools);
@@ -143,6 +157,7 @@ async function selectTool(
     const response = await deps.plannerAgent.invoke({
       systemPrompt: deps.reactPrompt,
       userPrompt,
+      signal,
     });
 
     // 解析 JSON

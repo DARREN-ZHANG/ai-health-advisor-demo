@@ -78,8 +78,10 @@ export interface AgentRuntimeObserver {
   onReflected?(artifact: ReflectionArtifact): void;
   /** P1 新增：plan 生成后触发 */
   onPlanBuilt?(plan: AnalysisPlan): void;
+  /** H-7: plan 验证完成后触发 */
+  onPlanVerified?(plan: AnalysisPlan, ctx: { supportedMetrics: string[] }): void;
   /** P1 新增：plan 失败时触发 */
-  onPlanFailed?(reason: 'parse_error' | 'verification_failed' | 'invocation_error'): void;
+  onPlanFailed?(reason: 'parse_error' | 'verification_failed' | 'invocation_error' | 'schema_error'): void;
   /** P1 新增：clarification 响应触发 */
   onClarification?(question: string): void;
   /** P3 新增：sync gate 审核完成后触发 */
@@ -159,14 +161,16 @@ export async function executeAgent(
 
       if (!planResult.success) {
         // Plan 失败：确定失败原因并通知 observer
-        const reason = planResult.parseError
-          ? (planResult.parseError.includes('调用失败') ? 'invocation_error' : 'parse_error')
-          : 'verification_failed';
+        // H-14: 优先使用结构化 failureType，向后兼容
+        const reason = planResult.failureType
+          ?? (planResult.parseError ? 'parse_error' : 'verification_failed');
         tryNotify(() => observer?.onPlanFailed?.(reason));
 
         // 返回安全响应（不绕过 planner 直接回答复杂问题）
         return toClarificationOrSafeResponse(
-          deps.fallbackEngine, request, planResult, fallbackKey, locale,
+          deps.fallbackEngine, request,
+          planResult as { success: false; parseError?: string; verificationResult?: PlanVerificationResult; failureType?: string },
+          fallbackKey, locale,
         );
       }
 
@@ -178,6 +182,8 @@ export async function executeAgent(
       }
 
       tryNotify(() => observer?.onPlanBuilt?.(analysisPlan!));
+      // H-7: plan 验证通过后通知 observer
+      tryNotify(() => observer?.onPlanVerified?.(analysisPlan!, { supportedMetrics: getSupportedMetrics() }));
     }
 
     // P2: Evidence Resolver + ReAct Loop（仅在 plan 成功后执行）
@@ -190,25 +196,38 @@ export async function executeAgent(
 
       // 有未满足的 required evidence 且配置了 reactLoop → 运行受限 ReAct
       if (resolutionResult.unresolved.length > 0 && deps.reactLoop) {
-        const reactResult = await runConstrainedReAct(deps.reactLoop, {
-          unresolvedNeeds: resolutionResult.unresolved,
-          context: { packet, context },
-          maxSteps: MAX_REACT_STEPS,
-        });
+        // C-3: 创建 AbortController 将整体超时传递给 ReAct 循环
+        const reactController = new AbortController();
+        const reactTimeout = setTimeout(() => reactController.abort(), timeoutMs);
+        try {
+          const reactResult = await runConstrainedReAct(deps.reactLoop, {
+            unresolvedNeeds: resolutionResult.unresolved,
+            context: { packet, context },
+            maxSteps: MAX_REACT_STEPS,
+            signal: reactController.signal,
+          });
 
         // 通知 observer 每一步
         for (const step of reactResult.steps) {
           tryNotify(() => observer?.onReActStep?.(step));
         }
 
-        // 将 ReAct 收集的证据追加到 resolvedEvidence
+        // H-2: 使用 metric 精确匹配 evidence 和 need
         resolvedEvidence = [
           ...resolvedEvidence,
-          ...reactResult.collectedEvidence.map((e, idx) => ({
-            need: resolutionResult.unresolved[idx] ?? resolutionResult.unresolved[0]!,
-            evidence: e,
-          })),
+          ...reactResult.collectedEvidence.map((e) => {
+            const matchedNeed = e.metric
+              ? resolutionResult.unresolved.find((n) => n.metric === e.metric)
+              : undefined;
+            return {
+              need: matchedNeed ?? resolutionResult.unresolved[0]!,
+              evidence: e,
+            };
+          }),
         ];
+        } finally {
+          clearTimeout(reactTimeout);
+        }
       }
     }
 
@@ -321,9 +340,17 @@ export async function executeAgent(
       tryNotify(() => observer?.onSyncGate?.(gateResult));
 
       if (!gateResult.approved) {
-        // 重生成一次：基于原始 prompt（已有 plan 上下文）重新调用 solver
+        // H-1: 将 rejection 反馈追加到 taskPrompt，让 solver 知道需要修正什么
+        const rejectionFeedback = gateResult.reviewResult?.violations
+          ?.map((v) => `- [${v.severity}] ${v.description} → ${v.requiredChanges}`)
+          ?.join('\n');
+        const regeneratedTaskPrompt = rejectionFeedback
+          ? `${taskPrompt}\n\n## 上次回复被审核拒绝，请修正以下问题：\n${rejectionFeedback}`
+          : taskPrompt;
+
+        // 重生成一次：基于原始 prompt + rejection 反馈重新调用 solver
         const regeneratedRaw = await withTimeout(
-          (signal) => deps.agent.invoke({ systemPrompt, userPrompt: taskPrompt, signal }),
+          (signal) => deps.agent.invoke({ systemPrompt, userPrompt: regeneratedTaskPrompt, signal }),
           timeoutMs,
         );
         const regeneratedParsed = parseAgentResponse(regeneratedRaw.content, {
@@ -632,7 +659,7 @@ function toClarificationResponse(
 function toClarificationOrSafeResponse(
   engine: FallbackEngine,
   request: AgentRequest,
-  planResult: { success: false; parseError?: string; verificationResult?: PlanVerificationResult },
+  planResult: { success: false; parseError?: string; verificationResult?: PlanVerificationResult; failureType?: string },
   key: FallbackLookupKey,
   locale: Locale,
 ): AgentResponseEnvelope {
@@ -663,8 +690,8 @@ function shouldTriggerSyncGate(
   context: AgentContext,
   userMessage: string | undefined,
 ): boolean {
-  // 条件 1: plan.riskLevel === 'safety_boundary'
-  if (plan?.userIntent.riskLevel === 'safety_boundary') return true;
+  // 条件 1: plan.riskLevel 为潜在风险或安全边界
+  if (plan?.userIntent.riskLevel === 'safety_boundary' || plan?.userIntent.riskLevel === 'potential_risk') return true;
   // 条件 2: 用户询问运动准备度、诊断、用药、治疗承诺
   if (userMessage && HIGH_RISK_TOPIC_PATTERNS.some((p) => p.test(userMessage))) return true;
   // 条件 3: 输出状态为严重异常（overallStatus === 'red'）

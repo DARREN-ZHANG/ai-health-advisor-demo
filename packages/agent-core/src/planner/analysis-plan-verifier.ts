@@ -5,6 +5,8 @@ export interface PlanVerifierContext {
   supportedMetrics: string[];
   maxSummaryLength: number;
   availableDateRange: { start: string; end: string };
+  /** C-2: 当前 packet 中有数据的 metric 集合（可选，无 packet 时为空） */
+  availablePacketMetrics?: string[];
 }
 
 /**
@@ -73,10 +75,21 @@ export function verifyAnalysisPlan(
     });
   }
 
-  // 6. required evidence 必须可从 TaskContextPacket 中解析
-  // 注意：unsupported 的 metric 已由规则 2 报告，此处只检查 supported 但不可解析的情况
-  // 当前 verifier 无 packet 上下文，supported metric 暂视为可解析
-  // H-2: 移除空壳循环，避免给读者"检查存在"的假象
+  // 6. required evidence 的 metric 在 packet 中应有对应数据源
+  // C-2: 恢复规则 6 实质校验
+  const availablePacketMetrics = new Set(ctx.availablePacketMetrics ?? []);
+  if (availablePacketMetrics.size > 0) {
+    for (let i = 0; i < plan.evidenceNeeds.length; i++) {
+      const need = plan.evidenceNeeds[i]!;
+      if (need.required && !availablePacketMetrics.has(need.metric)) {
+        violations.push({
+          rule: 'required_evidence_not_available',
+          message: `必需指标 ${need.metric} 在当前数据包中无对应数据源`,
+          path: `evidenceNeeds[${i}].metric`,
+        });
+      }
+    }
+  }
 
   return { valid: violations.length === 0, violations };
 }

@@ -34,6 +34,8 @@ export interface PlanBuilderResult {
   success: boolean;
   plan?: AnalysisPlan;
   parseError?: string;
+  /** H-14: 结构化失败类型，避免依赖字符串匹配 */
+  failureType?: 'invocation_error' | 'parse_error' | 'schema_error' | 'verification_failed';
   verificationResult?: PlanVerificationResult;
 }
 
@@ -57,30 +59,33 @@ export async function buildAnalysisPlan(
     // 3. 解析 JSON
     const parseResult = parsePlanJson(response.content);
     if (!parseResult.success) {
-      return { success: false, parseError: parseResult.error };
+      return { success: false, parseError: parseResult.error, failureType: 'parse_error' };
     }
 
     // 4. Schema 校验
     const schemaResult = AnalysisPlanSchema.safeParse(parseResult.data);
     if (!schemaResult.success) {
-      return { success: false, parseError: formatZodError(schemaResult.error) };
+      return { success: false, parseError: formatZodError(schemaResult.error), failureType: 'schema_error' };
     }
 
     // 5. 业务规则校验
+    // C-2: 从 basePacket 提取有数据的 metric 集合
+    const availablePacketMetrics = extractAvailableMetrics(input.basePacket);
     const verificationResult = verifyAnalysisPlan(schemaResult.data, {
       supportedMetrics: input.supportedMetrics,
       maxSummaryLength: 800,
       availableDateRange: input.availableDateRange,
+      availablePacketMetrics,
     });
 
     if (!verificationResult.valid) {
-      return { success: false, verificationResult };
+      return { success: false, verificationResult, failureType: 'verification_failed' };
     }
 
     return { success: true, plan: schemaResult.data };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { success: false, parseError: `Planner 调用失败: ${message}` };
+    return { success: false, parseError: `Planner 调用失败: ${message}`, failureType: 'invocation_error' };
   }
 }
 
@@ -190,4 +195,30 @@ function formatZodError(error: z.ZodError): string {
   return error.errors
     .map((e) => `${e.path.join('.')}: ${e.message}`)
     .join('; ');
+}
+
+/**
+ * C-2: 从 TaskContextPacket 中提取有数据的 metric 集合
+ */
+function extractAvailableMetrics(packet: TaskContextPacket): string[] {
+  const metrics = new Set<string>();
+
+  // 从 evidence 中提取
+  for (const e of packet.evidence ?? []) {
+    if (e.metric) metrics.add(e.metric);
+  }
+
+  // 从 visibleCharts 中提取
+  for (const chart of packet.visibleCharts ?? []) {
+    metrics.add(chart.metric);
+  }
+
+  // 从 homepage.trend7d 中提取
+  if (packet.homepage) {
+    for (const trend of packet.homepage.trend7d ?? []) {
+      metrics.add(trend.metric);
+    }
+  }
+
+  return [...metrics];
 }

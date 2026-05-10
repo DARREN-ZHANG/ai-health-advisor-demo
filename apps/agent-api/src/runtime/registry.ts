@@ -14,6 +14,7 @@ import {
   InMemoryAnalyticalMemoryStore,
   createHealthAgent,
   SyncReflectionReviewer,
+  ReflectionObserver,
   queryMetricSummaryTool,
   queryVisibleChartFactsTool,
   queryMissingDataTool,
@@ -140,17 +141,15 @@ export function createRuntimeRegistry(
   const fallbackEngine = createFallbackEngine({}, join(config.dataDir, 'fallbacks'));
 
   // 6. 创建 agent（支持多角色配置）
+  // H-4: fallback 模式下使用 FakeChatModel 避免创建真实 API 连接
   const providerEnv = toProviderEnv(config);
-  const agents = config.FALLBACK_ONLY_MODE
-    ? initializeAgents({
-        solver: resolveProviderConfig(providerEnv, 'solver'),
-        planner: resolveProviderConfig(providerEnv, 'planner'),
-        reviewer: resolveProviderConfig(providerEnv, 'reviewer'),
-      })
-    : initializeAgents(resolveAllLlmConfigs(providerEnv));
   const agent = config.FALLBACK_ONLY_MODE
     ? createHealthAgent({ chatModel: new FakeChatModel('{"summary":"fallback","chartTokens":[],"microTips":[]}') })
-    : agents.solverAgent;
+    : undefined;
+  const agents = config.FALLBACK_ONLY_MODE
+    ? undefined
+    : initializeAgents(resolveAllLlmConfigs(providerEnv));
+  const effectiveAgent = agent ?? agents!.solverAgent;
 
   // 7. getProfile 中间层：应用 override，并正确处理当前活动日
   function getProfileWithOverrides(profileId: string): ProfileData {
@@ -262,10 +261,11 @@ export function createRuntimeRegistry(
     reloadProfiles,
   });
 
-  // C-1: 构建 P1/P2/P3 依赖（仅非 fallback 模式）
+  // C-1: 构建 P0/P1/P2/P3 依赖（仅非 fallback 模式）
   let planBuilder: PlanBuilderDeps | undefined;
   let reactLoop: ReActLoopDeps | undefined;
   let syncReviewer: SyncReflectionReviewer | undefined;
+  let reflectionObserver: ReflectionObserver | undefined;
 
   if (!config.FALLBACK_ONLY_MODE) {
     const plannerPrompt = loadPromptFile(
@@ -273,7 +273,7 @@ export function createRuntimeRegistry(
     );
 
     planBuilder = {
-      plannerAgent: agents.plannerAgent,
+      plannerAgent: agents!.plannerAgent,
       plannerPrompt,
     };
 
@@ -284,14 +284,21 @@ export function createRuntimeRegistry(
     reactTools.set(queryTimelineEventsTool.name, queryTimelineEventsTool as ToolDefinition<unknown, unknown>);
 
     reactLoop = {
-      plannerAgent: agents.plannerAgent,
+      plannerAgent: agents!.plannerAgent,
       tools: reactTools,
       reactPrompt: loadPromptFile(join(config.dataDir, 'prompts', 'react-tool-select.md')),
     };
 
     syncReviewer = new SyncReflectionReviewer({
-      reviewerAgent: agents.reviewerAgent,
+      reviewerAgent: agents!.reviewerAgent,
       gatePrompt: loadPromptFile(join(config.dataDir, 'prompts', 'sync-gate.md')),
+    });
+
+    // C-1: 注入 P0 异步 ReflectionObserver
+    reflectionObserver = new ReflectionObserver({
+      reviewerAgent: agents!.reviewerAgent,
+      reviewerPrompt: loadPromptFile(join(config.dataDir, 'prompts', 'reflection-reviewer.md')),
+      reviewerModelName: config.REVIEWER_LLM_MODEL || config.LLM_MODEL,
     });
   }
 
@@ -317,14 +324,15 @@ export function createRuntimeRegistry(
     getTimelineSync,
 
     // AgentRuntimeDeps 自己的字段
-    agent,
+    agent: effectiveAgent,
     promptLoader,
     fallbackEngine,
 
-    // C-1: P1/P2/P3 依赖注入
+    // C-1: P0/P1/P2/P3 依赖注入
     planBuilder,
     reactLoop,
     syncReviewer,
+    reflectionObserver,
   };
 }
 

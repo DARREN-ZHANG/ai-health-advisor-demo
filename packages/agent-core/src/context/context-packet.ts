@@ -1,10 +1,13 @@
 import type { ChartTokenId, DataTab, Timeframe } from '@health-advisor/shared';
+import { z } from 'zod';
+import { MetricType } from '../planner/analysis-plan';
 
 // ────────────────────────────────────────────
 // 核心 Metric 类型
 // ────────────────────────────────────────────
 
-export type MetricName = 'hrv' | 'sleep' | 'activity' | 'stress' | 'spo2' | 'resting-hr';
+// H-5: 从统一的 MetricType 派生，保持与 planner/tools 层一致
+export type MetricName = typeof MetricType extends z.ZodEnum<infer Values> ? Values[number] : never;
 
 export interface MetricValue {
   value: number;
@@ -194,7 +197,7 @@ export interface ViewSummaryContextPacket {
 export interface QuestionIntentPacket {
   metricFocus: string[];
   timeScope: 'today' | 'yesterday' | 'week' | 'month' | 'custom' | 'unknown';
-  actionIntent: 'explain_chart' | 'exercise_readiness' | 'status_summary' | 'ask_why' | 'general';
+  actionIntent: 'explain_chart' | 'exercise_readiness' | 'status_summary' | 'ask_why' | 'compare_periods' | 'general';
   riskLevel: 'general' | 'potential_risk' | 'safety_boundary';
 }
 

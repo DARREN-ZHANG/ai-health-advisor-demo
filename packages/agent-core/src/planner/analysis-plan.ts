@@ -28,7 +28,7 @@ export const AnalysisPlanSchema = z.object({
   taskType: z.literal('advisor_chat'),
   userIntent: z.object({
     action: ActionIntent,
-    riskLevel: z.enum(['general', 'safety_boundary']),
+    riskLevel: z.enum(['general', 'potential_risk', 'safety_boundary']),
     needsClarification: z.boolean(),
     clarificationQuestion: z.string().optional(),
   }),

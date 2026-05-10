@@ -84,9 +84,9 @@ function tryResolveFromPacket(
     };
   }
 
-  // 3. 从 homepage.trend7d 中查找
+  // 3. 从 homepage.trend7d 中查找（H-8: 增加 timeScope 兼容性校验）
   const matchingTrend = packet.homepage?.trend7d?.find(
-    (ms) => ms.metric === need.metric,
+    (ms) => ms.metric === need.metric && isTimeScopeCompatible(need.timeScope, '7d'),
   );
   if (matchingTrend) {
     return {
