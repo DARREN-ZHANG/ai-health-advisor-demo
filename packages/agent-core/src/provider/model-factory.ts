@@ -1,4 +1,4 @@
-import type { ResolvedProviderConfig } from '../types/provider';
+import type { ResolvedProviderConfig, ResolvedLlmConfig, LlmRole } from '../types/provider';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
@@ -28,4 +28,12 @@ export function createChatModel(config: ResolvedProviderConfig): BaseChatModel {
     default:
       throw new Error(`Unknown provider: ${config.provider satisfies never}`);
   }
+}
+
+/** 为指定角色创建 ChatModel */
+export function createChatModelForRole(
+  configs: ResolvedLlmConfig,
+  role: LlmRole,
+): BaseChatModel {
+  return createChatModel(configs[role]);
 }
