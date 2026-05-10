@@ -2,6 +2,7 @@
 
 import { Section, Button } from '@health-advisor/ui';
 import type { TimelineAppendPayload } from '@health-advisor/shared';
+import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import { useGodModeStore } from '@/stores/god-mode.store';
 import { useProfileStore } from '@/stores/profile.store';
 import { useActiveSensingStore } from '@/stores/active-sensing.store';
@@ -10,20 +11,18 @@ import { ProfileEditor } from '@/components/god-mode/ProfileEditor';
 import { useTranslations } from 'next-intl';
 
 /** 时间轴可追加的活动片段 */
-const TIMELINE_SEGMENT_KEYS: { type: TimelineAppendPayload['segmentType']; labelKey: string; icon: string; params?: Record<string, number | string | boolean> }[] = [
-  { type: 'meal_intake', labelKey: 'mealIntake', icon: '🍽️', params: { mealContext: 'breakfast' } },
-  { type: 'steady_cardio', labelKey: 'steadyCardio', icon: '🏃', params: { durationMinutes: 30 } },
-  { type: 'prolonged_sedentary', labelKey: 'prolongedSedentary', icon: '🪑', params: { durationMinutes: 120 } },
-  { type: 'intermittent_exercise', labelKey: 'intermittentExercise', icon: '🏋️', params: { rounds: 5 } },
-  { type: 'walk', labelKey: 'walk', icon: '🚶', params: undefined },
-  { type: 'sleep', labelKey: 'sleep', icon: '😴', params: { durationMinutes: 480 } },
-  { type: 'deep_focus', labelKey: 'deepFocus', icon: '🧠', params: { intensity: 'high' } },
-  { type: 'anxiety_episode', labelKey: 'anxietyEpisode', icon: '😰', params: { trigger: 'work' } },
-  { type: 'breathing_pause', labelKey: 'breathingPause', icon: '🫁', params: { severity: 'moderate' } },
-  { type: 'alcohol_intake', labelKey: 'alcoholIntake', icon: '🍺', params: { amount: 'moderate' } },
-  { type: 'caffeine_intake', labelKey: 'caffeineIntake', icon: '☕', params: { dose: 'moderate', context: 'unknown' } },
-  { type: 'nightmare', labelKey: 'nightmare', icon: '👻', params: { intensity: 'high' } },
-  { type: 'relaxation', labelKey: 'relaxation', icon: '📖', params: { activity: 'reading' } },
+const TIMELINE_SEGMENT_KEYS: { type: TimelineAppendPayload['segmentType']; labelKey: string; helpKey: string; icon: string; params?: Record<string, number | string | boolean> }[] = [
+  { type: 'meal_intake', labelKey: 'mealIntake', helpKey: 'mealIntake', icon: '🍽️', params: { mealContext: 'breakfast' } },
+  { type: 'steady_cardio', labelKey: 'steadyCardio', helpKey: 'steadyCardio', icon: '🏃', params: { durationMinutes: 30 } },
+  { type: 'prolonged_sedentary', labelKey: 'prolongedSedentary', helpKey: 'prolongedSedentary', icon: '🪑', params: { durationMinutes: 120 } },
+  { type: 'intermittent_exercise', labelKey: 'intermittentExercise', helpKey: 'intermittentExercise', icon: '🏋️', params: { rounds: 5 } },
+  { type: 'walk', labelKey: 'walk', helpKey: 'walk', icon: '🚶', params: undefined },
+  { type: 'sleep', labelKey: 'sleep', helpKey: 'sleep', icon: '😴', params: { durationMinutes: 480 } },
+  { type: 'deep_focus', labelKey: 'deepFocus', helpKey: 'deepFocus', icon: '🧠', params: { intensity: 'high' } },
+  { type: 'anxiety_episode', labelKey: 'anxietyEpisode', helpKey: 'anxietyEpisode', icon: '😰', params: { trigger: 'work' } },
+  { type: 'alcohol_intake', labelKey: 'alcoholIntake', helpKey: 'alcoholIntake', icon: '🍺', params: { amount: 'moderate' } },
+  { type: 'caffeine_intake', labelKey: 'caffeineIntake', helpKey: 'caffeineIntake', icon: '☕', params: { dose: 'moderate', context: 'unknown' } },
+  { type: 'relaxation', labelKey: 'relaxation', helpKey: 'relaxation', icon: '📖', params: { activity: 'reading' } },
 ];
 
 const PROBABILISTIC_SEGMENT_TYPES = new Set(['alcohol_intake', 'caffeine_intake']);
@@ -78,6 +77,7 @@ function ConfigAreaContent({ className, disabled }: ConfigAreaProps) {
   const { data: godModeState } = useGodModeState();
   const t = useTranslations('godMode');
   const tSeg = useTranslations('godMode.segments');
+  const tHelp = useTranslations('godMode.segmentsHelp');
 
   const isTimelineBusy = isAppendingTimeline || isInjectingEvent || isTriggeringSync || isAdvancingClock || isResettingTimeline;
   const isConfigDisabled = isTimelineBusy || disabled;
@@ -131,6 +131,7 @@ function ConfigAreaContent({ className, disabled }: ConfigAreaProps) {
   const timelineSegments = TIMELINE_SEGMENT_KEYS.map((seg) => ({
     ...seg,
     label: tSeg(seg.labelKey),
+    helpText: tHelp(seg.helpKey),
     durationLabel: formatDuration(seg.params),
   }));
 
@@ -177,9 +178,20 @@ function ConfigAreaContent({ className, disabled }: ConfigAreaProps) {
               onClick={() => handleAppendTimeline(seg)}
               className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border-2 border-slate-800 hover:border-slate-700 text-xs text-slate-400 transition-all disabled:opacity-50"
             >
-              <span>{seg.icon} {seg.label}</span>
+              <span className="relative flex items-center min-w-0 group/tip" onClick={e => e.stopPropagation()}>
+                {seg.icon} {seg.label}
+                <QuestionMarkCircleIcon className="h-3.5 w-3.5 ml-1 shrink-0 text-slate-600 group-hover/tip:text-slate-400 transition-colors" />
+                <span
+                  role="tooltip"
+                  className="pointer-events-none absolute bottom-full -left-2 mb-2 w-56 rounded-lg bg-slate-800 px-3 py-2 text-[11px] leading-relaxed text-slate-300 opacity-0 invisible group-hover/tip:visible group-hover/tip:opacity-100 transition-opacity z-50 border border-slate-700 shadow-xl text-left"
+                >
+                  {seg.helpText}
+                  {/* 小三角箭头 */}
+                  <span className="absolute top-full left-8 -mt-px border-4 border-transparent border-t-slate-700" />
+                </span>
+              </span>
               {seg.durationLabel && (
-                <span className="text-[10px] text-slate-600">{seg.durationLabel}</span>
+                <span className="text-[10px] text-slate-600 shrink-0 ml-1">{seg.durationLabel}</span>
               )}
             </button>
           ))}
