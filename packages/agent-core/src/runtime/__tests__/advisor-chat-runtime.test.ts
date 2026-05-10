@@ -588,8 +588,8 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
       );
 
       expect(onPlanFailed).toHaveBeenCalledTimes(1);
-      // schema 错误属于 parse_error
-      expect(['parse_error', 'verification_failed']).toContain(onPlanFailed.mock.calls[0]![0]);
+      // H-14: schema 错误现在有独立的 failureType
+      expect(['parse_error', 'verification_failed', 'schema_error']).toContain(onPlanFailed.mock.calls[0]![0]);
     });
   });
 
