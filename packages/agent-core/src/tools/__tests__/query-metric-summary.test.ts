@@ -90,7 +90,7 @@ describe('queryMetricSummaryTool', () => {
       expect(result.data.unit).toBe('ms');
       expect(result.data.trend).toBe('up');
       expect(result.data.dataPoints).toBe(6); // 7 - 1
-      expect(result.evidenceIds).toEqual(['ev-hrv-1', 'ev-hrv-2']);
+      expect(result.evidenceIds).toEqual(['ev-hrv-1', 'ev-hrv-2', 'ev-chart-1']);
     }
   });
 

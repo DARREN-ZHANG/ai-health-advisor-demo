@@ -178,7 +178,7 @@ describe('resolveEvidenceByPlan', () => {
       expect(data[0].metric).toBe('activity');
     });
 
-    it('不匹配 source 非 daily_records 的 EvidenceFact', () => {
+    it('H-5: 按 metric 匹配，不再过滤 source 类型', () => {
       const evidence: EvidenceFact = {
         id: 'ev-hrv-mem',
         source: 'memory',
@@ -196,9 +196,9 @@ describe('resolveEvidenceByPlan', () => {
       const packet = createPacket({ evidence: [evidence] });
       const result = resolveEvidenceByPlan(plan, packet);
 
-      // source 不是 daily_records，不匹配
-      expect(result.resolved).toHaveLength(0);
-      expect(result.unresolved).toHaveLength(1);
+      // H-5: 移除 source 过滤后，memory 源的 evidence 也能匹配
+      expect(result.resolved).toHaveLength(1);
+      expect(result.unresolved).toHaveLength(0);
     });
   });
 
