@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { cleanSafetyIssues } from '../../output/safety-cleaner';
+import type { ActionOption } from '@health-advisor/shared';
 
 describe('cleanSafetyIssues', () => {
   it('正常 summary 直接通过', () => {
@@ -99,5 +100,28 @@ describe('cleanSafetyIssues', () => {
     );
     expect(result.cleaned).toContain('血氧数据暂不可用');
     expect(result.cleaned).not.toContain('97%');
+  });
+
+  describe('actions cleaning', () => {
+    it('cleans diagnosis language in action text', () => {
+      const actions: ActionOption[] = [
+        {
+          id: 'opt-1',
+          emoji: '🏃',
+          title: '确诊为疲劳',
+          description: '你患有过度训练综合征',
+          aiPromise: '建议服用药物缓解',
+        },
+      ];
+      const result = cleanSafetyIssues('正常摘要', [], [], actions);
+      expect(result.cleanedActions[0]?.title).toBe('检测到疲劳');
+      expect(result.cleanedActions[0]?.description).toBe('你检测到过度训练综合征');
+      expect(result.cleanedActions[0]?.aiPromise).toBe('建议及时就医咨询');
+    });
+
+    it('returns empty cleanedActions when no actions provided', () => {
+      const result = cleanSafetyIssues('正常摘要', []);
+      expect(result.cleanedActions).toEqual([]);
+    });
   });
 });

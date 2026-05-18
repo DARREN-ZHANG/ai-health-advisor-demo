@@ -133,13 +133,15 @@ export async function executeAgent(
     const cleaned = cleanSafetyIssues(
       safeEnvelope.summary,
       context.dataWindow.missingFields,
-      safeEnvelope.microTips,
+      safeEnvelope.microTips ?? [],
+      safeEnvelope.actions ?? [],
     );
 
     const result: AgentResponseEnvelope = {
       ...safeEnvelope,
       summary: cleaned.cleaned,
-      microTips: cleaned.cleanedTips,
+      microTips: cleaned.cleanedTips.length > 0 ? cleaned.cleanedTips : undefined,
+      actions: cleaned.cleanedActions.length > 0 ? cleaned.cleanedActions : undefined,
       meta: {
         ...safeEnvelope.meta,
         finishReason: 'complete',

@@ -1,3 +1,5 @@
+import type { ActionOption } from '@health-advisor/shared';
+
 export interface SafetyFlag {
   type: 'diagnosis' | 'hallucinated_data' | 'unauthorized_advice';
   original: string;
@@ -7,6 +9,7 @@ export interface SafetyFlag {
 export interface SafetyCleanResult {
   cleaned: string;
   cleanedTips: string[];
+  cleanedActions: ActionOption[];
   flags: SafetyFlag[];
 }
 
@@ -21,7 +24,7 @@ const DIAGNOSIS_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
 
 // 药物建议模式
 const MEDICATION_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
-  { pattern: /建议服用[^。]+药物/g, replacement: '建议及时就医咨询' },
+  { pattern: /建议服用[^。]*药物[^。]*/g, replacement: '建议及时就医咨询' },
   { pattern: /服药/g, replacement: '就医' },
 ];
 
@@ -44,6 +47,7 @@ export function cleanSafetyIssues(
   summary: string,
   missingMetrics: string[],
   microTips: string[] = [],
+  actions: ActionOption[] = [],
 ): SafetyCleanResult {
   const flags: SafetyFlag[] = [];
 
@@ -106,7 +110,30 @@ export function cleanSafetyIssues(
     return cleanedTip;
   });
 
-  return { cleaned, cleanedTips, flags };
+  // 清洗 actions
+  const cleanedActions = actions.map((action) => {
+    let cleanedTitle = action.title;
+    let cleanedDescription = action.description;
+    let cleanedAiPromise = action.aiPromise;
+    for (const { pattern, replacement } of DIAGNOSIS_PATTERNS) {
+      cleanedTitle = cleanedTitle.replace(pattern, replacement);
+      cleanedDescription = cleanedDescription.replace(pattern, replacement);
+      cleanedAiPromise = cleanedAiPromise.replace(pattern, replacement);
+    }
+    for (const { pattern, replacement } of MEDICATION_PATTERNS) {
+      cleanedTitle = cleanedTitle.replace(pattern, replacement);
+      cleanedDescription = cleanedDescription.replace(pattern, replacement);
+      cleanedAiPromise = cleanedAiPromise.replace(pattern, replacement);
+    }
+    return {
+      ...action,
+      title: cleanedTitle,
+      description: cleanedDescription,
+      aiPromise: cleanedAiPromise,
+    };
+  });
+
+  return { cleaned, cleanedTips, cleanedActions, flags };
 }
 
 function getMetricPatterns(metric: string): RegExp[] {
