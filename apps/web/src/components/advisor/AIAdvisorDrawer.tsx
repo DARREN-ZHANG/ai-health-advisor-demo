@@ -153,6 +153,7 @@ export function AIAdvisorDrawer() {
         content: response.summary,
         chartTokens: response.chartTokens,
         microTips: response.microTips,
+        memoryCandidates: response.memoryCandidates,
         source: response.source,
         statusColor: response.statusColor,
         meta: response.meta,

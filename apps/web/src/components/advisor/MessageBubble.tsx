@@ -4,6 +4,7 @@ import { m } from 'framer-motion';
 import type { Message } from '@/stores/ai-advisor.store';
 
 import { ChartTokenRenderer } from './ChartTokenRenderer';
+import { MemoryCandidateCard } from './MemoryCandidateCard';
 
 interface MessageBubbleProps {
   message: Message;
@@ -63,6 +64,14 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           <div className="w-full mt-2 flex flex-col gap-2">
             {message.chartTokens.map((token, idx) => (
               <ChartTokenRenderer key={idx} tokenId={token} />
+            ))}
+          </div>
+        )}
+
+        {isAssistant && message.memoryCandidates && message.memoryCandidates.length > 0 && (
+          <div className="mt-2 flex w-full flex-col gap-2">
+            {message.memoryCandidates.map((candidate) => (
+              <MemoryCandidateCard key={candidate.id} candidate={candidate} />
             ))}
           </div>
         )}
