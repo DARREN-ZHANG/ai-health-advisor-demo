@@ -246,7 +246,7 @@ function AISummarySection({
             {summaryData.summary}
           </p>
 
-          {summaryData.microTips.length > 0 && (
+          {summaryData.microTips && summaryData.microTips.length > 0 && (
             <div className="space-y-2 pt-2">
               <div className="flex items-center gap-1.5">
                 <SparklesIcon className="w-3.5 h-3.5 text-emerald-400" />
