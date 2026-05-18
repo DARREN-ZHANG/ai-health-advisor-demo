@@ -50,8 +50,8 @@ export function buildTaskPrompt(
   if (taskType === AgentTaskType.HOMEPAGE_SUMMARY) {
     sections.push(t(
       locale,
-      `- 摘要长度严格控制在 80-${maxLen} 字之间`,
-      `- Summary length must be strictly between 50-100 words`,
+      '- 摘要长度控制在 220-420 字之间；完整卡片由 summary + actions 组成，整体阅读量约 300-500 字',
+      '- Summary length must be between 150-300 words',
     ));
   } else {
     sections.push(t(
@@ -62,8 +62,8 @@ export function buildTaskPrompt(
   }
   sections.push(t(
     locale,
-    '- 输出格式必须为 JSON，包含 source、statusColor、summary、chartTokens、microTips 字段',
-    '- Output must be valid JSON with fields: source, statusColor, summary, chartTokens, microTips',
+    '- 输出格式必须为 JSON，包含 source、statusColor、summary、chartTokens 字段；microTips 可选',
+    '- Output must be valid JSON with fields: source, statusColor, summary, chartTokens; microTips optional',
   ));
 
   // 使用 TaskContextPacket 渲染（如果可用）
@@ -144,21 +144,46 @@ export function buildTaskPrompt(
   sections.push(t(locale, '## 输出格式', '## Output Format'));
   sections.push(t(locale, '请严格按以下 JSON 格式输出：', 'Output strictly in the following JSON format:'));
   sections.push('```json');
-  sections.push('{');
-  sections.push('  "source": "llm",');
-  sections.push('  "statusColor": "good",');
-  sections.push(t(
-    locale,
-    '  "summary": "摘要文本",',
-    '  "summary": "Summary text",',
-  ));
-  sections.push('  "chartTokens": ["CHART_TOKEN_1"],');
-  sections.push(t(
-    locale,
-    '  "microTips": ["贴士1", "贴士2"]',
-    '  "microTips": ["Tip 1", "Tip 2"]',
-  ));
-  sections.push('}');
+
+  if (taskType === AgentTaskType.HOMEPAGE_SUMMARY) {
+    sections.push('{');
+    sections.push('  "source": "llm",');
+    sections.push('  "statusColor": "good",');
+    sections.push(t(
+      locale,
+      '  "summary": "摘要文本",',
+      '  "summary": "Summary text",',
+    ));
+    sections.push('  "chartTokens": ["CHART_TOKEN_1"],');
+    sections.push(t(
+      locale,
+      '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "💤",\n      "title": "改善睡眠",\n      "description": "建议今晚提前30分钟入睡",\n      "aiPromise": "我会持续跟踪您的睡眠趋势"\n    }\n  ],',
+      '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "💤",\n      "title": "Improve Sleep",\n      "description": "Try going to bed 30 minutes earlier tonight",\n      "aiPromise": "I will keep tracking your sleep trends"\n    }\n  ],',
+    ));
+    sections.push(t(
+      locale,
+      '  "microTips": ["贴士1", "贴士2"]',
+      '  "microTips": ["Tip 1", "Tip 2"]',
+    ));
+    sections.push('}');
+  } else {
+    sections.push('{');
+    sections.push('  "source": "llm",');
+    sections.push('  "statusColor": "good",');
+    sections.push(t(
+      locale,
+      '  "summary": "摘要文本",',
+      '  "summary": "Summary text",',
+    ));
+    sections.push('  "chartTokens": ["CHART_TOKEN_1"],');
+    sections.push(t(
+      locale,
+      '  "microTips": ["贴士1", "贴士2"]',
+      '  "microTips": ["Tip 1", "Tip 2"]',
+    ));
+    sections.push('}');
+  }
+
   sections.push('```');
 
   return sections.join('\n');

@@ -17,7 +17,7 @@ export const TASK_ROUTES: Record<InternalTaskType, TaskRoute> = {
     requiresTab: false,
     requiresTimeframe: false,
     windowDays: 14,
-    maxSummaryLength: 120,
+    maxSummaryLength: 420,
   },
   [AgentTaskType.VIEW_SUMMARY]: {
     taskType: AgentTaskType.VIEW_SUMMARY,
