@@ -20,7 +20,7 @@ describe('TASK_ROUTES', () => {
     const route = TASK_ROUTES[AgentTaskType.HOMEPAGE_SUMMARY];
     expect(route.requiresUserMessage).toBe(false);
     expect(route.windowDays).toBe(14);
-    expect(route.maxSummaryLength).toBe(120);
+    expect(route.maxSummaryLength).toBe(420);
   });
 
   it('view_summary requires tab and timeframe', () => {
@@ -34,6 +34,11 @@ describe('TASK_ROUTES', () => {
     const route = TASK_ROUTES[AgentTaskType.ADVISOR_CHAT];
     expect(route.requiresUserMessage).toBe(true);
     expect(route.windowDays).toBe(14);
+  });
+
+  it('homepage maxSummaryLength 为 420', () => {
+    const route = TASK_ROUTES[AgentTaskType.HOMEPAGE_SUMMARY];
+    expect(route.maxSummaryLength).toBe(420);
   });
 
   it('micro_insight has short window', () => {

@@ -10,6 +10,7 @@ import { useProfileStore } from '@/stores/profile.store';
 import { useMorningBrief, useRefetchBrief } from '@/hooks/use-ai-query';
 import { useUIStore } from '@/stores/ui.store';
 import type { StatusColor } from '@health-advisor/ui';
+import type { ActionOption } from '@health-advisor/shared';
 import { useTranslations } from 'next-intl';
 
 export default function HomePage() {
@@ -38,7 +39,8 @@ export default function HomePage() {
     status: mapApiStatusToUi(data?.statusColor, data?.meta.finishReason),
     title: t('realtimeBrief'),
     summary: data?.summary || (error ? t('briefNetworkError') : t('briefPreparing')),
-    microTips: data?.microTips || [],
+    actions: data?.actions ?? [],
+    onActionSelect: (action: ActionOption) => showToast(`${action.title}：已记录`, 'success'),
   };
 
   return (

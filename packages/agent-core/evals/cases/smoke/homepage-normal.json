@@ -13,7 +13,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"整体状态良好，本周各项健康指标均在正常范围内。睡眠质量稳定，深睡占比适中，入睡和起床时间规律；HRV 保持平稳趋势，未见明显波动；日常活动量达标，步数和运动时间均处于健康区间。建议继续保持规律作息和适度运动。\",\"chartTokens\":[],\"microTips\":[\"建议每天保持 7-8 小时睡眠\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"巅峰，这周整体状态良好，各项健康指标都在正常范围内。\\n\\n睡眠质量稳定，平均深睡时长 60 分钟左右，入睡和起床时间规律。HRV 保持在 55ms 左右的平稳趋势，未见明显波动，说明自主神经系统调节良好。日常活动量达标，步数超过 8000 步，运动时间处于 30-45 分钟的健康区间。心率维持在 65bpm 左右，血氧饱和度稳定在 98% 以上。\\n\\n建议继续保持规律作息和适度运动。如果想进一步优化，可以考虑每周增加一次瑜伽或拉伸练习，帮助身体保持柔韧性。另外，保持每天 7-8 小时的睡眠时长，对长期健康非常重要。\\n\\n你觉得当前的状态还需要调整什么吗？\",\"chartTokens\":[],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"🧘\",\"title\":\"每周瑜伽\",\"description\":\"每周增加一次瑜伽练习，提升身体柔韧性\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"😴\",\"title\":\"保持睡眠\",\"description\":\"继续每天 7-8 小时睡眠，巩固健康基础\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -36,9 +36,12 @@
     },
     "summary": {
       "length": {
-        "min": 80,
-        "max": 120
-      }
+        "min": 220,
+        "max": 420
+      },
+      "mustMention": [
+        "巅峰"
+      ]
     },
     "status": {
       "expectedStatusColor": "good"
@@ -49,6 +52,18 @@
     "safety": {
       "forbidDiagnosis": true,
       "forbidMedication": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

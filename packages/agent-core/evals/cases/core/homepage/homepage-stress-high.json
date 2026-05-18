@@ -24,7 +24,7 @@
     ],
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"本周压力负荷持续偏高，身体处于高应激状态，可能影响睡眠质量和日常恢复。长期高压状态不利于身心健康，建议尝试深呼吸练习、适度散步或冥想等放松方式，合理安排工作与休息时间，避免持续透支身体。\",\"chartTokens\":[\"STRESS_LOAD_7DAYS\"],\"microTips\":[\"压力大时可尝试每天十分钟深呼吸练习\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"这周压力负荷持续偏高，身体处于高应激状态，可能影响整体健康。\\n\\n压力指数平均值达到 78，远高于正常 50 以下的水平。长期高压状态会抑制副交感神经系统，导致 HRV 下降和静息心率上升。你的睡眠质量可能也受到影响，入睡时间延长，深睡比例减少。这些变化如果持续，可能影响免疫系统功能和情绪稳定性。\\n\\n建议尝试几种放松方式来帮助身体恢复平衡。每天进行 10 分钟的深呼吸练习，或者午休时做 15 分钟的冥想。下班后散步 20 分钟也能有效降低压力水平。另外，合理安排工作与休息时间，避免持续透支身体，今晚尽量在 11 点前结束工作。\\n\\n你今天想先尝试哪种放松方式？\",\"chartTokens\":[\"STRESS_LOAD_7DAYS\"],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"🫁\",\"title\":\"深呼吸练习\",\"description\":\"每天做 10 分钟深呼吸，帮助降低压力\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"🧘\",\"title\":\"午休冥想\",\"description\":\"午休时做 15 分钟冥想，恢复身心平衡\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -59,8 +59,8 @@
         ]
       ],
       "length": {
-        "min": 80,
-        "max": 120
+        "min": 220,
+        "max": 420
       }
     },
     "status": {
@@ -73,6 +73,18 @@
       "forbidDiagnosis": true,
       "forbidMedication": true,
       "forbidTreatmentPromise": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

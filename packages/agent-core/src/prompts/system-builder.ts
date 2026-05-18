@@ -37,18 +37,9 @@ export function buildSystemPrompt(
     '## Personal Reference Levels (internal only)',
   ));
   if (context.task.type === AgentTaskType.HOMEPAGE_SUMMARY) {
-    sections.push(t(locale,
-      '- 静息心率通常水平：仅用于内部状态判定，首页简报禁止输出具体数值或相对关系',
-      '- Resting heart rate usual level: for internal status assessment only; homepage briefing must not output specific values or relative relationships',
-    ));
-    sections.push(t(locale,
-      '- HRV 通常水平：仅用于内部恢复解读，首页简报禁止输出具体数值或相对关系',
-      '- HRV usual level: for internal recovery interpretation only; homepage briefing must not output specific values or relative relationships',
-    ));
-    sections.push(t(locale,
-      '- SpO2 参考水平：仅用于内部风险判断，首页简报禁止输出具体数值或相对关系',
-      '- SpO2 reference level: for internal risk assessment only; homepage briefing must not output specific values or relative relationships',
-    ));
+    sections.push(`- ${t(locale, '静息心率通常水平', 'Resting HR usual level')}: ${context.profile.baselines.restingHR} bpm — ${t(locale, '可用于数据引用，但用生活化比喻包装', 'may reference in response, but wrap with relatable analogies')}`);
+    sections.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}: ${context.profile.baselines.hrv} ms — ${t(locale, '可用于数据引用，但用生活化比喻包装', 'may reference in response, but wrap with relatable analogies')}`);
+    sections.push(`- ${t(locale, 'SpO2 参考水平', 'SpO2 reference level')}: ${context.profile.baselines.spo2}% — ${t(locale, '可用于数据引用，但注意临床阈值提醒', 'may reference in response, but note clinical thresholds')}`);
   } else {
     sections.push(`- ${t(locale, '静息心率通常水平', 'Resting HR usual level')}: ${context.profile.baselines.restingHR} bpm`);
     sections.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}: ${context.profile.baselines.hrv} ms`);

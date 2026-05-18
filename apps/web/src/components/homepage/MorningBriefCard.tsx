@@ -2,14 +2,16 @@
 
 import { Card, statusColors } from '@health-advisor/ui';
 import type { StatusColor } from '@health-advisor/ui';
+import type { ActionOption } from '@health-advisor/shared';
 import { m } from 'framer-motion';
-import { useTranslations } from 'next-intl';
+import { ActionOptions } from './ActionOptions';
 
 interface MorningBriefCardProps {
   status: StatusColor;
   title: string;
   summary: string;
-  microTips?: string[];
+  actions?: ActionOption[];
+  onActionSelect?: (action: ActionOption) => void;
   isLoading?: boolean;
 }
 
@@ -17,11 +19,11 @@ export function MorningBriefCard({
   status,
   title,
   summary,
-  microTips = [],
+  actions = [],
+  onActionSelect,
   isLoading = false,
 }: MorningBriefCardProps) {
   const statusColor = statusColors[status];
-  const t = useTranslations('homepage');
 
   if (isLoading) {
     return (
@@ -52,28 +54,11 @@ export function MorningBriefCard({
             />
           </div>
 
-          <p className="text-slate-300 leading-relaxed">
+          <div className="text-slate-300 leading-relaxed whitespace-pre-line">
             {summary}
-          </p>
+          </div>
 
-          {microTips.length > 0 && (
-            <div className="space-y-3 pt-4 border-t border-slate-800/50">
-              <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <span className="w-1 h-3 bg-blue-500 rounded-full" />
-                {t('smartInsights')}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {microTips.map((tip, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                  >
-                    {tip}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+          <ActionOptions actions={actions} onSelect={onActionSelect} />
         </div>
       </Card>
     </m.div>

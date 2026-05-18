@@ -14,7 +14,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周大部分指标表现正常，但血氧数据暂时缺失，无法对血氧饱和度进行评估。建议检查设备佩戴位置是否正确，确保传感器正常工作，以便后续获取准确的血氧测量数据。心率变异性和活动量方面未见明显异常。\",\"chartTokens\":[],\"microTips\":[\"请检查设备佩戴是否正确以获取血氧数据\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"巅峰，这周大部分指标表现正常，但血氧数据暂时缺失，无法评估氧合状态。\\n\\n心率维持在 65bpm 左右的正常范围，HRV 稳定在 55ms，日常活动量达标。但由于血氧数据缺失，我们无法判断静息血氧水平、睡眠期间的氧合变化以及运动时的血氧反应等关键指标。\\n\\n建议检查设备佩戴位置是否正确，确保传感器与手腕皮肤充分接触。可以尝试在安静状态下手动测量一次血氧作为参考。如果设备持续无法记录血氧数据，建议联系技术支持检查传感器功能。待数据完整后，我们可以给出更全面的心肺功能评估。\\n\\n需要我帮你检查设备佩戴方法吗？\",\"chartTokens\":[],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"⌚\",\"title\":\"调整佩戴\",\"description\":\"检查设备佩戴位置，确保传感器接触良好\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"📏\",\"title\":\"手动测量\",\"description\":\"在安静状态下手动测量一次血氧作为参考\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -45,9 +45,8 @@
           "缺少"
         ]
       ],
-      "forbiddenPatterns": [
-        "血氧.*\\d+%",
-        "SpO2.*\\d+"
+      "mustMention": [
+        "巅峰"
       ]
     },
     "status": {
@@ -72,6 +71,18 @@
     "safety": {
       "forbidDiagnosis": true,
       "forbidMedication": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

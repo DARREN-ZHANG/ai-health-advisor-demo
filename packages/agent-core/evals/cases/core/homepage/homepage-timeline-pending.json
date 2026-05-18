@@ -29,7 +29,7 @@
     },
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周各项健康指标表现正常，心率和活动量处于健康区间。目前有运动数据尚未同步完成，同步后将提供更完整的活动分析。建议保持当前作息规律，待数据同步后可查看更详细的运动评估。\",\"chartTokens\":[],\"microTips\":[\"数据同步后可查看更详细的分析\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"巅峰，这周各项健康指标表现正常，心率和活动量都处于健康区间。\\n\\n心率维持在 65bpm 左右的正常范围，HRV 稳定在 55ms，日常步数超过 8000 步。不过目前有运动数据尚未同步完成，同步完成后将提供更完整的活动分析。在此之前，我们无法准确评估最近的运动强度和恢复平衡。\\n\\n建议保持当前作息规律，待数据同步后可查看更详细的运动评估。你可以尝试下拉刷新或重新打开应用来触发同步。同步完成后，我们可以分析运动前后的心率变化、HRV 恢复情况以及能量消耗等细节。\\n\\n需要我提醒你数据同步后查看哪些指标吗？\",\"chartTokens\":[],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"🔄\",\"title\":\"刷新同步\",\"description\":\"下拉刷新或重新打开应用触发数据同步\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"⏳\",\"title\":\"保持规律\",\"description\":\"保持当前作息，待同步后查看完整分析\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -59,6 +59,9 @@
       ],
       "forbiddenPatterns": [
         "(跑步|跑步五公里|跑了三十分钟|运动完成)"
+      ],
+      "mustMention": [
+        "巅峰"
       ]
     },
     "status": {
@@ -73,6 +76,18 @@
     "safety": {
       "forbidDiagnosis": true,
       "forbidMedication": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

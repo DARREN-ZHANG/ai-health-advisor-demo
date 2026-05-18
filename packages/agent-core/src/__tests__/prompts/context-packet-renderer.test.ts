@@ -121,7 +121,7 @@ describe('renderTaskContextPacket', () => {
     expect(output).toContain('Last available date: 2026-04-08');
   });
 
-  it('hides homepage interpretation-only metric values in evidence facts', () => {
+  it('renders homepage metric values in evidence facts', () => {
     const packet: TaskContextPacket = {
       task: { type: 'homepage_summary', page: 'home' },
       userContext: {
@@ -151,8 +151,8 @@ describe('renderTaskContextPacket', () => {
     expect(output).toContain('Evidence Facts');
     expect(output).toContain('latest_hrv');
     expect(output).toContain('metric=hrv');
-    expect(output).not.toContain('58ms');
-    expect(output).not.toContain('value=58');
+    expect(output).toContain('58ms');
+    expect(output).toContain('value=58');
   });
 
   it('renders homepage packet in zh', () => {
@@ -457,6 +457,95 @@ describe('renderTaskContextPacket', () => {
     expect(output).toContain('任务上下文');
   });
 
+  it('renders specific numeric values for hrv/spo2/resting_hr on homepage task', () => {
+    const packet: TaskContextPacket = {
+      task: { type: 'homepage_summary', page: 'home' },
+      userContext: {
+        profileId: 'p1',
+        name: 'Test',
+        age: 30,
+        tags: [],
+        baselines: { restingHR: 60, hrv: 60, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
+      },
+      dataWindow: { start: '2026-04-04', end: '2026-04-10', recordCount: 7, completenessPct: 100 },
+      missingData: [],
+      evidence: [
+        {
+          id: 'latest_hrv',
+          source: 'daily_records',
+          metric: 'hrv',
+          value: 58,
+          unit: 'ms',
+          dateRange: { start: '2026-04-10', end: '2026-04-10' },
+          derivation: 'latest record in selected window',
+        },
+      ],
+      visibleCharts: [
+        {
+          chartToken: ChartTokenId.HRV_7DAYS,
+          metric: 'hrv',
+          timeframe: 'week',
+          visible: true,
+          dataSummary: {
+            metric: 'hrv',
+            latest: { value: 58, unit: 'ms', date: '2026-04-10' },
+            average: { value: 59, unit: 'ms' },
+            baseline: { value: 60, unit: 'ms' },
+            deltaPctVsBaseline: -3,
+            trendDirection: 'stable',
+            anomalyPoints: [],
+            missing: { missingCount: 0, totalCount: 7, completenessPct: 100 },
+            evidenceIds: ['e1'],
+          },
+          evidenceIds: ['e1'],
+        },
+      ],
+      homepage: {
+        recentEvents: [],
+        latest24h: {
+          date: '2026-04-10',
+          metrics: [
+            { metric: 'hrv', value: 58, unit: 'ms', baseline: 60, deltaPctVsBaseline: -3, status: 'normal', evidenceId: 'e1' },
+            { metric: 'resting_hr', value: 62, unit: 'bpm', baseline: 60, deltaPctVsBaseline: 3, status: 'normal', evidenceId: 'e2' },
+            { metric: 'spo2', value: 97, unit: '%', baseline: 98, deltaPctVsBaseline: -1, status: 'normal', evidenceId: 'e3' },
+          ],
+        },
+        trend7d: [
+          {
+            metric: 'hrv',
+            latest: { value: 58, unit: 'ms', date: '2026-04-10' },
+            average: { value: 59, unit: 'ms' },
+            baseline: { value: 60, unit: 'ms' },
+            deltaPctVsBaseline: -3,
+            trendDirection: 'stable',
+            anomalyPoints: [],
+            missing: { missingCount: 0, totalCount: 7, completenessPct: 100 },
+            evidenceIds: ['e3'],
+          },
+        ],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+      },
+    };
+
+    const output = renderTaskContextPacket(packet);
+    // Evidence
+    expect(output).toContain('value=58ms');
+    // User context baselines
+    expect(output).toContain('60 bpm');
+    expect(output).toContain('60 ms');
+    expect(output).toContain('98%');
+    // Latest 24h
+    expect(output).toContain('hrv：58ms');
+    expect(output).toContain('resting_hr：62bpm');
+    expect(output).toContain('spo2：97%');
+    // Trend 7d
+    expect(output).toContain('latest 58ms on 2026-04-10');
+    expect(output).toContain('avg 59ms');
+    // Visible charts
+    expect(output).toContain('  hrv:');
+  });
+
   it('homepage context must not contain user-visible baseline jargon', () => {
     const packet: TaskContextPacket = {
       task: { type: 'homepage_summary', page: 'home' },
@@ -522,15 +611,14 @@ describe('renderTaskContextPacket', () => {
     expect(output).not.toContain('基准线');
     expect(output).not.toContain('偏离基线');
     expect(output).not.toContain('baseline');
-    expect(output).not.toContain('58ms');
-    expect(output).not.toContain('59ms');
-    expect(output).not.toContain('60ms');
-    expect(output).not.toContain('value=58ms');
+    expect(output).toContain('58ms');
+    expect(output).toContain('59ms');
+    expect(output).toContain('60ms');
     const hrvLine = output.split('\n').find((line) => line.startsWith('- hrv：')) ?? '';
-    expect(hrvLine).not.toContain('58');
-    expect(hrvLine).not.toContain('相对平时');
+    expect(hrvLine).toContain('58');
+    expect(hrvLine).toContain('相对平时');
     expect(output).toContain('sleep_total：420min（相对平时 0%）');
     expect(output).toContain('通常水平');
-    expect(output).toContain('仅用于解读');
+    expect(output).not.toContain('仅用于解读');
   });
 });

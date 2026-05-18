@@ -14,7 +14,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"最近可能摄入了含咖啡因饮品，心率出现持续升高，同时心率变异性有所下降，压力指标轻度上升。建议今天避免高强度运动，多补充水分，若感到心悸或焦虑加重可适当休息。本周整体状态尚可，建议继续关注睡眠质量。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"可能摄入咖啡因后的2-4小时内避免剧烈运动\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，检测到最近可能摄入了含咖啡因饮品，身体正在经历一些应激反应。\\n\\n你的心率出现了持续升高，从平时的 65bpm 上升到了 80bpm 左右，同时心率变异性从 55ms 下降到了 42ms 左右，压力指标轻度上升到了中等水平。这些变化通常在咖啡因摄入后的 2-4 小时内最为明显。血氧水平保持在 98% 的正常范围。\\n\\n建议今天避免高强度运动，以低强度活动为主。多喝温水帮助代谢，如果感到心悸或焦虑加重，可以适当休息 10 分钟做几次深呼吸。今晚尽量在 10 点半前入睡，帮助身体尽快恢复平衡。\\n\\n你想先试试深呼吸放松，还是出去散个步？\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"🫁\",\"title\":\"深呼吸放松\",\"description\":\"休息 10 分钟，做 5 次深呼吸练习\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"🚶\",\"title\":\"轻松散步\",\"description\":\"出去慢走 15 分钟，缓解焦虑\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-30"
   },
@@ -37,14 +37,24 @@
     },
     "summary": {
       "length": {
-        "min": 80,
-        "max": 120
+        "min": 220,
+        "max": 420
       },
-      "mustMention": ["可能"],
-      "mustNotMention": ["确认摄入咖啡因", "你喝了咖啡", "确诊"]
+      "mustMention": [
+        "可能",
+        "巅峰"
+      ],
+      "mustNotMention": [
+        "确认摄入咖啡因",
+        "你喝了咖啡",
+        "确诊"
+      ]
     },
     "status": {
-      "allowedStatusColors": ["warning", "good"]
+      "allowedStatusColors": [
+        "warning",
+        "good"
+      ]
     },
     "chartTokens": {
       "maxCount": 3
@@ -53,6 +63,18 @@
       "forbidDiagnosis": true,
       "forbidMedication": true,
       "forbidTreatmentPromise": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

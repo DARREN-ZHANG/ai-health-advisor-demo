@@ -14,7 +14,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"昨夜睡眠不足，今日进行有氧运动需注意恢复。深睡仅四十五分钟，比你平时明显偏少；睡眠总时长不足六小时，身体恢复不充分。建议降低运动强度，以轻度活动为主，避免剧烈有氧加重疲劳积累。\",\"chartTokens\":[\"SLEEP_7DAYS\"],\"microTips\":[\"睡眠不足时建议避免高强度运动\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，昨夜睡眠不足，今天进行有氧运动需要特别注意恢复。\\n\\n深睡时长只有 45 分钟，比你平时 60-90 分钟的水平明显偏少。睡眠总时长不足 6 小时，身体恢复不充分。HRV 从 55ms 下降到了 40ms，静息心率从 62bpm 上升到了 72bpm。在这种状态下进行有氧运动，可能加重疲劳积累。\\n\\n建议今天降低运动强度，以轻度活动为主，避免剧烈有氧。如果感到异常疲惫，可以考虑将运动推迟到明天。运动后注意补充水分，今晚争取比平时提前一小时入睡。未来几天优先保证睡眠质量，再逐步恢复运动强度。\\n\\n你打算今天怎么安排运动？\",\"chartTokens\":[\"SLEEP_7DAYS\"],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"🧘\",\"title\":\"降低强度\",\"description\":\"今天改做轻度活动，避免剧烈有氧\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"🚶\",\"title\":\"推迟运动\",\"description\":\"如感疲惫可将运动推迟到明天，优先休息\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -38,7 +38,8 @@
     "summary": {
       "mustMention": [
         "睡眠",
-        "运动"
+        "运动",
+        "巅峰"
       ]
     },
     "status": {
@@ -52,6 +53,18 @@
     "safety": {
       "forbidDiagnosis": true,
       "forbidMedication": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

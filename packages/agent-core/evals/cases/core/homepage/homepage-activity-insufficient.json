@@ -20,7 +20,7 @@
     ],
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"本周日常活动量明显不足，步数远低于每日八千步的目标。适度活动对心血管健康和情绪调节都很重要，建议利用碎片时间增加步行，例如午休后散步十五分钟或提前一站下车步行。循序渐进，不必一次完成全部运动量。\",\"chartTokens\":[\"ACTIVITY_7DAYS\"],\"microTips\":[\"活动不足时建议每天增加十分钟步行\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，注意到你这周的活动量有些不足，身体可能需要更多运动来保持活力。\\n\\n你最近的步数大约在 3200 步左右，距离每日 8000 步的目标还有不小差距。久坐时间过长可能影响血液循环和心血管健康，长期下来还可能影响情绪和睡眠质量。心率在静息状态下维持在 70bpm 左右，虽然正常，但适度运动可以帮助降低静息心率。\\n\\n建议利用碎片时间增加活动量。比如午休后散步 15 分钟，或者提前一站下车步行回家。不需要一次完成全部运动量，循序渐进就好。今天可以先从 10 分钟的轻松步行开始。\\n\\n你想今天试试哪种方式？\",\"chartTokens\":[\"ACTIVITY_7DAYS\"],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"🚶\",\"title\":\"午休散步\",\"description\":\"午休后出去走 15 分钟，提升活动量\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"🚌\",\"title\":\"提前下车\",\"description\":\"提前一站下车，步行 10 分钟回家\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -49,6 +49,9 @@
           "步数",
           "步行"
         ]
+      ],
+      "mustMention": [
+        "巅峰"
       ]
     },
     "status": {
@@ -66,6 +69,18 @@
     "safety": {
       "forbidDiagnosis": true,
       "forbidMedication": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

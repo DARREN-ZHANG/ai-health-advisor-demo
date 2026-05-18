@@ -149,3 +149,120 @@ describe('parseAgentResponse', () => {
     }
   });
 });
+
+describe('actions parsing', () => {
+  it('parses valid actions from LLM output', () => {
+    const raw = JSON.stringify({
+      summary: '测试',
+      chartTokens: [],
+      microTips: [],
+      actions: [
+        { id: 'a1', emoji: '💪', title: '去运动', description: '适当运动有助于恢复', aiPromise: '我会记录你的选择并用于本次建议上下文' },
+        { id: 'a2', emoji: '😴', title: '去休息', description: '充足睡眠有助于恢复', aiPromise: '我会记录你的选择并用于本次建议上下文' },
+      ],
+    });
+
+    const result = parseAgentResponse(raw, {
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: basePageContext,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.envelope.actions).toHaveLength(2);
+      expect(result.envelope.actions?.[0].id).toBe('a1');
+      expect(result.envelope.actions?.[1].title).toBe('去休息');
+    }
+  });
+
+  it('tolerates missing actions field', () => {
+    const raw = JSON.stringify({
+      summary: '测试',
+      chartTokens: [],
+      microTips: [],
+    });
+
+    const result = parseAgentResponse(raw, {
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: basePageContext,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.envelope.actions).toBeUndefined();
+    }
+  });
+
+  it('tolerates missing microTips field', () => {
+    const raw = JSON.stringify({
+      summary: '测试',
+      chartTokens: [],
+      actions: [],
+    });
+
+    const result = parseAgentResponse(raw, {
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: basePageContext,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.envelope.microTips).toBeUndefined();
+    }
+  });
+
+  it('rejects actions above max 3', () => {
+    const actions = Array.from({ length: 5 }, (_, i) => ({
+      id: `a${i}`,
+      emoji: '🔹',
+      title: `选项${i}`,
+      description: '描述',
+      aiPromise: '承诺',
+    }));
+    const raw = JSON.stringify({
+      summary: '测试',
+      chartTokens: [],
+      microTips: [],
+      actions,
+    });
+
+    const result = parseAgentResponse(raw, {
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: basePageContext,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects actions with incomplete fields', () => {
+    const raw = JSON.stringify({
+      summary: '测试',
+      chartTokens: [],
+      microTips: [],
+      actions: [{ id: 'a1', emoji: '💪', title: '去运动' }],
+    });
+
+    const result = parseAgentResponse(raw, {
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: basePageContext,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects actions when not an array', () => {
+    const raw = JSON.stringify({
+      summary: '测试',
+      chartTokens: [],
+      microTips: [],
+      actions: 'not-an-array',
+    });
+
+    const result = parseAgentResponse(raw, {
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: basePageContext,
+    });
+
+    expect(result.success).toBe(false);
+  });
+});

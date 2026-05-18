@@ -15,3 +15,6 @@ export const MAX_MICRO_TIPS = 3;
 
 /** 低数据阈值：窗口内记录少于该数量视为低数据 */
 export const LOW_DATA_THRESHOLD = 3;
+
+/** 单次响应最大 action 选项数 */
+export const MAX_ACTIONS = 3;

@@ -24,7 +24,7 @@
     ],
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 本周呈明显下降趋势，可能提示身体恢复不足或压力增加。自主神经系统调节能力正在承压，建议今天减少高强度训练，增加恢复时间，并把睡眠质量作为今晚的优先事项。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"HRV 下降时建议减少高强度训练\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，你的 HRV 本周呈明显下降趋势，身体可能正在承受额外的压力。\\n\\nHRV 从平时的 55ms 左右下降到了 35ms，这个降幅提示自主神经系统的调节能力正在承压。可能的原因包括睡眠不足、工作压力增加、或近期的运动强度过大。你的静息心率也有所上升，从 62bpm 升高到了 70bpm，进一步印证了恢复不足的信号。\\n\\n建议今天减少高强度训练，用低强度活动替代。优先保证今晚的睡眠质量，争取睡满 7-8 小时。可以尝试下班后散步 20 分钟，帮助副交感神经系统恢复平衡。未来几天持续观察 HRV 变化，如果继续下降需要考虑进一步减少训练量。\\n\\n你想今天先做哪些调整？\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"🚶\",\"title\":\"下班散步\",\"description\":\"下班后散步 20 分钟，帮助神经系统恢复\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"🛌\",\"title\":\"保证睡眠\",\"description\":\"今晚争取睡满 7-8 小时，优先恢复\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -47,7 +47,8 @@
     },
     "summary": {
       "mustMention": [
-        "HRV"
+        "HRV",
+        "巅峰"
       ],
       "mustMentionAny": [
         [
@@ -56,9 +57,6 @@
           "减少训练",
           "降低强度"
         ]
-      ],
-      "forbiddenPatterns": [
-        "HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%)"
       ]
     },
     "status": {
@@ -73,6 +71,18 @@
       "forbidDiagnosis": true,
       "forbidMedication": true,
       "forbidTreatmentPromise": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

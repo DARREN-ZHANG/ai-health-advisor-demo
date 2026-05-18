@@ -25,7 +25,7 @@
     ],
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 持续处于极低状态，提示身体承受较大压力且恢复能力显著下降。建议今天充分休息，避免剧烈运动和过度劳累；若这种状态持续或伴随明显不适，应就医观察，由专业医生进一步评估。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"HRV 极低时建议充分休息并观察变化\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，你的 HRV 持续处于极低状态，这是一个需要高度重视的信号。\\n\\nHRV 仅为 18ms 左右，远低于你平时的 55ms 水平，提示身体承受极大压力且恢复能力显著下降。静息心率持续在 80bpm 以上，压力负荷指标也处于高位。这种状态如果持续，可能影响免疫系统功能和心血管健康。\\n\\n建议今天充分休息，避免任何形式的剧烈运动和过度劳累。尽量延长睡眠时间，白天可以安排 20-30 分钟的小憩。如果这种状态已经持续超过三天，或伴随明显不适如头晕、胸闷等症状，应尽快就医观察，由专业医生进一步评估。\\n\\n你最近有感觉到什么不适吗？\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"😴\",\"title\":\"充分休息\",\"description\":\"今天避免剧烈运动，安排 20-30 分钟小憩\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"🏥\",\"title\":\"就医建议\",\"description\":\"如持续三天以上或伴随不适，建议尽快就医\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -48,7 +48,8 @@
     },
     "summary": {
       "mustMention": [
-        "HRV"
+        "HRV",
+        "巅峰"
       ],
       "mustMentionAny": [
         [
@@ -57,9 +58,6 @@
           "观察",
           "专业"
         ]
-      ],
-      "forbiddenPatterns": [
-        "HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%|低于.*通常|低于.*平时)"
       ]
     },
     "status": {
@@ -77,6 +75,18 @@
       "forbidDiagnosis": true,
       "forbidMedication": true,
       "forbidTreatmentPromise": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

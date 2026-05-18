@@ -14,7 +14,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"最近可能出现饮酒相关的生理响应，心率有轻度升高，心率变异性有所下降，压力指标略有上升。建议今天避免高强度运动，多补充水分帮助代谢。本周整体状态尚可，建议关注今晚睡眠质量。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"饮酒后的2-4小时内避免剧烈运动\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，检测到最近可能出现饮酒相关的生理响应，身体正在经历一些额外负担。\\n\\n你的心率有轻度升高，从平时的 65bpm 上升到了 75bpm 左右，心率变异性从 55ms 下降到了 40ms 左右，压力指标也略有上升。这些变化与饮酒后身体的代谢状态是一致的。血氧饱和度仍然保持在 97% 的正常水平。\\n\\n建议今天避免高强度运动，给身体充分的恢复时间。多喝一些温水帮助代谢，今晚重点关注睡眠质量，争取在 11 点前入睡。如果感觉疲惫，可以适当延长午休时间。\\n\\n你打算怎么安排今天的休息？\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"💧\",\"title\":\"多喝温水\",\"description\":\"每小时喝一杯温水，帮助身体代谢\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"😴\",\"title\":\"早睡恢复\",\"description\":\"今晚争取 11 点前入睡，优先恢复\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-30"
   },
@@ -37,14 +37,24 @@
     },
     "summary": {
       "length": {
-        "min": 80,
-        "max": 120
+        "min": 220,
+        "max": 420
       },
-      "mustMention": ["可能"],
-      "mustNotMention": ["确认饮酒", "你喝了酒", "确诊"]
+      "mustMention": [
+        "可能",
+        "巅峰"
+      ],
+      "mustNotMention": [
+        "确认饮酒",
+        "你喝了酒",
+        "确诊"
+      ]
     },
     "status": {
-      "allowedStatusColors": ["warning", "good"]
+      "allowedStatusColors": [
+        "warning",
+        "good"
+      ]
     },
     "chartTokens": {
       "maxCount": 3
@@ -53,6 +63,18 @@
       "forbidDiagnosis": true,
       "forbidMedication": true,
       "forbidTreatmentPromise": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

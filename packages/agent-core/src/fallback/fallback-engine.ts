@@ -6,6 +6,7 @@ export interface FallbackEntry {
   summary: string;
   chartTokens: ChartTokenId[];
   microTips: string[];
+  actions?: import('@health-advisor/shared').ActionOption[];
 }
 
 // 支持 old 格式（直接 profileId -> FallbackEntry）和 new 格式（Locale -> profileId -> FallbackEntry）
@@ -36,11 +37,13 @@ const GENERIC_FALLBACK: Record<Locale, FallbackEntry> = {
     summary: '健康数据正在分析中，请稍后再试。',
     chartTokens: [],
     microTips: ['如有疑问，请咨询专业医生'],
+    actions: [],
   },
   en: {
     summary: 'Health data is being analyzed. Please try again later.',
     chartTokens: [],
     microTips: ['If you have concerns, please consult a healthcare professional'],
+    actions: [],
   },
 };
 
@@ -79,6 +82,7 @@ export function createFallbackEngine(
         statusColor: 'warning',
         chartTokens: entry.chartTokens,
         microTips: entry.microTips,
+        actions: entry.actions ?? [],
         meta: {
           taskType,
           pageContext: key.pageContext,

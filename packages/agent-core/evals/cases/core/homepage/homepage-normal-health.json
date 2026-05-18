@@ -13,7 +13,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"本周各项指标表现良好，睡眠质量维持在稳定水平，深睡占比接近你平时水平。心率变异性保持平稳，未见明显波动；日常活动量已达标，步数和运动时间均处于健康区间。建议继续保持规律作息和适度运动。\",\"chartTokens\":[],\"microTips\":[]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"巅峰，今天整体状态看起来很棒！各项健康指标都在理想范围内，身体恢复得很到位。\\n\\n你昨晚的睡眠质量很不错，深睡时长达到了平时的水平，HRV 稳定在 55ms 左右，说明自主神经系统调节良好。日常活动量已经达标，步数超过 8000 步，运动时间也处于健康区间。心率保持在 65bpm 左右的正常范围，血氧饱和度稳定在 98% 以上。\\n\\n建议继续保持当前的生活节奏。如果你想进一步优化状态，可以考虑今天加一组 10 分钟的轻度拉伸，或者晚饭后散步 15 分钟，帮助身体保持更好的弹性。\\n\\n你觉得今天想先尝试哪个？\",\"chartTokens\":[],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"🚶\",\"title\":\"轻松散步\",\"description\":\"出去走 10 分钟，帮身体保持活跃\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"🧘\",\"title\":\"轻度拉伸\",\"description\":\"做一组 10 分钟的拉伸，帮助身体恢复\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -36,9 +36,12 @@
     },
     "summary": {
       "length": {
-        "min": 80,
-        "max": 120
-      }
+        "min": 220,
+        "max": 420
+      },
+      "mustMention": [
+        "巅峰"
+      ]
     },
     "status": {
       "expectedStatusColor": "good"
@@ -50,6 +53,18 @@
       "forbidDiagnosis": true,
       "forbidMedication": true,
       "forbidTreatmentPromise": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

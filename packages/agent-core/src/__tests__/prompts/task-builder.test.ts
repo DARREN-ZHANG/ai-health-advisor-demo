@@ -158,6 +158,12 @@ describe('buildTaskPrompt', () => {
     expect(prompt).toContain('microTips');
   });
 
+  it('homepage 任务 prompt 包含 actions 输出格式说明', () => {
+    const prompt = buildTaskPrompt(makeContext(), mockLoader, emptyRules);
+    expect(prompt).toContain('actions');
+    expect(prompt).toContain('aiPromise');
+  });
+
   it('包含 analytical memory 历史分析参考', () => {
     const ctx = makeContext({
       memory: {
