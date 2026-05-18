@@ -11,9 +11,7 @@ import type {
   AdvisorChatContextPacket,
   MetricSummary,
 } from '../context/context-packet';
-import { AgentTaskType, ChartTokenId, type DataTab, type Locale } from '@health-advisor/shared';
-
-const HOMEPAGE_INTERPRETATION_ONLY_METRICS = new Set(['hrv', 'spo2', 'resting_hr', 'resting-hr']);
+import { ChartTokenId, type DataTab, type Locale } from '@health-advisor/shared';
 
 // ────────────────────────────────────────────
 // 双语标签辅助函数
@@ -34,14 +32,13 @@ function colon(locale: Locale): string {
 
 export function renderTaskContextPacket(packet: TaskContextPacket, locale: Locale = 'zh'): string {
   const sections: string[] = [];
-  const isHomepage = packet.task.type === AgentTaskType.HOMEPAGE_SUMMARY;
 
   sections.push(renderTaskPacket(packet.task, locale));
-  sections.push(renderUserContext(packet.userContext, isHomepage, locale));
+  sections.push(renderUserContext(packet.userContext, locale));
   sections.push(renderDataWindow(packet.dataWindow, locale));
   sections.push(renderMissingData(packet.missingData, locale));
-  sections.push(renderVisibleCharts(packet.visibleCharts, isHomepage, locale));
-  sections.push(renderEvidence(packet.evidence, isHomepage));
+  sections.push(renderVisibleCharts(packet.visibleCharts, locale));
+  sections.push(renderEvidence(packet.evidence));
 
   if (packet.homepage) sections.push(renderHomepage(packet.homepage, locale));
   if (packet.viewSummary) sections.push(renderViewSummary(packet.viewSummary, locale));
@@ -71,7 +68,7 @@ function renderTaskPacket(task: TaskPacket, locale: Locale): string {
 // User Context
 // ────────────────────────────────────────────
 
-function renderUserContext(user: UserContextPacket, isHomepage: boolean, locale: Locale): string {
+function renderUserContext(user: UserContextPacket, locale: Locale): string {
   const c = colon(locale);
   const lines = [t(locale, '## 用户信息', '## User Info')];
   lines.push(`- ${t(locale, '姓名', 'Name')}${c}${user.name}`);
@@ -82,15 +79,9 @@ function renderUserContext(user: UserContextPacket, isHomepage: boolean, locale:
   }
   lines.push('');
   lines.push(t(locale, '## 个人参考水平（内部分析用，不要原样写给用户）', '## Personal Reference Levels (internal only)'));
-  if (isHomepage) {
-    lines.push(`- ${t(locale, '静息心率通常水平：仅用于内部状态判定，首页简报禁止输出具体数值或相对关系', 'Resting HR usual level: for internal status assessment only; homepage briefing must not output specific values or relative relationships')}`);
-    lines.push(`- ${t(locale, 'HRV 通常水平：仅用于内部恢复解读，首页简报禁止输出具体数值或相对关系', 'HRV usual level: for internal recovery interpretation only; homepage briefing must not output specific values or relative relationships')}`);
-    lines.push(`- ${t(locale, 'SpO2 参考水平：仅用于内部风险判断，首页简报禁止输出具体数值或相对关系', 'SpO2 reference level: for internal risk assessment only; homepage briefing must not output specific values or relative relationships')}`);
-  } else {
-    lines.push(`- ${t(locale, '静息心率通常水平', 'Resting HR usual level')}${c}${user.baselines.restingHR} bpm`);
-    lines.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}${c}${user.baselines.hrv} ms`);
-    lines.push(`- ${t(locale, 'SpO2 参考水平', 'SpO2 reference level')}${c}${user.baselines.spo2}%`);
-  }
+  lines.push(`- ${t(locale, '静息心率通常水平', 'Resting HR usual level')}${c}${user.baselines.restingHR} bpm`);
+  lines.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}${c}${user.baselines.hrv} ms`);
+  lines.push(`- ${t(locale, 'SpO2 参考水平', 'SpO2 reference level')}${c}${user.baselines.spo2}%`);
   lines.push(`- ${t(locale, '平均睡眠', 'Average sleep')}${c}${user.baselines.avgSleepMinutes} ${t(locale, '分钟', 'minutes')}`);
   lines.push(`- ${t(locale, '平均步数', 'Average steps')}${c}${user.baselines.avgSteps} ${t(locale, '步', 'steps')}`);
   return lines.join('\n');
@@ -137,15 +128,13 @@ function renderMissingData(items: MissingDataItem[], locale: Locale): string {
 // Visible Charts
 // ────────────────────────────────────────────
 
-function renderVisibleCharts(charts: VisibleChartPacket[], isHomepage: boolean, locale: Locale): string {
+function renderVisibleCharts(charts: VisibleChartPacket[], locale: Locale): string {
   if (charts.length === 0) return '';
 
   const lines = [t(locale, '## 可见图表', '## Visible Charts')];
   for (const chart of charts) {
     lines.push(`- ${chart.chartToken} (${chart.metric}, ${chart.timeframe})`);
-    lines.push(renderMetricSummary(chart.dataSummary, '  ', {
-      interpretationOnly: isHomepage && isHomepageInterpretationOnlyMetric(chart.metric),
-    }, locale));
+    lines.push(renderMetricSummary(chart.dataSummary, '  ', {}, locale));
   }
   return lines.join('\n');
 }
@@ -154,7 +143,7 @@ function renderVisibleCharts(charts: VisibleChartPacket[], isHomepage: boolean, 
 // Evidence
 // ────────────────────────────────────────────
 
-function renderEvidence(evidence: EvidenceFact[], isHomepage: boolean): string {
+function renderEvidence(evidence: EvidenceFact[]): string {
   if (evidence.length === 0) return '';
 
   const lines = ['## Evidence Facts'];
@@ -163,7 +152,7 @@ function renderEvidence(evidence: EvidenceFact[], isHomepage: boolean): string {
     parts.push(`source=${fact.source}`);
     if (fact.dateRange) parts.push(`${fact.dateRange.start}~${fact.dateRange.end}`);
     if (fact.metric) parts.push(`metric=${fact.metric}`);
-    if (fact.value !== undefined && !(isHomepage && isHomepageInterpretationOnlyMetric(fact.metric))) {
+    if (fact.value !== undefined) {
       parts.push(`value=${fact.value}${fact.unit ?? ''}`);
     }
     parts.push(`derivation=${fact.derivation}`);
@@ -198,10 +187,6 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string
   for (const m of homepage.latest24h.metrics) {
     if (m.status === 'missing') {
       lines.push(`- ${m.metric}${c}${t(locale, '数据缺失', 'data missing')}`);
-    } else if (isHomepageInterpretationOnlyMetric(m.metric)) {
-      const statusText = formatLatest24hStatus(m.status, locale);
-      const noteSuffix = m.clinicalNote ? `（${m.clinicalNote}）` : '';
-      lines.push(`- ${m.metric}${c}${statusText}${noteSuffix}，${t(locale, '用于解读状态与建议，不输出具体数值或参考关系', 'for status interpretation and recommendations only; do not output specific values or reference relationships')}`);
     } else {
       const parts: string[] = [`- ${m.metric}${c}${m.value}${m.unit}`];
       if (m.baseline !== undefined && m.deltaPctVsBaseline !== undefined) {
@@ -218,9 +203,7 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string
   if (homepage.trend7d.length > 0) {
     lines.push(t(locale, '## 过去一周趋势', '## Past Week Trends'));
     for (const tr of homepage.trend7d) {
-      lines.push(renderMetricSummary(tr, '- ', {
-        interpretationOnly: isHomepageInterpretationOnlyMetric(tr.metric),
-      }, locale));
+      lines.push(renderMetricSummary(tr, '- ', {}, locale));
     }
   }
 
@@ -348,18 +331,12 @@ function renderAdvisorChat(chat: AdvisorChatContextPacket, locale: Locale): stri
 function renderMetricSummary(
   ms: MetricSummary,
   prefix: string = '',
-  options: { interpretationOnly?: boolean } = {},
+  _options: { interpretationOnly?: boolean } = {},
   locale: Locale = 'zh',
 ): string {
+  void _options;
   const parts: string[] = [];
   parts.push(`${prefix}${ms.metric}:`);
-  if (options.interpretationOnly) {
-    parts.push(`trend ${ms.trendDirection}`);
-    if (ms.anomalyPoints.length > 0) parts.push(`anomalies detected`);
-    parts.push(ms.missing.missingCount === 0 ? 'data complete' : 'partial data');
-    parts.push(t(locale, '仅用于解读：不要输出数值或相对关系', 'Interpretation only: do not output values or relative relationships'));
-    return parts.join(', ');
-  }
   if (ms.latest) parts.push(`latest ${ms.latest.value}${ms.latest.unit} on ${ms.latest.date ?? 'latest'}`);
   if (ms.average) parts.push(`avg ${ms.average.value}${ms.average.unit}`);
   if (ms.baseline) {
@@ -391,20 +368,4 @@ function getChartTokenForTab(tab: DataTab): ChartTokenId | undefined {
   return map[tab];
 }
 
-function isHomepageInterpretationOnlyMetric(metric?: string): boolean {
-  return metric !== undefined && HOMEPAGE_INTERPRETATION_ONLY_METRICS.has(metric);
-}
 
-function formatLatest24hStatus(status: 'normal' | 'attention' | 'critical' | 'missing', locale: Locale): string {
-  switch (status) {
-    case 'critical':
-      return t(locale, '异常', 'critical');
-    case 'attention':
-      return t(locale, '需要关注', 'attention needed');
-    case 'missing':
-      return t(locale, '数据缺失', 'data missing');
-    case 'normal':
-    default:
-      return t(locale, '未见明显异常', 'no significant abnormality');
-  }
-}
