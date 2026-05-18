@@ -426,6 +426,70 @@ describe('AgentEvalCaseSchema', () => {
     });
   });
 
+  it('parses durable memory and workflow eval setup', () => {
+    const result = AgentEvalCaseSchema.safeParse({
+      id: 'memory-schema',
+      title: 'Memory schema',
+      suite: 'core',
+      category: 'advisor-chat',
+      priority: 'P0',
+      tags: ['memory'],
+      setup: {
+        profileId: 'profile-a',
+        memory: {
+          durableFacts: [
+            {
+              id: 'fact-1',
+              userScopeId: 'demo',
+              profileId: 'profile-a',
+              kind: 'allergy',
+              canonicalKey: 'allergy:peanut',
+              payload: { allergen: 'peanut' },
+              status: 'active',
+              sensitivity: 'health',
+              sourceCandidateId: 'cand-1',
+              createdAt: 1760000000000,
+              updatedAt: 1760000000000,
+            },
+          ],
+        },
+        workflow: {
+          consents: [
+            {
+              id: 'consent-1',
+              userScopeId: 'demo',
+              profileId: 'profile-a',
+              workflowType: 'therapist_outreach',
+              scope: { deliveryMode: 'mock' },
+              status: 'active',
+              createdAt: 1760000000000,
+              updatedAt: 1760000000000,
+            },
+          ],
+          expectedOutboxCount: 0,
+        },
+        modelFixture: {
+          mode: 'fake-json',
+          content: '{"source":"llm","statusColor":"good","summary":"已考虑确认记忆。","chartTokens":[],"microTips":[]}',
+        },
+      },
+      request: {
+        requestId: 'eval-memory-schema',
+        sessionId: 'eval-session',
+        profileId: 'profile-a',
+        taskType: 'advisor_chat',
+        pageContext: { profileId: 'profile-a', page: 'advisor', timeframe: 'week' },
+        userMessage: '我今天能吃花生吗？',
+      },
+      expectations: {
+        protocol: { requireValidEnvelope: true },
+        workflow: { expectedOutboxCount: 0 },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   // ── 完整 setup 校验 ─────────────────────────────────
 
   describe('setup', () => {

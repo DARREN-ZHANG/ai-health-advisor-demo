@@ -62,6 +62,50 @@ const StrictAgentRequestSchema = z
   })
   .strict();
 
+// ── Memory / Workflow Schema ─────────────────────────
+
+const DurableFactSchema = z.object({
+  id: z.string().min(1),
+  userScopeId: z.string().min(1),
+  profileId: z.string().min(1),
+  kind: z.enum(['allergy', 'medical_constraint', 'goal', 'preference', 'workflow_contact', 'workflow_consent', 'correction', 'revocation']),
+  canonicalKey: z.string().min(1),
+  payload: z.record(z.string(), z.unknown()),
+  status: z.enum(['active', 'revoked', 'superseded']),
+  sensitivity: z.enum(['standard', 'health', 'workflow']),
+  sourceCandidateId: z.string().min(1),
+  createdAt: z.number().int().positive(),
+  updatedAt: z.number().int().positive(),
+  revokedAt: z.number().int().positive().optional(),
+}).strict();
+
+const WorkflowContactEvalSchema = z.object({
+  id: z.string().min(1),
+  userScopeId: z.string().min(1),
+  profileId: z.string().min(1),
+  contactType: z.enum(['therapist', 'coach', 'doctor', 'caregiver', 'other']),
+  displayName: z.string().min(1),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()),
+  status: z.enum(['active', 'inactive']),
+  createdAt: z.number().int().positive(),
+  updatedAt: z.number().int().positive(),
+}).strict();
+
+const WorkflowConsentEvalSchema = z.object({
+  id: z.string().min(1),
+  userScopeId: z.string().min(1),
+  profileId: z.string().min(1),
+  workflowType: z.string().min(1),
+  contactId: z.string().min(1).optional(),
+  scope: z.record(z.string(), z.unknown()),
+  status: z.enum(['active', 'revoked']),
+  createdAt: z.number().int().positive(),
+  updatedAt: z.number().int().positive(),
+  revokedAt: z.number().int().positive().optional(),
+}).strict();
+
 // ── Setup Schema ─────────────────────────────────────
 
 const AgentEvalSetupSchema = z.object({
@@ -86,9 +130,16 @@ const AgentEvalSetupSchema = z.object({
         })
         .strict()
         .optional(),
+      durableFacts: z.array(DurableFactSchema).optional(),
     })
     .strict()
     .optional(),
+
+  workflow: z.object({
+    contacts: z.array(WorkflowContactEvalSchema).optional(),
+    consents: z.array(WorkflowConsentEvalSchema).optional(),
+    expectedOutboxCount: z.number().int().min(0).optional(),
+  }).strict().optional(),
 
   memoryByProfile: z
     .record(
@@ -103,6 +154,7 @@ const AgentEvalSetupSchema = z.object({
             }).strict(),
           )
           .optional(),
+        durableFacts: z.array(DurableFactSchema).optional(),
       }).strict(),
     )
     .optional(),
@@ -268,6 +320,11 @@ const MemoryExpectationSchema = z.object({
   forbiddenLeakPatterns: z.array(z.string().min(1)).optional(),
 }).strict();
 
+const WorkflowExpectationSchema = z.object({
+  expectedOutboxCount: z.number().int().min(0).optional(),
+  forbidDirectExternalSideEffect: z.boolean().optional(),
+}).strict();
+
 const HomepageTaskExpectationSchema = z
   .object({
     requireRecentEventFirst: z.boolean().optional(),
@@ -372,6 +429,7 @@ const AgentEvalExpectationsSchema = z.object({
   evidence: EvidenceExpectationSchema.optional(),
   safety: SafetyExpectationSchema.optional(),
   memory: MemoryExpectationSchema.optional(),
+  workflow: WorkflowExpectationSchema.optional(),
   taskSpecific: TaskSpecificExpectationSchema.optional(),
 }).strict();
 

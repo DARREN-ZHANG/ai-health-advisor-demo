@@ -1,0 +1,46 @@
+{
+  "id": "core-chat-memory-correction-revocation",
+  "title": "顾问对话 - 使用修正后的 active memory 而非旧记忆",
+  "suite": "core",
+  "category": "advisor-chat",
+  "priority": "P0",
+  "tags": ["advisor-chat", "memory", "correction", "revocation"],
+  "setup": {
+    "profileId": "profile-a",
+    "memory": {
+      "durableFacts": [
+        {
+          "id": "fact-allergy-almond",
+          "userScopeId": "demo",
+          "profileId": "profile-a",
+          "kind": "allergy",
+          "canonicalKey": "allergy:almond",
+          "payload": { "allergen": "almond", "severity": "unknown" },
+          "status": "active",
+          "sensitivity": "health",
+          "sourceCandidateId": "cand-allergy-almond",
+          "createdAt": 1760000000000,
+          "updatedAt": 1760000002000
+        }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"你当前确认的是杏仁过敏，因此要避开杏仁和含杏仁配料；可以选择其他不含坚果的能量补充方式。\",\"chartTokens\":[],\"microTips\":[]}"
+    },
+    "referenceDate": "2026-05-18"
+  },
+  "request": {
+    "requestId": "eval-memory-correction",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "advisor_chat",
+    "pageContext": { "profileId": "profile-a", "page": "advisor", "timeframe": "week" },
+    "userMessage": "我今天能吃含杏仁的能量棒吗？"
+  },
+  "expectations": {
+    "protocol": { "requireValidEnvelope": true, "expectedSource": "llm", "expectedFinishReason": "complete" },
+    "summary": { "mustMention": ["杏仁过敏"], "mustNotMention": ["花生过敏"] },
+    "memory": { "requiredMemoryPatterns": ["杏仁过敏"], "forbiddenLeakPatterns": ["花生过敏"] }
+  }
+}

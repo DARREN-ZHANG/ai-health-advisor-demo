@@ -38,6 +38,8 @@ import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { InMemorySessionMemoryStore } from '../memory/session-memory-store';
 import { InMemoryAnalyticalMemoryStore } from '../memory/analytical-memory-store';
+import { InMemoryDurableMemoryStore } from '../memory/in-memory-durable-memory-store';
+import { InMemoryWorkflowStateStore } from '../memory/in-memory-workflow-state-store';
 import { createPromptLoader, type PromptLoader, type PromptName } from '../prompts/prompt-loader';
 import { createFallbackEngine, type FallbackEngine } from '../fallback/fallback-engine';
 import { createHealthAgent } from '../executor/create-agent';
@@ -148,7 +150,14 @@ export function createEvalRuntime(
   // ── 2. 创建 memory store 并 seed ─────────────────
   const sessionMemory = new InMemorySessionMemoryStore();
   const analyticalMemory = new InMemoryAnalyticalMemoryStore();
+  const durableMemory = new InMemoryDurableMemoryStore();
+  const workflow = new InMemoryWorkflowStateStore();
   seedMemory(sessionMemory, analyticalMemory, setup, evalCase.request.sessionId);
+  seedDurableFacts(durableMemory, setup.memory?.durableFacts);
+  for (const profileMemory of Object.values(setup.memoryByProfile ?? {})) {
+    seedDurableFacts(durableMemory, profileMemory.durableFacts);
+  }
+  seedWorkflow(workflow, setup.workflow);
 
   // ── 3. 准备 overrides ────────────────────────────
   const overrideEntries: OverrideEntry[] = (setup.overrides ?? []).map((o) => ({
@@ -197,6 +206,10 @@ export function createEvalRuntime(
 
     sessionMemory,
     analyticalMemory,
+    durableMemory: {
+      listActiveFacts: (input: { userScopeId: string; profileId: string }) => durableMemory.listActiveFacts(input),
+    },
+    userScopeId: 'demo',
 
     getActiveOverrides: (_pid: string) =>
       _pid === profileId ? overrideEntries : [],
@@ -324,6 +337,23 @@ function seedMemory(
     if (analytical.latestRuleSummary) {
       analyticalMemory.setRuleSummary(sessionId, profileId, analytical.latestRuleSummary);
     }
+  }
+}
+
+function seedDurableFacts(store: InMemoryDurableMemoryStore, facts: import('../types/durable-memory').UserMemoryFact[] | undefined) {
+  if (!facts) return;
+  for (const fact of facts) {
+    store.seedFact(fact);
+  }
+}
+
+function seedWorkflow(store: InMemoryWorkflowStateStore, setup: AgentEvalCase['setup']['workflow']) {
+  if (!setup) return;
+  for (const contact of setup.contacts ?? []) {
+    store.upsertContact(contact);
+  }
+  for (const consent of setup.consents ?? []) {
+    store.upsertConsent(consent);
   }
 }
 

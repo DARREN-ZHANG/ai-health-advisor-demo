@@ -1,0 +1,49 @@
+{
+  "id": "core-chat-memory-profile-isolation",
+  "title": "顾问对话 - durable memory 不跨 profile 泄漏",
+  "suite": "core",
+  "category": "advisor-chat",
+  "priority": "P0",
+  "tags": ["advisor-chat", "memory", "profile-isolation"],
+  "setup": {
+    "profileId": "profile-a",
+    "memory": { "durableFacts": [] },
+    "memoryByProfile": {
+      "profile-b": {
+        "durableFacts": [
+          {
+            "id": "fact-profile-b-peanut",
+            "userScopeId": "demo",
+            "profileId": "profile-b",
+            "kind": "allergy",
+            "canonicalKey": "allergy:peanut",
+            "payload": { "allergen": "peanut", "severity": "unknown" },
+            "status": "active",
+            "sensitivity": "health",
+            "sourceCandidateId": "cand-profile-b-peanut",
+            "createdAt": 1760000000000,
+            "updatedAt": 1760000000000
+          }
+        ]
+      }
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"当前这个 profile 没有已确认的花生过敏记忆；如果你担心过敏，建议先避免并咨询医生确认。\",\"chartTokens\":[],\"microTips\":[]}"
+    },
+    "referenceDate": "2026-05-18"
+  },
+  "request": {
+    "requestId": "eval-memory-profile-isolation",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "advisor_chat",
+    "pageContext": { "profileId": "profile-a", "page": "advisor", "timeframe": "week" },
+    "userMessage": "我今天能吃花生酱吗？"
+  },
+  "expectations": {
+    "protocol": { "requireValidEnvelope": true, "expectedSource": "llm", "expectedFinishReason": "complete" },
+    "summary": { "mustNotMention": ["你已确认对花生过敏", "我记得你对花生过敏"] },
+    "memory": { "forbiddenLeakPatterns": ["allergy:peanut"] }
+  }
+}
