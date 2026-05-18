@@ -31,12 +31,21 @@ export const PageContextSchema = z
     { message: 'customDateRange is required when timeframe is "custom"', path: ['customDateRange'] },
   );
 
+export const ActionOptionSchema = z.object({
+  id: z.string().min(1),
+  emoji: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().min(1),
+  aiPromise: z.string().min(1),
+});
+
 export const AgentResponseEnvelopeSchema = z.object({
   summary: z.string().min(1),
   source: z.string().min(1),
   statusColor: z.enum(['good', 'warning', 'error']),
   chartTokens: z.array(ChartTokenIdSchema),
-  microTips: z.array(z.string()),
+  microTips: z.array(z.string()).optional(),
+  actions: z.array(ActionOptionSchema).max(3).optional(),
   meta: z.object({
     taskType: AgentTaskTypeSchema,
     pageContext: PageContextSchema,

@@ -20,12 +20,21 @@ export interface PageContext {
 
 export type AgentStatusColor = 'good' | 'warning' | 'error';
 
+export interface ActionOption {
+  id: string;
+  emoji: string;
+  title: string;
+  description: string;
+  aiPromise: string;
+}
+
 export interface AgentResponseEnvelope {
   summary: string;
   source: string;
   statusColor: AgentStatusColor;
   chartTokens: ChartTokenId[];
-  microTips: string[];
+  microTips?: string[];
+  actions?: ActionOption[];
   meta: {
     taskType: AgentTaskType;
     pageContext: PageContext;

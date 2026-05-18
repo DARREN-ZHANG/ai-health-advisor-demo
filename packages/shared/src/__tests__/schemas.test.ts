@@ -828,3 +828,101 @@ describe('ImuSampleSchema', () => {
     expect(() => ImuSampleSchema.parse({ ...validSample, offsetMs: 0.5 })).toThrow();
   });
 });
+
+describe('AgentResponseEnvelopeSchema — actions & microTips optional', () => {
+  const validPageContext = {
+    profileId: 'test-profile',
+    page: 'home',
+    timeframe: 'week',
+  };
+
+  it('accepts valid actions array', () => {
+    const envelope = {
+      summary: '测试摘要',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      microTips: [],
+      actions: [
+        {
+          id: 'opt-1',
+          emoji: '🚶',
+          title: '餐后漫步',
+          description: '去外面走 15 分钟',
+          aiPromise: '我会记录你的选择并用于本次建议上下文',
+        },
+      ],
+      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+    };
+    const result = AgentResponseEnvelopeSchema.safeParse(envelope);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.actions).toHaveLength(1);
+      expect(result.data.actions?.[0]?.id).toBe('opt-1');
+    }
+  });
+
+  it('accepts envelope without actions (optional)', () => {
+    const envelope = {
+      summary: '测试摘要',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      microTips: [],
+      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+    };
+    const result = AgentResponseEnvelopeSchema.safeParse(envelope);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.actions).toBeUndefined();
+    }
+  });
+
+  it('accepts envelope without microTips (optional)', () => {
+    const envelope = {
+      summary: '测试摘要',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+    };
+    const result = AgentResponseEnvelopeSchema.safeParse(envelope);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.microTips).toBeUndefined();
+    }
+  });
+
+  it('rejects actions with more than 3 items', () => {
+    const actions = Array.from({ length: 4 }, (_, i) => ({
+      id: `opt-${i}`,
+      emoji: '🏃',
+      title: `选项${i}`,
+      description: `描述${i}`,
+      aiPromise: `承诺${i}`,
+    }));
+    const envelope = {
+      summary: '测试摘要',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      actions,
+      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+    };
+    const result = AgentResponseEnvelopeSchema.safeParse(envelope);
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects action with missing required fields', () => {
+    const envelope = {
+      summary: '测试摘要',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      actions: [{ id: 'opt-1', emoji: '🚶' }],
+      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+    };
+    const result = AgentResponseEnvelopeSchema.safeParse(envelope);
+    expect(result.success).toBe(false);
+  });
+});
