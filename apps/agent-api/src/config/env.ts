@@ -52,9 +52,17 @@ const AppConfigSchema = z.object({
         .filter((origin) => origin.length > 0) ?? []
     ),
   DATA_DIR: z.string().optional(),
+  MEMORY_BACKEND: z.enum(['memory', 'supabase']).default('memory'),
+  SUPABASE_DB_URL: z.string().optional(),
+  MEMORY_EXTRACTION_ENABLED: envBool.default('false'),
+  MEMORY_CANDIDATE_TTL_HOURS: z.coerce.number().positive().default(24),
+  DEMO_USER_SCOPE_ID: z.string().min(1).default('demo'),
 }).refine(
   (data) => data.FALLBACK_ONLY_MODE || data.LLM_API_KEY.length > 0,
   { message: 'LLM_API_KEY is required when FALLBACK_ONLY_MODE is false', path: ['LLM_API_KEY'] },
+).refine(
+  (data) => data.MEMORY_BACKEND !== 'supabase' || Boolean(data.SUPABASE_DB_URL),
+  { message: 'SUPABASE_DB_URL is required when MEMORY_BACKEND is supabase', path: ['SUPABASE_DB_URL'] },
 );
 
 export type AppConfig = z.infer<typeof AppConfigSchema> & {
