@@ -48,6 +48,8 @@ export type { AgentConfig, HealthAgent, AgentInvokeInput, AgentInvokeOutput } fr
 export { initializeAgent, initializeAgents } from './executor/agent-initializer';
 
 // Memory
+export { validateExtractedMemoryCandidate } from './memory/memory-candidate-validator';
+export type { ExtractedMemoryCandidate, CandidateValidationResult } from './memory/memory-candidate-validator';
 export { InMemorySessionMemoryStore } from './memory/session-memory-store';
 export type { SessionMemoryStore } from './memory/session-memory-store';
 export { InMemoryAnalyticalMemoryStore } from './memory/analytical-memory-store';
