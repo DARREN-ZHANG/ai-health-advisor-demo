@@ -21,7 +21,7 @@ import type { EvalCheckResult, EvalScorerInput } from '../types';
  * 所有可变语义由 case JSON 的 patterns 表达，
  * scorer 中不硬编码事件/指标同义词。
  *
- * 匹配范围：summary + microTips 拼接
+ * 匹配范围：summary + microTips + actions 拼接
  */
 export const taskScorer = {
   id: 'task',
@@ -59,11 +59,15 @@ export const taskScorer = {
 
 // ── 内部工具函数 ──────────────────────────────────────────
 
-/** 构建匹配文本：summary + microTips 拼接 */
+/** 构建匹配文本：summary + microTips + actions 拼接 */
 function buildMatchText(envelope: AgentResponseEnvelope): string {
   const parts = [envelope.summary];
-  if (envelope.microTips.length > 0) {
+  if (envelope.microTips && envelope.microTips.length > 0) {
     parts.push(envelope.microTips.join('\n'));
+  }
+  if (envelope.actions && envelope.actions.length > 0) {
+    const actionTexts = envelope.actions.map((a) => `${a.title} ${a.description} ${a.aiPromise}`);
+    parts.push(actionTexts.join('\n'));
   }
   return parts.join('\n');
 }
