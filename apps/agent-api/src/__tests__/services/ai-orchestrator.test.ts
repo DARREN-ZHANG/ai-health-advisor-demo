@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { AiOrchestrator } from '../../services/ai-orchestrator';
-import { BriefCache } from '../../services/brief-cache';
 import type { AgentRequest } from '@health-advisor/agent-core';
 import type { AgentResponseEnvelope, PageContext } from '@health-advisor/shared';
 import { AgentTaskType } from '@health-advisor/shared';
+import type { RuntimeRegistry } from '../../runtime/registry';
+import type { MemoryServices } from '../../runtime/memory-services';
 
 // mock executeAgent 以控制返回值
 vi.mock('@health-advisor/agent-core', () => ({
@@ -34,6 +35,28 @@ function makeMetrics() {
   };
 }
 
+function makeRegistry(): RuntimeRegistry {
+  return {
+    overrideStore: {
+      getSyncState: vi.fn().mockReturnValue({ lastSyncedMeasuredAt: null, syncSessions: [] }),
+      getSyncedEvents: vi.fn().mockReturnValue([]),
+    },
+    getActiveOverrides: vi.fn().mockReturnValue([]),
+    getInjectedEvents: vi.fn().mockReturnValue([]),
+  } as unknown as RuntimeRegistry;
+}
+
+function makeMemoryServices(hit?: { payload: Record<string, unknown> }): MemoryServices {
+  return {
+    cache: {
+      get: vi.fn().mockResolvedValue(hit),
+      set: vi.fn().mockResolvedValue(undefined),
+      invalidateProfile: vi.fn().mockResolvedValue(0),
+      clearExpired: vi.fn().mockResolvedValue(0),
+    },
+  } as unknown as MemoryServices;
+}
+
 const completeResponse: AgentResponseEnvelope = {
   summary: '健康状态良好',
   source: 'llm',
@@ -48,9 +71,11 @@ describe('AiOrchestrator', () => {
     mockedExecuteAgent.mockResolvedValueOnce(completeResponse);
     const metrics = makeMetrics();
     const orchestrator = new AiOrchestrator({
-      registry: {} as unknown as import('../../runtime/registry').RuntimeRegistry,
+      registry: makeRegistry(),
       metrics,
       timeoutMs: 60000,
+      memoryServices: makeMemoryServices(),
+      modelVersion: 'gpt-test',
     });
 
     const request: AgentRequest = {
@@ -75,7 +100,7 @@ describe('AiOrchestrator', () => {
     };
     mockedExecuteAgent.mockResolvedValueOnce(fallbackResponse);
     const metrics = makeMetrics();
-    const orchestrator = new AiOrchestrator({ registry: {} as unknown as import('../../runtime/registry').RuntimeRegistry, metrics, timeoutMs: 6000 });
+    const orchestrator = new AiOrchestrator({ registry: makeRegistry(), metrics, timeoutMs: 6000, memoryServices: makeMemoryServices(), modelVersion: 'gpt-test' });
 
     const result = await orchestrator.execute({
       requestId: 'req-2', sessionId: 'sess-1', profileId: 'profile-a',
@@ -95,7 +120,7 @@ describe('AiOrchestrator', () => {
     };
     mockedExecuteAgent.mockResolvedValueOnce(timeoutResponse);
     const metrics = makeMetrics();
-    const orchestrator = new AiOrchestrator({ registry: {} as unknown as import('../../runtime/registry').RuntimeRegistry, metrics, timeoutMs: 6000 });
+    const orchestrator = new AiOrchestrator({ registry: makeRegistry(), metrics, timeoutMs: 6000, memoryServices: makeMemoryServices(), modelVersion: 'gpt-test' });
 
     const result = await orchestrator.execute({
       requestId: 'req-3', sessionId: 'sess-1', profileId: 'profile-a',
@@ -109,7 +134,7 @@ describe('AiOrchestrator', () => {
   it('provider error 时增加 providerError 计数并抛出', async () => {
     mockedExecuteAgent.mockRejectedValueOnce(new Error('connection failed'));
     const metrics = makeMetrics();
-    const orchestrator = new AiOrchestrator({ registry: {} as unknown as import('../../runtime/registry').RuntimeRegistry, metrics, timeoutMs: 6000 });
+    const orchestrator = new AiOrchestrator({ registry: makeRegistry(), metrics, timeoutMs: 6000, memoryServices: makeMemoryServices(), modelVersion: 'gpt-test' });
 
     await expect(
       orchestrator.execute({
@@ -121,18 +146,15 @@ describe('AiOrchestrator', () => {
     expect(metrics.calls.providerError).toBe(1);
   });
 
-  it('briefCache 命中时跳过 LLM 调用并记录指标', async () => {
+  it('cache 命中时跳过 LLM 调用并记录指标', async () => {
     mockedExecuteAgent.mockClear();
-    const briefCache = new BriefCache();
-    // 先写入缓存
-    briefCache.set('profile-a', completeResponse);
-
     const metrics = makeMetrics();
     const orchestrator = new AiOrchestrator({
-      registry: {} as unknown as import('../../runtime/registry').RuntimeRegistry,
+      registry: makeRegistry(),
       metrics,
       timeoutMs: 60000,
-      briefCache,
+      memoryServices: makeMemoryServices({ payload: completeResponse as unknown as Record<string, unknown> }),
+      modelVersion: 'gpt-test',
     });
 
     const result = await orchestrator.execute({

@@ -139,7 +139,7 @@ export function buildTaskPrompt(
   const analyticalContext = buildAnalyticalContext(context, locale);
   if (analyticalContext.length > 0) {
     sections.push('');
-    sections.push(t(locale, '## 历史分析参考', '## Historical Analysis Reference'));
+    sections.push(t(locale, '## 派生分析缓存', '## Derived Analysis Cache'));
     for (const item of analyticalContext) {
       sections.push(`- ${item}`);
     }

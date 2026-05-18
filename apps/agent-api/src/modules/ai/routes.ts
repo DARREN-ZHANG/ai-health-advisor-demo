@@ -29,12 +29,12 @@ interface ChatBody {
 }
 
 export async function aiRoutes(app: FastifyInstance) {
-  const briefCache = app.briefCache;
   const orchestrator = new AiOrchestrator({
     registry: app.runtime,
     metrics: app.metrics,
     timeoutMs: app.config.AI_TIMEOUT_MS,
-    briefCache,
+    memoryServices: app.memoryServices,
+    modelVersion: app.config.LLM_MODEL,
   });
 
   /** 将 AI 结果元数据附加到请求上下文，供 onResponse 日志使用 */
@@ -56,7 +56,7 @@ export async function aiRoutes(app: FastifyInstance) {
 
     // 手动刷新时清除该 profile 的当日缓存，确保调用 LLM
     if (bustCache) {
-      briefCache.invalidate(profileId);
+      await app.memoryServices.cache.invalidateProfile({ profileId });
     }
 
     // 后端隐式触发 app_open 同步：将 pending 事件同步到已同步状态，
@@ -65,7 +65,7 @@ export async function aiRoutes(app: FastifyInstance) {
     if (pendingEvents.length > 0) {
       app.runtime.overrideStore.performSync(profileId, 'app_open');
       // 同步后刷新 brief 缓存，避免返回过期的缓存结果
-      briefCache.invalidate(profileId);
+      await app.memoryServices.cache.invalidateProfile({ profileId });
     }
 
     const parsed = PageContextSchema.safeParse(pageContext);
