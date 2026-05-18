@@ -24,13 +24,15 @@
     ],
     "baseline": {
       "restingHr": 48,
-      "hrv": 95,
+      "hrv": 94,
       "spo2": 99,
       "avgSleepMinutes": 465,
       "avgSteps": 12000
     },
     "dailyBaseline": {
-      "avgSleepMinutes": 600
+      "avgSleepMinutes": 600,
+      "avgSteps": 5000,
+      "hrv": 85
     }
   },
   "initialDemoTime": "2026-05-18T07:05",
