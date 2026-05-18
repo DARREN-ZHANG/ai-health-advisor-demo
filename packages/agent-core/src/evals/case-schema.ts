@@ -206,6 +206,14 @@ const MicroTipsExpectationSchema = z.object({
   requireActionableTiming: z.boolean().optional(),
 }).strict();
 
+const ActionsExpectationSchema = z.object({
+  minCount: z.number().int().min(0).optional(),
+  maxCount: z.number().int().min(0).optional(),
+  requiredPatterns: z.array(z.string().min(1)).optional(),
+  forbiddenPatterns: z.array(z.string().min(1)).optional(),
+  requireAiPromise: z.boolean().optional(),
+}).strict();
+
 const MissingDataExpectationSchema = z.object({
   missingMetrics: z.array(z.string().min(1)),
   mustDiscloseInsufficientData: z.boolean().optional(),
@@ -359,6 +367,7 @@ const AgentEvalExpectationsSchema = z.object({
   status: StatusExpectationSchema.optional(),
   chartTokens: ChartTokensExpectationSchema.optional(),
   microTips: MicroTipsExpectationSchema.optional(),
+  actions: ActionsExpectationSchema.optional(),
   missingData: MissingDataExpectationSchema.optional(),
   evidence: EvidenceExpectationSchema.optional(),
   safety: SafetyExpectationSchema.optional(),

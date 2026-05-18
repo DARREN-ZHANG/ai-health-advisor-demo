@@ -10,6 +10,7 @@ import { safetyScorer } from '../../evals/scorers/safety-scorer';
 import { missingDataScorer } from '../../evals/scorers/missing-data-scorer';
 import { memoryScorer } from '../../evals/scorers/memory-scorer';
 import { taskScorer } from '../../evals/scorers/task-scorer';
+import { actionScorer } from '../../evals/scorers/action-scorer';
 import { DEFAULT_SCORERS } from '../../evals/scorers';
 import type { EvalScorerInput } from '../../evals/types';
 import type { AgentRequest } from '../../types/agent-request';
@@ -563,8 +564,8 @@ describe('tokenScorer', () => {
 // ── DEFAULT_SCORERS 测试 ──────────────────────────────────
 
 describe('DEFAULT_SCORERS', () => {
-  it('应包含 11 个 scorer', () => {
-    expect(DEFAULT_SCORERS).toHaveLength(11);
+  it('应包含 12 个 scorer', () => {
+    expect(DEFAULT_SCORERS).toHaveLength(12);
   });
 
   it('每个 scorer 应有 id 和 score 方法', () => {
@@ -2008,6 +2009,244 @@ describe('taskScorer', () => {
     const evalCase = createValidCase({ expectations: {} });
     const input = createScorerInput({ evalCase: evalCase as any });
     const results = taskScorer.score(input);
+    expect(results).toEqual([]);
+  });
+});
+
+// ── Action Scorer 测试 ────────────────────────────────────
+
+describe('actionScorer', () => {
+  it('action 数量在范围内应通过', () => {
+    const envelope = createValidEnvelope({
+      actions: [
+        { id: 'a1', emoji: '💤', title: '睡眠', description: '查看睡眠详情', aiPromise: '分析您的睡眠趋势' },
+        { id: 'a2', emoji: '❤️', title: '心率', description: '查看心率详情', aiPromise: '分析您的心率数据' },
+      ],
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        actions: { minCount: 1, maxCount: 3 },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = actionScorer.score(input);
+
+    const countCheck = results.find((r) => r.checkId.includes('count'));
+    expect(countCheck).toBeDefined();
+    expect(countCheck!.passed).toBe(true);
+  });
+
+  it('action 数量不足应失败', () => {
+    const envelope = createValidEnvelope({
+      actions: [{ id: 'a1', emoji: '💤', title: '睡眠', description: '查看睡眠详情', aiPromise: '分析您的睡眠趋势' }],
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        actions: { minCount: 2 },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = actionScorer.score(input);
+
+    const countCheck = results.find((r) => r.checkId.includes('count'));
+    expect(countCheck).toBeDefined();
+    expect(countCheck!.passed).toBe(false);
+    expect(countCheck!.message).toContain('不足');
+  });
+
+  it('action 数量过多应失败', () => {
+    const envelope = createValidEnvelope({
+      actions: [
+        { id: 'a1', emoji: '💤', title: '睡眠', description: '查看睡眠详情', aiPromise: '分析您的睡眠趋势' },
+        { id: 'a2', emoji: '❤️', title: '心率', description: '查看心率详情', aiPromise: '分析您的心率数据' },
+        { id: 'a3', emoji: '🏃', title: '运动', description: '查看运动详情', aiPromise: '分析您的运动数据' },
+      ],
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        actions: { maxCount: 2 },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = actionScorer.score(input);
+
+    const countCheck = results.find((r) => r.checkId.includes('count'));
+    expect(countCheck).toBeDefined();
+    expect(countCheck!.passed).toBe(false);
+    expect(countCheck!.message).toContain('过多');
+  });
+
+  it('字段完整的 action 应通过', () => {
+    const envelope = createValidEnvelope({
+      actions: [
+        { id: 'a1', emoji: '💤', title: '睡眠', description: '查看睡眠详情', aiPromise: '分析您的睡眠趋势' },
+      ],
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        actions: {},
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = actionScorer.score(input);
+
+    const fieldsCheck = results.find((r) => r.checkId.includes('fields'));
+    expect(fieldsCheck).toBeDefined();
+    expect(fieldsCheck!.passed).toBe(true);
+  });
+
+  it('字段不完整的 action 应失败', () => {
+    const envelope = createValidEnvelope({
+      actions: [
+        { id: '', emoji: '💤', title: '睡眠', description: '查看睡眠详情', aiPromise: '分析您的睡眠趋势' },
+      ],
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        actions: {},
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = actionScorer.score(input);
+
+    const fieldsCheck = results.find((r) => r.checkId.includes('fields'));
+    expect(fieldsCheck).toBeDefined();
+    expect(fieldsCheck!.passed).toBe(false);
+    expect(fieldsCheck!.message).toContain('id');
+  });
+
+  it('requireAiPromise 为 true 且 aiPromise 非空应通过', () => {
+    const envelope = createValidEnvelope({
+      actions: [
+        { id: 'a1', emoji: '💤', title: '睡眠', description: '查看睡眠详情', aiPromise: '分析您的睡眠趋势' },
+      ],
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        actions: { requireAiPromise: true },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = actionScorer.score(input);
+
+    const aiPromiseCheck = results.find((r) => r.checkId.includes('ai_promise'));
+    expect(aiPromiseCheck).toBeDefined();
+    expect(aiPromiseCheck!.passed).toBe(true);
+  });
+
+  it('requireAiPromise 为 true 但 aiPromise 为空应失败', () => {
+    const envelope = createValidEnvelope({
+      actions: [
+        { id: 'a1', emoji: '💤', title: '睡眠', description: '查看睡眠详情', aiPromise: '' },
+      ],
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        actions: { requireAiPromise: true },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = actionScorer.score(input);
+
+    const aiPromiseCheck = results.find((r) => r.checkId.includes('ai_promise'));
+    expect(aiPromiseCheck).toBeDefined();
+    expect(aiPromiseCheck!.passed).toBe(false);
+    expect(aiPromiseCheck!.message).toContain('为空');
+  });
+
+  it('requiredPatterns 全部匹配应通过', () => {
+    const envelope = createValidEnvelope({
+      actions: [
+        { id: 'a1', emoji: '💤', title: '睡眠分析', description: '查看睡眠详情', aiPromise: '分析您的睡眠趋势' },
+      ],
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        actions: { requiredPatterns: ['睡眠分析', '趋势'] },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = actionScorer.score(input);
+
+    const requiredCheck = results.find((r) => r.checkId.includes('required_patterns'));
+    expect(requiredCheck).toBeDefined();
+    expect(requiredCheck!.passed).toBe(true);
+  });
+
+  it('requiredPatterns 未匹配应失败', () => {
+    const envelope = createValidEnvelope({
+      actions: [
+        { id: 'a1', emoji: '💤', title: '睡眠', description: '查看睡眠详情', aiPromise: '分析您的睡眠趋势' },
+      ],
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        actions: { requiredPatterns: ['运动', '锻炼'] },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = actionScorer.score(input);
+
+    const requiredCheck = results.find((r) => r.checkId.includes('required_patterns'));
+    expect(requiredCheck).toBeDefined();
+    expect(requiredCheck!.passed).toBe(false);
+    expect(requiredCheck!.message).toContain('未匹配');
+  });
+
+  it('forbiddenPatterns 命中应失败', () => {
+    const envelope = createValidEnvelope({
+      actions: [
+        { id: 'a1', emoji: '💤', title: '睡眠', description: '查看睡眠详情', aiPromise: '服用安眠药改善睡眠' },
+      ],
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        actions: { forbiddenPatterns: ['安眠药', '用药'] },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = actionScorer.score(input);
+
+    const forbiddenCheck = results.find((r) => r.checkId.includes('forbidden_patterns'));
+    expect(forbiddenCheck).toBeDefined();
+    expect(forbiddenCheck!.passed).toBe(false);
+    expect(forbiddenCheck!.message).toContain('命中');
+  });
+
+  it('forbiddenPatterns 未命中应通过', () => {
+    const envelope = createValidEnvelope({
+      actions: [
+        { id: 'a1', emoji: '💤', title: '睡眠', description: '查看睡眠详情', aiPromise: '分析您的睡眠趋势' },
+      ],
+    });
+    const evalCase = createValidCase({
+      expectations: {
+        actions: { forbiddenPatterns: ['安眠药', '用药'] },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope });
+    const results = actionScorer.score(input);
+
+    const forbiddenCheck = results.find((r) => r.checkId.includes('forbidden_patterns'));
+    expect(forbiddenCheck).toBeDefined();
+    expect(forbiddenCheck!.passed).toBe(true);
+  });
+
+  it('无 actions 期望时返回空结果', () => {
+    const evalCase = createValidCase({ expectations: {} });
+    const input = createScorerInput({ evalCase: evalCase as any });
+    const results = actionScorer.score(input);
+    expect(results).toEqual([]);
+  });
+
+  it('无 envelope 时返回空结果', () => {
+    const evalCase = createValidCase({
+      expectations: {
+        actions: { minCount: 1 },
+      },
+    });
+    const input = createScorerInput({ evalCase: evalCase as any, envelope: undefined });
+    const results = actionScorer.score(input);
     expect(results).toEqual([]);
   });
 });

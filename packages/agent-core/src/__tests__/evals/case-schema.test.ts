@@ -328,6 +328,60 @@ describe('AgentEvalCaseSchema', () => {
     });
   });
 
+  // ── actions 校验 ────────────────────────────────────
+
+  describe('actions', () => {
+    it('合法 actions 配置应通过', () => {
+      const input = createValidCase({
+        expectations: {
+          actions: {
+            minCount: 1,
+            maxCount: 3,
+            requiredPatterns: ['睡眠', '心率'],
+            forbiddenPatterns: ['用药', '确诊'],
+            requireAiPromise: true,
+          },
+        },
+      });
+      const result = parseAgentEvalCase(input);
+      expect(result.expectations.actions?.minCount).toBe(1);
+      expect(result.expectations.actions?.maxCount).toBe(3);
+      expect(result.expectations.actions?.requireAiPromise).toBe(true);
+    });
+
+    it('空对象 actions 应通过', () => {
+      const input = createValidCase({
+        expectations: {
+          actions: {},
+        },
+      });
+      const result = parseAgentEvalCase(input);
+      expect(result.expectations.actions).toEqual({});
+    });
+
+    it('actions 中未知字段应失败', () => {
+      const input = createValidCase({
+        expectations: {
+          actions: {
+            unknownField: 'should fail',
+          },
+        },
+      });
+      expect(() => parseAgentEvalCase(input)).toThrow();
+    });
+
+    it('actions.requiredPatterns 为空字符串数组项应失败', () => {
+      const input = createValidCase({
+        expectations: {
+          actions: {
+            requiredPatterns: ['睡眠', ''],
+          },
+        },
+      });
+      expect(() => parseAgentEvalCase(input)).toThrow();
+    });
+  });
+
   // ── evidence 校验 ───────────────────────────────────
 
   describe('evidence', () => {

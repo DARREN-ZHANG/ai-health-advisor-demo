@@ -121,6 +121,14 @@ export interface AgentEvalExpectations {
     requireActionableTiming?: boolean;
   };
 
+  actions?: {
+    minCount?: number;
+    maxCount?: number;
+    requiredPatterns?: string[];
+    forbiddenPatterns?: string[];
+    requireAiPromise?: boolean;
+  };
+
   missingData?: {
     missingMetrics: string[];
     mustDiscloseInsufficientData?: boolean;
