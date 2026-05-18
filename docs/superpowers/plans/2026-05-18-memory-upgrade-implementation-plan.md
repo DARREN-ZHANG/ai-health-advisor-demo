@@ -4,7 +4,7 @@
 
 **Goal:** Build a Supabase-backed durable memory system for confirmed user facts, candidate confirmation, derived cache separation, and demo workflow outbox readiness.
 
-**Architecture:** `agent-core` owns memory schemas, extraction contracts, validators, prompt-facing durable memory context, and in-memory test stores. `apps/agent-api` owns Supabase Postgres adapters, Fastify wiring, memory confirmation routes, and mock workflow outbox. `apps/web` displays candidate confirmation cards in the Advisor drawer and calls backend confirmation endpoints.
+**Architecture:** `agent-core` owns memory schemas, extraction contracts, validators, prompt-facing durable memory context, cache/workflow store interfaces, and in-memory test stores. `apps/agent-api` owns Supabase Postgres adapters, Fastify wiring, memory confirmation routes, fingerprinted cache persistence, and persisted mock workflow outbox. `apps/web` displays candidate confirmation cards in the Advisor drawer and calls backend confirmation endpoints.
 
 **Tech Stack:** TypeScript, Zod, Fastify, Vitest, Supabase Postgres via backend-owned SQL connection, Next.js, Zustand, TanStack Query.
 
@@ -28,7 +28,7 @@ This plan intentionally excludes real email delivery and production Auth. Those 
 | Stage B | Supabase persistence | SQL migration, backend config, Supabase adapters |
 | Stage C | Runtime and API integration | Extraction, chat response candidates, confirmation routes, context injection |
 | Stage D | Frontend demo flow | Advisor confirmation cards and mutations |
-| Stage E | Cache and workflow demo readiness | Derived cache boundary and mock workflow outbox |
+| Stage E | Cache and workflow demo readiness | Derived cache boundary, fingerprinted cache store, persisted mock workflow outbox/events |
 
 ## File Structure
 
@@ -38,12 +38,17 @@ Create or modify these files:
 - `packages/shared/src/schemas/agent.ts`: add Zod schema for the optional response field.
 - `packages/shared/src/__tests__/schemas.test.ts`: cover schema parsing.
 - `packages/agent-core/src/types/durable-memory.ts`: durable memory domain types and store interfaces.
+- `packages/agent-core/src/types/agent-cache.ts`: derived cache record types and cache store interface.
+- `packages/agent-core/src/types/workflow-memory.ts`: workflow contact, consent, outbox, event types and workflow store interface.
 - `packages/agent-core/src/memory/durable-memory-schema.ts`: Zod schemas for candidates, facts, revisions, cache, workflow records.
+- `packages/agent-core/src/memory/in-memory-agent-cache-store.ts`: in-memory fingerprinted cache store for tests and local dev.
+- `packages/agent-core/src/memory/in-memory-workflow-state-store.ts`: in-memory workflow state/outbox/event store for tests and local dev.
 - `packages/agent-core/src/memory/memory-candidate-validator.ts`: deterministic candidate validation.
 - `packages/agent-core/src/memory/in-memory-durable-memory-store.ts`: in-memory implementations for tests and local dev.
 - `packages/agent-core/src/memory/memory-extraction-service.ts`: LLM-backed structured extractor contract and implementation.
 - `packages/agent-core/src/memory/durable-memory-context.ts`: prompt-safe rendering of confirmed facts.
 - `packages/agent-core/src/__tests__/memory/*.test.ts`: unit tests for schemas, validation, stores, extraction, prompt rendering.
+- `packages/agent-core/evals/cases/core/advisor-chat/*memory*.json`: memory extraction, confirmation, profile isolation, and workflow no-side-effect eval cases.
 - `packages/agent-core/src/types/agent-context.ts`: add confirmed durable facts to `context.memory`.
 - `packages/agent-core/src/context/context-builder.ts`: accept preloaded durable facts.
 - `packages/agent-core/src/runtime/agent-runtime.ts`: pre-load durable facts before building context.
@@ -65,6 +70,9 @@ Create or modify these files:
 - `apps/agent-api/src/modules/workflows/routes.ts`: demo workflow routes for mock outbox.
 - `apps/agent-api/src/__tests__/modules/memory/routes.test.ts`: memory API tests.
 - `apps/agent-api/src/__tests__/persistence/supabase/memory-store.test.ts`: adapter tests using fake SQL executor.
+- `apps/agent-api/src/__tests__/persistence/supabase/cache-store.test.ts`: cache adapter tests using fake SQL executor.
+- `apps/agent-api/src/__tests__/persistence/supabase/workflow-store.test.ts`: workflow adapter tests using fake SQL executor.
+- `apps/agent-api/src/__tests__/modules/workflows/routes.test.ts`: workflow route tests verifying persisted mock outbox/events.
 - `apps/web/src/hooks/use-memory-query.ts`: memory confirmation mutations.
 - `apps/web/src/stores/ai-advisor.store.ts`: store memory candidates on assistant messages.
 - `apps/web/src/components/advisor/MemoryCandidateCard.tsx`: confirmation card.
@@ -581,7 +589,7 @@ git commit -m "feat(agent-core): validate memory candidates"
 
 ### Task 4: In-Memory Stores For Local Dev And Tests
 
-**Purpose:** Provide testable store implementations before adding Supabase adapters.
+**Purpose:** Provide testable store implementations before adding Supabase adapters, including the canonicalKey merge/update contract.
 
 **Depends on:** Task 2 and Task 3.
 
@@ -645,6 +653,26 @@ describe('InMemoryDurableMemoryStore', () => {
     expect(result.fact.canonicalKey).toBe('allergy:peanut');
     expect(result.revision.revisionType).toBe('create');
     expect(facts).toHaveLength(1);
+  });
+
+  it('updates the existing active fact when canonical key already exists', async () => {
+    const store = new InMemoryDurableMemoryStore();
+    const first = await store.saveCandidate(candidate());
+    await store.confirmCandidate({ candidate: first, now: 1760000001000 });
+    const second = await store.saveCandidate(candidate({
+      id: 'cand-2',
+      payload: { allergen: 'peanut', severity: 'severe' },
+      evidenceQuote: '我对花生严重过敏',
+    }));
+
+    const result = await store.confirmCandidate({ candidate: second, now: 1760000002000 });
+    const facts = await store.listActiveFacts({ userScopeId: 'demo', profileId: 'profile-a' });
+
+    expect(result.revision.revisionType).toBe('update');
+    expect(result.revision.previousPayload).toEqual({ allergen: 'peanut', severity: 'unknown' });
+    expect(result.revision.nextPayload).toEqual({ allergen: 'peanut', severity: 'severe' });
+    expect(facts).toHaveLength(1);
+    expect(facts[0]?.payload).toEqual({ allergen: 'peanut', severity: 'severe' });
   });
 });
 ```
@@ -722,8 +750,43 @@ export class InMemoryDurableMemoryStore implements MemoryCandidateStore, Durable
     candidate: MemoryCandidateRecord;
     now: number;
   }): Promise<{ fact: UserMemoryFact; revision: MemoryRevision }> {
-    const factId = `fact-${input.candidate.id}`;
     const revisionId = `rev-${input.candidate.id}`;
+    const existing = Array.from(this.facts.values()).find((fact) => {
+      return fact.userScopeId === input.candidate.userScopeId
+        && fact.profileId === input.candidate.profileId
+        && fact.canonicalKey === input.candidate.canonicalKey
+        && fact.status === 'active';
+    });
+
+    if (existing) {
+      const updated: UserMemoryFact = {
+        ...existing,
+        kind: input.candidate.kind,
+        payload: input.candidate.payload,
+        sensitivity: input.candidate.kind === 'allergy' || input.candidate.kind === 'medical_constraint'
+          ? 'health'
+          : input.candidate.kind.startsWith('workflow_')
+            ? 'workflow'
+            : 'standard',
+        sourceCandidateId: input.candidate.id,
+        updatedAt: input.now,
+      };
+      const revision: MemoryRevision = {
+        id: revisionId,
+        memoryFactId: existing.id,
+        revisionType: 'update',
+        previousPayload: existing.payload,
+        nextPayload: updated.payload,
+        sourceCandidateId: input.candidate.id,
+        createdAt: input.now,
+      };
+      this.facts.set(existing.id, updated);
+      this.revisions.set(revision.id, revision);
+      await this.setCandidateStatus(input.candidate.id, 'confirmed', input.now);
+      return { fact: updated, revision };
+    }
+
+    const factId = `fact-${input.candidate.id}`;
     const fact: UserMemoryFact = {
       id: factId,
       userScopeId: input.candidate.userScopeId,
@@ -779,6 +842,10 @@ export class InMemoryDurableMemoryStore implements MemoryCandidateStore, Durable
     };
     this.revisions.set(revision.id, revision);
     return revision;
+  }
+
+  seedFact(fact: UserMemoryFact): void {
+    this.facts.set(fact.id, fact);
   }
 }
 ```
@@ -862,12 +929,15 @@ create table if not exists user_memory_facts (
   source_candidate_id uuid not null references memory_candidates(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  revoked_at timestamptz,
-  unique (user_scope_id, profile_id, canonical_key, status)
+  revoked_at timestamptz
 );
 
 create index if not exists user_memory_facts_active_idx
   on user_memory_facts (user_scope_id, profile_id, status);
+
+create unique index if not exists user_memory_facts_one_active_key_idx
+  on user_memory_facts (user_scope_id, profile_id, canonical_key)
+  where status = 'active';
 
 create table if not exists memory_revisions (
   id uuid primary key default gen_random_uuid(),
@@ -1000,7 +1070,7 @@ git commit -m "feat(agent-api): add Supabase memory schema config"
 
 ### Task 6: Supabase Persistence Adapters
 
-**Purpose:** Implement backend-owned Supabase Postgres adapters behind `agent-core` store interfaces.
+**Purpose:** Implement backend-owned Supabase Postgres adapters behind `agent-core` store interfaces, preserving the same canonicalKey create/update semantics as the in-memory store.
 
 **Depends on:** Task 4 and Task 5.
 
@@ -1019,16 +1089,13 @@ import { SupabaseMemoryStore } from '../../../persistence/supabase/memory-store'
 import type { MemoryCandidateRecord } from '@health-advisor/agent-core';
 
 class FakeSql {
-  rows: unknown[] = [];
-  lastQuery = '';
+  responses: unknown[][] = [];
+  queries: string[] = [];
 
   async query<T>(strings: TemplateStringsArray, ...values: unknown[]): Promise<T[]> {
-    this.lastQuery = strings.join('?');
-    if (this.lastQuery.includes('insert into memory_candidates')) return [this.rows[0] as T];
-    if (this.lastQuery.includes('from memory_candidates')) return this.rows as T[];
-    if (this.lastQuery.includes('from user_memory_facts')) return this.rows as T[];
-    if (this.lastQuery.includes('update memory_candidates')) return [this.rows[0] as T];
-    return [];
+    this.queries.push(strings.join('?'));
+    void values;
+    return (this.responses.shift() ?? []) as T[];
   }
 }
 
@@ -1052,16 +1119,101 @@ function candidate(): MemoryCandidateRecord {
   };
 }
 
+function candidateRow(overrides: Record<string, unknown> = {}) {
+  const record = candidate();
+  return {
+    id: record.id,
+    user_scope_id: record.userScopeId,
+    profile_id: record.profileId,
+    session_id: record.sessionId,
+    source_message_id: record.sourceMessageId,
+    kind: record.kind,
+    canonical_key: record.canonicalKey,
+    payload_json: record.payload,
+    evidence_quote: record.evidenceQuote,
+    confidence: record.confidence,
+    proposed_confirmation_text: record.proposedConfirmationText,
+    status: record.status,
+    created_at: new Date(record.createdAt).toISOString(),
+    updated_at: new Date(record.updatedAt).toISOString(),
+    expires_at: new Date(record.expiresAt).toISOString(),
+    ...overrides,
+  };
+}
+
+function factRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'fact-1',
+    user_scope_id: 'demo',
+    profile_id: 'profile-a',
+    kind: 'allergy',
+    canonical_key: 'allergy:peanut',
+    payload_json: { allergen: 'peanut' },
+    status: 'active',
+    sensitivity: 'health',
+    source_candidate_id: 'cand-1',
+    created_at: new Date(1760000000000).toISOString(),
+    updated_at: new Date(1760000000000).toISOString(),
+    revoked_at: null,
+    ...overrides,
+  };
+}
+
+function revisionRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'rev-1',
+    memory_fact_id: 'fact-1',
+    revision_type: 'create',
+    previous_payload_json: null,
+    next_payload_json: { allergen: 'peanut' },
+    source_candidate_id: 'cand-1',
+    created_at: new Date(1760000000000).toISOString(),
+    ...overrides,
+  };
+}
+
 describe('SupabaseMemoryStore', () => {
   it('saves candidates through memory_candidates table', async () => {
     const sql = new FakeSql();
-    sql.rows = [candidate()];
+    sql.responses = [[candidateRow()]];
     const store = new SupabaseMemoryStore(sql);
 
     const saved = await store.saveCandidate(candidate());
 
     expect(saved.id).toBe('cand-1');
-    expect(sql.lastQuery).toContain('insert into memory_candidates');
+    expect(sql.queries[0]).toContain('insert into memory_candidates');
+  });
+
+  it('updates an existing active fact for the same canonical key', async () => {
+    const sql = new FakeSql();
+    sql.responses = [
+      [factRow({ payload_json: { allergen: 'peanut', severity: 'unknown' } })],
+      [factRow({
+        payload_json: { allergen: 'peanut', severity: 'severe' },
+        source_candidate_id: 'cand-2',
+        updated_at: new Date(1760000002000).toISOString(),
+      })],
+      [revisionRow({
+        revision_type: 'update',
+        previous_payload_json: { allergen: 'peanut', severity: 'unknown' },
+        next_payload_json: { allergen: 'peanut', severity: 'severe' },
+        source_candidate_id: 'cand-2',
+      })],
+      [candidateRow({ id: 'cand-2', status: 'confirmed' })],
+    ];
+    const store = new SupabaseMemoryStore(sql);
+
+    const result = await store.confirmCandidate({
+      candidate: candidate({
+        id: 'cand-2',
+        payload: { allergen: 'peanut', severity: 'severe' },
+      }),
+      now: 1760000002000,
+    });
+
+    expect(result.revision.revisionType).toBe('update');
+    expect(result.revision.previousPayload).toEqual({ allergen: 'peanut', severity: 'unknown' });
+    expect(sql.queries.some((query) => query.includes('update user_memory_facts'))).toBe(true);
   });
 });
 ```
@@ -1248,25 +1400,42 @@ export class SupabaseMemoryStore implements MemoryCandidateStore, DurableMemoryS
     candidate: MemoryCandidateRecord;
     now: number;
   }): Promise<{ fact: UserMemoryFact; revision: MemoryRevision }> {
-    const factRows = await this.sql.query<Record<string, unknown>>`
-      insert into user_memory_facts (
-        user_scope_id, profile_id, kind, canonical_key, payload_json,
-        status, sensitivity, source_candidate_id, created_at, updated_at
-      )
-      values (
-        ${input.candidate.userScopeId}, ${input.candidate.profileId}, ${input.candidate.kind},
-        ${input.candidate.canonicalKey}, ${input.candidate.payload}, 'active',
-        ${sensitivityForKind(input.candidate.kind)}, ${input.candidate.id},
-        ${new Date(input.now)}, ${new Date(input.now)}
-      )
-      on conflict (user_scope_id, profile_id, canonical_key, status)
-      do update set
-        payload_json = excluded.payload_json,
-        source_candidate_id = excluded.source_candidate_id,
-        updated_at = excluded.updated_at
-      returning *
+    const existingRows = await this.sql.query<Record<string, unknown>>`
+      select * from user_memory_facts
+      where user_scope_id = ${input.candidate.userScopeId}
+        and profile_id = ${input.candidate.profileId}
+        and canonical_key = ${input.candidate.canonicalKey}
+        and status = 'active'
+      limit 1
     `;
+    const existing = existingRows[0] ? fromFactRow(existingRows[0]) : undefined;
+
+    const factRows = existing
+      ? await this.sql.query<Record<string, unknown>>`
+          update user_memory_facts
+          set kind = ${input.candidate.kind},
+              payload_json = ${input.candidate.payload},
+              sensitivity = ${sensitivityForKind(input.candidate.kind)},
+              source_candidate_id = ${input.candidate.id},
+              updated_at = ${new Date(input.now)}
+          where id = ${existing.id}
+          returning *
+        `
+      : await this.sql.query<Record<string, unknown>>`
+          insert into user_memory_facts (
+            user_scope_id, profile_id, kind, canonical_key, payload_json,
+            status, sensitivity, source_candidate_id, created_at, updated_at
+          )
+          values (
+            ${input.candidate.userScopeId}, ${input.candidate.profileId}, ${input.candidate.kind},
+            ${input.candidate.canonicalKey}, ${input.candidate.payload}, 'active',
+            ${sensitivityForKind(input.candidate.kind)}, ${input.candidate.id},
+            ${new Date(input.now)}, ${new Date(input.now)}
+          )
+          returning *
+        `;
     const fact = fromFactRow(factRows[0]!);
+    const revisionType: MemoryRevision['revisionType'] = existing ? 'update' : 'create';
 
     const revisionRows = await this.sql.query<Record<string, unknown>>`
       insert into memory_revisions (
@@ -1274,7 +1443,8 @@ export class SupabaseMemoryStore implements MemoryCandidateStore, DurableMemoryS
         source_candidate_id, created_at
       )
       values (
-        ${fact.id}, 'create', null, ${fact.payload}, ${input.candidate.id}, ${new Date(input.now)}
+        ${fact.id}, ${revisionType}, ${existing?.payload ?? null}, ${fact.payload},
+        ${input.candidate.id}, ${new Date(input.now)}
       )
       returning *
     `;
@@ -2147,20 +2317,561 @@ git add packages/agent-core/src/types/agent-context.ts packages/agent-core/src/m
 git commit -m "feat(agent-core): inject confirmed durable memory"
 ```
 
-### Task 12: Derived Cache Boundary
+### Task 12: Derived Cache Boundary And Cache Store
 
-**Purpose:** Keep homepage/view/planner outputs out of durable memory and label them as derived cache/artifacts.
+**Purpose:** Keep homepage/view/planner outputs out of durable memory, persist them only as fingerprinted cache entries, and make cache invalidation depend on current input data instead of user facts.
 
-**Depends on:** Task 11.
+**Depends on:** Task 5, Task 7, Task 11.
 
 **Files:**
+- Create: `packages/agent-core/src/types/agent-cache.ts`
+- Create: `packages/agent-core/src/memory/in-memory-agent-cache-store.ts`
+- Create: `packages/agent-core/src/__tests__/memory/in-memory-agent-cache-store.test.ts`
 - Modify: `packages/agent-core/src/memory/analytical-memory-store.ts`
-- Modify: `packages/agent-core/src/types/memory.ts`
 - Modify: `packages/agent-core/src/prompts/task-builder.ts`
-- Modify: `packages/agent-core/src/__tests__/memory/analytical-memory-store.test.ts`
 - Modify: `packages/agent-core/src/__tests__/prompts/task-builder.test.ts`
+- Create: `apps/agent-api/src/persistence/supabase/cache-store.ts`
+- Create: `apps/agent-api/src/__tests__/persistence/supabase/cache-store.test.ts`
+- Create: `apps/agent-api/src/services/agent-cache-identity.ts`
+- Modify: `apps/agent-api/src/runtime/memory-services.ts`
+- Modify: `apps/agent-api/src/services/ai-orchestrator.ts`
+- Modify: `apps/agent-api/src/modules/ai/routes.ts`
 
-- [ ] **Step 1: Add naming test for derived cache**
+- [ ] **Step 1: Write cache store tests**
+
+Create `packages/agent-core/src/__tests__/memory/in-memory-agent-cache-store.test.ts`:
+
+```ts
+import { describe, expect, it } from 'vitest';
+import { InMemoryAgentCacheStore } from '../../memory/in-memory-agent-cache-store';
+import type { AgentCacheEntry } from '../../types/agent-cache';
+
+function entry(overrides: Partial<AgentCacheEntry> = {}): AgentCacheEntry {
+  return {
+    id: 'cache-1',
+    cacheType: 'homepage_brief',
+    profileId: 'profile-a',
+    sessionId: 'sess-1',
+    cacheKey: 'homepage:profile-a:2026-05-18:zh',
+    dataFingerprint: 'fingerprint-a',
+    promptVersion: 'memory-upgrade-v1',
+    modelVersion: 'gpt-demo',
+    locale: 'zh',
+    pageContext: { profileId: 'profile-a', page: 'homepage', timeframe: 'week' },
+    payload: { summary: '今日状态稳定' },
+    createdAt: 1760000000000,
+    expiresAt: 1760007200000,
+    ...overrides,
+  };
+}
+
+describe('InMemoryAgentCacheStore', () => {
+  it('returns only matching unexpired fingerprinted cache entry', async () => {
+    const store = new InMemoryAgentCacheStore();
+    await store.set(entry());
+    await store.set(entry({ id: 'cache-2', dataFingerprint: 'fingerprint-b' }));
+
+    const cached = await store.get({
+      cacheType: 'homepage_brief',
+      profileId: 'profile-a',
+      cacheKey: 'homepage:profile-a:2026-05-18:zh',
+      dataFingerprint: 'fingerprint-a',
+      promptVersion: 'memory-upgrade-v1',
+      modelVersion: 'gpt-demo',
+      locale: 'zh',
+      now: 1760000001000,
+    });
+
+    expect(cached?.id).toBe('cache-1');
+  });
+
+  it('treats expired cache as missing', async () => {
+    const store = new InMemoryAgentCacheStore();
+    await store.set(entry({ expiresAt: 1760000000001 }));
+
+    const cached = await store.get({
+      cacheType: 'homepage_brief',
+      profileId: 'profile-a',
+      cacheKey: 'homepage:profile-a:2026-05-18:zh',
+      dataFingerprint: 'fingerprint-a',
+      promptVersion: 'memory-upgrade-v1',
+      modelVersion: 'gpt-demo',
+      locale: 'zh',
+      now: 1760000001000,
+    });
+
+    expect(cached).toBeUndefined();
+  });
+});
+```
+
+- [ ] **Step 2: Run the failing test**
+
+Run: `pnpm --filter @health-advisor/agent-core test -- in-memory-agent-cache-store.test.ts`
+
+Expected: FAIL because the cache store does not exist.
+
+- [ ] **Step 3: Define cache types and in-memory store**
+
+Create `packages/agent-core/src/types/agent-cache.ts`:
+
+```ts
+export type AgentCacheType = 'homepage_brief' | 'view_summary' | 'planner_output';
+
+export interface AgentCacheEntry {
+  id: string;
+  cacheType: AgentCacheType;
+  profileId: string;
+  sessionId?: string;
+  cacheKey: string;
+  dataFingerprint: string;
+  promptVersion: string;
+  modelVersion: string;
+  locale: string;
+  pageContext: Record<string, unknown>;
+  payload: Record<string, unknown>;
+  createdAt: number;
+  expiresAt: number;
+}
+
+export interface AgentCacheLookup {
+  cacheType: AgentCacheType;
+  profileId: string;
+  cacheKey: string;
+  dataFingerprint: string;
+  promptVersion: string;
+  modelVersion: string;
+  locale: string;
+  now: number;
+}
+
+export interface AgentCacheStore {
+  get(input: AgentCacheLookup): Promise<AgentCacheEntry | undefined>;
+  set(entry: AgentCacheEntry): Promise<AgentCacheEntry>;
+  invalidateProfile(input: { profileId: string; cacheType?: AgentCacheType }): Promise<number>;
+  clearExpired(now: number): Promise<number>;
+}
+```
+
+Create `packages/agent-core/src/memory/in-memory-agent-cache-store.ts`:
+
+```ts
+import type { AgentCacheEntry, AgentCacheLookup, AgentCacheStore } from '../types/agent-cache';
+
+function identity(entry: Pick<AgentCacheEntry, 'cacheType' | 'profileId' | 'cacheKey' | 'dataFingerprint' | 'promptVersion' | 'modelVersion' | 'locale'>): string {
+  return [
+    entry.cacheType,
+    entry.profileId,
+    entry.cacheKey,
+    entry.dataFingerprint,
+    entry.promptVersion,
+    entry.modelVersion,
+    entry.locale,
+  ].join('|');
+}
+
+export class InMemoryAgentCacheStore implements AgentCacheStore {
+  private entries = new Map<string, AgentCacheEntry>();
+
+  async get(input: AgentCacheLookup): Promise<AgentCacheEntry | undefined> {
+    const entry = this.entries.get(identity(input));
+    if (!entry || entry.expiresAt <= input.now) return undefined;
+    return entry;
+  }
+
+  async set(entry: AgentCacheEntry): Promise<AgentCacheEntry> {
+    this.entries.set(identity(entry), entry);
+    return entry;
+  }
+
+  async invalidateProfile(input: { profileId: string; cacheType?: AgentCacheEntry['cacheType'] }): Promise<number> {
+    let deleted = 0;
+    for (const [key, entry] of this.entries) {
+      if (entry.profileId === input.profileId && (!input.cacheType || entry.cacheType === input.cacheType)) {
+        this.entries.delete(key);
+        deleted += 1;
+      }
+    }
+    return deleted;
+  }
+
+  async clearExpired(now: number): Promise<number> {
+    let deleted = 0;
+    for (const [key, entry] of this.entries) {
+      if (entry.expiresAt <= now) {
+        this.entries.delete(key);
+        deleted += 1;
+      }
+    }
+    return deleted;
+  }
+}
+```
+
+Add exports to `packages/agent-core/src/index.ts`:
+
+```ts
+export { InMemoryAgentCacheStore } from './memory/in-memory-agent-cache-store';
+export type { AgentCacheEntry, AgentCacheLookup, AgentCacheStore, AgentCacheType } from './types/agent-cache';
+```
+
+- [ ] **Step 4: Add deterministic cache identity builder**
+
+Create `apps/agent-api/src/services/agent-cache-identity.ts`:
+
+```ts
+import crypto from 'node:crypto';
+import type { AgentRequest } from '@health-advisor/agent-core';
+import { AgentTaskType, type Locale } from '@health-advisor/shared';
+import type { RuntimeRegistry } from '../runtime/registry.js';
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function sha256(value: unknown): string {
+  return crypto.createHash('sha256').update(stableJson(value)).digest('hex');
+}
+
+export function buildAgentCacheIdentity(input: {
+  request: AgentRequest;
+  locale: Locale | undefined;
+  registry: RuntimeRegistry;
+  promptVersion: string;
+  modelVersion: string;
+}) {
+  const locale = input.locale ?? 'zh';
+  const syncState = input.registry.overrideStore.getSyncState(input.request.profileId);
+  const syncedEvents = input.registry.overrideStore.getSyncedEvents(input.request.profileId);
+  const activeOverrides = input.registry.getActiveOverrides(input.request.profileId);
+  const injectedEvents = input.registry.getInjectedEvents(input.request.profileId);
+  const scope = {
+    taskType: input.request.taskType,
+    profileId: input.request.profileId,
+    pageContext: input.request.pageContext,
+    tab: input.request.tab,
+    timeframe: input.request.timeframe,
+    dateRange: input.request.dateRange,
+    visibleChartIds: input.request.visibleChartIds,
+  };
+
+  return {
+    cacheType: input.request.taskType === AgentTaskType.HOMEPAGE_SUMMARY ? 'homepage_brief' as const : 'view_summary' as const,
+    cacheKey: sha256({ scope, locale }),
+    dataFingerprint: sha256({ syncState, syncedEvents, activeOverrides, injectedEvents }),
+    promptVersion: input.promptVersion,
+    modelVersion: input.modelVersion,
+    locale,
+  };
+}
+```
+
+This identity is the required invalidation rule: cache hits are allowed only when request scope, locale, prompt version, model version, and current synchronized input-data fingerprint match.
+
+- [ ] **Step 5: Add Supabase cache adapter tests**
+
+Create `apps/agent-api/src/__tests__/persistence/supabase/cache-store.test.ts`:
+
+```ts
+import { describe, expect, it } from 'vitest';
+import { SupabaseAgentCacheStore } from '../../../persistence/supabase/cache-store';
+
+class FakeSql {
+  responses: unknown[][] = [];
+  queries: string[] = [];
+
+  async query<T>(strings: TemplateStringsArray, ...values: unknown[]): Promise<T[]> {
+    this.queries.push(strings.join('?'));
+    void values;
+    return (this.responses.shift() ?? []) as T[];
+  }
+}
+
+const row = {
+  id: 'cache-1',
+  cache_type: 'homepage_brief',
+  profile_id: 'profile-a',
+  session_id: 'sess-1',
+  cache_key: 'cache-key',
+  data_fingerprint: 'fingerprint',
+  prompt_version: 'memory-upgrade-v1',
+  model_version: 'gpt-demo',
+  locale: 'zh',
+  page_context_json: { profileId: 'profile-a', page: 'homepage', timeframe: 'week' },
+  payload_json: { summary: '今日状态稳定' },
+  created_at: new Date(1760000000000).toISOString(),
+  expires_at: new Date(1760007200000).toISOString(),
+};
+
+describe('SupabaseAgentCacheStore', () => {
+  it('queries agent_cache_entries with fingerprint identity', async () => {
+    const sql = new FakeSql();
+    sql.responses = [[row]];
+    const store = new SupabaseAgentCacheStore(sql);
+
+    const cached = await store.get({
+      cacheType: 'homepage_brief',
+      profileId: 'profile-a',
+      cacheKey: 'cache-key',
+      dataFingerprint: 'fingerprint',
+      promptVersion: 'memory-upgrade-v1',
+      modelVersion: 'gpt-demo',
+      locale: 'zh',
+      now: 1760000001000,
+    });
+
+    expect(cached?.id).toBe('cache-1');
+    expect(sql.queries[0]).toContain('from agent_cache_entries');
+    expect(sql.queries[0]).toContain('data_fingerprint');
+  });
+});
+```
+
+- [ ] **Step 6: Implement Supabase cache adapter**
+
+Create `apps/agent-api/src/persistence/supabase/cache-store.ts`:
+
+```ts
+import type { AgentCacheEntry, AgentCacheLookup, AgentCacheStore } from '@health-advisor/agent-core';
+import type { SqlExecutor } from './client.js';
+
+function fromCacheRow(row: Record<string, unknown>): AgentCacheEntry {
+  return {
+    id: String(row.id),
+    cacheType: row.cache_type as AgentCacheEntry['cacheType'],
+    profileId: String(row.profile_id),
+    sessionId: row.session_id ? String(row.session_id) : undefined,
+    cacheKey: String(row.cache_key),
+    dataFingerprint: String(row.data_fingerprint),
+    promptVersion: String(row.prompt_version),
+    modelVersion: String(row.model_version),
+    locale: String(row.locale),
+    pageContext: row.page_context_json as Record<string, unknown>,
+    payload: row.payload_json as Record<string, unknown>,
+    createdAt: new Date(String(row.created_at)).getTime(),
+    expiresAt: new Date(String(row.expires_at)).getTime(),
+  };
+}
+
+export class SupabaseAgentCacheStore implements AgentCacheStore {
+  constructor(private readonly sql: SqlExecutor) {}
+
+  async get(input: AgentCacheLookup): Promise<AgentCacheEntry | undefined> {
+    const rows = await this.sql.query<Record<string, unknown>>`
+      select * from agent_cache_entries
+      where cache_type = ${input.cacheType}
+        and profile_id = ${input.profileId}
+        and cache_key = ${input.cacheKey}
+        and data_fingerprint = ${input.dataFingerprint}
+        and prompt_version = ${input.promptVersion}
+        and model_version = ${input.modelVersion}
+        and locale = ${input.locale}
+        and expires_at > ${new Date(input.now)}
+      limit 1
+    `;
+    return rows[0] ? fromCacheRow(rows[0]) : undefined;
+  }
+
+  async set(entry: AgentCacheEntry): Promise<AgentCacheEntry> {
+    const rows = await this.sql.query<Record<string, unknown>>`
+      insert into agent_cache_entries (
+        id, cache_type, profile_id, session_id, cache_key, data_fingerprint,
+        prompt_version, model_version, locale, page_context_json, payload_json,
+        created_at, expires_at
+      )
+      values (
+        ${entry.id}, ${entry.cacheType}, ${entry.profileId}, ${entry.sessionId ?? null},
+        ${entry.cacheKey}, ${entry.dataFingerprint}, ${entry.promptVersion}, ${entry.modelVersion},
+        ${entry.locale}, ${entry.pageContext}, ${entry.payload},
+        ${new Date(entry.createdAt)}, ${new Date(entry.expiresAt)}
+      )
+      on conflict (cache_type, profile_id, cache_key, data_fingerprint, prompt_version, model_version, locale)
+      do update set
+        session_id = excluded.session_id,
+        page_context_json = excluded.page_context_json,
+        payload_json = excluded.payload_json,
+        created_at = excluded.created_at,
+        expires_at = excluded.expires_at
+      returning *
+    `;
+    return fromCacheRow(rows[0]!);
+  }
+
+  async invalidateProfile(input: { profileId: string; cacheType?: AgentCacheEntry['cacheType'] }): Promise<number> {
+    const rows = input.cacheType
+      ? await this.sql.query<Record<string, unknown>>`
+          delete from agent_cache_entries
+          where profile_id = ${input.profileId} and cache_type = ${input.cacheType}
+          returning id
+        `
+      : await this.sql.query<Record<string, unknown>>`
+          delete from agent_cache_entries
+          where profile_id = ${input.profileId}
+          returning id
+        `;
+    return rows.length;
+  }
+
+  async clearExpired(now: number): Promise<number> {
+    const rows = await this.sql.query<Record<string, unknown>>`
+      delete from agent_cache_entries
+      where expires_at <= ${new Date(now)}
+      returning id
+    `;
+    return rows.length;
+  }
+}
+```
+
+- [ ] **Step 7: Wire cache service into backend runtime**
+
+Modify `apps/agent-api/src/runtime/memory-services.ts`:
+
+```ts
+import { InMemoryAgentCacheStore, type AgentCacheStore } from '@health-advisor/agent-core';
+import { SupabaseAgentCacheStore } from '../persistence/supabase/cache-store.js';
+
+export interface MemoryServices {
+  userScopeId: string;
+  candidateTtlMs: number;
+  candidates: MemoryCandidateStore;
+  durable: DurableMemoryStore;
+  cache: AgentCacheStore;
+  extractor?: MemoryExtractionService;
+}
+```
+
+In the Supabase branch, construct one SQL client and pass it to both adapters:
+
+```ts
+const sql = createSupabaseSql(config.SUPABASE_DB_URL);
+const memoryStore = new SupabaseMemoryStore(sql);
+return {
+  userScopeId: config.DEMO_USER_SCOPE_ID,
+  candidateTtlMs: config.MEMORY_CANDIDATE_TTL_HOURS * 60 * 60 * 1000,
+  candidates: memoryStore,
+  durable: memoryStore,
+  cache: new SupabaseAgentCacheStore(sql),
+};
+```
+
+In the in-memory branch:
+
+```ts
+const store = new InMemoryDurableMemoryStore();
+return {
+  userScopeId: config.DEMO_USER_SCOPE_ID,
+  candidateTtlMs: config.MEMORY_CANDIDATE_TTL_HOURS * 60 * 60 * 1000,
+  candidates: store,
+  durable: store,
+  cache: new InMemoryAgentCacheStore(),
+};
+```
+
+- [ ] **Step 8: Replace homepage brief cache with fingerprinted cache**
+
+Modify `apps/agent-api/src/services/ai-orchestrator.ts` so `AiOrchestratorDeps` receives `memoryServices` and `modelVersion`, then uses `buildAgentCacheIdentity()` for homepage/view summary cache. Keep cache reads out of advisor chat.
+
+```ts
+import crypto from 'node:crypto';
+import { AgentTaskType, type AgentResponseEnvelope, type Locale } from '@health-advisor/shared';
+import type { MemoryServices } from '../runtime/memory-services.js';
+import { buildAgentCacheIdentity } from './agent-cache-identity.js';
+
+export interface AiOrchestratorDeps {
+  registry: RuntimeRegistry;
+  metrics: MetricsStore;
+  timeoutMs: number;
+  memoryServices: MemoryServices;
+  modelVersion: string;
+}
+
+function cacheableTask(taskType: AgentTaskType): boolean {
+  return taskType === AgentTaskType.HOMEPAGE_SUMMARY || taskType === AgentTaskType.VIEW_SUMMARY;
+}
+
+export class AiOrchestrator {
+  constructor(private deps: AiOrchestratorDeps) {}
+
+  async execute(request: AgentRequest, locale?: Locale): Promise<AgentResponseEnvelope> {
+    const cacheIdentity = cacheableTask(request.taskType)
+      ? buildAgentCacheIdentity({
+          request,
+          locale,
+          registry: this.deps.registry,
+          promptVersion: 'memory-upgrade-v1',
+          modelVersion: this.deps.modelVersion,
+        })
+      : undefined;
+
+    if (cacheIdentity) {
+      const cached = await this.deps.memoryServices.cache.get({
+        ...cacheIdentity,
+        profileId: request.profileId,
+        now: Date.now(),
+      });
+      if (cached) {
+        this.deps.metrics.incrementBriefCacheHit();
+        return {
+          ...(cached.payload as AgentResponseEnvelope),
+          meta: { ...(cached.payload as AgentResponseEnvelope).meta, finishReason: 'cached' },
+        };
+      }
+    }
+
+    const result = await executeAgent(request, this.deps.registry, this.deps.timeoutMs, undefined, locale);
+
+    if (result.meta.finishReason === 'timeout') {
+      this.deps.metrics.incrementAiTimeout();
+    }
+    if (result.meta.finishReason === 'fallback') {
+      this.deps.metrics.incrementFallbackUsed();
+    }
+
+    if (cacheIdentity && result.meta.finishReason === 'complete') {
+      await this.deps.memoryServices.cache.set({
+        id: crypto.randomUUID(),
+        ...cacheIdentity,
+        profileId: request.profileId,
+        sessionId: request.sessionId,
+        pageContext: request.pageContext as Record<string, unknown>,
+        payload: result as unknown as Record<string, unknown>,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+      });
+    }
+
+    return result;
+  }
+}
+```
+
+Keep the existing `try/catch` around the LLM call and keep incrementing provider errors in the catch block.
+
+Update `apps/agent-api/src/modules/ai/routes.ts` to pass the new orchestrator dependency:
+
+```ts
+const orchestrator = new AiOrchestrator({
+  registry: app.runtime,
+  metrics: app.metrics,
+  timeoutMs: app.config.AI_TIMEOUT_MS,
+  memoryServices: app.memoryServices,
+  modelVersion: app.config.LLM_MODEL,
+});
+```
+
+After any demo data mutation or manual refresh that previously called `briefCache.invalidate(profileId)`, call:
+
+```ts
+await app.memoryServices.cache.invalidateProfile({ profileId });
+```
+
+- [ ] **Step 9: Rename prompt section and document boundary**
 
 In `packages/agent-core/src/__tests__/prompts/task-builder.test.ts`, add a test that builds a prompt with `latestHomepageBrief` and expects `Derived Analysis Cache` or `派生分析缓存`, not `Historical Analysis Reference`.
 
@@ -2169,23 +2880,11 @@ expect(prompt).toContain('派生分析缓存');
 expect(prompt).not.toContain('历史分析参考');
 ```
 
-- [ ] **Step 2: Run failing test**
-
-Run: `pnpm --filter @health-advisor/agent-core test -- task-builder.test.ts`
-
-Expected: FAIL because the old heading is still used.
-
-- [ ] **Step 3: Rename prompt section**
-
 In `packages/agent-core/src/prompts/task-builder.ts`, change the analytical section heading:
 
 ```ts
 sections.push(t(locale, '## 派生分析缓存', '## Derived Analysis Cache'));
 ```
-
-Keep `buildAnalyticalContext` behavior unchanged. This task changes semantics and labels, not cache storage behavior.
-
-- [ ] **Step 4: Add code comments for memory boundary**
 
 In `packages/agent-core/src/memory/analytical-memory-store.ts`, update the interface comment:
 
@@ -2197,22 +2896,24 @@ In `packages/agent-core/src/memory/analytical-memory-store.ts`, update the inter
 export interface AnalyticalMemoryStore {
 ```
 
-- [ ] **Step 5: Run tests**
+- [ ] **Step 10: Run cache tests**
 
 Run:
 
 ```bash
-pnpm --filter @health-advisor/agent-core test -- analytical-memory-store.test.ts
+pnpm --filter @health-advisor/agent-core test -- in-memory-agent-cache-store.test.ts
 pnpm --filter @health-advisor/agent-core test -- task-builder.test.ts
+pnpm --filter @health-advisor/agent-api test -- cache-store.test.ts
+pnpm --filter @health-advisor/agent-api test -- ai-orchestrator.test.ts
 ```
 
-Expected: PASS.
+Expected: PASS, and cache hit tests must show no cache hit when `dataFingerprint` changes.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
-git add packages/agent-core/src/memory/analytical-memory-store.ts packages/agent-core/src/types/memory.ts packages/agent-core/src/prompts/task-builder.ts packages/agent-core/src/__tests__/memory/analytical-memory-store.test.ts packages/agent-core/src/__tests__/prompts/task-builder.test.ts
-git commit -m "refactor(agent-core): label analytical memory as derived cache"
+git add packages/agent-core/src/types/agent-cache.ts packages/agent-core/src/memory/in-memory-agent-cache-store.ts packages/agent-core/src/__tests__/memory/in-memory-agent-cache-store.test.ts packages/agent-core/src/memory/analytical-memory-store.ts packages/agent-core/src/prompts/task-builder.ts packages/agent-core/src/__tests__/prompts/task-builder.test.ts apps/agent-api/src/persistence/supabase/cache-store.ts apps/agent-api/src/__tests__/persistence/supabase/cache-store.test.ts apps/agent-api/src/services/agent-cache-identity.ts apps/agent-api/src/runtime/memory-services.ts apps/agent-api/src/services/ai-orchestrator.ts apps/agent-api/src/modules/ai/routes.ts
+git commit -m "feat(agent-api): add fingerprinted agent cache"
 ```
 
 ### Task 13: Frontend Memory Confirmation Cards
@@ -2368,19 +3069,575 @@ git add apps/web/src/hooks/use-memory-query.ts apps/web/src/components/advisor/M
 git commit -m "feat(web): add memory confirmation cards"
 ```
 
-### Task 14: Demo Workflow Outbox Reservation
+### Task 14: Workflow State Store And Demo Outbox Reservation
 
-**Purpose:** Reserve the workflow path in code and demo a mock therapist outreach action without real email delivery.
+**Purpose:** Reserve the workflow path with persisted contacts, consents, outbox items, and audit events while keeping real email delivery outside the demo.
 
 **Depends on:** Task 5, Task 7, Task 10.
 
 **Files:**
 - Create: `packages/agent-core/src/types/workflow-memory.ts`
+- Create: `packages/agent-core/src/memory/in-memory-workflow-state-store.ts`
+- Create: `packages/agent-core/src/__tests__/memory/in-memory-workflow-state-store.test.ts`
+- Create: `apps/agent-api/src/persistence/supabase/workflow-store.ts`
+- Create: `apps/agent-api/src/__tests__/persistence/supabase/workflow-store.test.ts`
+- Modify: `apps/agent-api/src/runtime/memory-services.ts`
+- Modify: `apps/agent-api/src/modules/memory/routes.ts`
 - Create: `apps/agent-api/src/modules/workflows/routes.ts`
 - Create: `apps/agent-api/src/__tests__/modules/workflows/routes.test.ts`
 - Modify: `apps/agent-api/src/app.ts`
 
-- [ ] **Step 1: Write workflow route test**
+- [ ] **Step 1: Write workflow store tests**
+
+Create `packages/agent-core/src/__tests__/memory/in-memory-workflow-state-store.test.ts`:
+
+```ts
+import { describe, expect, it } from 'vitest';
+import { InMemoryWorkflowStateStore } from '../../memory/in-memory-workflow-state-store';
+
+describe('InMemoryWorkflowStateStore', () => {
+  it('finds active consent and persists outbox events', async () => {
+    const store = new InMemoryWorkflowStateStore();
+    const contact = await store.upsertContact({
+      id: 'contact-1',
+      userScopeId: 'demo',
+      profileId: 'profile-a',
+      contactType: 'therapist',
+      displayName: 'Demo Therapist',
+      email: 'therapist@example.com',
+      metadata: {},
+      status: 'active',
+      createdAt: 1760000000000,
+      updatedAt: 1760000000000,
+    });
+    const consent = await store.upsertConsent({
+      id: 'consent-1',
+      userScopeId: 'demo',
+      profileId: 'profile-a',
+      workflowType: 'therapist_outreach',
+      contactId: contact.id,
+      scope: { deliveryMode: 'mock' },
+      status: 'active',
+      createdAt: 1760000000000,
+      updatedAt: 1760000000000,
+    });
+
+    const active = await store.findActiveConsent({
+      userScopeId: 'demo',
+      profileId: 'profile-a',
+      workflowType: 'therapist_outreach',
+    });
+    const outbox = await store.enqueueOutbox({
+      id: 'outbox-1',
+      userScopeId: 'demo',
+      profileId: 'profile-a',
+      workflowType: 'therapist_outreach',
+      contactId: contact.id,
+      consentId: consent.id,
+      payload: { reason: '用户确认疲劳并授权联系理疗师', deliveryMode: 'mock' },
+      status: 'pending',
+      createdAt: 1760000001000,
+      updatedAt: 1760000001000,
+    });
+    await store.appendEvent({
+      id: 'event-1',
+      workflowOutboxId: outbox.id,
+      eventType: 'outbox_created',
+      payload: { deliveryMode: 'mock' },
+      createdAt: 1760000001000,
+    });
+
+    expect(active?.id).toBe('consent-1');
+    expect(await store.listEvents(outbox.id)).toHaveLength(1);
+  });
+});
+```
+
+- [ ] **Step 2: Run the failing test**
+
+Run: `pnpm --filter @health-advisor/agent-core test -- in-memory-workflow-state-store.test.ts`
+
+Expected: FAIL because the workflow store does not exist.
+
+- [ ] **Step 3: Define workflow types and in-memory store**
+
+Create `packages/agent-core/src/types/workflow-memory.ts`:
+
+```ts
+export type WorkflowContactType = 'therapist' | 'coach' | 'doctor' | 'caregiver' | 'other';
+export type WorkflowRecordStatus = 'active' | 'inactive';
+export type WorkflowConsentStatus = 'active' | 'revoked';
+export type WorkflowOutboxStatus = 'pending' | 'processing' | 'sent' | 'cancelled' | 'failed';
+
+export interface WorkflowContact {
+  id: string;
+  userScopeId: string;
+  profileId: string;
+  contactType: WorkflowContactType;
+  displayName: string;
+  email?: string;
+  phone?: string;
+  metadata: Record<string, unknown>;
+  status: WorkflowRecordStatus;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface WorkflowConsent {
+  id: string;
+  userScopeId: string;
+  profileId: string;
+  workflowType: string;
+  contactId?: string;
+  scope: Record<string, unknown>;
+  status: WorkflowConsentStatus;
+  createdAt: number;
+  updatedAt: number;
+  revokedAt?: number;
+}
+
+export interface WorkflowOutboxItem {
+  id: string;
+  userScopeId: string;
+  profileId: string;
+  workflowType: string;
+  contactId?: string;
+  consentId?: string;
+  payload: Record<string, unknown>;
+  status: WorkflowOutboxStatus;
+  createdAt: number;
+  updatedAt: number;
+  processedAt?: number;
+}
+
+export interface WorkflowEvent {
+  id: string;
+  workflowOutboxId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  createdAt: number;
+}
+
+export interface WorkflowStateStore {
+  upsertContact(contact: WorkflowContact): Promise<WorkflowContact>;
+  upsertConsent(consent: WorkflowConsent): Promise<WorkflowConsent>;
+  findActiveConsent(input: { userScopeId: string; profileId: string; workflowType: string; contactId?: string }): Promise<WorkflowConsent | undefined>;
+  enqueueOutbox(item: WorkflowOutboxItem): Promise<WorkflowOutboxItem>;
+  appendEvent(event: WorkflowEvent): Promise<WorkflowEvent>;
+  listEvents(workflowOutboxId: string): Promise<WorkflowEvent[]>;
+}
+```
+
+Create `packages/agent-core/src/memory/in-memory-workflow-state-store.ts`:
+
+```ts
+import type {
+  WorkflowConsent,
+  WorkflowContact,
+  WorkflowEvent,
+  WorkflowOutboxItem,
+  WorkflowStateStore,
+} from '../types/workflow-memory';
+
+export class InMemoryWorkflowStateStore implements WorkflowStateStore {
+  private contacts = new Map<string, WorkflowContact>();
+  private consents = new Map<string, WorkflowConsent>();
+  private outbox = new Map<string, WorkflowOutboxItem>();
+  private events = new Map<string, WorkflowEvent[]>();
+
+  async upsertContact(contact: WorkflowContact): Promise<WorkflowContact> {
+    this.contacts.set(contact.id, contact);
+    return contact;
+  }
+
+  async upsertConsent(consent: WorkflowConsent): Promise<WorkflowConsent> {
+    this.consents.set(consent.id, consent);
+    return consent;
+  }
+
+  async findActiveConsent(input: { userScopeId: string; profileId: string; workflowType: string; contactId?: string }): Promise<WorkflowConsent | undefined> {
+    return Array.from(this.consents.values()).find((consent) => {
+      return consent.userScopeId === input.userScopeId
+        && consent.profileId === input.profileId
+        && consent.workflowType === input.workflowType
+        && consent.status === 'active'
+        && (!input.contactId || consent.contactId === input.contactId);
+    });
+  }
+
+  async enqueueOutbox(item: WorkflowOutboxItem): Promise<WorkflowOutboxItem> {
+    this.outbox.set(item.id, item);
+    return item;
+  }
+
+  async appendEvent(event: WorkflowEvent): Promise<WorkflowEvent> {
+    const existing = this.events.get(event.workflowOutboxId) ?? [];
+    this.events.set(event.workflowOutboxId, [...existing, event]);
+    return event;
+  }
+
+  async listEvents(workflowOutboxId: string): Promise<WorkflowEvent[]> {
+    return this.events.get(workflowOutboxId) ?? [];
+  }
+}
+```
+
+Add exports to `packages/agent-core/src/index.ts`:
+
+```ts
+export { InMemoryWorkflowStateStore } from './memory/in-memory-workflow-state-store';
+export type {
+  WorkflowConsent,
+  WorkflowContact,
+  WorkflowContactType,
+  WorkflowEvent,
+  WorkflowOutboxItem,
+  WorkflowStateStore,
+} from './types/workflow-memory';
+```
+
+- [ ] **Step 4: Add Supabase workflow adapter tests**
+
+Create `apps/agent-api/src/__tests__/persistence/supabase/workflow-store.test.ts`:
+
+```ts
+import { describe, expect, it } from 'vitest';
+import { SupabaseWorkflowStateStore } from '../../../persistence/supabase/workflow-store';
+
+class FakeSql {
+  responses: unknown[][] = [];
+  queries: string[] = [];
+
+  async query<T>(strings: TemplateStringsArray, ...values: unknown[]): Promise<T[]> {
+    this.queries.push(strings.join('?'));
+    void values;
+    return (this.responses.shift() ?? []) as T[];
+  }
+}
+
+describe('SupabaseWorkflowStateStore', () => {
+  it('enqueues outbox rows and appends events', async () => {
+    const sql = new FakeSql();
+    sql.responses = [
+      [{
+        id: 'outbox-1',
+        user_scope_id: 'demo',
+        profile_id: 'profile-a',
+        workflow_type: 'therapist_outreach',
+        contact_id: 'contact-1',
+        consent_id: 'consent-1',
+        payload_json: { deliveryMode: 'mock' },
+        status: 'pending',
+        created_at: new Date(1760000000000).toISOString(),
+        updated_at: new Date(1760000000000).toISOString(),
+        processed_at: null,
+      }],
+      [{
+        id: 'event-1',
+        workflow_outbox_id: 'outbox-1',
+        event_type: 'outbox_created',
+        payload_json: { deliveryMode: 'mock' },
+        created_at: new Date(1760000000000).toISOString(),
+      }],
+    ];
+    const store = new SupabaseWorkflowStateStore(sql);
+
+    await store.enqueueOutbox({
+      id: 'outbox-1',
+      userScopeId: 'demo',
+      profileId: 'profile-a',
+      workflowType: 'therapist_outreach',
+      contactId: 'contact-1',
+      consentId: 'consent-1',
+      payload: { deliveryMode: 'mock' },
+      status: 'pending',
+      createdAt: 1760000000000,
+      updatedAt: 1760000000000,
+    });
+    await store.appendEvent({
+      id: 'event-1',
+      workflowOutboxId: 'outbox-1',
+      eventType: 'outbox_created',
+      payload: { deliveryMode: 'mock' },
+      createdAt: 1760000000000,
+    });
+
+    expect(sql.queries[0]).toContain('insert into workflow_outbox');
+    expect(sql.queries[1]).toContain('insert into workflow_events');
+  });
+});
+```
+
+- [ ] **Step 5: Implement Supabase workflow adapter**
+
+Create `apps/agent-api/src/persistence/supabase/workflow-store.ts` with row mappers and these methods:
+
+```ts
+import type {
+  WorkflowConsent,
+  WorkflowContact,
+  WorkflowEvent,
+  WorkflowOutboxItem,
+  WorkflowStateStore,
+} from '@health-advisor/agent-core';
+import type { SqlExecutor } from './client.js';
+
+function fromOutboxRow(row: Record<string, unknown>): WorkflowOutboxItem {
+  return {
+    id: String(row.id),
+    userScopeId: String(row.user_scope_id),
+    profileId: String(row.profile_id),
+    workflowType: String(row.workflow_type),
+    contactId: row.contact_id ? String(row.contact_id) : undefined,
+    consentId: row.consent_id ? String(row.consent_id) : undefined,
+    payload: row.payload_json as Record<string, unknown>,
+    status: row.status as WorkflowOutboxItem['status'],
+    createdAt: new Date(String(row.created_at)).getTime(),
+    updatedAt: new Date(String(row.updated_at)).getTime(),
+    processedAt: row.processed_at ? new Date(String(row.processed_at)).getTime() : undefined,
+  };
+}
+
+function fromEventRow(row: Record<string, unknown>): WorkflowEvent {
+  return {
+    id: String(row.id),
+    workflowOutboxId: String(row.workflow_outbox_id),
+    eventType: String(row.event_type),
+    payload: row.payload_json as Record<string, unknown>,
+    createdAt: new Date(String(row.created_at)).getTime(),
+  };
+}
+
+export class SupabaseWorkflowStateStore implements WorkflowStateStore {
+  constructor(private readonly sql: SqlExecutor) {}
+
+  async upsertContact(contact: WorkflowContact): Promise<WorkflowContact> {
+    const rows = await this.sql.query<Record<string, unknown>>`
+      insert into workflow_contacts (
+        id, user_scope_id, profile_id, contact_type, display_name, email, phone,
+        metadata_json, status, created_at, updated_at
+      )
+      values (
+        ${contact.id}, ${contact.userScopeId}, ${contact.profileId}, ${contact.contactType},
+        ${contact.displayName}, ${contact.email ?? null}, ${contact.phone ?? null},
+        ${contact.metadata}, ${contact.status}, ${new Date(contact.createdAt)}, ${new Date(contact.updatedAt)}
+      )
+      on conflict (id) do update set
+        display_name = excluded.display_name,
+        email = excluded.email,
+        phone = excluded.phone,
+        metadata_json = excluded.metadata_json,
+        status = excluded.status,
+        updated_at = excluded.updated_at
+      returning *
+    `;
+    const row = rows[0]!;
+    return {
+      id: String(row.id),
+      userScopeId: String(row.user_scope_id),
+      profileId: String(row.profile_id),
+      contactType: row.contact_type as WorkflowContact['contactType'],
+      displayName: String(row.display_name),
+      email: row.email ? String(row.email) : undefined,
+      phone: row.phone ? String(row.phone) : undefined,
+      metadata: row.metadata_json as Record<string, unknown>,
+      status: row.status as WorkflowContact['status'],
+      createdAt: new Date(String(row.created_at)).getTime(),
+      updatedAt: new Date(String(row.updated_at)).getTime(),
+    };
+  }
+
+  async upsertConsent(consent: WorkflowConsent): Promise<WorkflowConsent> {
+    const rows = await this.sql.query<Record<string, unknown>>`
+      insert into workflow_consents (
+        id, user_scope_id, profile_id, workflow_type, contact_id, scope_json,
+        status, created_at, updated_at, revoked_at
+      )
+      values (
+        ${consent.id}, ${consent.userScopeId}, ${consent.profileId}, ${consent.workflowType},
+        ${consent.contactId ?? null}, ${consent.scope}, ${consent.status},
+        ${new Date(consent.createdAt)}, ${new Date(consent.updatedAt)},
+        ${consent.revokedAt ? new Date(consent.revokedAt) : null}
+      )
+      on conflict (id) do update set
+        scope_json = excluded.scope_json,
+        status = excluded.status,
+        updated_at = excluded.updated_at,
+        revoked_at = excluded.revoked_at
+      returning *
+    `;
+    const row = rows[0]!;
+    return {
+      id: String(row.id),
+      userScopeId: String(row.user_scope_id),
+      profileId: String(row.profile_id),
+      workflowType: String(row.workflow_type),
+      contactId: row.contact_id ? String(row.contact_id) : undefined,
+      scope: row.scope_json as Record<string, unknown>,
+      status: row.status as WorkflowConsent['status'],
+      createdAt: new Date(String(row.created_at)).getTime(),
+      updatedAt: new Date(String(row.updated_at)).getTime(),
+      revokedAt: row.revoked_at ? new Date(String(row.revoked_at)).getTime() : undefined,
+    };
+  }
+
+  async findActiveConsent(input: { userScopeId: string; profileId: string; workflowType: string; contactId?: string }): Promise<WorkflowConsent | undefined> {
+    const rows = input.contactId
+      ? await this.sql.query<Record<string, unknown>>`
+          select * from workflow_consents
+          where user_scope_id = ${input.userScopeId}
+            and profile_id = ${input.profileId}
+            and workflow_type = ${input.workflowType}
+            and contact_id = ${input.contactId}
+            and status = 'active'
+          limit 1
+        `
+      : await this.sql.query<Record<string, unknown>>`
+          select * from workflow_consents
+          where user_scope_id = ${input.userScopeId}
+            and profile_id = ${input.profileId}
+            and workflow_type = ${input.workflowType}
+            and status = 'active'
+          limit 1
+        `;
+    if (!rows[0]) return undefined;
+    return {
+      id: String(rows[0].id),
+      userScopeId: String(rows[0].user_scope_id),
+      profileId: String(rows[0].profile_id),
+      workflowType: String(rows[0].workflow_type),
+      contactId: rows[0].contact_id ? String(rows[0].contact_id) : undefined,
+      scope: rows[0].scope_json as Record<string, unknown>,
+      status: rows[0].status as WorkflowConsent['status'],
+      createdAt: new Date(String(rows[0].created_at)).getTime(),
+      updatedAt: new Date(String(rows[0].updated_at)).getTime(),
+      revokedAt: rows[0].revoked_at ? new Date(String(rows[0].revoked_at)).getTime() : undefined,
+    };
+  }
+
+  async enqueueOutbox(item: WorkflowOutboxItem): Promise<WorkflowOutboxItem> {
+    const rows = await this.sql.query<Record<string, unknown>>`
+      insert into workflow_outbox (
+        id, user_scope_id, profile_id, workflow_type, contact_id, consent_id,
+        payload_json, status, created_at, updated_at, processed_at
+      )
+      values (
+        ${item.id}, ${item.userScopeId}, ${item.profileId}, ${item.workflowType},
+        ${item.contactId ?? null}, ${item.consentId ?? null}, ${item.payload}, ${item.status},
+        ${new Date(item.createdAt)}, ${new Date(item.updatedAt)},
+        ${item.processedAt ? new Date(item.processedAt) : null}
+      )
+      returning *
+    `;
+    return fromOutboxRow(rows[0]!);
+  }
+
+  async appendEvent(event: WorkflowEvent): Promise<WorkflowEvent> {
+    const rows = await this.sql.query<Record<string, unknown>>`
+      insert into workflow_events (id, workflow_outbox_id, event_type, payload_json, created_at)
+      values (${event.id}, ${event.workflowOutboxId}, ${event.eventType}, ${event.payload}, ${new Date(event.createdAt)})
+      returning *
+    `;
+    return fromEventRow(rows[0]!);
+  }
+
+  async listEvents(workflowOutboxId: string): Promise<WorkflowEvent[]> {
+    const rows = await this.sql.query<Record<string, unknown>>`
+      select * from workflow_events
+      where workflow_outbox_id = ${workflowOutboxId}
+      order by created_at asc
+    `;
+    return rows.map(fromEventRow);
+  }
+}
+```
+
+- [ ] **Step 6: Wire workflow store into backend memory services**
+
+Modify `apps/agent-api/src/runtime/memory-services.ts`:
+
+```ts
+import {
+  InMemoryWorkflowStateStore,
+  type WorkflowStateStore,
+} from '@health-advisor/agent-core';
+import { SupabaseWorkflowStateStore } from '../persistence/supabase/workflow-store.js';
+
+export interface MemoryServices {
+  userScopeId: string;
+  candidateTtlMs: number;
+  candidates: MemoryCandidateStore;
+  durable: DurableMemoryStore;
+  cache: AgentCacheStore;
+  workflow: WorkflowStateStore;
+  extractor?: MemoryExtractionService;
+}
+```
+
+In the Supabase branch:
+
+```ts
+workflow: new SupabaseWorkflowStateStore(sql),
+```
+
+In the in-memory branch:
+
+```ts
+workflow: new InMemoryWorkflowStateStore(),
+```
+
+- [ ] **Step 7: Persist confirmed workflow candidates into workflow state**
+
+Modify `apps/agent-api/src/modules/memory/routes.ts` after `confirmCandidate(...)` succeeds:
+
+```ts
+import crypto from 'node:crypto';
+
+async function persistWorkflowMemory(app: FastifyInstance, candidate: MemoryCandidateRecord, now: number) {
+  if (candidate.kind === 'workflow_contact') {
+    await app.memoryServices.workflow.upsertContact({
+      id: typeof candidate.payload.contactId === 'string' ? candidate.payload.contactId : crypto.randomUUID(),
+      userScopeId: candidate.userScopeId,
+      profileId: candidate.profileId,
+      contactType: candidate.payload.contactType === 'therapist' ? 'therapist' : 'other',
+      displayName: typeof candidate.payload.displayName === 'string' ? candidate.payload.displayName : 'Demo contact',
+      email: typeof candidate.payload.email === 'string' ? candidate.payload.email : undefined,
+      phone: typeof candidate.payload.phone === 'string' ? candidate.payload.phone : undefined,
+      metadata: candidate.payload,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  if (candidate.kind === 'workflow_consent') {
+    await app.memoryServices.workflow.upsertConsent({
+      id: typeof candidate.payload.consentId === 'string' ? candidate.payload.consentId : crypto.randomUUID(),
+      userScopeId: candidate.userScopeId,
+      profileId: candidate.profileId,
+      workflowType: typeof candidate.payload.workflowType === 'string' ? candidate.payload.workflowType : 'therapist_outreach',
+      contactId: typeof candidate.payload.contactId === 'string' ? candidate.payload.contactId : undefined,
+      scope: candidate.payload,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+}
+```
+
+Call it from the confirm route:
+
+```ts
+const now = Date.now();
+const result = await app.memoryServices.durable.confirmCandidate({ candidate, now });
+await persistWorkflowMemory(app, candidate, now);
+return createSuccessResponse(result.fact, buildMeta(request));
+```
+
+This mirrors confirmed workflow candidates into workflow-specific tables. The durable fact remains the user-visible memory audit record.
+
+- [ ] **Step 8: Write workflow route tests**
 
 Create `apps/agent-api/src/__tests__/modules/workflows/routes.test.ts`:
 
@@ -2389,7 +3646,55 @@ import { describe, expect, it } from 'vitest';
 import { buildApp } from '../../../app';
 
 describe('workflow demo routes', () => {
-  it('creates a mock outbox action instead of sending email', async () => {
+  it('persists a mock outbox action and audit event without sending email', async () => {
+    const app = await buildApp({
+      env: { FALLBACK_ONLY_MODE: 'true', ENABLE_GOD_MODE: 'false', MEMORY_BACKEND: 'memory' },
+    });
+    await app.memoryServices.workflow.upsertContact({
+      id: 'contact-1',
+      userScopeId: 'demo',
+      profileId: 'profile-a',
+      contactType: 'therapist',
+      displayName: 'Demo Therapist',
+      email: 'therapist@example.com',
+      metadata: {},
+      status: 'active',
+      createdAt: 1760000000000,
+      updatedAt: 1760000000000,
+    });
+    await app.memoryServices.workflow.upsertConsent({
+      id: 'consent-1',
+      userScopeId: 'demo',
+      profileId: 'profile-a',
+      workflowType: 'therapist_outreach',
+      contactId: 'contact-1',
+      scope: { deliveryMode: 'mock' },
+      status: 'active',
+      createdAt: 1760000000000,
+      updatedAt: 1760000000000,
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/workflows/therapist-outreach/propose',
+      headers: { 'x-session-id': 'sess-1' },
+      payload: {
+        profileId: 'profile-a',
+        contactId: 'contact-1',
+        reason: '用户确认疲劳并授权联系理疗师',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data.status).toBe('pending');
+    expect(response.json().data.payload.deliveryMode).toBe('mock');
+    expect(response.json().data.payload.emailSent).toBe(false);
+    expect(await app.memoryServices.workflow.listEvents(response.json().data.id)).toHaveLength(1);
+
+    await app.close();
+  });
+
+  it('rejects workflow outbox creation without active consent', async () => {
     const app = await buildApp({
       env: { FALLBACK_ONLY_MODE: 'true', ENABLE_GOD_MODE: 'false', MEMORY_BACKEND: 'memory' },
     });
@@ -2400,39 +3705,18 @@ describe('workflow demo routes', () => {
       headers: { 'x-session-id': 'sess-1' },
       payload: {
         profileId: 'profile-a',
-        reason: '用户确认疲劳并授权联系理疗师',
+        reason: '用户确认疲劳',
       },
     });
 
-    expect(response.statusCode).toBe(200);
-    expect(response.json().data.status).toBe('pending');
+    expect(response.statusCode).toBe(409);
 
     await app.close();
   });
 });
 ```
 
-- [ ] **Step 2: Define workflow API type**
-
-Create `packages/agent-core/src/types/workflow-memory.ts`:
-
-```ts
-export interface WorkflowOutboxItem {
-  id: string;
-  userScopeId: string;
-  profileId: string;
-  workflowType: string;
-  contactId?: string;
-  consentId?: string;
-  payload: Record<string, unknown>;
-  status: 'pending' | 'processing' | 'sent' | 'cancelled' | 'failed';
-  createdAt: number;
-  updatedAt: number;
-  processedAt?: number;
-}
-```
-
-- [ ] **Step 3: Add demo route**
+- [ ] **Step 9: Add persisted mock workflow route**
 
 Create `apps/agent-api/src/modules/workflows/routes.ts`:
 
@@ -2445,6 +3729,7 @@ import { buildMeta } from '../../utils/meta.js';
 
 const ProposeTherapistOutreachSchema = z.object({
   profileId: z.string().min(1),
+  contactId: z.string().min(1).optional(),
   reason: z.string().min(1),
 });
 
@@ -2455,28 +3740,48 @@ export async function workflowRoutes(app: FastifyInstance) {
       return reply.status(400).send(createErrorResponse(ErrorCode.VALIDATION_ERROR, 'Invalid workflow proposal body', buildMeta(request)));
     }
 
-    const outboxItem = {
+    const consent = await app.memoryServices.workflow.findActiveConsent({
+      userScopeId: app.memoryServices.userScopeId,
+      profileId: body.data.profileId,
+      workflowType: 'therapist_outreach',
+      contactId: body.data.contactId,
+    });
+    if (!consent) {
+      return reply.status(409).send(createErrorResponse(ErrorCode.CONFLICT, 'Active workflow consent is required', buildMeta(request)));
+    }
+
+    const now = Date.now();
+    const outboxItem = await app.memoryServices.workflow.enqueueOutbox({
       id: crypto.randomUUID(),
       userScopeId: app.memoryServices.userScopeId,
       profileId: body.data.profileId,
       workflowType: 'therapist_outreach',
+      contactId: body.data.contactId ?? consent.contactId,
+      consentId: consent.id,
       payload: {
         reason: body.data.reason,
         deliveryMode: 'mock',
+        emailSent: false,
       },
-      status: 'pending' as const,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
+      status: 'pending',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await app.memoryServices.workflow.appendEvent({
+      id: crypto.randomUUID(),
+      workflowOutboxId: outboxItem.id,
+      eventType: 'outbox_created',
+      payload: { deliveryMode: 'mock', emailSent: false },
+      createdAt: now,
+    });
 
     return createSuccessResponse(outboxItem, buildMeta(request));
   });
 }
 ```
 
-- [ ] **Step 4: Register route**
-
-In `apps/agent-api/src/app.ts`:
+Register the route in `apps/agent-api/src/app.ts`:
 
 ```ts
 import { workflowRoutes } from './modules/workflows/routes.js';
@@ -2484,24 +3789,554 @@ import { workflowRoutes } from './modules/workflows/routes.js';
 await app.register(workflowRoutes);
 ```
 
-- [ ] **Step 5: Run tests**
+- [ ] **Step 10: Run workflow tests**
 
-Run: `pnpm --filter @health-advisor/agent-api test -- workflows/routes.test.ts`
-
-Expected: PASS and no real external side effect.
-
-- [ ] **Step 6: Commit**
+Run:
 
 ```bash
-git add packages/agent-core/src/types/workflow-memory.ts apps/agent-api/src/modules/workflows/routes.ts apps/agent-api/src/__tests__/modules/workflows/routes.test.ts apps/agent-api/src/app.ts
-git commit -m "feat(agent-api): add mock workflow outbox route"
+pnpm --filter @health-advisor/agent-core test -- in-memory-workflow-state-store.test.ts
+pnpm --filter @health-advisor/agent-api test -- workflow-store.test.ts
+pnpm --filter @health-advisor/agent-api test -- workflows/routes.test.ts
+pnpm --filter @health-advisor/agent-api test -- memory/routes.test.ts
 ```
 
-### Task 15: End-To-End Demo Verification
+Expected: PASS. The workflow route must create persisted outbox/events and must not call any email provider.
+
+- [ ] **Step 11: Commit**
+
+```bash
+git add packages/agent-core/src/types/workflow-memory.ts packages/agent-core/src/memory/in-memory-workflow-state-store.ts packages/agent-core/src/__tests__/memory/in-memory-workflow-state-store.test.ts apps/agent-api/src/persistence/supabase/workflow-store.ts apps/agent-api/src/__tests__/persistence/supabase/workflow-store.test.ts apps/agent-api/src/runtime/memory-services.ts apps/agent-api/src/modules/memory/routes.ts apps/agent-api/src/modules/workflows/routes.ts apps/agent-api/src/__tests__/modules/workflows/routes.test.ts apps/agent-api/src/app.ts
+git commit -m "feat(agent-api): persist mock workflow outbox"
+```
+
+### Task 15: Memory Eval Cases
+
+**Purpose:** Add repeatable eval coverage for confirmed durable memory, rejected candidates, correction/revocation behavior, profile isolation, and workflow no-direct-side-effect behavior.
+
+**Depends on:** Task 11 and Task 14.
+
+**Files:**
+- Modify: `packages/agent-core/src/evals/types.ts`
+- Modify: `packages/agent-core/src/evals/case-schema.ts`
+- Modify: `packages/agent-core/src/evals/eval-runtime.ts`
+- Modify: `packages/agent-core/src/__tests__/evals/case-schema.test.ts`
+- Create: `packages/agent-core/evals/cases/core/advisor-chat/chat-confirmed-allergy-memory.json`
+- Create: `packages/agent-core/evals/cases/core/advisor-chat/chat-rejected-allergy-memory.json`
+- Create: `packages/agent-core/evals/cases/core/advisor-chat/chat-memory-correction-revocation.json`
+- Create: `packages/agent-core/evals/cases/core/advisor-chat/chat-memory-profile-isolation.json`
+- Create: `packages/agent-core/evals/cases/core/advisor-chat/chat-therapist-workflow-no-direct-side-effect.json`
+
+- [ ] **Step 1: Write schema tests for durable memory eval setup**
+
+Add to `packages/agent-core/src/__tests__/evals/case-schema.test.ts`:
+
+```ts
+it('parses durable memory and workflow eval setup', () => {
+  const result = AgentEvalCaseSchema.safeParse({
+    id: 'memory-schema',
+    title: 'Memory schema',
+    suite: 'core',
+    category: 'advisor-chat',
+    priority: 'P0',
+    tags: ['memory'],
+    setup: {
+      profileId: 'profile-a',
+      memory: {
+        durableFacts: [
+          {
+            id: 'fact-1',
+            userScopeId: 'demo',
+            profileId: 'profile-a',
+            kind: 'allergy',
+            canonicalKey: 'allergy:peanut',
+            payload: { allergen: 'peanut' },
+            status: 'active',
+            sensitivity: 'health',
+            sourceCandidateId: 'cand-1',
+            createdAt: 1760000000000,
+            updatedAt: 1760000000000,
+          },
+        ],
+      },
+      workflow: {
+        consents: [
+          {
+            id: 'consent-1',
+            userScopeId: 'demo',
+            profileId: 'profile-a',
+            workflowType: 'therapist_outreach',
+            scope: { deliveryMode: 'mock' },
+            status: 'active',
+            createdAt: 1760000000000,
+            updatedAt: 1760000000000,
+          },
+        ],
+        expectedOutboxCount: 0,
+      },
+      modelFixture: {
+        mode: 'fake-json',
+        content: '{"source":"llm","statusColor":"good","summary":"已考虑确认记忆。","chartTokens":[],"microTips":[]}',
+      },
+    },
+    request: {
+      requestId: 'eval-memory-schema',
+      sessionId: 'eval-session',
+      profileId: 'profile-a',
+      taskType: 'advisor_chat',
+      pageContext: { profileId: 'profile-a', page: 'advisor', timeframe: 'week' },
+      userMessage: '我今天能吃花生吗？',
+    },
+    expectations: {
+      protocol: { requireValidEnvelope: true },
+      workflow: { expectedOutboxCount: 0 },
+    },
+  });
+
+  expect(result.success).toBe(true);
+});
+```
+
+- [ ] **Step 2: Extend eval types and schema**
+
+In `packages/agent-core/src/evals/types.ts`, import durable/workflow types and extend setup/expectations:
+
+```ts
+import type { UserMemoryFact } from '../types/durable-memory';
+import type { WorkflowConsent, WorkflowContact } from '../types/workflow-memory';
+
+export interface AgentEvalSetup {
+  profileId: string;
+  memory?: {
+    sessionMessages?: Array<{ role: 'user' | 'assistant'; text: string; createdAt?: number }>;
+    analytical?: {
+      latestHomepageBrief?: string;
+      latestViewSummaryByScope?: Record<string, string>;
+      latestRuleSummary?: string;
+    };
+    durableFacts?: UserMemoryFact[];
+  };
+  workflow?: {
+    contacts?: WorkflowContact[];
+    consents?: WorkflowConsent[];
+    expectedOutboxCount?: number;
+  };
+  memoryByProfile?: Record<string, {
+    sessionMessages?: Array<{ role: 'user' | 'assistant'; text: string; createdAt?: number }>;
+    durableFacts?: UserMemoryFact[];
+  }>;
+}
+
+export interface AgentEvalExpectations {
+  workflow?: {
+    expectedOutboxCount?: number;
+    forbidDirectExternalSideEffect?: boolean;
+  };
+}
+```
+
+Use the existing interface bodies and add only the new fields; do not remove existing fields.
+
+In `packages/agent-core/src/evals/case-schema.ts`, add reusable strict schemas:
+
+```ts
+const DurableFactSchema = z.object({
+  id: z.string().min(1),
+  userScopeId: z.string().min(1),
+  profileId: z.string().min(1),
+  kind: z.enum(['allergy', 'medical_constraint', 'goal', 'preference', 'workflow_contact', 'workflow_consent', 'correction', 'revocation']),
+  canonicalKey: z.string().min(1),
+  payload: z.record(z.string(), z.unknown()),
+  status: z.enum(['active', 'revoked', 'superseded']),
+  sensitivity: z.enum(['standard', 'health', 'workflow']),
+  sourceCandidateId: z.string().min(1),
+  createdAt: z.number().int().positive(),
+  updatedAt: z.number().int().positive(),
+  revokedAt: z.number().int().positive().optional(),
+}).strict();
+
+const WorkflowContactEvalSchema = z.object({
+  id: z.string().min(1),
+  userScopeId: z.string().min(1),
+  profileId: z.string().min(1),
+  contactType: z.enum(['therapist', 'coach', 'doctor', 'caregiver', 'other']),
+  displayName: z.string().min(1),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()),
+  status: z.enum(['active', 'inactive']),
+  createdAt: z.number().int().positive(),
+  updatedAt: z.number().int().positive(),
+}).strict();
+
+const WorkflowConsentEvalSchema = z.object({
+  id: z.string().min(1),
+  userScopeId: z.string().min(1),
+  profileId: z.string().min(1),
+  workflowType: z.string().min(1),
+  contactId: z.string().min(1).optional(),
+  scope: z.record(z.string(), z.unknown()),
+  status: z.enum(['active', 'revoked']),
+  createdAt: z.number().int().positive(),
+  updatedAt: z.number().int().positive(),
+  revokedAt: z.number().int().positive().optional(),
+}).strict();
+```
+
+Add `durableFacts: z.array(DurableFactSchema).optional()` inside `memory`, add `durableFacts: z.array(DurableFactSchema).optional()` inside each `memoryByProfile` value, add `workflow` inside setup, and add workflow expectations:
+
+```ts
+workflow: z.object({
+  contacts: z.array(WorkflowContactEvalSchema).optional(),
+  consents: z.array(WorkflowConsentEvalSchema).optional(),
+  expectedOutboxCount: z.number().int().min(0).optional(),
+}).strict().optional(),
+```
+
+```ts
+const WorkflowExpectationSchema = z.object({
+  expectedOutboxCount: z.number().int().min(0).optional(),
+  forbidDirectExternalSideEffect: z.boolean().optional(),
+}).strict();
+```
+
+Add `workflow: WorkflowExpectationSchema.optional()` to `AgentEvalExpectationsSchema`.
+
+- [ ] **Step 3: Seed durable memory and workflow setup in eval runtime**
+
+In `packages/agent-core/src/evals/eval-runtime.ts`, create the durable and workflow stores next to the existing session/analytical stores:
+
+```ts
+import { InMemoryDurableMemoryStore } from '../memory/in-memory-durable-memory-store';
+import { InMemoryWorkflowStateStore } from '../memory/in-memory-workflow-state-store';
+
+const durableMemory = new InMemoryDurableMemoryStore();
+const workflow = new InMemoryWorkflowStateStore();
+```
+
+Add a helper that seeds active durable facts without requiring a confirmation route:
+
+```ts
+function seedDurableFacts(store: InMemoryDurableMemoryStore, facts: UserMemoryFact[] | undefined) {
+  if (!facts) return;
+  for (const fact of facts) {
+    store.seedFact(fact);
+  }
+}
+```
+
+Seed workflow contacts/consents:
+
+```ts
+async function seedWorkflow(store: InMemoryWorkflowStateStore, setup: AgentEvalSetup['workflow']) {
+  if (!setup) return;
+  for (const contact of setup.contacts ?? []) {
+    await store.upsertContact(contact);
+  }
+  for (const consent of setup.consents ?? []) {
+    await store.upsertConsent(consent);
+  }
+}
+```
+
+Call `seedDurableFacts(durableMemory, setup.memory?.durableFacts)` and also seed profile-scoped facts from `setup.memoryByProfile`:
+
+```ts
+for (const profileMemory of Object.values(setup.memoryByProfile ?? {})) {
+  seedDurableFacts(durableMemory, profileMemory.durableFacts);
+}
+```
+
+Pass `durableMemory` and `userScopeId: 'demo'` into `executeAgent(...)` deps so Task 11 prompt injection is exercised by eval cases.
+
+- [ ] **Step 4: Add eval case for confirmed allergy memory**
+
+Create `packages/agent-core/evals/cases/core/advisor-chat/chat-confirmed-allergy-memory.json`:
+
+```json
+{
+  "id": "core-chat-confirmed-allergy-memory",
+  "title": "顾问对话 - 使用已确认过敏记忆",
+  "suite": "core",
+  "category": "advisor-chat",
+  "priority": "P0",
+  "tags": ["advisor-chat", "memory", "durable-memory", "allergy"],
+  "setup": {
+    "profileId": "profile-a",
+    "memory": {
+      "durableFacts": [
+        {
+          "id": "fact-allergy-peanut",
+          "userScopeId": "demo",
+          "profileId": "profile-a",
+          "kind": "allergy",
+          "canonicalKey": "allergy:peanut",
+          "payload": { "allergen": "peanut", "severity": "unknown" },
+          "status": "active",
+          "sensitivity": "health",
+          "sourceCandidateId": "cand-allergy-peanut",
+          "createdAt": 1760000000000,
+          "updatedAt": 1760000000000
+        }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"你已确认对花生过敏，因此今天不建议用花生酱补充能量，可以选择酸奶、香蕉或燕麦等替代。\",\"chartTokens\":[],\"microTips\":[\"避免含花生成分的零食\"]}"
+    },
+    "referenceDate": "2026-05-18"
+  },
+  "request": {
+    "requestId": "eval-confirmed-allergy-memory",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "advisor_chat",
+    "pageContext": { "profileId": "profile-a", "page": "advisor", "timeframe": "week" },
+    "userMessage": "我今天适合吃花生酱补充能量吗？"
+  },
+  "expectations": {
+    "protocol": { "requireValidEnvelope": true, "expectedSource": "llm", "expectedFinishReason": "complete" },
+    "summary": { "mustMention": ["花生过敏"], "mustNotMention": ["适合吃花生酱"] },
+    "memory": { "requiredMemoryPatterns": ["allergy:peanut"] }
+  }
+}
+```
+
+- [ ] **Step 5: Add eval cases for rejected, correction, isolation, and workflow no-side-effect**
+
+Create `packages/agent-core/evals/cases/core/advisor-chat/chat-rejected-allergy-memory.json`:
+
+```json
+{
+  "id": "core-chat-rejected-allergy-memory",
+  "title": "顾问对话 - 未确认过敏候选不会作为 durable memory 使用",
+  "suite": "core",
+  "category": "advisor-chat",
+  "priority": "P0",
+  "tags": ["advisor-chat", "memory", "confirmation"],
+  "setup": {
+    "profileId": "profile-a",
+    "memory": {
+      "sessionMessages": [
+        { "role": "user", "text": "我可能对花生过敏，但先不要记住。", "createdAt": 1760000000000 }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"如果你不确定是否过敏，今天不要把花生酱作为必要补能方案；可以选择更稳妥的碳水和蛋白来源。\",\"chartTokens\":[],\"microTips\":[]}"
+    },
+    "referenceDate": "2026-05-18"
+  },
+  "request": {
+    "requestId": "eval-rejected-allergy-memory",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "advisor_chat",
+    "pageContext": { "profileId": "profile-a", "page": "advisor", "timeframe": "week" },
+    "userMessage": "我今天适合吃花生酱补充能量吗？"
+  },
+  "expectations": {
+    "protocol": { "requireValidEnvelope": true, "expectedSource": "llm", "expectedFinishReason": "complete" },
+    "summary": { "mustNotMention": ["你已确认对花生过敏", "我记得你对花生过敏"] },
+    "memory": { "forbiddenLeakPatterns": ["allergy:peanut"] }
+  }
+}
+```
+
+Create `packages/agent-core/evals/cases/core/advisor-chat/chat-memory-correction-revocation.json`:
+
+```json
+{
+  "id": "core-chat-memory-correction-revocation",
+  "title": "顾问对话 - 使用修正后的 active memory 而非旧记忆",
+  "suite": "core",
+  "category": "advisor-chat",
+  "priority": "P0",
+  "tags": ["advisor-chat", "memory", "correction", "revocation"],
+  "setup": {
+    "profileId": "profile-a",
+    "memory": {
+      "durableFacts": [
+        {
+          "id": "fact-allergy-almond",
+          "userScopeId": "demo",
+          "profileId": "profile-a",
+          "kind": "allergy",
+          "canonicalKey": "allergy:almond",
+          "payload": { "allergen": "almond", "severity": "unknown" },
+          "status": "active",
+          "sensitivity": "health",
+          "sourceCandidateId": "cand-allergy-almond",
+          "createdAt": 1760000000000,
+          "updatedAt": 1760000002000
+        }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"你当前确认的是杏仁过敏，因此要避开杏仁和含杏仁配料；这里不应再按花生过敏来判断。\",\"chartTokens\":[],\"microTips\":[]}"
+    },
+    "referenceDate": "2026-05-18"
+  },
+  "request": {
+    "requestId": "eval-memory-correction",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "advisor_chat",
+    "pageContext": { "profileId": "profile-a", "page": "advisor", "timeframe": "week" },
+    "userMessage": "我今天能吃含杏仁的能量棒吗？"
+  },
+  "expectations": {
+    "protocol": { "requireValidEnvelope": true, "expectedSource": "llm", "expectedFinishReason": "complete" },
+    "summary": { "mustMention": ["杏仁过敏"], "mustNotMention": ["花生过敏"] },
+    "memory": { "requiredMemoryPatterns": ["allergy:almond"], "forbiddenLeakPatterns": ["allergy:peanut"] }
+  }
+}
+```
+
+Create `packages/agent-core/evals/cases/core/advisor-chat/chat-memory-profile-isolation.json`:
+
+```json
+{
+  "id": "core-chat-memory-profile-isolation",
+  "title": "顾问对话 - durable memory 不跨 profile 泄漏",
+  "suite": "core",
+  "category": "advisor-chat",
+  "priority": "P0",
+  "tags": ["advisor-chat", "memory", "profile-isolation"],
+  "setup": {
+    "profileId": "profile-a",
+    "memory": { "durableFacts": [] },
+    "memoryByProfile": {
+      "profile-b": {
+        "durableFacts": [
+          {
+            "id": "fact-profile-b-peanut",
+            "userScopeId": "demo",
+            "profileId": "profile-b",
+            "kind": "allergy",
+            "canonicalKey": "allergy:peanut",
+            "payload": { "allergen": "peanut", "severity": "unknown" },
+            "status": "active",
+            "sensitivity": "health",
+            "sourceCandidateId": "cand-profile-b-peanut",
+            "createdAt": 1760000000000,
+            "updatedAt": 1760000000000
+          }
+        ]
+      }
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"当前这个 profile 没有已确认的花生过敏记忆；如果你担心过敏，建议先避免并咨询医生确认。\",\"chartTokens\":[],\"microTips\":[]}"
+    },
+    "referenceDate": "2026-05-18"
+  },
+  "request": {
+    "requestId": "eval-memory-profile-isolation",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "advisor_chat",
+    "pageContext": { "profileId": "profile-a", "page": "advisor", "timeframe": "week" },
+    "userMessage": "我今天能吃花生酱吗？"
+  },
+  "expectations": {
+    "protocol": { "requireValidEnvelope": true, "expectedSource": "llm", "expectedFinishReason": "complete" },
+    "summary": { "mustNotMention": ["你已确认对花生过敏", "我记得你对花生过敏"] },
+    "memory": { "forbiddenLeakPatterns": ["allergy:peanut"] }
+  }
+}
+```
+
+Create `packages/agent-core/evals/cases/core/advisor-chat/chat-therapist-workflow-no-direct-side-effect.json`:
+
+```json
+{
+  "id": "core-chat-therapist-workflow-no-direct-side-effect",
+  "title": "顾问对话 - 理疗工作流只提出操作不直接发送邮件",
+  "suite": "core",
+  "category": "advisor-chat",
+  "priority": "P0",
+  "tags": ["advisor-chat", "memory", "workflow", "outbox"],
+  "setup": {
+    "profileId": "profile-a",
+    "memory": {
+      "durableFacts": [
+        {
+          "id": "fact-workflow-consent-therapist",
+          "userScopeId": "demo",
+          "profileId": "profile-a",
+          "kind": "workflow_consent",
+          "canonicalKey": "workflow_consent:therapist_outreach",
+          "payload": { "workflowType": "therapist_outreach", "deliveryMode": "mock" },
+          "status": "active",
+          "sensitivity": "workflow",
+          "sourceCandidateId": "cand-workflow-consent-therapist",
+          "createdAt": 1760000000000,
+          "updatedAt": 1760000000000
+        }
+      ]
+    },
+    "workflow": {
+      "consents": [
+        {
+          "id": "consent-therapist",
+          "userScopeId": "demo",
+          "profileId": "profile-a",
+          "workflowType": "therapist_outreach",
+          "scope": { "deliveryMode": "mock" },
+          "status": "active",
+          "createdAt": 1760000000000,
+          "updatedAt": 1760000000000
+        }
+      ],
+      "expectedOutboxCount": 0
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"你已经允许理疗预约工作流。现在我可以为你准备一条待确认的理疗预约请求，但不会直接发送邮件。\",\"chartTokens\":[],\"microTips\":[\"确认后再进入待发送队列\"]}"
+    },
+    "referenceDate": "2026-05-18"
+  },
+  "request": {
+    "requestId": "eval-workflow-no-side-effect",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "advisor_chat",
+    "pageContext": { "profileId": "profile-a", "page": "advisor", "timeframe": "week" },
+    "userMessage": "我今天很累，可以帮我联系理疗师吗？"
+  },
+  "expectations": {
+    "protocol": { "requireValidEnvelope": true, "expectedSource": "llm", "expectedFinishReason": "complete" },
+    "summary": { "mustMention": ["不会直接发送邮件"], "mustNotMention": ["已经发送邮件", "已发送给理疗师"] },
+    "workflow": { "expectedOutboxCount": 0, "forbidDirectExternalSideEffect": true }
+  }
+}
+```
+
+- [ ] **Step 6: Run eval schema and case loader tests**
+
+Run:
+
+```bash
+pnpm --filter @health-advisor/agent-core test -- case-schema.test.ts
+pnpm --filter @health-advisor/agent-core test -- eval-runner.test.ts
+pnpm --filter @health-advisor/agent-core eval -- --suite core --category advisor-chat --tags memory
+```
+
+Expected: PASS. The workflow case must prove advisor chat does not enqueue or send workflow side effects directly.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add packages/agent-core/src/evals/types.ts packages/agent-core/src/evals/case-schema.ts packages/agent-core/src/evals/eval-runtime.ts packages/agent-core/src/__tests__/evals/case-schema.test.ts packages/agent-core/evals/cases/core/advisor-chat/chat-confirmed-allergy-memory.json packages/agent-core/evals/cases/core/advisor-chat/chat-rejected-allergy-memory.json packages/agent-core/evals/cases/core/advisor-chat/chat-memory-correction-revocation.json packages/agent-core/evals/cases/core/advisor-chat/chat-memory-profile-isolation.json packages/agent-core/evals/cases/core/advisor-chat/chat-therapist-workflow-no-direct-side-effect.json
+git commit -m "test(agent-core): add durable memory eval cases"
+```
+
+### Task 16: End-To-End Demo Verification
 
 **Purpose:** Verify the full demo loop works with the in-memory backend before testing Supabase credentials.
 
-**Depends on:** Tasks 1-14.
+**Depends on:** Tasks 1-15.
 
 **Files:**
 - Modify: `docs/ops/local-development.md`
@@ -2536,10 +4371,12 @@ Create `docs/test/memory-upgrade-demo-runbook.md`:
 
 ## Workflow mock
 
-1. Confirm a therapist contact and consent candidate when the extractor returns one.
-2. Call `POST /workflows/therapist-outreach/propose`.
-3. Expected: backend returns a pending mock outbox item.
-4. Expected: no real email is sent.
+1. Confirm a therapist contact candidate when the extractor returns one.
+2. Confirm a therapist outreach consent candidate when the extractor returns one.
+3. Call `POST /workflows/therapist-outreach/propose`.
+4. Expected: backend returns a pending mock outbox item persisted in `workflow_outbox`.
+5. Expected: backend persists an `outbox_created` event in `workflow_events`.
+6. Expected: no real email is sent.
 ```
 
 - [ ] **Step 2: Add local dev note**
@@ -2561,6 +4398,7 @@ pnpm --filter @health-advisor/shared test
 pnpm --filter @health-advisor/agent-core test
 pnpm --filter @health-advisor/agent-api test
 pnpm --filter web test
+pnpm --filter @health-advisor/agent-core eval -- --suite core --category advisor-chat --tags memory
 ```
 
 Expected: all pass.
@@ -2592,12 +4430,14 @@ Task 1
                     -> Task 13
                     -> Task 14
                       -> Task 15
+                        -> Task 16
 ```
 
 The only parallel-safe split is:
 
 - After Task 10, Task 11 and Task 13 can be implemented by different engineers if they coordinate on the shared `memoryCandidates` response type.
-- Task 14 can run after Task 7 because it only depends on memory services and app route wiring.
+- Task 12 can run after Task 7 and Task 11 because it depends on the cache table from Task 5 and prompt boundary from Task 11.
+- Task 14 can run after Task 10 because it modifies confirmation routing and memory services with workflow state.
 
 ## Self-Review
 
@@ -2606,15 +4446,18 @@ The only parallel-safe split is:
 | Design requirement | Plan coverage |
 |---|---|
 | Supabase Free project as first backend | Task 5, Task 6, Task 7 |
-| Backend-owned DB access, no Supabase Auth requirement | Task 5, Task 7, Task 15 |
-| Durable memory only for confirmed user facts | Task 2, Task 3, Task 4, Task 10, Task 11 |
+| Backend-owned DB access, no Supabase Auth requirement | Task 5, Task 7, Task 16 |
+| Durable memory only for confirmed user facts | Task 2, Task 3, Task 4, Task 10, Task 11, Task 15 |
 | Extractor creates candidates only | Task 8, Task 9 |
 | User confirmation required before durable write | Task 10, Task 13 |
-| Homepage/view/planner outputs are cache/artifacts, not durable memory | Task 12 |
-| Workflow outbox reservation, no real email | Task 14, Task 15 |
+| Homepage/view/planner outputs are cache/artifacts, not durable memory | Task 12, Task 15 |
+| Fingerprinted cache invalidates when input data changes | Task 12 |
+| Same canonical key merges into one active fact with update revision | Task 4, Task 5, Task 6 |
+| Workflow contacts/consents/outbox/events persisted, no real email | Task 14, Task 16 |
+| Memory eval cases for confirmation, rejection, correction, isolation, workflow side effects | Task 15 |
 | Narrow taxonomy | Task 1, Task 2, Task 3, Task 8 |
-| Profile isolation | Task 4, Task 10, Task 11 |
-| Demo path works before formal productionization | Task 13, Task 14, Task 15 |
+| Profile isolation | Task 4, Task 10, Task 11, Task 15 |
+| Demo path works before formal productionization | Task 13, Task 14, Task 16 |
 
 No design requirement is intentionally omitted.
 
@@ -2626,7 +4469,7 @@ The biggest implementation risk is async durable memory loading before `buildAge
 
 The second risk is changing `AgentResponseEnvelope` because it is shared by homepage, view summary, and advisor chat. The field is optional, so existing callers do not need to change unless they want to display candidate cards. Task 1 includes schema coverage for backward compatibility.
 
-The workflow section is intentionally small. It reserves the outbox shape and demo route while keeping real delivery and production Auth outside the current build, matching the revised design.
+The workflow section persists the state that future integrations need: contacts, consents, outbox items, and audit events. It still keeps real delivery and production Auth outside the current build, matching the revised design while avoiding a route-only mock that would need to be replaced later.
 
 ### Design Difference Review
 
@@ -2634,7 +4477,9 @@ The implementation plan does not change the design. It adds concrete file names,
 
 - `MEMORY_BACKEND`, `SUPABASE_DB_URL`, `MEMORY_EXTRACTION_ENABLED`, `MEMORY_CANDIDATE_TTL_HOURS`, and `DEMO_USER_SCOPE_ID` operationalize the Supabase/backend-owned storage decision.
 - `/memory/candidates/:id/confirm` and `/memory/candidates/:id/reject` operationalize user confirmation.
-- `/workflows/therapist-outreach/propose` operationalizes mock workflow outbox without real email delivery.
+- `/workflows/therapist-outreach/propose` operationalizes persisted mock workflow outbox/events without real email delivery.
+- `agent_cache_entries` and `AgentCacheStore` operationalize the cache/artifact boundary without treating derived summaries as durable user memory.
+- The memory eval cases operationalize the design requirement that confirmation, rejection, correction, profile isolation, and workflow side effects remain testable.
 
 There is no planned durable storage of homepage summaries, view summaries, planner outputs, reflection reports, tool traces, raw prompts, or model outputs.
 
