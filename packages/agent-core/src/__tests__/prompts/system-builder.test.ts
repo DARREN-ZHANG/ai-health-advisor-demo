@@ -56,16 +56,14 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('睡眠改善');
   });
 
-  it('首页系统提示隐藏解释型指标的个人参考数值', () => {
+  it('首页系统提示传递解释型指标的个人参考数值并附引导语', () => {
     const prompt = buildSystemPrompt(makeContext(), mockLoader);
-    expect(prompt).toContain('静息心率通常水平：仅用于内部状态判定');
-    expect(prompt).toContain('HRV 通常水平：仅用于内部恢复解读');
-    expect(prompt).toContain('SpO2 参考水平：仅用于内部风险判断');
-    expect(prompt).not.toContain('62 bpm');
-    expect(prompt).not.toContain('58 ms');
-    expect(prompt).not.toContain('98%');
+    expect(prompt).toContain('62 bpm');
+    expect(prompt).toContain('58 ms');
+    expect(prompt).toContain('98%');
     expect(prompt).toContain('420'); // avgSleepMinutes
     expect(prompt).toContain('8500'); // avgSteps
+    expect(prompt).not.toContain('禁止输出具体数值');
     expect(prompt).not.toContain('基线');
     expect(prompt).not.toContain('基准线');
     expect(prompt).not.toContain('baseline');
@@ -121,5 +119,15 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('只能基于 evidence facts');
     expect(prompt).toContain('不得补全');
     expect(prompt).toContain('必须能回溯到至少一个 evidence fact');
+  });
+});
+
+describe('homepage baseline 值可见', () => {
+  it('homepage 任务下也传递 HRV/SpO2/静息心率的具体 baseline 值', () => {
+    const prompt = buildSystemPrompt(makeContext(), mockLoader);
+    expect(prompt).toContain('62 bpm');
+    expect(prompt).toContain('58 ms');
+    expect(prompt).toContain('98%');
+    expect(prompt).not.toContain('禁止输出具体数值');
   });
 });
