@@ -4,6 +4,7 @@ import type { PromptLoader, PromptName } from './prompt-loader';
 import type { RuleEvaluationResult } from '../rules/types';
 import type { TaskContextPacket } from '../context/context-packet';
 import { renderTaskContextPacket } from './context-packet-renderer';
+import { renderDurableMemoryFacts } from '../memory/durable-memory-context';
 import { TASK_ROUTES } from '../routing/task-router';
 
 const TASK_PROMPT_MAP: Record<string, PromptName> = {
@@ -113,6 +114,13 @@ export function buildTaskPrompt(
       t(locale, `可引用的图表 token：${rulesResult.suggestedChartTokens.join(', ')}`,
         `Available chart tokens: ${rulesResult.suggestedChartTokens.join(', ')}`),
     );
+  }
+
+  // 持久化记忆（用户已确认的事实）
+  const durableMemoryContext = renderDurableMemoryFacts(context.memory.durableFacts, locale);
+  if (durableMemoryContext.length > 0) {
+    sections.push('');
+    sections.push(...durableMemoryContext);
   }
 
   // 对话记忆（如果 packet 未提供，或作为补充）

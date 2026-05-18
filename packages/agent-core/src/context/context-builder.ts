@@ -1,5 +1,6 @@
 import type { AgentRequest } from '../types/agent-request';
 import type { AgentContext, AgentStatusColor } from '../types/agent-context';
+import type { UserMemoryFact } from '../types/durable-memory';
 import type { ContextBuilderDeps } from './context-types';
 import type { DatedEvent } from '@health-advisor/sandbox';
 import type { Locale } from '@health-advisor/shared';
@@ -15,6 +16,7 @@ export function buildAgentContext(
   deps: ContextBuilderDeps,
   referenceDate?: string,
   locale: Locale = DEFAULT_LOCALE,
+  durableFacts: UserMemoryFact[] = [],
 ): AgentContext {
   // 1. 解析 profile
   const profileData = deps.getProfile(request.profileId);
@@ -110,6 +112,7 @@ export function buildAgentContext(
       latestHomepageBrief: analytical?.latestHomepageBrief,
       latestViewSummary: scope ? analytical?.latestViewSummaryByScope?.[scope] : undefined,
       latestRuleSummary: analytical?.latestRuleSummary,
+      durableFacts,
     },
     ...(timelineSync ? { timelineSync } : {}),
     ...(demoNow ? { demoNow } : {}),

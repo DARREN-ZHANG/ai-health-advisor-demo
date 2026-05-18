@@ -6,6 +6,7 @@ import type { HealthAgent } from '../executor/create-agent';
 import type { PromptLoader } from '../prompts/prompt-loader';
 import type { FallbackEngine, FallbackLookupKey } from '../fallback/fallback-engine';
 import type { AgentContext } from '../types/agent-context';
+import type { UserMemoryFact } from '../types/durable-memory';
 import { buildAgentContext } from '../context/context-builder';
 import { evaluateHomepageRules } from '../rules/homepage-rules';
 import { evaluateViewSummaryRules } from '../rules/view-summary-rules';
@@ -58,6 +59,12 @@ export interface AgentRuntimeDeps extends ContextBuilderDeps {
   syncReviewer?: SyncReflectionReviewer;
   /** P2 新增：ReAct 循环依赖（可选，不设置时 unresolved evidence 不会触发额外取证） */
   reactLoop?: ReActLoopDeps;
+  /** 持久化记忆存储（可选） */
+  durableMemory?: {
+    listActiveFacts(input: { userScopeId: string; profileId: string }): Promise<UserMemoryFact[]>;
+  };
+  /** 用户范围标识（用于 durable memory 查询） */
+  userScopeId?: string;
 }
 
 /**
@@ -124,21 +131,29 @@ export async function executeAgent(
   };
 
   try {
-    // 1. 构建 Agent 上下文
-    const context = buildAgentContext(request, deps, deps.referenceDate, locale);
+    // 1. 加载持久化记忆
+    const durableFacts = deps.durableMemory
+      ? await deps.durableMemory.listActiveFacts({
+          userScopeId: deps.userScopeId ?? 'demo',
+          profileId: request.profileId,
+        })
+      : [];
+
+    // 2. 构建 Agent 上下文
+    const context = buildAgentContext(request, deps, deps.referenceDate, locale, durableFacts);
     tryNotify(() => observer?.onContextBuilt?.(context));
 
-    // 2. low-data 快速 fallback：数据不足时跳过 LLM 调用
+    // 3. low-data 快速 fallback：数据不足时跳过 LLM 调用
     if (context.signals.lowData) {
       tryNotify(() => observer?.onFallback?.('low_data'));
       return toLowDataFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
     }
 
-    // 3. 执行规则引擎
+    // 4. 执行规则引擎
     const rulesResult = evaluateRules(context);
     tryNotify(() => observer?.onRulesEvaluated?.(rulesResult));
 
-    // 4. 构建 TaskContextPacket
+    // 5. 构建 TaskContextPacket
     const packet = buildTaskContextPacket(context, rulesResult);
     tryNotify(() => observer?.onPacketBuilt?.(packet));
 
@@ -249,7 +264,7 @@ export async function executeAgent(
       }
     }
 
-    // 5. 构建 prompts（传入 packet）
+    // 6. 构建 prompts（传入 packet）
     const systemPrompt = buildSystemPrompt(context, deps.promptLoader, packet.missingData);
     let taskPrompt = buildTaskPrompt(context, deps.promptLoader, rulesResult, packet);
 
@@ -260,14 +275,14 @@ export async function executeAgent(
 
     tryNotify(() => observer?.onPromptBuilt?.({ systemPrompt, taskPrompt }));
 
-    // 6. 带超时调用 LLM，超时时通过 AbortSignal 真正中断底层调用
+    // 7. 带超时调用 LLM，超时时通过 AbortSignal 真正中断底层调用
     const raw = await withTimeout(
       (signal) => deps.agent.invoke({ systemPrompt, userPrompt: taskPrompt, signal }),
       timeoutMs,
     );
     tryNotify(() => observer?.onModelOutput?.(raw.content));
 
-    // 7. 解析结构化输出
+    // 8. 解析结构化输出
     const parseResult = parseAgentResponse(raw.content, {
       taskType: request.taskType,
       pageContext: request.pageContext,
@@ -279,7 +294,7 @@ export async function executeAgent(
       return toFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
     }
 
-    // 8. 校验 chart tokens（只能来自 visibleCharts 或 suggestedChartTokens）
+    // 9. 校验 chart tokens（只能来自 visibleCharts 或 suggestedChartTokens）
     const allowedTokens = new Set([
       ...packet.visibleCharts.map((vc) => vc.chartToken),
       ...(packet.homepage?.suggestedChartTokens ?? []),
@@ -294,7 +309,7 @@ export async function executeAgent(
       chartTokens: tokenResult.valid,
     };
 
-    // 9. Safety clean
+    // 10. Safety clean
     const cleaned = cleanSafetyIssues(
       safeEnvelope.summary,
       context.dataWindow.missingFields,
@@ -316,10 +331,10 @@ export async function executeAgent(
     // onParsed: 结构化输出已解析完成（时序: onParsed → onVerified → onSyncGate → onReflected）
     tryNotify(() => observer?.onParsed?.(result));
 
-    // 10. 写回 session memory
+    // 11. 写回 session memory
     writeSessionMemory(deps, request, result.summary);
 
-    // 11. 写回 analytical memory
+    // 12. 写回 analytical memory
     writeAnalyticalMemory(deps, request, context, result.summary, rulesResult);
 
     // P0: 确定性验证（同步，不阻断输出，但产生观测 artifact）
