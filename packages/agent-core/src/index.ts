@@ -54,6 +54,7 @@ export { InMemorySessionMemoryStore } from './memory/session-memory-store';
 export type { SessionMemoryStore } from './memory/session-memory-store';
 export { InMemoryAnalyticalMemoryStore } from './memory/analytical-memory-store';
 export type { AnalyticalMemoryStore } from './memory/analytical-memory-store';
+export { InMemoryDurableMemoryStore } from './memory/in-memory-durable-memory-store';
 export { trimConversationTurns, isSessionExpired } from './memory/memory-policy';
 
 // Context
