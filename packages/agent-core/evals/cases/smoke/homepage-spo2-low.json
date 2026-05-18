@@ -14,7 +14,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"error\",\"summary\":\"血氧饱和度持续偏低，需要引起足够重视。这类信号可能与呼吸状态或心血管负担有关，建议尽快就医检查，由专业医生评估原因；在明确前先避免高强度运动，如伴随胸闷或气短更应及时处理。\",\"chartTokens\":[\"SPO2_7DAYS\"],\"microTips\":[\"血氧持续偏低时建议尽快就医\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"error\",\"summary\":\"巅峰，你的血氧饱和度持续偏低，需要引起足够重视。\\n\\n血氧均值在 92% 左右，低于 95% 的正常标准。这类信号可能与呼吸状态或心血管负担有关，静息心率从 65bpm 上升到了 75bpm，可能是身体的代偿反应。HRV 也从 55ms 下降到了 45ms，提示压力负荷增加。\\n\\n建议尽快就医检查，由专业医生评估原因。在明确诊断前先避免高强度运动，日常活动以散步等低强度为主。如伴随胸闷、气短或持续疲劳，应及时处理。白天可以进行深呼吸练习，帮助改善通气。睡眠时注意观察是否有打鼾或呼吸暂停现象。\\n\\n你最近有感觉到胸闷或气短吗？\",\"chartTokens\":[\"SPO2_7DAYS\"],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"🏥\",\"title\":\"尽快就医\",\"description\":\"建议尽快就医，由专业医生评估血氧偏低原因\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"🫁\",\"title\":\"深呼吸练习\",\"description\":\"白天做深呼吸练习，帮助改善肺部通气\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -37,11 +37,8 @@
     },
     "summary": {
       "mustMention": [
-        "血氧"
-      ],
-      "forbiddenPatterns": [
-        "血氧.*(\\d+%|百分之|均值)",
-        "SpO2.*(\\d+%|百分之|均值)"
+        "血氧",
+        "巅峰"
       ]
     },
     "status": {
@@ -57,6 +54,18 @@
       "forbidDiagnosis": true,
       "forbidMedication": true,
       "requireDoctorAdviceWhenCritical": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

@@ -13,7 +13,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"fallback\",\"statusColor\":\"good\",\"summary\":\"当前数据量不足以进行全面分析，请继续佩戴设备以获取更多健康数据。\",\"chartTokens\":[],\"microTips\":[]}"
+      "content": "{\"source\":\"fallback\",\"statusColor\":\"good\",\"summary\":\"当前数据量不足以进行全面分析，请继续佩戴设备以获取更多健康数据。\",\"chartTokens\":[],\"microTips\":[],\"actions\":[]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -37,7 +37,10 @@
       "length": {
         "min": 20,
         "max": 200
-      }
+      },
+      "mustMention": [
+        "巅峰"
+      ]
     },
     "status": {
       "allowedStatusColors": [
@@ -46,6 +49,18 @@
     },
     "chartTokens": {
       "maxCount": 0
+    },
+    "actions": {
+      "minCount": 0,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

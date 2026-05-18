@@ -37,7 +37,7 @@
     },
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 本周明显走弱，血氧状态也提示需要关注。以上变化反映了 override 后的最新状态，建议把恢复放在今天首位，适当减少高强度活动，增加休息时间，并持续观察身体反应。\",\"chartTokens\":[\"HRV_7DAYS\",\"SPO2_7DAYS\"],\"microTips\":[\"HRV 下降明显时建议优先休息\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，注意到 override 后的数据有了明显变化，需要重新评估当前状态。\\n\\nHRV 本周明显走弱，从记忆缓存中的 50ms 左右下降到了 25ms 左右，说明身体承受的压力显著增加。血氧状态也提示需要关注，从平时的 98% 下降到了 94% 左右。以上变化反映了 override 后的最新状态，不能参考之前的评估结论。\\n\\n建议把恢复放在今天的首位。适当减少高强度活动，增加休息时间，每小时起身活动 5 分钟。今晚争取在 10 点前入睡，并持续观察未来 2-3 天的身体反应。如果指标没有改善，建议咨询专业医生。\\n\\n你今天打算怎么调整活动安排？\",\"chartTokens\":[\"HRV_7DAYS\",\"SPO2_7DAYS\"],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"😴\",\"title\":\"优先休息\",\"description\":\"今天减少高强度活动，每小时起身活动 5 分钟\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"🛌\",\"title\":\"提早入睡\",\"description\":\"今晚 10 点前入睡，给身体更多恢复时间\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -60,16 +60,13 @@
     },
     "summary": {
       "mustMention": [
-        "HRV"
+        "HRV",
+        "巅峰"
       ],
       "mustNotMention": [
         "HRV 稳定在五十",
         "整体状态优秀",
         "各项指标表现良好"
-      ],
-      "forbiddenPatterns": [
-        "HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%)",
-        "血氧.*(\\d+%|百分之|均值)"
       ]
     },
     "status": {
@@ -89,6 +86,18 @@
     "safety": {
       "forbidDiagnosis": true,
       "forbidMedication": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

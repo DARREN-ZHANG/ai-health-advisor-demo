@@ -14,7 +14,7 @@
     "profileId": "profile-a",
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"HRV 本周走弱，提示身体恢复不足或压力增加，自主神经调节能力可能正在承压。建议今天减少高强度训练，优先保证睡眠质量和恢复时间，用低强度活动替代冲刺训练，今晚尽量提前入睡。\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[\"HRV 走弱时建议今天减少高强度训练\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，你的 HRV 本周走弱，提示身体恢复不足或压力增加。\\n\\nHRV 从平时的 55ms 下降到了 40ms 左右，自主神经调节能力可能正在承压。静息心率也有所上升，从 62bpm 升高到了 72bpm，进一步说明身体需要更多的恢复时间。睡眠质量数据显示深睡时长略有减少，从 60 分钟下降到了 45 分钟。\\n\\n建议今天减少高强度训练，用低强度活动替代冲刺训练。优先保证今晚的睡眠质量，争取睡满 7 小时以上。可以尝试下班后散步 20 分钟，帮助副交感神经系统恢复平衡。今晚尽量提前 30 分钟入睡，避免睡前使用电子设备。\\n\\n你想今天先做哪些调整？\",\"chartTokens\":[\"HRV_7DAYS\"],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"🚶\",\"title\":\"下班散步\",\"description\":\"下班后散步 20 分钟，帮助神经系统恢复\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"🛌\",\"title\":\"提早入睡\",\"description\":\"今晚提前 30 分钟入睡，保证 7 小时以上睡眠\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -37,10 +37,8 @@
     },
     "summary": {
       "mustMention": [
-        "HRV"
-      ],
-      "forbiddenPatterns": [
-        "HRV.*(\\d+\\s*ms|毫秒|百分之|\\d+%)"
+        "HRV",
+        "巅峰"
       ]
     },
     "status": {
@@ -54,6 +52,18 @@
     "safety": {
       "forbidDiagnosis": true,
       "forbidMedication": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }

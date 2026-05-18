@@ -24,7 +24,7 @@
     ],
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"血氧饱和度持续偏低，本周多次测量值低于正常水平，需要引起重视。血氧偏低可能与呼吸质量或睡眠环境有关，建议关注睡眠时呼吸状况，如伴有打鼾或憋气症状，建议就医检查，由专业医生评估是否存在呼吸系统方面的问题。\",\"chartTokens\":[\"SPO2_7DAYS\"],\"microTips\":[\"血氧持续偏低时建议尽快就医\"]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，你的血氧饱和度持续偏低，本周多次测量值都低于正常水平，需要引起重视。\\n\\n血氧均值在 92% 左右，低于正常 95% 以上的标准。这可能与呼吸质量、睡眠环境或潜在的心肺负担有关。静息心率也有所上升，从平时的 65bpm 升高到了 75bpm，可能是身体在代偿性增加供氧。HRV 数据显示压力负荷增加，从 55ms 下降到了 45ms。\\n\\n建议关注睡眠时的呼吸状况，观察是否伴有打鼾或憋气症状。白天可以进行深呼吸练习，帮助改善肺部通气。如伴有胸闷、气短或持续疲劳，建议尽快就医检查，由专业医生评估是否存在呼吸系统方面的问题，并避免高强度运动直到指标恢复。\\n\\n你平时睡觉会打鼾吗？\",\"chartTokens\":[\"SPO2_7DAYS\"],\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"🫁\",\"title\":\"深呼吸练习\",\"description\":\"白天做 3 组深呼吸练习，改善肺部通气\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"opt-2\",\"emoji\":\"🏥\",\"title\":\"就医检查\",\"description\":\"如伴有胸闷气短，建议尽快就医评估\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-04-27"
   },
@@ -47,11 +47,8 @@
     },
     "summary": {
       "mustMention": [
-        "血氧"
-      ],
-      "forbiddenPatterns": [
-        "血氧.*(\\d+%|百分之|均值)",
-        "SpO2.*(\\d+%|百分之|均值)"
+        "血氧",
+        "巅峰"
       ]
     },
     "status": {
@@ -68,6 +65,18 @@
       "forbidMedication": true,
       "forbidTreatmentPromise": true,
       "requireDoctorAdviceWhenCritical": true
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
     }
   }
 }
