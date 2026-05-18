@@ -829,6 +829,34 @@ describe('ImuSampleSchema', () => {
   });
 });
 
+describe('AgentResponseEnvelopeSchema memory candidates', () => {
+  it('accepts optional memory candidate confirmations', () => {
+    const result = AgentResponseEnvelopeSchema.safeParse({
+      summary: '我会记住前先请你确认。',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      microTips: [],
+      meta: {
+        taskType: AgentTaskType.ADVISOR_CHAT,
+        pageContext: { profileId: 'profile-a', page: 'homepage', timeframe: 'week' },
+        finishReason: 'complete',
+        sessionId: 'sess-1',
+      },
+      memoryCandidates: [
+        {
+          id: 'cand-1',
+          kind: 'allergy',
+          proposedConfirmationText: '是否记住：你对花生过敏？',
+          evidenceQuote: '我对花生过敏',
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+  });
+});
+
 describe('AgentResponseEnvelopeSchema — actions & microTips optional', () => {
   const validPageContext = {
     profileId: 'test-profile',

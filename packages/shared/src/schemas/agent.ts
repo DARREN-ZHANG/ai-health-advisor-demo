@@ -39,6 +39,24 @@ export const ActionOptionSchema = z.object({
   aiPromise: z.string().min(1),
 });
 
+const MemoryCandidateKindSchema = z.enum([
+  'allergy',
+  'medical_constraint',
+  'goal',
+  'preference',
+  'workflow_contact',
+  'workflow_consent',
+  'correction',
+  'revocation',
+]);
+
+export const MemoryCandidateConfirmationSchema = z.object({
+  id: z.string().min(1),
+  kind: MemoryCandidateKindSchema,
+  proposedConfirmationText: z.string().min(1),
+  evidenceQuote: z.string().min(1),
+});
+
 export const AgentResponseEnvelopeSchema = z.object({
   summary: z.string().min(1),
   source: z.string().min(1),
@@ -47,6 +65,7 @@ export const AgentResponseEnvelopeSchema = z.object({
   microTips: z.array(z.string()).optional(),
   actions: z.array(ActionOptionSchema).max(3).optional(),
   actionsSectionTitle: z.string().optional(),
+  memoryCandidates: z.array(MemoryCandidateConfirmationSchema).optional(),
   meta: z.object({
     taskType: AgentTaskTypeSchema,
     pageContext: PageContextSchema,
