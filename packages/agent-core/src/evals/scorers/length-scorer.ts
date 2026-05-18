@@ -4,15 +4,15 @@ import type { EvalCheckResult, EvalScorerInput } from '../types';
 // ── Length Scorer ────────────────────────────────────────
 
 /** homepage 中文默认摘要长度范围（按字符计数） */
-const HOMEPAGE_DEFAULT_LENGTH_ZH = { min: 80, max: 120 } as const;
+const HOMEPAGE_DEFAULT_LENGTH_ZH = { min: 220, max: 420 } as const;
 
 /** homepage 英文默认摘要长度范围（按单词计数） */
-const HOMEPAGE_DEFAULT_LENGTH_EN = { min: 50, max: 100 } as const;
+const HOMEPAGE_DEFAULT_LENGTH_EN = { min: 150, max: 300 } as const;
 
 /**
  * 摘要长度检查：
  * - 使用 expectations.summary.length.min/max 进行范围校验
- * - homepage 类型默认：中文 80-120 字符，英文 50-100 单词
+ * - homepage 类型默认：中文 220-420 字符，英文 150-300 单词
  * - microTips 单条长度暂不作为 hard check
  */
 export const lengthScorer = {

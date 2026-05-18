@@ -76,7 +76,7 @@ function createValidCase(overrides?: Record<string, unknown>) {
         expectedFinishReason: 'complete' as const,
       },
       summary: {
-        length: { min: 80, max: 120 },
+        length: { min: 220, max: 420 },
       },
       status: {
         expectedStatusColor: 'good' as const,
@@ -317,8 +317,8 @@ describe('lengthScorer', () => {
     expect(lengthCheck!.message).toContain('过短');
   });
 
-  it('homepage 类型默认使用 80-120 范围', () => {
-    // 30 字，低于默认 min 80
+  it('homepage 类型默认使用 220-420 范围', () => {
+    // 30 字，低于默认 min 220
     const shortSummary = '您今天的整体健康状态良好。';
     const envelope = createValidEnvelope({ summary: shortSummary });
     const evalCase = createValidCase({
@@ -333,8 +333,8 @@ describe('lengthScorer', () => {
     const lengthCheck = results.find((r) => r.checkId.includes('summary_length'));
     expect(lengthCheck).toBeDefined();
     expect(lengthCheck!.passed).toBe(false);
-    expect(lengthCheck!.details?.min).toBe(80);
-    expect(lengthCheck!.details?.max).toBe(120);
+    expect(lengthCheck!.details?.min).toBe(220);
+    expect(lengthCheck!.details?.max).toBe(420);
   });
 
   it('非 homepage 且无显式配置时跳过长度检查', () => {
