@@ -1,14 +1,17 @@
 import {
   InMemoryDurableMemoryStore,
   InMemoryAgentCacheStore,
+  InMemoryWorkflowStateStore,
   type DurableMemoryStore,
   type MemoryCandidateStore,
   type MemoryExtractionService,
   type AgentCacheStore,
+  type WorkflowStateStore,
 } from '@health-advisor/agent-core';
 import { createSupabaseSql } from '../persistence/supabase/client.js';
 import { SupabaseMemoryStore } from '../persistence/supabase/memory-store.js';
 import { SupabaseAgentCacheStore } from '../persistence/supabase/cache-store.js';
+import { SupabaseWorkflowStateStore } from '../persistence/supabase/workflow-store.js';
 
 export interface MemoryServicesConfig {
   MEMORY_BACKEND: 'memory' | 'supabase';
@@ -23,6 +26,7 @@ export interface MemoryServices {
   candidates: MemoryCandidateStore;
   durable: DurableMemoryStore;
   cache: AgentCacheStore;
+  workflow: WorkflowStateStore;
   extractor?: MemoryExtractionService;
 }
 
@@ -38,6 +42,7 @@ export function createMemoryServices(config: MemoryServicesConfig): MemoryServic
       candidateTtlMs: config.MEMORY_CANDIDATE_TTL_HOURS * 60 * 60 * 1000,
       candidates: memoryStore,
       durable: memoryStore,
+      workflow: new SupabaseWorkflowStateStore(sql),
       cache: new SupabaseAgentCacheStore(sql),
     };
   }
@@ -48,6 +53,7 @@ export function createMemoryServices(config: MemoryServicesConfig): MemoryServic
     candidateTtlMs: config.MEMORY_CANDIDATE_TTL_HOURS * 60 * 60 * 1000,
     candidates: store,
     durable: store,
+    workflow: new InMemoryWorkflowStateStore(),
     cache: new InMemoryAgentCacheStore(),
   };
 }

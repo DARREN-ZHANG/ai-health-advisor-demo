@@ -59,6 +59,15 @@ export type { AnalyticalMemoryStore } from './memory/analytical-memory-store';
 export { InMemoryDurableMemoryStore } from './memory/in-memory-durable-memory-store';
 export { InMemoryAgentCacheStore } from './memory/in-memory-agent-cache-store';
 export type { AgentCacheEntry, AgentCacheLookup, AgentCacheStore, AgentCacheType } from './types/agent-cache';
+export { InMemoryWorkflowStateStore } from './memory/in-memory-workflow-state-store';
+export type {
+  WorkflowConsent,
+  WorkflowContact,
+  WorkflowContactType,
+  WorkflowEvent,
+  WorkflowOutboxItem,
+  WorkflowStateStore,
+} from './types/workflow-memory';
 export { trimConversationTurns, isSessionExpired } from './memory/memory-policy';
 
 // Context

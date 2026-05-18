@@ -1,11 +1,45 @@
+import crypto from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { createErrorResponse, createSuccessResponse, ErrorCode } from '@health-advisor/shared';
 import { buildMeta } from '../../utils/meta.js';
+import type { MemoryCandidateRecord } from '@health-advisor/agent-core';
 
 const CandidateActionBodySchema = z.object({
   profileId: z.string().min(1),
 });
+
+async function persistWorkflowMemory(app: FastifyInstance, candidate: MemoryCandidateRecord, now: number) {
+  if (candidate.kind === 'workflow_contact') {
+    await app.memoryServices.workflow.upsertContact({
+      id: typeof candidate.payload.contactId === 'string' ? candidate.payload.contactId : crypto.randomUUID(),
+      userScopeId: candidate.userScopeId,
+      profileId: candidate.profileId,
+      contactType: candidate.payload.contactType === 'therapist' ? 'therapist' : 'other',
+      displayName: typeof candidate.payload.displayName === 'string' ? candidate.payload.displayName : 'Demo contact',
+      email: typeof candidate.payload.email === 'string' ? candidate.payload.email : undefined,
+      phone: typeof candidate.payload.phone === 'string' ? candidate.payload.phone : undefined,
+      metadata: candidate.payload,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  if (candidate.kind === 'workflow_consent') {
+    await app.memoryServices.workflow.upsertConsent({
+      id: typeof candidate.payload.consentId === 'string' ? candidate.payload.consentId : crypto.randomUUID(),
+      userScopeId: candidate.userScopeId,
+      profileId: candidate.profileId,
+      workflowType: typeof candidate.payload.workflowType === 'string' ? candidate.payload.workflowType : 'therapist_outreach',
+      contactId: typeof candidate.payload.contactId === 'string' ? candidate.payload.contactId : undefined,
+      scope: candidate.payload,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+}
 
 export async function memoryRoutes(app: FastifyInstance) {
   app.get('/memory/candidates', async (request, reply) => {
@@ -46,7 +80,9 @@ export async function memoryRoutes(app: FastifyInstance) {
       return reply.status(409).send(createErrorResponse(ErrorCode.CONFLICT, 'Memory candidate is not pending', buildMeta(request)));
     }
 
-    const result = await app.memoryServices.durable.confirmCandidate({ candidate, now: Date.now() });
+    const now = Date.now();
+    const result = await app.memoryServices.durable.confirmCandidate({ candidate, now });
+    await persistWorkflowMemory(app, candidate, now);
     return createSuccessResponse(result.fact, buildMeta(request));
   });
 

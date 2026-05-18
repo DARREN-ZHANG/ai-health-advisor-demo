@@ -15,6 +15,7 @@ import { dataRoutes } from './modules/data/routes.js';
 import { aiRoutes } from './modules/ai/routes.js';
 import { godModeRoutes } from './modules/god-mode/routes.js';
 import { memoryRoutes } from './modules/memory/routes.js';
+import { workflowRoutes } from './modules/workflows/routes.js';
 import { GodModeService } from './modules/god-mode/service.js';
 import { BriefCache } from './services/brief-cache.js';
 import { createMemoryServices } from './runtime/memory-services.js';
@@ -87,6 +88,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
   await app.register(dataRoutes);
   await app.register(aiRoutes);
   await app.register(memoryRoutes);
+  await app.register(workflowRoutes);
 
   // God-Mode 路由受 ENABLE_GOD_MODE 环境变量保护
   if (config.ENABLE_GOD_MODE) {
