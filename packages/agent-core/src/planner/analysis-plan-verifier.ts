@@ -31,6 +31,7 @@ export function verifyAnalysisPlan(
   // 2. metric 必须属于已支持指标集合
   for (let i = 0; i < plan.evidenceNeeds.length; i++) {
     const need = plan.evidenceNeeds[i];
+    if (!need) continue;
     if (!ctx.supportedMetrics.includes(need.metric)) {
       violations.push({
         rule: 'unsupported_metric',
@@ -43,6 +44,7 @@ export function verifyAnalysisPlan(
   // 3. dateRange 合法性
   for (let i = 0; i < plan.evidenceNeeds.length; i++) {
     const need = plan.evidenceNeeds[i];
+    if (!need) continue;
     if (need.dateRange) {
       if (need.dateRange.start < ctx.availableDateRange.start ||
           need.dateRange.end > ctx.availableDateRange.end) {

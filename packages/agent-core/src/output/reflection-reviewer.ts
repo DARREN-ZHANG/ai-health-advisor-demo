@@ -60,7 +60,7 @@ function buildGateUserPrompt(input: ReflectionReviewInput): string {
   sections.push('## AI 回复内容');
   sections.push(`- 摘要: ${envelope.summary}`);
   sections.push(`- 状态颜色: ${envelope.statusColor}`);
-  if (envelope.microTips.length > 0) {
+  if (envelope.microTips && envelope.microTips.length > 0) {
     sections.push(`- 微建议: ${envelope.microTips.join('; ')}`);
   }
 

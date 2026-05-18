@@ -1,5 +1,5 @@
 import type { AgentRequest } from '../types/agent-request';
-import type { AgentResponseEnvelope, AgentTaskType, DataTab, Locale } from '@health-advisor/shared';
+import type { AgentResponseEnvelope, DataTab, Locale } from '@health-advisor/shared';
 import { AgentTaskType, DEFAULT_LOCALE } from '@health-advisor/shared';
 import type { ContextBuilderDeps } from '../context/context-types';
 import type { HealthAgent } from '../executor/create-agent';

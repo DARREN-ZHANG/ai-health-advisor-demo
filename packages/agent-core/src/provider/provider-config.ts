@@ -22,14 +22,14 @@ export function resolveProviderConfig(
   const apiKey = env[`${prefix}_API_KEY`] ?? env.LLM_API_KEY ?? '';
   const baseUrl = env[`${prefix}_BASE_URL`] ?? env.LLM_BASE_URL ?? '';
   const timeoutMs = env[`${prefix}_TIMEOUT_MS`]
-    ? parseInt(env[`${prefix}_TIMEOUT_MS`], 10)
-    : (env.LLM_TIMEOUT_MS ? parseInt(env.LLM_TIMEOUT_MS, 10) : defaults.timeoutMs);
+    ? parseInt(env[`${prefix}_TIMEOUT_MS`]!, 10)
+    : (env.LLM_TIMEOUT_MS ? parseInt(env.LLM_TIMEOUT_MS!, 10) : defaults.timeoutMs);
   const temperature = env[`${prefix}_TEMPERATURE`]
-    ? parseFloat(env[`${prefix}_TEMPERATURE`])
-    : (env.LLM_TEMPERATURE ? parseFloat(env.LLM_TEMPERATURE) : defaults.temperature);
+    ? parseFloat(env[`${prefix}_TEMPERATURE`]!)
+    : (env.LLM_TEMPERATURE ? parseFloat(env.LLM_TEMPERATURE!) : defaults.temperature);
   const maxRetries = env[`${prefix}_MAX_RETRIES`]
-    ? parseInt(env[`${prefix}_MAX_RETRIES`], 10)
-    : (env.LLM_MAX_RETRIES ? parseInt(env.LLM_MAX_RETRIES, 10) : DEFAULT_MAX_RETRIES);
+    ? parseInt(env[`${prefix}_MAX_RETRIES`]!, 10)
+    : (env.LLM_MAX_RETRIES ? parseInt(env.LLM_MAX_RETRIES!, 10) : DEFAULT_MAX_RETRIES);
 
   return { provider, model, apiKey, baseUrl, timeoutMs, temperature, maxRetries };
 }

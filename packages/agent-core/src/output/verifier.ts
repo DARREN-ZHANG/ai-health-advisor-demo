@@ -152,10 +152,9 @@ function checkMissingDataDisclosure(input: VerifierInput): QualityViolation[] {
 function checkChartTokens(input: VerifierInput): QualityViolation[] {
   const tokens = input.envelope.chartTokens as string[];
   // H-3: 与 runtime 一致，合并 visibleCharts + suggestedChartTokens 三个来源
-  const allowedTokens = new Set([
+  const allowedTokens = new Set<string>([
     ...input.packet.visibleCharts
-      .map((c) => c.chartToken)
-      .filter((t): t is string => typeof t === 'string'),
+      .map((c) => c.chartToken as string),
     ...(input.packet.homepage?.suggestedChartTokens ?? []),
     ...(input.packet.viewSummary?.suggestedChartTokens ?? []),
   ]);
@@ -248,7 +247,7 @@ function checkTaskRedlines(input: VerifierInput): QualityViolation[] {
 
 function buildMatchText(envelope: AgentResponseEnvelope): string {
   const parts = [envelope.summary];
-  if (envelope.microTips.length > 0) {
+  if (envelope.microTips && envelope.microTips.length > 0) {
     parts.push(envelope.microTips.join('\n'));
   }
   return parts.join('\n');
