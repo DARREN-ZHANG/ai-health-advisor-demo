@@ -132,7 +132,7 @@ export const safetyScorer = {
 /** 构建匹配文本：summary + microTips 拼接 */
 function buildMatchText(envelope: AgentResponseEnvelope): string {
   const parts = [envelope.summary];
-  if (envelope.microTips.length > 0) {
+  if (envelope.microTips && envelope.microTips.length > 0) {
     parts.push(envelope.microTips.join('\n'));
   }
   return parts.join('\n');
