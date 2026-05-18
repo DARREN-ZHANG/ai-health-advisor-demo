@@ -2,6 +2,7 @@ import {
   InMemoryDurableMemoryStore,
   type DurableMemoryStore,
   type MemoryCandidateStore,
+  type MemoryExtractionService,
 } from '@health-advisor/agent-core';
 import { createSupabaseSql } from '../persistence/supabase/client.js';
 import { SupabaseMemoryStore } from '../persistence/supabase/memory-store.js';
@@ -18,6 +19,7 @@ export interface MemoryServices {
   candidateTtlMs: number;
   candidates: MemoryCandidateStore;
   durable: DurableMemoryStore;
+  extractor?: MemoryExtractionService;
 }
 
 export function createMemoryServices(config: MemoryServicesConfig): MemoryServices {

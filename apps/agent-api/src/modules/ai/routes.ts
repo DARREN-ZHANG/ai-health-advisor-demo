@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { randomUUID } from 'node:crypto';
 import { createSuccessResponse, createErrorResponse, ErrorCode, AgentTaskType, PageContextSchema } from '@health-advisor/shared';
 import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 import { AgentRequestSchema } from '@health-advisor/agent-core';
@@ -164,7 +165,49 @@ export async function aiRoutes(app: FastifyInstance) {
 
     const result = await orchestrator.execute(parseResult.data, request.lang);
     attachAiLogMeta(request, result.meta.finishReason);
-    return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
+
+    const memoryCandidates = [];
+
+    if (app.memoryServices.extractor && parseResult.data.userMessage) {
+      const extraction = await app.memoryServices.extractor.extract({
+        userMessage: parseResult.data.userMessage,
+        profileId,
+        sessionId: request.ctx.sessionId!,
+      });
+
+      for (const extracted of extraction.candidates) {
+        const now = Date.now();
+        const candidate = await app.memoryServices.candidates.saveCandidate({
+          id: randomUUID(),
+          userScopeId: app.memoryServices.userScopeId,
+          profileId,
+          sessionId: request.ctx.sessionId!,
+          sourceMessageId: request.ctx.requestId,
+          kind: extracted.kind as import('@health-advisor/agent-core').MemoryKind,
+          canonicalKey: extracted.canonicalKey,
+          payload: extracted.payload,
+          evidenceQuote: extracted.evidenceQuote,
+          confidence: extracted.confidence,
+          proposedConfirmationText: extracted.proposedConfirmationText,
+          status: 'pending',
+          createdAt: now,
+          updatedAt: now,
+          expiresAt: now + app.memoryServices.candidateTtlMs,
+        });
+
+        memoryCandidates.push({
+          id: candidate.id,
+          kind: candidate.kind,
+          proposedConfirmationText: candidate.proposedConfirmationText,
+          evidenceQuote: candidate.evidenceQuote,
+        });
+      }
+    }
+
+    return createSuccessResponse(
+      attachSessionMeta({ ...result, ...(memoryCandidates.length > 0 ? { memoryCandidates } : {}) }, request.ctx.sessionId),
+      buildMeta(request),
+    );
   });
 }
 

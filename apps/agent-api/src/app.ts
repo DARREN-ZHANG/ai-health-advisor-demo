@@ -1,4 +1,6 @@
 import Fastify from 'fastify';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { loadConfig, type AppConfig } from './config/env.js';
 import { requestContextPlugin } from './plugins/request-context.js';
 import { langPlugin } from './plugins/lang-plugin.js';
@@ -15,6 +17,7 @@ import { godModeRoutes } from './modules/god-mode/routes.js';
 import { GodModeService } from './modules/god-mode/service.js';
 import { BriefCache } from './services/brief-cache.js';
 import { createMemoryServices } from './runtime/memory-services.js';
+import { LlmMemoryExtractionService } from '@health-advisor/agent-core';
 
 export interface BuildAppOptions {
   env?: Record<string, string | undefined>;
@@ -63,6 +66,13 @@ export async function buildApp(options: BuildAppOptions = {}) {
   const registry = createRuntimeRegistry(config, app.metrics);
   const briefCache = new BriefCache();
   const memoryServices = createMemoryServices(config);
+
+  if (config.MEMORY_EXTRACTION_ENABLED && !config.FALLBACK_ONLY_MODE) {
+    memoryServices.extractor = new LlmMemoryExtractionService({
+      agent: registry.agent,
+      prompt: readFileSync(join(config.dataDir, 'prompts', 'memory-extraction.md'), 'utf-8'),
+    });
+  }
 
   // 装饰 Fastify 实例
   app.decorate('runtime', registry);
