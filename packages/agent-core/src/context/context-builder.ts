@@ -70,6 +70,9 @@ export function buildAgentContext(
   // 9. 获取时间轴同步上下文（可选）
   const timelineSync = deps.getTimelineSync?.(request.profileId);
 
+  // 10. 获取当前模拟时间（可选）
+  const demoNow = deps.getDemoNow?.(request.profileId);
+
   return {
     profile: {
       profileId: profile.profileId,
@@ -109,6 +112,7 @@ export function buildAgentContext(
       latestRuleSummary: analytical?.latestRuleSummary,
     },
     ...(timelineSync ? { timelineSync } : {}),
+    ...(demoNow ? { demoNow } : {}),
     locale,
   };
 }

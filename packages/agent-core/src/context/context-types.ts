@@ -19,4 +19,6 @@ export interface ContextBuilderDeps {
   getInjectedEvents: (profileId: string) => DatedEvent[];
   /** 获取时间轴同步上下文（可选，demo timeline 模式下提供） */
   getTimelineSync?: (profileId: string) => TimelineSyncContext | undefined;
+  /** 获取当前模拟时间（可选，demo timeline 模式下提供，格式 YYYY-MM-DDTHH:mm） */
+  getDemoNow?: (profileId: string) => string | undefined;
 }

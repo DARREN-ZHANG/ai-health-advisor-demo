@@ -62,6 +62,8 @@ export interface AgentContext {
   };
   /** 时间轴同步上下文（demo timeline 模式下可用） */
   timelineSync?: TimelineSyncContext;
+  /** 当前模拟时间（demo timeline 模式下可用，格式 YYYY-MM-DDTHH:mm） */
+  demoNow?: string;
   /** 当前请求的语言标识 */
   locale: Locale;
 }

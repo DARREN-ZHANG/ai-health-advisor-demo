@@ -323,6 +323,10 @@ export function createRuntimeRegistry(
     getActiveOverrides: (profileId: string) => overrideStore.getActiveOverrides(profileId),
     getInjectedEvents: (profileId: string) => overrideStore.getInjectedEvents(profileId),
     getTimelineSync,
+    getDemoNow: (profileId: string) => {
+      try { return overrideStore.getDemoClock(profileId).currentTime; }
+      catch { return undefined; }
+    },
 
     // AgentRuntimeDeps 自己的字段
     agent: effectiveAgent,

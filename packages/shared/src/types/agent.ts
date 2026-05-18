@@ -35,6 +35,8 @@ export interface AgentResponseEnvelope {
   chartTokens: ChartTokenId[];
   microTips?: string[];
   actions?: ActionOption[];
+  /** LLM 生成的 actions 区段标题，用于替代前端硬编码文案 */
+  actionsSectionTitle?: string;
   meta: {
     taskType: AgentTaskType;
     pageContext: PageContext;

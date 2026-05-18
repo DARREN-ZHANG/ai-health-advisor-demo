@@ -11,6 +11,7 @@ interface MorningBriefCardProps {
   title: string;
   summary: string;
   actions?: ActionOption[];
+  actionsSectionTitle?: string;
   onActionSelect?: (action: ActionOption) => void;
   isLoading?: boolean;
 }
@@ -20,6 +21,7 @@ export function MorningBriefCard({
   title,
   summary,
   actions = [],
+  actionsSectionTitle,
   onActionSelect,
   isLoading = false,
 }: MorningBriefCardProps) {
@@ -58,7 +60,7 @@ export function MorningBriefCard({
             {summary}
           </div>
 
-          <ActionOptions actions={actions} onSelect={onActionSelect} />
+          <ActionOptions actions={actions} sectionTitle={actionsSectionTitle} onSelect={onActionSelect} />
         </div>
       </Card>
     </m.div>

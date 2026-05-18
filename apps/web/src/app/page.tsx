@@ -40,6 +40,7 @@ export default function HomePage() {
     title: t('realtimeBrief'),
     summary: data?.summary || (error ? t('briefNetworkError') : t('briefPreparing')),
     actions: data?.actions ?? [],
+    actionsSectionTitle: data?.actionsSectionTitle,
     onActionSelect: (action: ActionOption) => showToast(`${action.title}：已记录`, 'success'),
   };
 

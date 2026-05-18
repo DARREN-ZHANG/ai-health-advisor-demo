@@ -6,10 +6,12 @@ import { useState } from 'react';
 
 interface ActionOptionsProps {
   actions: ActionOption[];
+  /** LLM 生成的区段标题，降级使用柔和默认文案 */
+  sectionTitle?: string;
   onSelect?: (action: ActionOption) => void;
 }
 
-export function ActionOptions({ actions, onSelect }: ActionOptionsProps) {
+export function ActionOptions({ actions, sectionTitle, onSelect }: ActionOptionsProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   if (actions.length === 0) return null;
@@ -18,7 +20,7 @@ export function ActionOptions({ actions, onSelect }: ActionOptionsProps) {
     <div className="space-y-2 pt-4 border-t border-slate-800/50">
       <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
         <span className="w-1 h-3 bg-emerald-500 rounded-full" />
-        行动方案
+        {sectionTitle ?? '为你准备了一些灵感'}
       </p>
       <div className="space-y-2">
         {actions.map((action) => (

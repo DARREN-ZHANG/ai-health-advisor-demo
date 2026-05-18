@@ -30,17 +30,23 @@ function colon(locale: Locale): string {
 // 主入口
 // ────────────────────────────────────────────
 
-export function renderTaskContextPacket(packet: TaskContextPacket, locale: Locale = 'zh'): string {
+export function renderTaskContextPacket(packet: TaskContextPacket, locale: Locale = 'zh', demoNow?: string): string {
   const sections: string[] = [];
 
   sections.push(renderTaskPacket(packet.task, locale));
+
+  // 注入当前模拟时间（让 LLM 感知 demo timeline 的"现在"）
+  if (demoNow) {
+    sections.push(`## ${t(locale, '当前时间', 'Current Time')}\n- ${t(locale, '当前模拟时间', 'Current simulated time')}${colon(locale)}${demoNow}`);
+  }
+
   sections.push(renderUserContext(packet.userContext, locale));
   sections.push(renderDataWindow(packet.dataWindow, locale));
   sections.push(renderMissingData(packet.missingData, locale));
   sections.push(renderVisibleCharts(packet.visibleCharts, locale));
   sections.push(renderEvidence(packet.evidence));
 
-  if (packet.homepage) sections.push(renderHomepage(packet.homepage, locale));
+  if (packet.homepage) sections.push(renderHomepage(packet.homepage, locale, demoNow));
   if (packet.viewSummary) sections.push(renderViewSummary(packet.viewSummary, locale));
   if (packet.advisorChat) sections.push(renderAdvisorChat(packet.advisorChat, locale));
 
@@ -165,16 +171,23 @@ function renderEvidence(evidence: EvidenceFact[]): string {
 // Homepage
 // ────────────────────────────────────────────
 
-function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string {
+function renderHomepage(homepage: HomepageContextPacket, locale: Locale, demoNow?: string): string {
   const c = colon(locale);
   const lines: string[] = [];
 
-  // Recent events
+  // Recent events（附时间权重标签）
   if (homepage.recentEvents.length > 0) {
     lines.push(t(locale, '## 最近发生的事件', '## Recent Events'));
+    // 权重指引注释
+    if (demoNow) {
+      lines.push(t(locale, '> 数据时效权重：距当前时间越近的数据权重越高，请按权重分配篇幅，高权重详述，低权重概括', '> Data freshness weight: data closer to current time has higher weight. Allocate more detail to high-weight data, summarize low-weight data'));
+    }
     for (const ev of homepage.recentEvents) {
       if (ev.start && ev.end) {
-        lines.push(`- [${ev.type}] ${t(locale, '开始', 'start')}${c}${ev.start}, ${t(locale, '持续', 'duration')}${c}${ev.durationMin} ${t(locale, '分钟', 'min')}, ${t(locale, '置信度', 'confidence')}${c}${Math.round(ev.confidence * 100)}%`);
+        // 计算时间权重标签
+        const weightLabel = demoNow ? computeWeightLabel(ev.start, demoNow, locale) : '';
+        const weightPrefix = weightLabel ? `${weightLabel} ` : '';
+        lines.push(`- ${weightPrefix}[${ev.type}] ${t(locale, '开始', 'start')}${c}${ev.start}, ${t(locale, '持续', 'duration')}${c}${ev.durationMin} ${t(locale, '分钟', 'min')}, ${t(locale, '置信度', 'confidence')}${c}${Math.round(ev.confidence * 100)}%`);
       } else {
         lines.push(`- [${ev.type}] ${ev.type}`);
       }
@@ -368,4 +381,31 @@ function getChartTokenForTab(tab: DataTab): ChartTokenId | undefined {
   return map[tab];
 }
 
+// ────────────────────────────────────────────
+// 辅助：时间权重标签
+// ────────────────────────────────────────────
 
+/** 计算事件距当前时间的时间差并返回权重标签 */
+function computeWeightLabel(eventStart: string, demoNow: string, locale: Locale): string {
+  const eventMs = new Date(`${eventStart}:00`).getTime();
+  const nowMs = new Date(`${demoNow}:00`).getTime();
+  const diffMin = Math.round((nowMs - eventMs) / 60000);
+
+  if (diffMin < 0) {
+    // 未来事件（不应出现但做保护）
+    return `[${t(locale, '权重:高', 'weight:high')}]`;
+  }
+
+  // 格式化时间差
+  const diffLabel = diffMin < 60
+    ? t(locale, `距当前${diffMin}分钟`, `${diffMin}min ago`)
+    : t(locale, `距当前${Math.floor(diffMin / 60)}小时${diffMin % 60 > 0 ? `${diffMin % 60}分钟` : ''}`, `${Math.floor(diffMin / 60)}h${diffMin % 60 > 0 ? `${diffMin % 60}m` : ''} ago`);
+
+  if (diffMin <= 30) {
+    return `[${t(locale, '权重:高', 'weight:high')}|${diffLabel}]`;
+  }
+  if (diffMin <= 120) {
+    return `[${t(locale, '权重:中', 'weight:medium')}|${diffLabel}]`;
+  }
+  return `[${t(locale, '权重:低', 'weight:low')}|${diffLabel}]`;
+}

@@ -46,6 +46,7 @@ export const AgentResponseEnvelopeSchema = z.object({
   chartTokens: z.array(ChartTokenIdSchema),
   microTips: z.array(z.string()).optional(),
   actions: z.array(ActionOptionSchema).max(3).optional(),
+  actionsSectionTitle: z.string().optional(),
   meta: z.object({
     taskType: AgentTaskTypeSchema,
     pageContext: PageContextSchema,

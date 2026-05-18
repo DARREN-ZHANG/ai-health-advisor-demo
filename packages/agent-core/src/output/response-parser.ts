@@ -142,6 +142,10 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
     };
   }
 
+  const actionsSectionTitle = typeof obj.actionsSectionTitle === 'string' && obj.actionsSectionTitle.length > 0
+    ? obj.actionsSectionTitle
+    : undefined;
+
   const envelope: AgentResponseEnvelope = {
     summary,
     source: typeof obj.source === 'string' && obj.source.length > 0 ? obj.source : 'llm',
@@ -149,6 +153,7 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
     chartTokens: validTokens,
     microTips: tips.length > 0 ? tips : undefined,
     actions,
+    actionsSectionTitle,
     meta: {
       taskType: meta.taskType,
       pageContext: meta.pageContext,

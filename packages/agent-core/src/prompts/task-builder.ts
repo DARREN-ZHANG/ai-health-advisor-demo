@@ -47,6 +47,10 @@ export function buildTaskPrompt(
   // 任务约束
   sections.push('');
   sections.push(t(locale, '## 任务约束', '## Task Constraints'));
+  // 注入当前模拟时间，让 LLM 明确知道"现在"是几点
+  if (context.demoNow) {
+    sections.push(`- ${t(locale, '当前模拟时间', 'Current simulated time')}${t(locale, '：', ': ')}${context.demoNow}`);
+  }
   if (taskType === AgentTaskType.HOMEPAGE_SUMMARY) {
     sections.push(t(
       locale,
@@ -69,7 +73,7 @@ export function buildTaskPrompt(
   // 使用 TaskContextPacket 渲染（如果可用）
   if (packet) {
     sections.push('');
-    sections.push(renderTaskContextPacket(packet, locale));
+    sections.push(renderTaskContextPacket(packet, locale, context.demoNow));
   } else {
     // 降级：保留基本数据窗口信息
     sections.push('');
@@ -157,8 +161,13 @@ export function buildTaskPrompt(
     sections.push('  "chartTokens": ["CHART_TOKEN_1"],');
     sections.push(t(
       locale,
-      '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "💤",\n      "title": "改善睡眠",\n      "description": "建议今晚提前30分钟入睡",\n      "aiPromise": "我会持续跟踪您的睡眠趋势"\n    }\n  ],',
-      '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "💤",\n      "title": "Improve Sleep",\n      "description": "Try going to bed 30 minutes earlier tonight",\n      "aiPromise": "I will keep tracking your sleep trends"\n    }\n  ],',
+      '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "💤",\n      "title": "要不要早点休息",\n      "description": "今晚提前30分钟入睡试试看",\n      "aiPromise": "我会持续关注你的睡眠趋势"\n    }\n  ],',
+      '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "💤",\n      "title": "Try resting earlier",\n      "description": "How about going to bed 30 minutes earlier tonight",\n      "aiPromise": "I will keep tracking your sleep trends"\n    }\n  ],',
+    ));
+    sections.push(t(
+      locale,
+      '  "actionsSectionTitle": "为你准备了一些灵感",',
+      '  "actionsSectionTitle": "Some ideas for you",',
     ));
     sections.push(t(
       locale,
