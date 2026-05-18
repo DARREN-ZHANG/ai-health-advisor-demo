@@ -38,7 +38,10 @@ export default function HomePage() {
     status: mapApiStatusToUi(data?.statusColor, data?.meta.finishReason),
     title: t('realtimeBrief'),
     summary: data?.summary || (error ? t('briefNetworkError') : t('briefPreparing')),
-    microTips: data?.microTips || [],
+    actions: data?.actions || [],
+    onActionSelect: (action: { title: string }) => {
+      showToast(action.title, 'info');
+    },
   };
 
   return (
