@@ -1,54 +1,42 @@
 {
   "zh": {
     "profile-a": {
-      "summary": "整体健康数据看起来不错。HRV 和睡眠质量保持稳定，建议继续保持当前的运动和作息习惯。",
+      "summary": "目前各项健康指标表现良好，整体状态不错。\n\n你的睡眠质量保持稳定，HRV 趋势也在正常范围内波动。日常活动量已达标，步数和运动时间都处于健康区间。\n\n建议继续保持规律的作息和适度运动。如果你想进一步优化，可以考虑今天多走 10 分钟，帮助巩固当前的恢复势头。\n\n你想怎么做？",
       "chartTokens": ["HRV_7DAYS", "SLEEP_7DAYS"],
-      "microTips": [
-        "建议每天保持 7-8 小时的睡眠",
-        "您的 HRV 趋势稳定，说明自主神经系统调节良好"
-      ]
+      "microTips": [],
+      "actions": []
     },
     "profile-b": {
-      "summary": "近期健康数据有波动。睡眠时长偏短，建议关注作息规律，适当增加运动。",
+      "summary": "最近几天你的身体数据有些波动，我注意到几个需要关注的点。\n\n睡眠时长偏短，HRV 也有下降的趋势。这通常意味着你的身体恢复还没完全到位，需要给副交感神经一点缓冲时间。\n\n建议今晚提前 30 分钟上床，并且把运动强度调低一档，改成散步或轻度拉伸。\n\n你想怎么做？",
       "chartTokens": ["SLEEP_7DAYS", "ACTIVITY_7DAYS"],
-      "microTips": [
-        "睡眠时间不足 6 小时，建议尽量提前就寝",
-        "每天增加 2000 步可有效改善心肺功能"
-      ]
+      "microTips": [],
+      "actions": []
     },
     "profile-c": {
-      "summary": "健康数据提示存在压力过大和睡眠不足的问题，建议重点关注压力管理和作息调整。",
+      "summary": "你的身体在发出几个需要重视的信号，我们一起来看看怎么调整。\n\n压力负荷持续偏高，睡眠也严重不足。这两个因素叠加，会让你的 HRV 持续走低，身体的\"恢复电池\"一直在亏电。\n\n我的建议：今天优先做两件事——第一，设定一个固定的就寝时间并坚持；第二，睡前 1 小时远离电子屏幕，做 10 分钟的深呼吸或冥想。\n\n你想怎么做？",
       "chartTokens": ["STRESS_LOAD_7DAYS", "SLEEP_7DAYS"],
-      "microTips": [
-        "压力负荷持续偏高，建议每天进行 10 分钟冥想或深呼吸",
-        "睡眠严重不足，建议设定固定就寝时间并避免睡前使用电子设备"
-      ]
+      "microTips": [],
+      "actions": []
     }
   },
   "en": {
     "profile-a": {
-      "summary": "Overall health data looks good. HRV and sleep quality remain stable. Keep up your current exercise and sleep routine.",
+      "summary": "Your health metrics are looking good overall — nice work keeping things steady.\n\nSleep quality remains stable, and your HRV trend is within a healthy range. Daily activity is on track with both step count and exercise time in good zones.\n\nMy suggestion: keep up the routine. If you want to push further, consider adding a 10-minute walk today to solidify your recovery momentum.\n\nWhat would you like to do?",
       "chartTokens": ["HRV_7DAYS", "SLEEP_7DAYS"],
-      "microTips": [
-        "Aim for 7-8 hours of sleep every night",
-        "Your HRV trend is stable, indicating healthy autonomic nervous system regulation"
-      ]
+      "microTips": [],
+      "actions": []
     },
     "profile-b": {
-      "summary": "Recent health data shows some fluctuation. Sleep duration is on the shorter side. Consider maintaining a consistent schedule and increasing physical activity.",
+      "summary": "I've noticed some fluctuations in your recent data — let me walk you through what I see.\n\nSleep duration has been on the shorter side, and your HRV is trending downward. This usually means your body hasn't fully recovered yet and needs some buffer time.\n\nMy suggestion: try going to bed 30 minutes earlier tonight, and dial back your exercise intensity — swap in a light walk or gentle stretching instead.\n\nWhat would you like to do?",
       "chartTokens": ["SLEEP_7DAYS", "ACTIVITY_7DAYS"],
-      "microTips": [
-        "You're getting less than 6 hours of sleep — try going to bed earlier",
-        "Adding 2,000 daily steps can effectively improve cardiovascular fitness"
-      ]
+      "microTips": [],
+      "actions": []
     },
     "profile-c": {
-      "summary": "Health data indicates elevated stress levels and insufficient sleep. Prioritize stress management and sleep schedule adjustments.",
+      "summary": "Your body is sending some signals we should pay attention to. Let's figure out the best adjustments together.\n\nStress levels remain elevated, and sleep is significantly lacking. When these two stack up, your HRV keeps dropping and your body's \"recovery battery\" stays depleted.\n\nMy top two recommendations: First, set a fixed bedtime and stick to it. Second, put away screens one hour before bed and do 10 minutes of deep breathing or meditation.\n\nWhat would you like to do?",
       "chartTokens": ["STRESS_LOAD_7DAYS", "SLEEP_7DAYS"],
-      "microTips": [
-        "Stress load remains high — try 10 minutes of daily meditation or deep breathing",
-        "Sleep is severely lacking. Set a fixed bedtime and avoid screens before sleep"
-      ]
+      "microTips": [],
+      "actions": []
     }
   }
 }

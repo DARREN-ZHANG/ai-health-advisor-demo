@@ -8,6 +8,7 @@ const mockAssets: FallbackAssets = {
       summary: '整体健康数据看起来不错。',
       chartTokens: [ChartTokenId.HRV_7DAYS, ChartTokenId.SLEEP_7DAYS],
       microTips: ['建议每天保持 7-8 小时的睡眠'],
+      actions: [],
     },
   },
   'view-summary': {
@@ -15,6 +16,7 @@ const mockAssets: FallbackAssets = {
       summary: '近 7 天 HRV 数据整体在正常范围内。',
       chartTokens: [ChartTokenId.HRV_7DAYS],
       microTips: ['心率变异性稳定'],
+      actions: [],
     },
   },
   'advisor-chat': {
@@ -22,6 +24,7 @@ const mockAssets: FallbackAssets = {
       summary: '根据您的数据分析，整体状况良好。',
       chartTokens: [ChartTokenId.HRV_7DAYS],
       microTips: ['保持运动'],
+      actions: [],
     },
   },
 };
@@ -46,6 +49,7 @@ describe('createFallbackEngine', () => {
 
     expect(result.summary).toContain('不错');
     expect(result.meta.finishReason).toBe('fallback');
+    expect(result.actions).toEqual([]);
   });
 
   it('为 view_summary 返回 tab 匹配的 fallback', () => {
@@ -80,6 +84,7 @@ describe('createFallbackEngine', () => {
 
     expect(result.summary).toBeTruthy();
     expect(result.meta.finishReason).toBe('fallback');
+    expect(result.actions).toEqual([]);
   });
 
   it('fallback 包含正确的 meta 字段', () => {
