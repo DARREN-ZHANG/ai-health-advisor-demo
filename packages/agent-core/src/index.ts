@@ -2,6 +2,18 @@
 
 // Types
 export type { AgentRequest } from './types/agent-request';
+export type {
+  MemoryKind,
+  MemoryCandidateStatus,
+  UserMemoryFactStatus,
+  MemoryConfidence,
+  MemorySensitivity,
+  MemoryCandidateRecord,
+  UserMemoryFact,
+  MemoryRevision,
+  MemoryCandidateStore,
+  DurableMemoryStore,
+} from './types/durable-memory';
 export type { InternalTaskType } from './types/internal-task-type';
 export type { AgentContext, AgentStatusColor, TimelineSyncContext } from './types/agent-context';
 export type {
@@ -13,6 +25,11 @@ export type { LlmProvider, ModelRuntimeConfig, ResolvedProviderConfig, LlmRole, 
 
 // Schemas
 export { AgentRequestSchema } from './types/agent-request';
+export {
+  MemoryKindSchema,
+  MemoryCandidateRecordSchema,
+  UserMemoryFactSchema,
+} from './memory/durable-memory-schema';
 
 // Routing
 export { resolveTaskRoute, TASK_ROUTES } from './routing/task-router';
