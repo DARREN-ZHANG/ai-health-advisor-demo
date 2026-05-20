@@ -3628,10 +3628,10 @@
         "score": 98
       },
       "activity": {
-        "steps": 5000,
-        "calories": 2147,
-        "activeMinutes": 30,
-        "distanceKm": 4.2
+        "steps": 5900,
+        "calories": 2275,
+        "activeMinutes": 35,
+        "distanceKm": 5
       },
       "spo2": 97,
       "stress": {
@@ -3649,63 +3649,63 @@
           "hour": 2,
           "hr": 46,
           "spo2": 97,
-          "steps": 41,
+          "steps": 48,
           "stressLoad": 29
         },
         {
           "hour": 4,
           "hr": 45,
           "spo2": 97,
-          "steps": 164,
+          "steps": 194,
           "stressLoad": 29
         },
         {
           "hour": 6,
           "hr": 54,
           "spo2": 96,
-          "steps": 369,
+          "steps": 436,
           "stressLoad": 29
         },
         {
           "hour": 8,
           "hr": 79,
           "spo2": 98,
-          "steps": 656,
+          "steps": 775,
           "stressLoad": 29
         },
         {
           "hour": 10,
           "hr": 56,
           "spo2": 97,
-          "steps": 1026,
+          "steps": 1210,
           "stressLoad": 29
         },
         {
           "hour": 12,
           "hr": 81,
           "spo2": 98,
-          "steps": 1477,
+          "steps": 1743,
           "stressLoad": 29
         },
         {
           "hour": 14,
           "hr": 78,
           "spo2": 96,
-          "steps": 2010,
+          "steps": 2372,
           "stressLoad": 29
         },
         {
           "hour": 16,
           "hr": 69,
           "spo2": 96,
-          "steps": 2626,
+          "steps": 3098,
           "stressLoad": 29
         },
         {
           "hour": 18,
           "hr": 71,
           "spo2": 96,
-          "steps": 3323,
+          "steps": 3921,
           "sleepMinutes": 2,
           "stressLoad": 29
         },
@@ -3713,7 +3713,7 @@
           "hour": 20,
           "hr": 58,
           "spo2": 96,
-          "steps": 4103,
+          "steps": 4841,
           "sleepMinutes": 120,
           "stressLoad": 29
         },
@@ -3721,7 +3721,7 @@
           "hour": 22,
           "hr": 45,
           "spo2": 97,
-          "steps": 4964,
+          "steps": 5858,
           "sleepMinutes": 120,
           "stressLoad": 29
         }

@@ -31,7 +31,7 @@
     },
     "dailyBaseline": {
       "avgSleepMinutes": 600,
-      "avgSteps": 5000,
+      "avgSteps": 5900,
       "hrv": 93
     }
   },
