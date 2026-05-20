@@ -45,8 +45,8 @@ export function buildSystemPrompt(
     sections.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}: ${context.profile.baselines.hrv} ms`);
     sections.push(`- ${t(locale, 'SpO2 参考水平', 'SpO2 reference level')}: ${context.profile.baselines.spo2}%`);
   }
-  sections.push(`- ${t(locale, '平均睡眠', 'Average sleep')}: ${context.profile.baselines.avgSleepMinutes} ${t(locale, '分钟', 'minutes')}`);
-  sections.push(`- ${t(locale, '平均步数', 'Average steps')}: ${context.profile.baselines.avgSteps} ${t(locale, '步', 'steps')}`);
+  sections.push(`- ${t(locale, '平均睡眠', 'Average sleep')}: ${context.profile.baselines.avgSleepMinutes} min`);
+  sections.push(`- ${t(locale, '平均步数', 'Average steps')}: ${context.profile.baselines.avgSteps} steps`);
 
   // 数据质量约束（优先使用结构化 missingData）
   sections.push('');
@@ -91,6 +91,7 @@ export function buildSystemPrompt(
   sections.push(t(locale, '- summary 只能基于 evidence facts 和当前 task packet', '- Summary must be based solely on evidence facts and the current task packet'));
   sections.push(t(locale, '- 如果 evidence 缺失，不得补全', '- If evidence is missing, do not fill in gaps'));
   sections.push(t(locale, '- 重要建议必须能回溯到至少一个 evidence fact', '- Important recommendations must be traceable to at least one evidence fact'));
+  sections.push(t(locale, '- 禁止编造、推测或暗示上下文中未明确提供的事件（如进餐、运动、久坐等）。只能讨论 task packet 中 recentEvents 明确列出的事件。', '- Never fabricate, speculate, or imply events not explicitly provided in context (e.g. meals, exercise, sedentary). Only discuss events listed in recentEvents of the task packet.'));
 
   return sections.join('\n');
 }

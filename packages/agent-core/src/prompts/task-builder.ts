@@ -153,10 +153,11 @@ export function buildTaskPrompt(
     sections.push('{');
     sections.push('  "source": "llm",');
     sections.push('  "statusColor": "good",');
+    // summary 示例展示 \\n\\n 三段结构，引导 LLM 遵循分段格式
     sections.push(t(
       locale,
-      '  "summary": "摘要文本",',
-      '  "summary": "Summary text",',
+      '  "summary": "小明，刚刚检测到你可能完成了一组有氧运动！心率峰值持续了大约20分钟。\\n\\n从24h数据看，昨晚深睡只有45 min，身体还没完全恢复过来。HRV也提示恢复压力偏高，高强度运动可能加重负担。\\n\\n建议今天不要再追加高强度训练，如果还想动一动，饭后快走15 min是个不错的选择。你觉得呢？",',
+      "  \"summary\": \"Ming, looks like you just finished a cardio session! Heart rate peaked for about 20 minutes.\\n\\nFrom the 24h data, deep sleep was only 45 min last night, and your body hasn't fully recovered. HRV also suggests elevated recovery stress.\\n\\nSuggest skipping high-intensity training today. If you want to move, a 15-min brisk walk after dinner is a solid choice. What do you think?\",",
     ));
     sections.push('  "chartTokens": ["CHART_TOKEN_1"],');
     sections.push(t(
