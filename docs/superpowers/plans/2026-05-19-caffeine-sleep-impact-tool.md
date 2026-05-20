@@ -4,7 +4,7 @@
 
 **Goal:** Build `estimateCaffeineSleepImpact` and wire it into the realtime homepage brief so caffeine sleep impact is included only when a `possible_caffeine_intake` event exists.
 
-**Architecture:** The Tool lives in `packages/agent-core/src/tools` and consumes only `TaskContextPacket.homepage.recentEvents`. Homepage brief uses a deterministic pre-prompt collection step in `executeAgent`: for `HOMEPAGE_SUMMARY`, if the packet contains `possible_caffeine_intake`, execute the Tool and append its structured result to the task prompt; otherwise skip the Tool entirely. This keeps the LLM from inventing caffeine impact when no event exists.
+**Architecture:** The Tool lives in `packages/agent-core/src/tools` and consumes only `TaskContextPacket.homepage.recentEvents`. Realtime homepage brief uses an event-driven `RealtimeBriefToolOrchestrator`: trigger policies inspect structured events, produce a `ToolInvocationPlan`, execute selected tools, normalize outputs into a `ToolEvidencePacket`, and append that packet to the final single LLM brief prompt. This is not ReAct; it is a deterministic, testable orchestration layer for proactive realtime briefs, while Advisor Chat can continue using ReAct for open-ended questions.
 
 **Tech Stack:** TypeScript, Zod, Vitest, existing `ToolDefinition` interface, existing `AgentRuntime` homepage prompt pipeline.
 
@@ -20,7 +20,7 @@ Existing relevant files:
 - `packages/agent-core/src/tools/query-timeline-events.ts`: closest existing Tool pattern.
 - `packages/agent-core/src/tools/index.ts`: exports Tool implementations.
 - `packages/agent-core/src/index.ts`: package-level exports consumed by `apps/agent-api`.
-- `apps/agent-api/src/runtime/registry.ts`: registers ReAct tools.
+- `apps/agent-api/src/runtime/registry.ts`: registers ReAct tools for chat and future tool access.
 - `packages/agent-core/src/runtime/agent-runtime.ts`: builds context, builds packet, builds prompt, invokes LLM.
 - `packages/agent-core/src/prompts/task-builder.ts`: renders homepage prompt using `TaskContextPacket`.
 - `data/sandbox/prompts/homepage.md` and `data/sandbox/prompts/homepage/template.md`: homepage writing rules.
@@ -46,10 +46,10 @@ Create:
   - Owns Tool input/output schemas, event selection, exponential decay math, risk classification, and supportive advice generation.
 - `packages/agent-core/src/tools/__tests__/estimate-caffeine-sleep-impact.test.ts`
   - Unit tests for Tool behavior and math.
-- `packages/agent-core/src/runtime/homepage-tool-evidence.ts`
-  - Owns homepage-specific conditional Tool collection and prompt rendering for Tool results.
-- `packages/agent-core/src/runtime/__tests__/homepage-tool-evidence.test.ts`
-  - Unit tests for conditional collection and prompt rendering.
+- `packages/agent-core/src/runtime/realtime-brief-tool-orchestrator.ts`
+  - Owns event-driven Tool trigger policies, invocation planning, Tool execution, Tool evidence normalization, and prompt rendering for realtime homepage briefs.
+- `packages/agent-core/src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts`
+  - Unit tests for policy matching, no-call behavior, Tool evidence rendering, and extensible registry behavior.
 
 Modify:
 
@@ -60,9 +60,9 @@ Modify:
 - `apps/agent-api/src/runtime/registry.ts`
   - Register `estimateCaffeineSleepImpactTool` in the ReAct Tool map.
 - `packages/agent-core/src/runtime/agent-runtime.ts`
-  - For homepage summaries, conditionally collect Tool evidence after packet construction and before prompt construction.
+  - For homepage summaries, run `RealtimeBriefToolOrchestrator` after packet construction and before prompt construction.
 - `packages/agent-core/src/__tests__/runtime/agent-runtime.test.ts`
-  - Verify homepage prompt includes caffeine Tool result only when caffeine event exists.
+  - Verify homepage prompt includes the Tool evidence packet only when the orchestrator selected and executed a Tool.
 - `data/sandbox/prompts/homepage.md`
   - Add a short rule telling the LLM how to use the Tool result when present.
 - `data/sandbox/prompts/homepage/template.md`
@@ -514,7 +514,7 @@ git commit -m "feat(agent): estimate caffeine sleep impact"
 
 **Task details:**
 
-Expose the Tool from `agent-core` and register it in the existing ReAct Tool map. Homepage conditional invocation in Module 2 will call the Tool directly from `agent-core`; registry export keeps the Tool available to the Agent Tool system.
+Expose the Tool from `agent-core` and register it in the existing ReAct Tool map. The realtime brief orchestrator in Module 2 will use a local Tool registry, and this package/API export keeps the same Tool available to the broader Agent Tool system.
 
 - [ ] **Step 1: Export from `packages/agent-core/src/tools/index.ts`**
 
@@ -572,32 +572,43 @@ git commit -m "feat(agent): register caffeine sleep impact tool"
 
 ---
 
-## Module 2: Homepage Conditional Tool Flow
+## Module 2: Realtime Brief Tool Orchestrator
 
-### Task 4: Add Homepage Tool Evidence Collector Tests
+### Task 4: Add Realtime Brief Orchestrator Tests
 
 **Files:**
 
-- Create: `packages/agent-core/src/runtime/__tests__/homepage-tool-evidence.test.ts`
-- Create later in Task 5: `packages/agent-core/src/runtime/homepage-tool-evidence.ts`
+- Create: `packages/agent-core/src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts`
+- Create later in Task 5: `packages/agent-core/src/runtime/realtime-brief-tool-orchestrator.ts`
 
 **Task details:**
 
-This module ensures the homepage brief calls the Tool only when a caffeine event exists and renders a prompt section only when the Tool returns an estimate.
+This module is the extensibility layer for realtime briefs. It is event-driven, not ReAct:
 
-- [ ] **Step 1: Create the failing collector test**
+- Trigger policies inspect structured `TaskContextPacket` data.
+- Matching policies produce a `ToolInvocationPlan`.
+- Selected Tools execute before the final homepage LLM call.
+- Tool results are normalized into a `ToolEvidencePacket`.
+- The final LLM sees the evidence packet and writes the realtime brief.
+
+For this implementation, the only default policy is `caffeine-sleep-impact-on-possible-caffeine`. The test also includes a custom mock policy to prove new event/tool policies can be registered without changing runtime orchestration.
+
+- [ ] **Step 1: Create the failing orchestrator test**
 
 Add this file:
 
 ```ts
+import { z } from 'zod';
 import { describe, expect, it } from 'vitest';
 import type { TaskContextPacket, RecentEventPacket } from '../../context/context-packet';
 import type { AgentContext } from '../../types/agent-context';
+import type { ToolDefinition, ToolResult } from '../../tools/tool-types';
 import {
-  appendHomepageToolEvidenceToPrompt,
-  collectHomepageToolEvidence,
-  shouldCollectCaffeineSleepImpact,
-} from '../homepage-tool-evidence';
+  appendRealtimeBriefToolEvidenceToPrompt,
+  buildRealtimeBriefToolInvocationPlan,
+  executeRealtimeBriefToolPlan,
+  type RealtimeBriefToolTriggerPolicy,
+} from '../realtime-brief-tool-orchestrator';
 
 function makeEvent(type: string, confidence = 0.84): RecentEventPacket {
   return {
@@ -611,13 +622,13 @@ function makeEvent(type: string, confidence = 0.84): RecentEventPacket {
       pendingEventCount: 0,
       fromSyncedWindow: true,
     },
-    evidenceIds: ['event-caffeine'],
+    evidenceIds: [`event-${type}`],
   };
 }
 
-function makePacket(events: RecentEventPacket[]): TaskContextPacket {
+function makePacket(events: RecentEventPacket[], taskType = 'homepage_summary'): TaskContextPacket {
   return {
-    task: { type: 'homepage_summary', page: 'home' },
+    task: { type: taskType, page: taskType === 'homepage_summary' ? 'home' : 'advisor' },
     userContext: {
       profileId: 'profile-a',
       name: '林巅峰',
@@ -685,161 +696,374 @@ function makeContext(): AgentContext {
   } as AgentContext;
 }
 
-describe('homepage-tool-evidence', () => {
-  it('does not collect caffeine sleep impact when no caffeine event exists', async () => {
+describe('realtime-brief-tool-orchestrator', () => {
+  it('does not plan or execute any tool when no trigger policy matches', async () => {
     const packet = makePacket([makeEvent('exercise')]);
+    const context = makeContext();
 
-    expect(shouldCollectCaffeineSleepImpact(packet)).toBe(false);
-    await expect(collectHomepageToolEvidence(packet, makeContext())).resolves.toBeUndefined();
+    const plan = buildRealtimeBriefToolInvocationPlan(packet, context);
+    const evidence = await executeRealtimeBriefToolPlan(plan, packet, context);
+    const prompt = appendRealtimeBriefToolEvidenceToPrompt('base prompt', evidence);
+
+    expect(plan.invocations).toEqual([]);
+    expect(evidence.items).toEqual([]);
+    expect(prompt).toBe('base prompt');
   });
 
-  it('collects caffeine sleep impact when possible_caffeine_intake exists', async () => {
+  it('plans and executes caffeine sleep impact tool when possible_caffeine_intake exists', async () => {
     const packet = makePacket([makeEvent('possible_caffeine_intake')]);
+    const context = makeContext();
 
-    expect(shouldCollectCaffeineSleepImpact(packet)).toBe(true);
-    const evidence = await collectHomepageToolEvidence(packet, makeContext());
+    const plan = buildRealtimeBriefToolInvocationPlan(packet, context);
+    const evidence = await executeRealtimeBriefToolPlan(plan, packet, context);
+    const prompt = appendRealtimeBriefToolEvidenceToPrompt('base prompt', evidence);
 
-    expect(evidence?.caffeineSleepImpact.hasCaffeineEvent).toBe(true);
-    expect(evidence?.caffeineSleepImpact.estimatedCaffeineLoad?.remainingRatioAtSleep).toBeCloseTo(0.38, 2);
-  });
-
-  it('appends a compact Tool result section to homepage prompt', async () => {
-    const packet = makePacket([makeEvent('possible_caffeine_intake')]);
-    const evidence = await collectHomepageToolEvidence(packet, makeContext());
-
-    const prompt = appendHomepageToolEvidenceToPrompt('base prompt', evidence);
-
-    expect(prompt).toContain('## 已调用工具结果');
+    expect(plan.invocations).toHaveLength(1);
+    expect(plan.invocations[0]).toMatchObject({
+      policyId: 'caffeine-sleep-impact-on-possible-caffeine',
+      toolName: 'estimateCaffeineSleepImpact',
+      priority: 80,
+    });
+    expect(evidence.items).toHaveLength(1);
+    expect(evidence.items[0]?.status).toBe('success');
+    expect(prompt).toContain('## 工具证据包');
     expect(prompt).toContain('estimateCaffeineSleepImpact');
     expect(prompt).toContain('估算咖啡因剩余比例');
     expect(prompt).toContain('不是血液化学实测');
   });
 
-  it('returns original prompt when there is no collected evidence', () => {
-    const prompt = appendHomepageToolEvidenceToPrompt('base prompt', undefined);
+  it('does not run realtime brief policies outside homepage_summary', () => {
+    const packet = makePacket([makeEvent('possible_caffeine_intake')], 'advisor_chat');
+    const plan = buildRealtimeBriefToolInvocationPlan(packet, makeContext());
 
-    expect(prompt).toBe('base prompt');
+    expect(plan.invocations).toEqual([]);
+  });
+
+  it('supports adding another event-driven tool policy without changing the orchestrator', async () => {
+    const exerciseTool: ToolDefinition<{ eventType: string }, { recovery: string }> = {
+      name: 'estimateExerciseRecovery',
+      description: '估算运动后的恢复建议',
+      inputSchema: z.object({ eventType: z.string() }),
+      outputSchema: z.object({ recovery: z.string() }),
+      async execute(input): Promise<ToolResult<{ recovery: string }>> {
+        return {
+          success: true,
+          data: { recovery: `${input.eventType}: light recovery` },
+          evidenceIds: ['event-exercise'],
+        };
+      },
+    };
+    const exercisePolicy: RealtimeBriefToolTriggerPolicy = {
+      id: 'exercise-recovery-on-exercise',
+      toolName: 'estimateExerciseRecovery',
+      priority: 60,
+      reason: 'exercise event should enrich realtime brief with recovery guidance',
+      when: (packet) => (packet.homepage?.recentEvents ?? []).some((event) => event.type === 'exercise'),
+      buildInput: () => ({ eventType: 'exercise' }),
+    };
+    const packet = makePacket([makeEvent('exercise')]);
+    const context = makeContext();
+    const plan = buildRealtimeBriefToolInvocationPlan(packet, context, [exercisePolicy]);
+    const tools = new Map<string, ToolDefinition<unknown, unknown>>([
+      [exerciseTool.name, exerciseTool as ToolDefinition<unknown, unknown>],
+    ]);
+
+    const evidence = await executeRealtimeBriefToolPlan(plan, packet, context, tools);
+
+    expect(plan.invocations).toHaveLength(1);
+    expect(evidence.items[0]).toMatchObject({
+      toolName: 'estimateExerciseRecovery',
+      status: 'success',
+      evidenceIds: ['event-exercise'],
+    });
   });
 });
 ```
 
-- [ ] **Step 2: Run the collector test and verify it fails**
+- [ ] **Step 2: Run the orchestrator test and verify it fails**
 
 Run:
 
 ```bash
-pnpm --filter @health-advisor/agent-core test -- src/runtime/__tests__/homepage-tool-evidence.test.ts
+pnpm --filter @health-advisor/agent-core test -- src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts
 ```
 
 Expected:
 
 ```text
-FAIL  src/runtime/__tests__/homepage-tool-evidence.test.ts
-Cannot find module '../homepage-tool-evidence'
+FAIL  src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts
+Cannot find module '../realtime-brief-tool-orchestrator'
 ```
 
-- [ ] **Step 3: Commit the failing collector tests**
+- [ ] **Step 3: Commit the failing orchestrator tests**
 
 ```bash
-git add packages/agent-core/src/runtime/__tests__/homepage-tool-evidence.test.ts
-git commit -m "test(agent): specify homepage caffeine tool evidence"
+git add packages/agent-core/src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts
+git commit -m "test(agent): specify realtime brief tool orchestrator"
 ```
 
-### Task 5: Implement Homepage Tool Evidence Collector
+### Task 5: Implement Realtime Brief Tool Orchestrator
 
 **Files:**
 
-- Create: `packages/agent-core/src/runtime/homepage-tool-evidence.ts`
-- Test: `packages/agent-core/src/runtime/__tests__/homepage-tool-evidence.test.ts`
+- Create: `packages/agent-core/src/runtime/realtime-brief-tool-orchestrator.ts`
+- Test: `packages/agent-core/src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts`
 
 **Task details:**
 
-The collector is intentionally deterministic. It decides whether the Tool should run before any LLM prompt is built. This implements the requirement: "有咖啡因事件摄入时调用工具，没有事件则无需调用该工具".
+Implement a reusable orchestrator. This must not be a one-off caffeine helper. The caffeine behavior must be expressed as one default trigger policy inside a policy registry.
 
-- [ ] **Step 1: Add the collector implementation**
+- [ ] **Step 1: Add the orchestrator implementation**
 
-Create `packages/agent-core/src/runtime/homepage-tool-evidence.ts`:
+Create `packages/agent-core/src/runtime/realtime-brief-tool-orchestrator.ts`:
 
 ```ts
 import type { TaskContextPacket } from '../context/context-packet';
 import type { AgentContext } from '../types/agent-context';
-import { estimateCaffeineSleepImpactTool, type CaffeineSleepImpactOutput } from '../tools/estimate-caffeine-sleep-impact';
+import type { ToolDefinition, ToolResult } from '../tools/tool-types';
+import {
+  estimateCaffeineSleepImpactTool,
+  type CaffeineSleepImpactOutput,
+} from '../tools/estimate-caffeine-sleep-impact';
 
-export interface HomepageToolEvidence {
-  caffeineSleepImpact: CaffeineSleepImpactOutput;
+export interface RealtimeBriefToolTriggerPolicy {
+  id: string;
+  toolName: string;
+  priority: number;
+  reason: string;
+  when(packet: TaskContextPacket, context: AgentContext): boolean;
+  buildInput(packet: TaskContextPacket, context: AgentContext): unknown;
 }
 
-export function shouldCollectCaffeineSleepImpact(packet: TaskContextPacket): boolean {
-  return (packet.homepage?.recentEvents ?? []).some((event) => event.type === 'possible_caffeine_intake');
+export interface RealtimeBriefToolInvocation {
+  policyId: string;
+  toolName: string;
+  priority: number;
+  reason: string;
+  input: unknown;
 }
 
-export async function collectHomepageToolEvidence(
+export interface RealtimeBriefToolInvocationPlan {
+  invocations: RealtimeBriefToolInvocation[];
+}
+
+export interface RealtimeBriefToolEvidenceItem {
+  policyId: string;
+  toolName: string;
+  priority: number;
+  reason: string;
+  input: unknown;
+  status: 'success' | 'error';
+  data?: unknown;
+  evidenceIds: string[];
+  error?: string;
+}
+
+export interface RealtimeBriefToolEvidencePacket {
+  items: RealtimeBriefToolEvidenceItem[];
+}
+
+export function createDefaultRealtimeBriefToolPolicies(): RealtimeBriefToolTriggerPolicy[] {
+  return [
+    {
+      id: 'caffeine-sleep-impact-on-possible-caffeine',
+      toolName: estimateCaffeineSleepImpactTool.name,
+      priority: 80,
+      reason: 'possible_caffeine_intake event should enrich realtime brief with estimated caffeine load at sleep time',
+      when(packet) {
+        if (packet.task.type !== 'homepage_summary') return false;
+        return (packet.homepage?.recentEvents ?? []).some((event) => event.type === 'possible_caffeine_intake');
+      },
+      buildInput() {
+        return {};
+      },
+    },
+  ];
+}
+
+export function createDefaultRealtimeBriefTools(): Map<string, ToolDefinition<unknown, unknown>> {
+  return new Map<string, ToolDefinition<unknown, unknown>>([
+    [estimateCaffeineSleepImpactTool.name, estimateCaffeineSleepImpactTool as ToolDefinition<unknown, unknown>],
+  ]);
+}
+
+export function buildRealtimeBriefToolInvocationPlan(
   packet: TaskContextPacket,
   context: AgentContext,
-): Promise<HomepageToolEvidence | undefined> {
-  if (packet.task.type !== 'homepage_summary') return undefined;
-  if (!shouldCollectCaffeineSleepImpact(packet)) return undefined;
+  policies: RealtimeBriefToolTriggerPolicy[] = createDefaultRealtimeBriefToolPolicies(),
+): RealtimeBriefToolInvocationPlan {
+  if (packet.task.type !== 'homepage_summary') {
+    return { invocations: [] };
+  }
 
-  const result = await estimateCaffeineSleepImpactTool.execute({}, { packet, context });
-  if (!result.success) return undefined;
-  if (!result.data.hasCaffeineEvent) return undefined;
+  const invocations = policies
+    .filter((policy) => policy.when(packet, context))
+    .map((policy) => ({
+      policyId: policy.id,
+      toolName: policy.toolName,
+      priority: policy.priority,
+      reason: policy.reason,
+      input: policy.buildInput(packet, context),
+    }))
+    .sort((a, b) => b.priority - a.priority);
 
-  return {
-    caffeineSleepImpact: result.data,
-  };
+  return { invocations };
 }
 
-export function appendHomepageToolEvidenceToPrompt(
+export async function executeRealtimeBriefToolPlan(
+  plan: RealtimeBriefToolInvocationPlan,
+  packet: TaskContextPacket,
+  context: AgentContext,
+  tools: Map<string, ToolDefinition<unknown, unknown>> = createDefaultRealtimeBriefTools(),
+  maxTools = 3,
+): Promise<RealtimeBriefToolEvidencePacket> {
+  const items: RealtimeBriefToolEvidenceItem[] = [];
+
+  for (const invocation of plan.invocations.slice(0, maxTools)) {
+    const tool = tools.get(invocation.toolName);
+    if (!tool) {
+      items.push({
+        ...invocation,
+        status: 'error',
+        evidenceIds: [],
+        error: `Tool not registered: ${invocation.toolName}`,
+      });
+      continue;
+    }
+
+    const parsedInput = tool.inputSchema.safeParse(invocation.input);
+    if (!parsedInput.success) {
+      items.push({
+        ...invocation,
+        status: 'error',
+        evidenceIds: [],
+        error: `Invalid input: ${parsedInput.error.errors.map((error) => `${error.path.join('.')}: ${error.message}`).join('; ')}`,
+      });
+      continue;
+    }
+
+    let result: ToolResult<unknown>;
+    try {
+      result = await tool.execute(parsedInput.data, { packet, context });
+    } catch (error) {
+      result = {
+        success: false,
+        error: {
+          code: 'realtime_brief_tool_execution_error',
+          message: error instanceof Error ? error.message : '实时简报工具执行失败',
+        },
+      };
+    }
+
+    if (result.success) {
+      items.push({
+        ...invocation,
+        status: 'success',
+        data: result.data,
+        evidenceIds: result.evidenceIds,
+      });
+    } else {
+      items.push({
+        ...invocation,
+        status: 'error',
+        evidenceIds: [],
+        error: result.error.message,
+      });
+    }
+  }
+
+  return { items };
+}
+
+export function appendRealtimeBriefToolEvidenceToPrompt(
   taskPrompt: string,
-  evidence: HomepageToolEvidence | undefined,
+  evidencePacket: RealtimeBriefToolEvidencePacket,
 ): string {
-  if (!evidence) return taskPrompt;
+  if (evidencePacket.items.length === 0) return taskPrompt;
 
-  const impact = evidence.caffeineSleepImpact;
-  const load = impact.estimatedCaffeineLoad;
-  const sleepImpact = impact.sleepImpact;
-  const advice = impact.advice;
+  const lines = [taskPrompt, '', '## 工具证据包'];
+  lines.push('以下结果来自实时简报 Tool Orchestrator。只能引用 status=success 的工具结果；不得编造未出现的工具结果。');
 
-  if (!load || !sleepImpact || !advice || !impact.event) return taskPrompt;
+  for (const item of evidencePacket.items) {
+    lines.push('');
+    lines.push(`### ${item.toolName}`);
+    lines.push(`- policyId: ${item.policyId}`);
+    lines.push(`- status: ${item.status}`);
+    lines.push(`- priority: ${item.priority}`);
+    lines.push(`- reason: ${item.reason}`);
+    if (item.evidenceIds.length > 0) {
+      lines.push(`- evidenceIds: ${item.evidenceIds.join(', ')}`);
+    }
 
-  const percent = Math.round(load.remainingRatioAtSleep * 100);
-  const lines = [taskPrompt, '', '## 已调用工具结果'];
-  lines.push('- 工具: estimateCaffeineSleepImpact');
-  lines.push(`- 事件: possible_caffeine_intake, start=${impact.event.start}, confidence=${Math.round(impact.event.confidence * 100)}%`);
-  lines.push(`- 估算咖啡因剩余比例: ${percent}%`);
-  lines.push(`- 估算依据: ${load.basis}, measuredChemically=${load.measuredChemically}`);
-  lines.push(`- 半衰期模型: halfLifeHours=${load.halfLifeHours}, hoursUntilSleep=${load.hoursUntilSleep}, eliminationRateK=${load.eliminationRateK}`);
-  lines.push(`- 睡眠影响等级: ${sleepImpact.riskLevel}`);
-  lines.push(`- 睡眠影响解释: ${sleepImpact.rationale}`);
-  lines.push(`- 支持型建议: ${advice.message}`);
-  lines.push('- 写作要求: 如果 summary 提到该结果，必须说“估算咖啡因剩余比例”或“估算体内咖啡因负荷”，并说明这不是血液化学实测。不得说确认摄入咖啡因、血液咖啡因浓度、一定失眠。');
+    if (item.status === 'success') {
+      lines.push(...renderSuccessfulToolEvidence(item.toolName, item.data));
+    } else {
+      lines.push(`- error: ${item.error ?? 'unknown tool error'}`);
+      lines.push('- 写作要求: 不要引用失败工具的结果。');
+    }
+  }
 
   return lines.join('\n');
 }
+
+function renderSuccessfulToolEvidence(toolName: string, data: unknown): string[] {
+  if (toolName === estimateCaffeineSleepImpactTool.name && isCaffeineSleepImpactOutput(data)) {
+    return renderCaffeineSleepImpact(data);
+  }
+
+  return [
+    `- data: ${JSON.stringify(data)}`,
+    '- 写作要求: 只引用 data 中明确存在的字段，不得补充工具未返回的数字。',
+  ];
+}
+
+function renderCaffeineSleepImpact(data: CaffeineSleepImpactOutput): string[] {
+  if (!data.hasCaffeineEvent || !data.event || !data.estimatedCaffeineLoad || !data.sleepImpact || !data.advice) {
+    return ['- 工具结果: 没有足够证据估算咖啡因对今晚睡眠的影响。'];
+  }
+
+  const load = data.estimatedCaffeineLoad;
+  const percent = Math.round(load.remainingRatioAtSleep * 100);
+  return [
+    `- 事件: possible_caffeine_intake, start=${data.event.start}, confidence=${Math.round(data.event.confidence * 100)}%`,
+    `- 估算咖啡因剩余比例: ${percent}%`,
+    `- 估算依据: ${load.basis}, measuredChemically=${load.measuredChemically}`,
+    `- 半衰期模型: halfLifeHours=${load.halfLifeHours}, hoursUntilSleep=${load.hoursUntilSleep}, eliminationRateK=${load.eliminationRateK}`,
+    `- 睡眠影响等级: ${data.sleepImpact.riskLevel}`,
+    `- 睡眠影响解释: ${data.sleepImpact.rationale}`,
+    `- 支持型建议: ${data.advice.message}`,
+    '- 写作要求: 如果 summary 提到该结果，必须说“估算咖啡因剩余比例”或“估算体内咖啡因负荷”，并说明这不是血液化学实测。不得说确认摄入咖啡因、血液咖啡因浓度、一定失眠。',
+  ];
+}
+
+function isCaffeineSleepImpactOutput(value: unknown): value is CaffeineSleepImpactOutput {
+  if (typeof value !== 'object' || value === null) return false;
+  return typeof (value as { hasCaffeineEvent?: unknown }).hasCaffeineEvent === 'boolean';
+}
 ```
 
-- [ ] **Step 2: Run collector tests**
+- [ ] **Step 2: Run orchestrator tests**
 
 Run:
 
 ```bash
-pnpm --filter @health-advisor/agent-core test -- src/runtime/__tests__/homepage-tool-evidence.test.ts
+pnpm --filter @health-advisor/agent-core test -- src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts
 ```
 
 Expected:
 
 ```text
-PASS  src/runtime/__tests__/homepage-tool-evidence.test.ts
+PASS  src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts
 ```
 
-- [ ] **Step 3: Commit collector implementation**
+- [ ] **Step 3: Commit orchestrator implementation**
 
 ```bash
-git add packages/agent-core/src/runtime/homepage-tool-evidence.ts packages/agent-core/src/runtime/__tests__/homepage-tool-evidence.test.ts
-git commit -m "feat(agent): collect homepage caffeine tool evidence"
+git add packages/agent-core/src/runtime/realtime-brief-tool-orchestrator.ts packages/agent-core/src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts
+git commit -m "feat(agent): orchestrate realtime brief tools"
 ```
 
-### Task 6: Wire Conditional Tool Collection Into Homepage Runtime
+### Task 6: Wire Realtime Brief Orchestrator Into Homepage Runtime
 
 **Files:**
 
@@ -849,14 +1073,14 @@ git commit -m "feat(agent): collect homepage caffeine tool evidence"
 
 **Task details:**
 
-After `TaskContextPacket` is built, collect homepage Tool evidence only for homepage summaries with caffeine events. Append the Tool section before invoking the model. No caffeine event means no Tool section in the prompt.
+After `TaskContextPacket` is built, run the orchestrator only for homepage summaries. The orchestrator decides which tools to invoke from event policies. With only the caffeine policy registered, `possible_caffeine_intake` produces one tool invocation; no matching event produces an empty plan and no prompt section.
 
 - [ ] **Step 1: Add failing runtime tests**
 
 Append these tests inside `describe('executeAgent', () => { ... })` in `packages/agent-core/src/__tests__/runtime/agent-runtime.test.ts`:
 
 ```ts
-  it('homepage summary appends caffeine sleep impact tool result when caffeine event exists', async () => {
+  it('homepage summary appends realtime tool evidence packet when caffeine event exists', async () => {
     const invokeMock = vi.fn(async () => ({
       content: JSON.stringify({
         summary: '林巅峰，检测到一次可能的咖啡因摄入响应，估算咖啡因剩余比例仍可能影响今晚睡眠。',
@@ -890,13 +1114,14 @@ Append these tests inside `describe('executeAgent', () => { ... })` in `packages
     );
 
     const userPrompt = (invokeMock.mock.calls as unknown as Array<Array<{ userPrompt: string }>>)[0]![0]!.userPrompt;
-    expect(userPrompt).toContain('## 已调用工具结果');
+    expect(userPrompt).toContain('## 工具证据包');
     expect(userPrompt).toContain('estimateCaffeineSleepImpact');
+    expect(userPrompt).toContain('policyId: caffeine-sleep-impact-on-possible-caffeine');
     expect(userPrompt).toContain('估算咖啡因剩余比例');
     expect(userPrompt).toContain('不是血液化学实测');
   });
 
-  it('homepage summary does not append caffeine tool result when no caffeine event exists', async () => {
+  it('homepage summary does not append realtime tool evidence packet when no trigger policy matches', async () => {
     const invokeMock = vi.fn(async () => ({
       content: JSON.stringify({
         summary: '整体状态良好。',
@@ -909,7 +1134,7 @@ Append these tests inside `describe('executeAgent', () => { ... })` in `packages
     await executeAgent(makeRequest(), deps);
 
     const userPrompt = (invokeMock.mock.calls as unknown as Array<Array<{ userPrompt: string }>>)[0]![0]!.userPrompt;
-    expect(userPrompt).not.toContain('## 已调用工具结果');
+    expect(userPrompt).not.toContain('## 工具证据包');
     expect(userPrompt).not.toContain('estimateCaffeineSleepImpact');
   });
 ```
@@ -926,7 +1151,7 @@ Expected:
 
 ```text
 FAIL  src/__tests__/runtime/agent-runtime.test.ts
-Expected userPrompt to contain "## 已调用工具结果"
+Expected userPrompt to contain "## 工具证据包"
 ```
 
 - [ ] **Step 3: Modify runtime imports**
@@ -935,12 +1160,13 @@ In `packages/agent-core/src/runtime/agent-runtime.ts`, add:
 
 ```ts
 import {
-  appendHomepageToolEvidenceToPrompt,
-  collectHomepageToolEvidence,
-} from './homepage-tool-evidence';
+  appendRealtimeBriefToolEvidenceToPrompt,
+  buildRealtimeBriefToolInvocationPlan,
+  executeRealtimeBriefToolPlan,
+} from './realtime-brief-tool-orchestrator';
 ```
 
-- [ ] **Step 4: Append homepage Tool evidence before model invocation**
+- [ ] **Step 4: Run the realtime brief orchestrator before model invocation**
 
 Find this block:
 
@@ -958,8 +1184,9 @@ Replace it with:
     let taskPrompt = buildTaskPrompt(context, deps.promptLoader, rulesResult, packet);
 
     if (request.taskType === AgentTaskType.HOMEPAGE_SUMMARY) {
-      const homepageToolEvidence = await collectHomepageToolEvidence(packet, context);
-      taskPrompt = appendHomepageToolEvidenceToPrompt(taskPrompt, homepageToolEvidence);
+      const realtimeToolPlan = buildRealtimeBriefToolInvocationPlan(packet, context);
+      const realtimeToolEvidence = await executeRealtimeBriefToolPlan(realtimeToolPlan, packet, context);
+      taskPrompt = appendRealtimeBriefToolEvidenceToPrompt(taskPrompt, realtimeToolEvidence);
     }
 ```
 
@@ -981,7 +1208,7 @@ PASS  src/__tests__/runtime/agent-runtime.test.ts
 
 ```bash
 git add packages/agent-core/src/runtime/agent-runtime.ts packages/agent-core/src/__tests__/runtime/agent-runtime.test.ts
-git commit -m "feat(agent): add caffeine sleep impact to homepage brief"
+git commit -m "feat(agent): run realtime brief tool orchestrator"
 ```
 
 ---
@@ -997,14 +1224,14 @@ git commit -m "feat(agent): add caffeine sleep impact to homepage brief"
 
 **Task details:**
 
-The Tool section gives the model structured numbers. The prompt must tell the model how to use them and how not to overclaim.
+The `## 工具证据包` section gives the model structured Tool outputs. The prompt must tell the model how to use those outputs and how not to overclaim.
 
 - [ ] **Step 1: Update `data/sandbox/prompts/homepage.md`**
 
 Under the existing `事件分析要求` list, after the caffeine/alcohol probability-language bullet, add:
 
 ```md
-- 如果上下文包含 `estimateCaffeineSleepImpact` 工具结果，必须优先使用工具返回的“估算咖啡因剩余比例”和睡眠影响等级来解释今晚睡眠影响；必须说明该结果来自戒指生理信号估算，不是血液化学实测；不得说“血液咖啡因浓度”或“确认摄入咖啡因”。
+- 如果上下文的 `## 工具证据包` 包含 `estimateCaffeineSleepImpact` 工具结果，必须优先使用工具返回的“估算咖啡因剩余比例”和睡眠影响等级来解释今晚睡眠影响；必须说明该结果来自戒指生理信号估算，不是血液化学实测；不得说“血液咖啡因浓度”或“确认摄入咖啡因”。
 - 如果上下文没有 `estimateCaffeineSleepImpact` 工具结果，不得自行编造咖啡因半衰期、剩余比例、睡眠损失比例或具体提醒时间。
 ```
 
@@ -1013,7 +1240,7 @@ Under the existing `事件分析要求` list, after the caffeine/alcohol probabi
 Under the existing `数据引用规则` list, after the caffeine/alcohol probability-language bullet, add:
 
 ```md
-- 如果上下文包含 `estimateCaffeineSleepImpact` 工具结果，必须优先使用工具返回的“估算咖啡因剩余比例”和睡眠影响等级来解释今晚睡眠影响；必须说明该结果来自戒指生理信号估算，不是血液化学实测；不得说“血液咖啡因浓度”或“确认摄入咖啡因”。
+- 如果上下文的 `## 工具证据包` 包含 `estimateCaffeineSleepImpact` 工具结果，必须优先使用工具返回的“估算咖啡因剩余比例”和睡眠影响等级来解释今晚睡眠影响；必须说明该结果来自戒指生理信号估算，不是血液化学实测；不得说“血液咖啡因浓度”或“确认摄入咖啡因”。
 - 如果上下文没有 `estimateCaffeineSleepImpact` 工具结果，不得自行编造咖啡因半衰期、剩余比例、睡眠损失比例或具体提醒时间。
 ```
 
@@ -1043,65 +1270,129 @@ git commit -m "docs(prompts): guide caffeine sleep impact brief"
 
 ## Module 4: Integration And Regression Coverage
 
-### Task 8: Add Runtime Integration Coverage For No-Call Behavior
+### Task 8: Add Orchestrator Regression Coverage
 
 **Files:**
 
-- Modify: `packages/agent-core/src/runtime/__tests__/homepage-tool-evidence.test.ts`
+- Modify: `packages/agent-core/src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts`
 - Modify: `packages/agent-core/src/__tests__/runtime/agent-runtime.test.ts`
 
 **Task details:**
 
-The most important failure mode is mentioning caffeine impact without a caffeine event. Strengthen tests around the conditional boundary.
+The important production failure modes are:
 
-- [ ] **Step 1: Add a non-caffeine event collector test**
+- A non-caffeine event should not trigger the caffeine Tool.
+- A missing Tool registration should produce an error evidence item, not crash the brief.
+- The orchestrator should respect `maxTools` so future event/tool growth does not explode prompt size or latency.
+- Runtime should still call the final homepage LLM even when the orchestrator has no matching tools.
 
-Append this test to `packages/agent-core/src/runtime/__tests__/homepage-tool-evidence.test.ts`:
+- [ ] **Step 1: Add alcohol-only no-call regression test**
+
+Append this test to `packages/agent-core/src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts`:
 
 ```ts
-  it('does not collect caffeine sleep impact for alcohol-only probabilistic event', async () => {
+  it('does not plan caffeine sleep impact for alcohol-only probabilistic event', () => {
     const packet = makePacket([makeEvent('possible_alcohol_intake')]);
+    const plan = buildRealtimeBriefToolInvocationPlan(packet, makeContext());
 
-    expect(shouldCollectCaffeineSleepImpact(packet)).toBe(false);
-    await expect(collectHomepageToolEvidence(packet, makeContext())).resolves.toBeUndefined();
+    expect(plan.invocations).toEqual([]);
   });
 ```
 
-- [ ] **Step 2: Add an advisor-chat non-homepage collector test**
+- [ ] **Step 2: Add missing Tool registration regression test**
 
 Append this test to the same file:
 
 ```ts
-  it('does not collect caffeine sleep impact outside homepage_summary task', async () => {
-    const packet = {
-      ...makePacket([makeEvent('possible_caffeine_intake')]),
-      task: { type: 'advisor_chat', page: 'advisor', userMessage: '今晚睡眠会受影响吗' },
+  it('records an error evidence item when a planned tool is not registered', async () => {
+    const missingToolPolicy: RealtimeBriefToolTriggerPolicy = {
+      id: 'missing-tool-policy',
+      toolName: 'missingTool',
+      priority: 90,
+      reason: 'exercise event maps to a tool that is not registered',
+      when: (packet) => (packet.homepage?.recentEvents ?? []).some((event) => event.type === 'exercise'),
+      buildInput: () => ({ eventType: 'exercise' }),
     };
+    const packet = makePacket([makeEvent('exercise')]);
+    const plan = buildRealtimeBriefToolInvocationPlan(packet, makeContext(), [missingToolPolicy]);
 
-    await expect(collectHomepageToolEvidence(packet, makeContext())).resolves.toBeUndefined();
+    const evidence = await executeRealtimeBriefToolPlan(plan, packet, makeContext(), new Map());
+
+    expect(evidence.items).toHaveLength(1);
+    expect(evidence.items[0]).toMatchObject({
+      toolName: 'missingTool',
+      status: 'error',
+      error: 'Tool not registered: missingTool',
+    });
   });
 ```
 
-- [ ] **Step 3: Run focused regression tests**
+- [ ] **Step 3: Add `maxTools` regression test**
+
+Append this test to the same file:
+
+```ts
+  it('limits executed tools by maxTools while preserving priority order', async () => {
+    const makePolicy = (id: string, toolName: string, priority: number): RealtimeBriefToolTriggerPolicy => ({
+      id,
+      toolName,
+      priority,
+      reason: `${toolName} matched`,
+      when: () => true,
+      buildInput: () => ({}),
+    });
+    const EmptyInputSchema = z.object({});
+    type EmptyInput = z.infer<typeof EmptyInputSchema>;
+    const makeTool = (name: string): ToolDefinition<EmptyInput, { name: string }> => ({
+      name,
+      description: `${name} test tool`,
+      inputSchema: EmptyInputSchema,
+      outputSchema: z.object({ name: z.string() }),
+      async execute(): Promise<ToolResult<{ name: string }>> {
+        return { success: true, data: { name }, evidenceIds: [name] };
+      },
+    });
+    const policies = [
+      makePolicy('p-low', 'toolLow', 10),
+      makePolicy('p-high', 'toolHigh', 90),
+      makePolicy('p-mid', 'toolMid', 50),
+    ];
+    const tools = new Map<string, ToolDefinition<unknown, unknown>>(
+      ['toolLow', 'toolHigh', 'toolMid'].map((name) => [
+        name,
+        makeTool(name) as ToolDefinition<unknown, unknown>,
+      ]),
+    );
+    const packet = makePacket([makeEvent('exercise')]);
+    const plan = buildRealtimeBriefToolInvocationPlan(packet, makeContext(), policies);
+
+    const evidence = await executeRealtimeBriefToolPlan(plan, packet, makeContext(), tools, 2);
+
+    expect(plan.invocations.map((invocation) => invocation.toolName)).toEqual(['toolHigh', 'toolMid', 'toolLow']);
+    expect(evidence.items.map((item) => item.toolName)).toEqual(['toolHigh', 'toolMid']);
+  });
+```
+
+- [ ] **Step 4: Run focused regression tests**
 
 Run:
 
 ```bash
-pnpm --filter @health-advisor/agent-core test -- src/runtime/__tests__/homepage-tool-evidence.test.ts src/__tests__/runtime/agent-runtime.test.ts
+pnpm --filter @health-advisor/agent-core test -- src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts src/__tests__/runtime/agent-runtime.test.ts
 ```
 
 Expected:
 
 ```text
-PASS  src/runtime/__tests__/homepage-tool-evidence.test.ts
+PASS  src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts
 PASS  src/__tests__/runtime/agent-runtime.test.ts
 ```
 
-- [ ] **Step 4: Commit regression coverage**
+- [ ] **Step 5: Commit regression coverage**
 
 ```bash
-git add packages/agent-core/src/runtime/__tests__/homepage-tool-evidence.test.ts packages/agent-core/src/__tests__/runtime/agent-runtime.test.ts
-git commit -m "test(agent): cover caffeine tool conditional brief flow"
+git add packages/agent-core/src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts packages/agent-core/src/__tests__/runtime/agent-runtime.test.ts
+git commit -m "test(agent): cover realtime brief tool orchestration"
 ```
 
 ### Task 9: Run Final Verification
@@ -1117,14 +1408,14 @@ Run the focused suites first, then typecheck both packages touched by the work.
 - [ ] **Step 1: Run Tool and runtime tests**
 
 ```bash
-pnpm --filter @health-advisor/agent-core test -- src/tools/__tests__/estimate-caffeine-sleep-impact.test.ts src/runtime/__tests__/homepage-tool-evidence.test.ts src/__tests__/runtime/agent-runtime.test.ts
+pnpm --filter @health-advisor/agent-core test -- src/tools/__tests__/estimate-caffeine-sleep-impact.test.ts src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts src/__tests__/runtime/agent-runtime.test.ts
 ```
 
 Expected:
 
 ```text
 PASS  src/tools/__tests__/estimate-caffeine-sleep-impact.test.ts
-PASS  src/runtime/__tests__/homepage-tool-evidence.test.ts
+PASS  src/runtime/__tests__/realtime-brief-tool-orchestrator.test.ts
 PASS  src/__tests__/runtime/agent-runtime.test.ts
 ```
 
@@ -1180,16 +1471,20 @@ git commit -m "fix(agent): stabilize caffeine sleep impact flow"
 - `estimateCaffeineSleepImpactTool` exists and conforms to the approved output contract.
 - Tool output includes `basis: 'physiological_proxy'` and `measuredChemically: false`.
 - Tool returns `hasCaffeineEvent: false` when no eligible `possible_caffeine_intake` exists.
-- Homepage summary runtime calls the Tool only when `packet.homepage.recentEvents` contains `possible_caffeine_intake`.
-- Homepage prompt includes the Tool result section only after the Tool is actually called.
-- Homepage prompt contains no caffeine sleep-impact Tool section when no caffeine event exists.
+- `RealtimeBriefToolOrchestrator` builds a `ToolInvocationPlan` from trigger policies rather than hard-coded runtime conditionals.
+- Homepage summary runtime executes the orchestrator only for `HOMEPAGE_SUMMARY`.
+- Default caffeine policy calls the Tool only when `packet.homepage.recentEvents` contains `possible_caffeine_intake`.
+- Homepage prompt includes a `## 工具证据包` section only when at least one Tool produced evidence.
+- Homepage prompt contains no caffeine sleep-impact Tool section when no trigger policy matches.
+- New event/tool policies can be tested by passing policy and tool registries into the orchestrator without modifying `agent-runtime.ts`.
 - Homepage prompt rules prevent the LLM from inventing half-life, remaining ratio, blood concentration, or sleep-loss percentage.
 - ReAct Tool registry includes the Tool for future Agent Tool access.
 - Focused Tool, runtime, and typecheck commands pass.
 
 ## Implementation Notes
 
-- Keep homepage conditional Tool collection deterministic. Do not ask the LLM whether it should call this Tool for homepage summaries.
+- Keep realtime brief Tool orchestration deterministic and policy-driven. Do not ask the LLM whether it should call Tools for homepage summaries.
+- Treat `RealtimeBriefToolOrchestrator` as production-facing infrastructure, not a caffeine-only helper. Future event tools should be added by registering policies and tools, not by adding `if` branches in `agent-runtime.ts`.
 - Do not expand `AnalysisPlan.MetricType` in this implementation. The homepage path does not use planner/ReAct, and expanding planner metrics would increase blast radius.
 - Do not merge multiple caffeine events in this implementation. The approved spec selects the latest eligible event before target sleep time.
 - Do not add manual caffeine intake input. The approved Demo scope uses only existing `possible_caffeine_intake`.
