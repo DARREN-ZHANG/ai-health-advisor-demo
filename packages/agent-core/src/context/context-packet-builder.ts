@@ -283,17 +283,21 @@ function buildRecentEvents(
   // Add injected events
   if (context.signals.events.length > 0) {
     for (let i = 0; i < context.signals.events.length; i++) {
-      const evText = context.signals.events[i];
+      const evText = context.signals.events[i]!;
+      // 解析 "date | eventType" 格式，提取时间戳供权重计算
+      const separatorIdx = evText.indexOf(' | ');
+      const eventDate = separatorIdx > 0 ? evText.slice(0, separatorIdx) : '';
+      const eventType = separatorIdx > 0 ? evText.slice(separatorIdx + 3) : evText;
       const evidenceId = `injected_event_${i}`;
       evidence.add({
         id: evidenceId,
         source: 'rules',
-        derivation: `injected event: ${evText}`,
+        derivation: `injected event: ${eventType}`,
       });
       events.push({
-        type: evText!,
-        start: '',
-        end: '',
+        type: eventType,
+        start: eventDate,
+        end: eventDate,
         durationMin: 0,
         confidence: 1,
         syncState: {

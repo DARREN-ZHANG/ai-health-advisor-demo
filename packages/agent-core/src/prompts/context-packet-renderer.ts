@@ -88,8 +88,8 @@ function renderUserContext(user: UserContextPacket, locale: Locale): string {
   lines.push(`- ${t(locale, '静息心率通常水平', 'Resting HR usual level')}${c}${user.baselines.restingHR} bpm`);
   lines.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}${c}${user.baselines.hrv} ms`);
   lines.push(`- ${t(locale, 'SpO2 参考水平', 'SpO2 reference level')}${c}${user.baselines.spo2}%`);
-  lines.push(`- ${t(locale, '平均睡眠', 'Average sleep')}${c}${user.baselines.avgSleepMinutes} ${t(locale, '分钟', 'minutes')}`);
-  lines.push(`- ${t(locale, '平均步数', 'Average steps')}${c}${user.baselines.avgSteps} ${t(locale, '步', 'steps')}`);
+  lines.push(`- ${t(locale, '平均睡眠', 'Average sleep')}${c}${user.baselines.avgSleepMinutes} min`);
+  lines.push(`- ${t(locale, '平均步数', 'Average steps')}${c}${user.baselines.avgSteps} steps`);
   return lines.join('\n');
 }
 
@@ -187,7 +187,7 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale, demoNow
         // 计算时间权重标签
         const weightLabel = demoNow ? computeWeightLabel(ev.start, demoNow, locale) : '';
         const weightPrefix = weightLabel ? `${weightLabel} ` : '';
-        lines.push(`- ${weightPrefix}[${ev.type}] ${t(locale, '开始', 'start')}${c}${ev.start}, ${t(locale, '持续', 'duration')}${c}${ev.durationMin} ${t(locale, '分钟', 'min')}, ${t(locale, '置信度', 'confidence')}${c}${Math.round(ev.confidence * 100)}%`);
+        lines.push(`- ${weightPrefix}[${ev.type}] ${t(locale, '开始', 'start')}${c}${ev.start}, ${t(locale, '持续', 'duration')}${c}${ev.durationMin} min, ${t(locale, '置信度', 'confidence')}${c}${Math.round(ev.confidence * 100)}%`);
       } else {
         lines.push(`- [${ev.type}] ${ev.type}`);
       }
@@ -387,7 +387,9 @@ function getChartTokenForTab(tab: DataTab): ChartTokenId | undefined {
 
 /** 计算事件距当前时间的时间差并返回权重标签 */
 function computeWeightLabel(eventStart: string, demoNow: string, locale: Locale): string {
-  const eventMs = new Date(`${eventStart}:00`).getTime();
+  // 兼容 YYYY-MM-DDTHH:mm 和完整 ISO 格式
+  const normalizedStart = eventStart.length <= 16 ? `${eventStart}:00` : eventStart;
+  const eventMs = new Date(normalizedStart).getTime();
   const nowMs = new Date(`${demoNow}:00`).getTime();
   const diffMin = Math.round((nowMs - eventMs) / 60000);
 
@@ -398,8 +400,8 @@ function computeWeightLabel(eventStart: string, demoNow: string, locale: Locale)
 
   // 格式化时间差
   const diffLabel = diffMin < 60
-    ? t(locale, `距当前${diffMin}分钟`, `${diffMin}min ago`)
-    : t(locale, `距当前${Math.floor(diffMin / 60)}小时${diffMin % 60 > 0 ? `${diffMin % 60}分钟` : ''}`, `${Math.floor(diffMin / 60)}h${diffMin % 60 > 0 ? `${diffMin % 60}m` : ''} ago`);
+    ? `${diffMin} min ago`
+    : `${Math.floor(diffMin / 60)}h${diffMin % 60 > 0 ? `${diffMin % 60}m` : ''} ago`;
 
   if (diffMin <= 30) {
     return `[${t(locale, '权重:高', 'weight:high')}|${diffLabel}]`;

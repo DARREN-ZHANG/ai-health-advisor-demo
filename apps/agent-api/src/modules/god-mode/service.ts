@@ -99,33 +99,35 @@ export class GodModeService {
     options?: { durationMinutes?: number; advanceClock?: boolean },
   ): GodModeStateResponse {
     const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
-    this.registry.overrideStore.appendSegment(currentProfileId, segmentType, params, offsetMinutes, options);
+
+    // 注入 profile 基线到 params，使生成器能基于用户实际生理特征生成数据
+    const profile = this.registry.getRawProfile(currentProfileId);
+    const baseline = profile.profile?.dailyBaseline ?? profile.profile?.weeklyBaseline ?? profile.profile?.baseline;
+    const enrichedParams = {
+      ...params,
+      ...(baseline ? { _baselineRestingHr: baseline.restingHr, _baselineHrv: baseline.hrv, _baselineSpo2: baseline.spo2 } : {}),
+    };
+
+    const appendResult = this.registry.overrideStore.appendSegment(currentProfileId, segmentType, enrichedParams, offsetMinutes, options);
 
     // 同步注入 Active Sensing 事件，使 deriveActiveSensing 能反映最新操作
+    // 使用 segment 的真实 mock 时间（从 timeline-append 计算，不受 advanceClock 影响）
     const bannerEventType = GodModeService.TIMELINE_TO_BANNER_EVENT[segmentType];
     if (bannerEventType) {
       this.registry.overrideStore.injectEvent(currentProfileId, {
-        date: new Date().toISOString(),
+        date: appendResult.segmentStart,
         type: bannerEventType,
-        data: { source: segmentType, ...(params ?? {}) },
+        data: { source: segmentType, segmentStart: appendResult.segmentStart, segmentEnd: appendResult.segmentEnd, ...(params ?? {}) },
       });
     } else {
       // 非白名单事件也要注入，用于"覆盖"之前的状态
       this.registry.overrideStore.injectEvent(currentProfileId, {
-        date: new Date().toISOString(),
+        date: appendResult.segmentStart,
         type: segmentType,
-        data: params ?? {},
+        data: { ...(params ?? {}) },
       });
     }
 
-    this.invalidateSessionAnalytical(sessionId);
-    return this.getStateForProfile(currentProfileId);
-  }
-
-  /** 触发同步 */
-  triggerSync(trigger: 'app_open' | 'manual_refresh', sessionId?: string): GodModeStateResponse {
-    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
-    this.registry.overrideStore.performSync(currentProfileId, trigger);
     this.invalidateSessionAnalytical(sessionId);
     return this.getStateForProfile(currentProfileId);
   }
@@ -140,6 +142,8 @@ export class GodModeService {
   /** 重置时间轴 */
   resetProfileTimeline(profileId: string, sessionId?: string): GodModeStateResponse {
     this.registry.overrideStore.resetProfileTimeline(profileId);
+    // 重置后自动同步 baseline 事件
+    this.registry.overrideStore.performSync(profileId, 'manual_refresh');
     this.invalidateSessionAnalytical(sessionId);
     return this.getState();
   }

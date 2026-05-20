@@ -53,7 +53,7 @@ export function buildAgentContext(
     overallStatus: computeDefaultStatus(lowData, missingFields),
     anomalies: [],
     trends: [],
-    events: mergedEvents.map((e) => `${e.date}: ${e.type}`),
+    events: mergedEvents.map((e) => `${e.date} | ${e.type}`),
     lowData,
   };
 

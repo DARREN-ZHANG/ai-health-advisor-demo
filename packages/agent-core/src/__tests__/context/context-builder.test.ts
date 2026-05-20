@@ -107,7 +107,7 @@ describe('buildAgentContext', () => {
       { date: '2026-04-08', type: 'late_night', data: {} },
     ];
     const ctx = buildAgentContext(makeRequest(), deps, '2026-04-10');
-    expect(ctx.signals.events).toContain('2026-04-08: late_night');
+    expect(ctx.signals.events).toContain('2026-04-08 | late_night');
   });
 
   it('populates memory from stores', () => {

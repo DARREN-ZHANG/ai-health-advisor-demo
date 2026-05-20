@@ -69,7 +69,7 @@ export interface OverrideStoreService {
     params?: Record<string, number | string | boolean>,
     offsetMinutes?: number,
     options?: { durationMinutes?: number; advanceClock?: boolean },
-  ): { events: DeviceEvent[]; newCurrentTime: string };
+  ): { events: DeviceEvent[]; newCurrentTime: string; segmentStart: string; segmentEnd: string };
 
   // — 同步操作 —
   getSyncState(profileId: string): { lastSyncedMeasuredAt: string | null; syncSessions: SyncSession[] };
@@ -191,14 +191,14 @@ export function createOverrideStore(
       return [...ensureDemoState(profileId).segments];
     },
 
-    // — 追加片段 —
+    // — 追加片段（自动同步） —
     appendSegment(
       profileId: string,
       segmentType: ActivitySegmentType,
       params?: Record<string, number | string | boolean>,
       offsetMinutes?: number,
       options?: { durationMinutes?: number; advanceClock?: boolean },
-    ): { events: DeviceEvent[]; newCurrentTime: string } {
+    ): { events: DeviceEvent[]; newCurrentTime: string; segmentStart: string; segmentEnd: string } {
       const state = ensureDemoState(profileId);
       const result = appendSegment(
         state.segments,
@@ -210,17 +210,39 @@ export function createOverrideStore(
         options,
       );
 
-      // 将新事件追加到 rawEvents，保留已有水位线
       // 仅在 advanceClock 为 true 时推进时钟
       const advanceClock = options?.advanceClock !== false;
-      demoStateByProfile.set(profileId, {
+      const updatedState: DemoProfileState = {
         ...state,
         segments: result.segments,
         rawEvents: [...state.rawEvents, ...result.events],
         ...(advanceClock ? { clock: { ...state.clock, currentTime: result.newCurrentTime } } : {}),
+      };
+
+      // 自动同步：追加片段后立即执行同步，消除 pending 状态
+      const internalSync = rebuildSyncState(updatedState);
+      const { state: newSync } = sandboxPerformSync(
+        internalSync,
+        'app_open',
+        updatedState.clock.currentTime,
+      );
+
+      demoStateByProfile.set(profileId, {
+        ...updatedState,
+        syncState: {
+          lastSyncedMeasuredAt: newSync.lastSyncedMeasuredAt,
+          syncSessions: [...newSync.syncSessions],
+        },
       });
 
-      return { events: [...result.events], newCurrentTime: result.newCurrentTime };
+      // 从 segments 数组提取新 segment 的真实时间范围（不受 advanceClock 影响）
+      const newSegment = result.segments[result.segments.length - 1];
+      return {
+        events: [...result.events],
+        newCurrentTime: result.newCurrentTime,
+        segmentStart: newSegment!.start,
+        segmentEnd: newSegment!.end,
+      };
     },
 
     // — 同步操作 —
