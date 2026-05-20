@@ -177,4 +177,73 @@ describe('realtime-brief-tool-orchestrator', () => {
       evidenceIds: ['event-exercise'],
     });
   });
+
+  it('does not plan caffeine sleep impact for alcohol-only probabilistic event', () => {
+    const packet = makePacket([makeEvent('possible_alcohol_intake')]);
+    const plan = buildRealtimeBriefToolInvocationPlan(packet, makeContext());
+
+    expect(plan.invocations).toEqual([]);
+  });
+
+  it('records an error evidence item when a planned tool is not registered', async () => {
+    const missingToolPolicy: RealtimeBriefToolTriggerPolicy = {
+      id: 'missing-tool-policy',
+      toolName: 'missingTool',
+      priority: 90,
+      reason: 'exercise event maps to a tool that is not registered',
+      when: (packet) => (packet.homepage?.recentEvents ?? []).some((event) => event.type === 'exercise'),
+      buildInput: () => ({ eventType: 'exercise' }),
+    };
+    const packet = makePacket([makeEvent('exercise')]);
+    const plan = buildRealtimeBriefToolInvocationPlan(packet, makeContext(), [missingToolPolicy]);
+
+    const evidence = await executeRealtimeBriefToolPlan(plan, packet, makeContext(), new Map());
+
+    expect(evidence.items).toHaveLength(1);
+    expect(evidence.items[0]).toMatchObject({
+      toolName: 'missingTool',
+      status: 'error',
+      error: 'Tool not registered: missingTool',
+    });
+  });
+
+  it('limits executed tools by maxTools while preserving priority order', async () => {
+    const makePolicy = (id: string, toolName: string, priority: number): RealtimeBriefToolTriggerPolicy => ({
+      id,
+      toolName,
+      priority,
+      reason: `${toolName} matched`,
+      when: () => true,
+      buildInput: () => ({}),
+    });
+    const EmptyInputSchema = z.object({});
+    type EmptyInput = z.infer<typeof EmptyInputSchema>;
+    const makeTool = (name: string): ToolDefinition<EmptyInput, { name: string }> => ({
+      name,
+      description: `${name} test tool`,
+      inputSchema: EmptyInputSchema,
+      outputSchema: z.object({ name: z.string() }),
+      async execute(): Promise<ToolResult<{ name: string }>> {
+        return { success: true, data: { name }, evidenceIds: [name] };
+      },
+    });
+    const policies = [
+      makePolicy('p-low', 'toolLow', 10),
+      makePolicy('p-high', 'toolHigh', 90),
+      makePolicy('p-mid', 'toolMid', 50),
+    ];
+    const tools = new Map<string, ToolDefinition<unknown, unknown>>(
+      ['toolLow', 'toolHigh', 'toolMid'].map((name) => [
+        name,
+        makeTool(name) as ToolDefinition<unknown, unknown>,
+      ]),
+    );
+    const packet = makePacket([makeEvent('exercise')]);
+    const plan = buildRealtimeBriefToolInvocationPlan(packet, makeContext(), policies);
+
+    const evidence = await executeRealtimeBriefToolPlan(plan, packet, makeContext(), tools, 2);
+
+    expect(plan.invocations.map((invocation) => invocation.toolName)).toEqual(['toolHigh', 'toolMid', 'toolLow']);
+    expect(evidence.items.map((item) => item.toolName)).toEqual(['toolHigh', 'toolMid']);
+  });
 });
