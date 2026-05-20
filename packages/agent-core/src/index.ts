@@ -196,6 +196,8 @@ export { queryMetricSummaryTool } from './tools/query-metric-summary';
 export { queryVisibleChartFactsTool } from './tools/query-visible-chart-facts';
 export { queryMissingDataTool } from './tools/query-missing-data';
 export { queryTimelineEventsTool } from './tools/query-timeline-events';
+export { estimateCaffeineSleepImpactTool } from './tools/estimate-caffeine-sleep-impact';
+export type { CaffeineSleepImpactInput, CaffeineSleepImpactOutput } from './tools/estimate-caffeine-sleep-impact';
 
 // Evidence Resolver (P2)
 export { resolveEvidenceByPlan } from './planner/evidence-resolver';

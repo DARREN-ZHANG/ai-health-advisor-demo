@@ -43,6 +43,11 @@ import type { EvidenceResolutionResult } from '../planner/evidence-resolver';
 import { runConstrainedReAct } from '../executor/react-loop';
 import type { ReActLoopDeps, ReActLoopResult } from '../executor/react-loop';
 import type { ReActStep } from '../tools/tool-types';
+import {
+  appendRealtimeBriefToolEvidenceToPrompt,
+  buildRealtimeBriefToolInvocationPlan,
+  executeRealtimeBriefToolPlan,
+} from './realtime-brief-tool-orchestrator';
 
 export interface AgentRuntimeDeps extends ContextBuilderDeps {
   agent: HealthAgent;
@@ -252,6 +257,12 @@ export async function executeAgent(
     // 5. 构建 prompts（传入 packet）
     const systemPrompt = buildSystemPrompt(context, deps.promptLoader, packet.missingData);
     let taskPrompt = buildTaskPrompt(context, deps.promptLoader, rulesResult, packet);
+
+    if (request.taskType === AgentTaskType.HOMEPAGE_SUMMARY) {
+      const realtimeToolPlan = buildRealtimeBriefToolInvocationPlan(packet, context);
+      const realtimeToolEvidence = await executeRealtimeBriefToolPlan(realtimeToolPlan, packet, context);
+      taskPrompt = appendRealtimeBriefToolEvidenceToPrompt(taskPrompt, realtimeToolEvidence);
+    }
 
     // P1: 如有 plan，将 plan 上下文追加到 task prompt
     if (analysisPlan) {

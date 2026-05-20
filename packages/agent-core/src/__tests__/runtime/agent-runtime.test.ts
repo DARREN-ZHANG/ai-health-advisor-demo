@@ -264,6 +264,64 @@ describe('executeAgent', () => {
     const memory = deps.analyticalMemory.get('sess-1');
     expect(memory?.latestViewSummaryByScope?.['hrv:week']).toBeTruthy();
   });
+
+  it('homepage summary appends realtime tool evidence packet when caffeine event exists', async () => {
+    const invokeMock = vi.fn(async () => ({
+      content: JSON.stringify({
+        summary: '林巅峰，检测到一次可能的咖啡因摄入响应，估算咖啡因剩余比例仍可能影响今晚睡眠。',
+        chartTokens: [ChartTokenId.HRV_7DAYS],
+        microTips: [],
+      }),
+    }));
+    const deps = makeDeps({ invoke: invokeMock });
+
+    await executeAgent(
+      makeRequest(),
+      deps,
+      5_000,
+      {
+        onPacketBuilt(packet) {
+          packet.homepage!.recentEvents.push({
+            type: 'possible_caffeine_intake',
+            start: '2026-04-24T16:00',
+            end: '2026-04-24T18:00',
+            durationMin: 120,
+            confidence: 0.84,
+            syncState: {
+              lastSyncedMeasuredAt: '2026-04-24T18:00',
+              pendingEventCount: 0,
+              fromSyncedWindow: true,
+            },
+            evidenceIds: ['event-caffeine-runtime'],
+          });
+        },
+      },
+    );
+
+    const userPrompt = (invokeMock.mock.calls as unknown as Array<Array<{ userPrompt: string }>>)[0]![0]!.userPrompt;
+    expect(userPrompt).toContain('## 工具证据包');
+    expect(userPrompt).toContain('estimateCaffeineSleepImpact');
+    expect(userPrompt).toContain('policyId: caffeine-sleep-impact-on-possible-caffeine');
+    expect(userPrompt).toContain('估算咖啡因剩余比例');
+    expect(userPrompt).toContain('不是血液化学实测');
+  });
+
+  it('homepage summary does not append realtime tool evidence packet when no trigger policy matches', async () => {
+    const invokeMock = vi.fn(async () => ({
+      content: JSON.stringify({
+        summary: '整体状态良好。',
+        chartTokens: [ChartTokenId.HRV_7DAYS],
+        microTips: [],
+      }),
+    }));
+    const deps = makeDeps({ invoke: invokeMock });
+
+    await executeAgent(makeRequest(), deps);
+
+    const userPrompt = (invokeMock.mock.calls as unknown as Array<Array<{ userPrompt: string }>>)[0]![0]!.userPrompt;
+    expect(userPrompt).not.toContain('## 工具证据包');
+    expect(userPrompt).not.toContain('estimateCaffeineSleepImpact');
+  });
 });
 
 function makeDepsFromRecords(
