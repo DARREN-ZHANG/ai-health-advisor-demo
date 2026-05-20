@@ -152,10 +152,7 @@
     "timelineControl": "Timeline Control",
     "quickActions": "Quick Actions",
     "currentTime": "Current Time",
-    "pending": "Pending",
-    "lastSync": "Last Sync",
-    "neverSynced": "Never synced",
-    "sync": "Sync",
+    "eventCount": "Events",
     "reset": "Reset",
     "hint": "Hint: Timeline Control operations will trigger full-pipeline data revalidation in real time.",
     "segments": {
@@ -165,11 +162,13 @@
       "intermittentExercise": "HIIT",
       "walk": "Walk",
       "sleep": "Sleep",
+      "nap": "Nap",
       "deepFocus": "Focus",
       "anxietyEpisode": "Anxiety",
       "alcoholIntake": "Alcohol",
       "caffeineIntake": "Caffeine",
-      "relaxation": "Relax"
+      "relaxation": "Relax",
+      "strengthTraining": "Strength"
     },
     "segmentsHelp": {
       "mealIntake": "HR 65→85 gradual rise then fall, minimal steps, stable SpO2. ~20 min, sampled every minute.",
@@ -178,11 +177,13 @@
       "intermittentExercise": "HR alternates between 120-180 (active) and 65-95 (rest), intermittent step bursts. ~30 min.",
       "walk": "HR 85-125 moderate, steps accumulate steadily (60-130/min), stable SpO2. ~30 min.",
       "sleep": "HR 49-68 varies by sleep stage (light→deep→REM), zero steps. ~8 hours, includes sleep stage markers.",
+      "nap": "HR 52-62 low, mostly light sleep with some deep sleep, zero steps. ~1 hour, helps recovery.",
       "deepFocus": "HR 50-66 low and stable, zero steps, minimal motion, stable SpO2. ~2 hours.",
       "anxietyEpisode": "HR sinusoidal spike peaking at midpoint, restless body motion. ~30 min, sampled every minute.",
       "alcoholIntake": "HR gradually +4~15, HRV drops, stress load rises, peaks at 40-80 min. ~3 hours, sampled every 5 min.",
       "caffeineIntake": "HR gradually +8~25, HRV drops 15~45%, stress load rises, peaks at 45-75 min. ~4 hours, sampled every 5 min.",
-      "relaxation": "HR 47-57 low and relaxed, zero steps, SpO2 slightly elevated. ~30 min, sampled every minute."
+      "relaxation": "HR 47-57 low and relaxed, zero steps, SpO2 slightly elevated. ~30 min, sampled every minute.",
+      "strengthTraining": "HR alternates between 120-160 (set) and 78-102 (rest), minimal steps (0-3/min), SpO2 dips during sets. ~30 min."
     },
     "profile": {
       "cloneNew": "+ Clone New",

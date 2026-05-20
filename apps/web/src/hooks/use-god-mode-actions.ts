@@ -103,22 +103,6 @@ export function useGodModeActions() {
   });
 
   /**
-   * GM-TL2: 触发同步
-   */
-  const triggerSyncMutation = useMutation({
-    mutationFn: async (trigger: 'app_open' | 'manual_refresh') => {
-      return apiClient.post<GodModeStateResponse>('/god-mode/sync-trigger', { trigger });
-    },
-    onSuccess: (state) => {
-      setProfileId(state.currentProfileId);
-      syncActiveSensingBanner(state.activeSensing);
-      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
-    },
-  });
-
-  /**
    * GM-TL3: 推进时钟
    */
   const advanceClockMutation = useMutation({
@@ -155,8 +139,7 @@ export function useGodModeActions() {
     isInjectingEvent: injectEventMutation.isPending,
     appendTimeline: appendTimelineMutation.mutateAsync,
     isAppendingTimeline: appendTimelineMutation.isPending,
-    triggerSync: triggerSyncMutation.mutateAsync,
-    isTriggeringSync: triggerSyncMutation.isPending,
+
     advanceClock: advanceClockMutation.mutateAsync,
     isAdvancingClock: advanceClockMutation.isPending,
     resetTimeline: resetTimelineMutation.mutateAsync,

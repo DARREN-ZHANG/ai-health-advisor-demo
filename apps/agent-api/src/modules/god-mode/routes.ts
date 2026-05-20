@@ -8,7 +8,7 @@ import {
   MetricOverridePayloadSchema,
   ResetPayloadSchema,
   TimelineAppendPayloadSchema,
-  SyncTriggerPayloadSchema,
+
   AdvanceClockPayloadSchema,
   ResetProfileTimelinePayloadSchema,
   UpdateProfileRequestSchema,
@@ -184,20 +184,6 @@ export async function godModeRoutes(app: FastifyInstance) {
         advanceClock: parsed.data.advanceClock,
       },
     );
-    invalidateBriefCache();
-    return createSuccessResponse(result, buildMeta(request));
-  });
-
-  // 触发同步
-  app.post('/god-mode/sync-trigger', async (request, reply) => {
-    const parsed = SyncTriggerPayloadSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, parsed.error.issues.map((i) => i.message).join('; '), buildMeta(request)),
-      );
-    }
-
-    const result = service.triggerSync(parsed.data.trigger, request.ctx?.sessionId);
     invalidateBriefCache();
     return createSuccessResponse(result, buildMeta(request));
   });

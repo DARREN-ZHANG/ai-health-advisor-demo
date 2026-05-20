@@ -152,10 +152,7 @@
     "timelineControl": "Timeline Control",
     "quickActions": "Quick Actions",
     "currentTime": "当前时间",
-    "pending": "Pending",
-    "lastSync": "上次同步",
-    "neverSynced": "未同步",
-    "sync": "同步",
+    "eventCount": "事件总数",
     "reset": "重置",
     "hint": "提示：Timeline Control 操作会实时触发全链路数据重验证。",
     "segments": {
@@ -165,11 +162,13 @@
       "intermittentExercise": "HIIT 运动",
       "walk": "散步",
       "sleep": "睡眠",
+      "nap": "小憩",
       "deepFocus": "专注",
       "anxietyEpisode": "焦虑",
       "alcoholIntake": "饮酒",
       "caffeineIntake": "咖啡因",
-      "relaxation": "放松"
+      "relaxation": "放松",
+      "strengthTraining": "力量"
     },
     "segmentsHelp": {
       "mealIntake": "心率 65→85 缓升后回落，步数极少，SpO2 稳定。持续约 20 分钟，每分钟采样。",
@@ -178,11 +177,13 @@
       "intermittentExercise": "心率在 120-180（活跃）与 65-95（休息）间交替，步数呈间歇爆发。持续约 30 分钟。",
       "walk": "心率 85-125 中等，步数稳定累积（60-130 步/分），SpO2 稳定。持续约 30 分钟。",
       "sleep": "心率 49-68 随睡眠阶段（浅睡→深睡→REM）变化，步数为零。持续约 8 小时，含睡眠阶段标记。",
+      "nap": "心率 52-62 低位，以浅睡为主含少量深睡，步数为零。持续约 1 小时，帮助状态恢复。",
       "deepFocus": "心率 50-66 低位平稳，步数为零，体动极低，SpO2 稳定。持续约 2 小时。",
       "anxietyEpisode": "心率正弦波式飙升（峰值在段中），体动焦躁不安。持续约 30 分钟，每分钟采样。",
       "alcoholIntake": "心率渐升 +4~15，HRV 下降，压力负荷上升，40-80 分钟达峰。持续约 3 小时，每 5 分钟采样。",
       "caffeineIntake": "心率渐升 +8~25，HRV 下降 15~45%，压力负荷上升，45-75 分钟达峰。持续约 4 小时，每 5 分钟采样。",
-      "relaxation": "心率 47-57 低位放松，步数为零，SpO2 微升。持续约 30 分钟，每分钟采样。"
+      "relaxation": "心率 47-57 低位放松，步数为零，SpO2 微升。持续约 30 分钟，每分钟采样。",
+      "strengthTraining": "心率在 120-160（组内）与 78-102（休息）间交替，步数极少（0-3 步/分），SpO2 组内微降。持续约 30 分钟。"
     },
     "profile": {
       "cloneNew": "+ 复制新建",

@@ -338,7 +338,7 @@ describe('God-Mode Routes', () => {
       const body = response.json();
       expect(body.success).toBe(true);
       expect(body.data).toHaveProperty('currentDemoTime');
-      expect(body.data.pendingEventCount).toBeGreaterThanOrEqual(0);
+      expect(body.data.pendingEventCount).toBe(0);
 
       // 清理
       await app.inject({
@@ -399,7 +399,7 @@ describe('God-Mode Routes', () => {
       const body = response.json();
       expect(body.success).toBe(true);
       expect(body.data).toHaveProperty('currentDemoTime');
-      expect(body.data.pendingEventCount).toBeGreaterThanOrEqual(0);
+      expect(body.data.pendingEventCount).toBe(0);
 
       // 清理
       await app.inject({
@@ -425,54 +425,6 @@ describe('God-Mode Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/god-mode/timeline-append',
-        payload: {},
-      });
-
-      expect(response.statusCode).toBe(400);
-    });
-  });
-
-  describe('POST /god-mode/sync-trigger', () => {
-    test('app_open 同步返回 200', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/god-mode/sync-trigger',
-        payload: { trigger: 'app_open' },
-      });
-
-      expect(response.statusCode).toBe(200);
-      const body = response.json();
-      expect(body.success).toBe(true);
-      expect(body.data).toHaveProperty('currentDemoTime');
-      expect(body.data).toHaveProperty('lastSyncTime');
-    });
-
-    test('manual_refresh 同步返回 200', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/god-mode/sync-trigger',
-        payload: { trigger: 'manual_refresh' },
-      });
-
-      expect(response.statusCode).toBe(200);
-      const body = response.json();
-      expect(body.success).toBe(true);
-    });
-
-    test('无效 trigger 返回 400', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/god-mode/sync-trigger',
-        payload: { trigger: 'invalid_trigger' },
-      });
-
-      expect(response.statusCode).toBe(400);
-    });
-
-    test('缺少 trigger 返回 400', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/god-mode/sync-trigger',
         payload: {},
       });
 
@@ -551,8 +503,8 @@ describe('God-Mode Routes', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.success).toBe(true);
-      // 重置后恢复 baseline 初始状态，有 baseline sleep 的 pending events
-      expect(body.data.pendingEventCount).toBeGreaterThan(0);
+      // 重置后自动同步 baseline 事件，pendingEventCount 为 0
+      expect(body.data.pendingEventCount).toBe(0);
 
       // 清理
       await app.inject({

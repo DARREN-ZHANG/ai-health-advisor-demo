@@ -18,12 +18,33 @@ const TIMELINE_SEGMENT_KEYS: { type: TimelineAppendPayload['segmentType']; label
   { type: 'intermittent_exercise', labelKey: 'intermittentExercise', helpKey: 'intermittentExercise', icon: '🏋️', params: { rounds: 5 } },
   { type: 'walk', labelKey: 'walk', helpKey: 'walk', icon: '🚶', params: undefined },
   { type: 'sleep', labelKey: 'sleep', helpKey: 'sleep', icon: '😴', params: { durationMinutes: 480 } },
+  { type: 'nap', labelKey: 'nap', helpKey: 'nap', icon: '💤', params: { durationMinutes: 60 } },
   { type: 'deep_focus', labelKey: 'deepFocus', helpKey: 'deepFocus', icon: '🧠', params: { intensity: 'high' } },
   { type: 'anxiety_episode', labelKey: 'anxietyEpisode', helpKey: 'anxietyEpisode', icon: '😰', params: { trigger: 'work' } },
   { type: 'alcohol_intake', labelKey: 'alcoholIntake', helpKey: 'alcoholIntake', icon: '🍺', params: { amount: 'moderate' } },
   { type: 'caffeine_intake', labelKey: 'caffeineIntake', helpKey: 'caffeineIntake', icon: '☕', params: { dose: 'moderate', context: 'unknown' } },
   { type: 'relaxation', labelKey: 'relaxation', helpKey: 'relaxation', icon: '📖', params: { activity: 'reading' } },
+  { type: 'strength_training', labelKey: 'strengthTraining', helpKey: 'strengthTraining', icon: '💪', params: { setMinutes: 1, restMinutes: 2 } },
 ];
+
+/** 事件类型到图标和翻译键的映射，用于 hover tooltip 展示 */
+const EVENT_TYPE_DISPLAY: Record<string, { icon: string; labelKey: string }> = {
+  meal_intake: { icon: '🍽️', labelKey: 'mealIntake' },
+  steady_cardio: { icon: '🏃', labelKey: 'steadyCardio' },
+  prolonged_sedentary: { icon: '🪑', labelKey: 'prolongedSedentary' },
+  intermittent_exercise: { icon: '🏋️', labelKey: 'intermittentExercise' },
+  walk: { icon: '🚶', labelKey: 'walk' },
+  sleep: { icon: '😴', labelKey: 'sleep' },
+  nap: { icon: '💤', labelKey: 'nap' },
+  deep_focus: { icon: '🧠', labelKey: 'deepFocus' },
+  anxiety_episode: { icon: '😰', labelKey: 'anxietyEpisode' },
+  alcohol_intake: { icon: '🍺', labelKey: 'alcoholIntake' },
+  caffeine_intake: { icon: '☕', labelKey: 'caffeineIntake' },
+  relaxation: { icon: '📖', labelKey: 'relaxation' },
+  strength_training: { icon: '💪', labelKey: 'strengthTraining' },
+  possible_alcohol_intake: { icon: '🍺', labelKey: 'alcoholIntake' },
+  possible_caffeine_intake: { icon: '☕', labelKey: 'caffeineIntake' },
+};
 
 const PROBABILISTIC_SEGMENT_TYPES = new Set(['alcohol_intake', 'caffeine_intake']);
 
@@ -31,22 +52,6 @@ const EVENT_TYPE_MAP: Record<string, string> = {
   alcohol_intake: 'possible_alcohol_intake',
   caffeine_intake: 'possible_caffeine_intake',
 };
-
-/** 从 segment params 中提取并格式化用时指标 */
-function formatDuration(params?: Record<string, number | string | boolean>): string | null {
-  if (!params) return null;
-  if (typeof params.durationMinutes === 'number') {
-    const mins = params.durationMinutes;
-    if (mins >= 60 && mins % 60 === 0) {
-      return `(+${mins / 60}h)`;
-    }
-    return `(+${mins}min)`;
-  }
-  if (typeof params.rounds === 'number') {
-    return `(+${params.rounds} rounds)`;
-  }
-  return null;
-}
 
 interface ConfigAreaProps {
   className?: string;
@@ -69,7 +74,6 @@ function ConfigAreaContent({ className, disabled }: ConfigAreaProps) {
   const {
     appendTimeline, isAppendingTimeline,
     injectEvent, isInjectingEvent,
-    triggerSync, isTriggeringSync,
     advanceClock, isAdvancingClock,
     resetTimeline, isResettingTimeline,
   } = useGodModeActions();
@@ -79,7 +83,7 @@ function ConfigAreaContent({ className, disabled }: ConfigAreaProps) {
   const tSeg = useTranslations('godMode.segments');
   const tHelp = useTranslations('godMode.segmentsHelp');
 
-  const isTimelineBusy = isAppendingTimeline || isInjectingEvent || isTriggeringSync || isAdvancingClock || isResettingTimeline;
+  const isTimelineBusy = isAppendingTimeline || isInjectingEvent || isAdvancingClock || isResettingTimeline;
   const isConfigDisabled = isTimelineBusy || disabled;
 
   const handleAppendTimeline = async (segment: typeof TIMELINE_SEGMENT_KEYS[number]) => {
@@ -112,14 +116,6 @@ function ConfigAreaContent({ className, disabled }: ConfigAreaProps) {
     }
   };
 
-  const handleTriggerSync = async () => {
-    try {
-      await triggerSync('manual_refresh');
-    } catch (error) {
-      console.error('Failed to trigger sync:', error);
-    }
-  };
-
   const handleResetTimeline = async () => {
     try {
       await resetTimeline({ profileId: currentProfileId });
@@ -132,7 +128,6 @@ function ConfigAreaContent({ className, disabled }: ConfigAreaProps) {
     ...seg,
     label: tSeg(seg.labelKey),
     helpText: tHelp(seg.helpKey),
-    durationLabel: formatDuration(seg.params),
   }));
 
   return (
@@ -148,24 +143,41 @@ function ConfigAreaContent({ className, disabled }: ConfigAreaProps) {
       {/* Timeline Control */}
       <Section title={t('timelineControl')} className="space-y-4">
         {/* 状态显示 */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div className="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
             <div className="text-[10px] text-slate-500 uppercase tracking-wide">{t('currentTime')}</div>
             <div className="text-sm font-mono text-cyan-400 mt-1">
               {godModeState?.currentDemoTime?.slice(11) ?? '--:--'}
             </div>
           </div>
-          <div className="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
-            <div className="text-[10px] text-slate-500 uppercase tracking-wide">{t('pending')}</div>
-            <div className="text-sm font-mono text-yellow-400 mt-1">
-              {godModeState?.pendingEventCount ?? 0}
+          <div className="bg-slate-900 rounded-xl p-3 text-center border border-slate-800 group/events relative cursor-default">
+            <div className="text-[10px] text-slate-500 uppercase tracking-wide">{t('eventCount')}</div>
+            <div className="text-sm font-mono text-emerald-400 mt-1">
+              {godModeState?.recentRecognizedEvents?.length ?? 0}
             </div>
-          </div>
-          <div className="bg-slate-900 rounded-xl p-3 text-center border border-slate-800">
-            <div className="text-[10px] text-slate-500 uppercase tracking-wide">{t('lastSync')}</div>
-            <div className="text-sm font-mono text-green-400 mt-1">
-              {godModeState?.lastSyncTime?.slice(11) ?? t('neverSynced')}
-            </div>
+            {/* hover 展示事件详情列表 */}
+            {(godModeState?.recentRecognizedEvents?.length ?? 0) > 0 && (
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full right-0 mb-2 w-64 max-h-60 overflow-y-auto rounded-lg bg-slate-800 px-3 py-2 text-[11px] leading-relaxed text-slate-300 opacity-0 invisible group-hover/events:visible group-hover/events:opacity-100 transition-opacity z-50 border border-slate-700 shadow-xl text-left"
+              >
+                {(godModeState?.recentRecognizedEvents ?? []).map((event) => {
+                  const display = EVENT_TYPE_DISPLAY[event.type];
+                  const label = display ? tSeg(display.labelKey) : event.type;
+                  const icon = display?.icon ?? '📋';
+                  const startTime = event.start.slice(11);
+                  const endTime = event.end.slice(11);
+                  return (
+                    <div key={event.recognizedEventId} className="flex items-center gap-2 py-0.5">
+                      <span className="shrink-0">{icon}</span>
+                      <span className="flex-1 truncate">{label}</span>
+                      <span className="text-slate-500 font-mono shrink-0 text-[10px]">{startTime}–{endTime}</span>
+                    </div>
+                  );
+                })}
+                <span className="absolute top-full right-4 -mt-px border-4 border-transparent border-t-slate-700" />
+              </span>
+            )}
           </div>
         </div>
 
@@ -190,22 +202,15 @@ function ConfigAreaContent({ className, disabled }: ConfigAreaProps) {
                   <span className="absolute top-full left-8 -mt-px border-4 border-transparent border-t-slate-700" />
                 </span>
               </span>
-              {seg.durationLabel && (
-                <span className="text-[10px] text-slate-600 shrink-0 ml-1">{seg.durationLabel}</span>
-              )}
             </button>
           ))}
         </div>
 
         {/* 时钟控制 */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <Button variant="secondary" onClick={() => handleAdvanceClock(60)} disabled={isConfigDisabled}
             className="bg-slate-900 border-2 border-slate-800 rounded-xl text-xs">
             ⏰ +1h
-          </Button>
-          <Button variant="secondary" onClick={handleTriggerSync} disabled={isConfigDisabled}
-            className="bg-slate-900 border-2 border-slate-800 rounded-xl text-xs">
-            🔄 {t('sync')}
           </Button>
           <Button variant="secondary" onClick={handleResetTimeline} disabled={isConfigDisabled}
             className="bg-slate-900 border-2 border-red-900/50 rounded-xl text-xs text-red-400">
