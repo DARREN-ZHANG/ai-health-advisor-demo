@@ -19,6 +19,7 @@ import {
   queryVisibleChartFactsTool,
   queryMissingDataTool,
   queryTimelineEventsTool,
+  estimateCaffeineSleepImpactTool,
 } from '@health-advisor/agent-core';
 import type {
   PlanBuilderDeps,
@@ -283,6 +284,7 @@ export function createRuntimeRegistry(
     reactTools.set(queryVisibleChartFactsTool.name, queryVisibleChartFactsTool as ToolDefinition<unknown, unknown>);
     reactTools.set(queryMissingDataTool.name, queryMissingDataTool as ToolDefinition<unknown, unknown>);
     reactTools.set(queryTimelineEventsTool.name, queryTimelineEventsTool as ToolDefinition<unknown, unknown>);
+    reactTools.set(estimateCaffeineSleepImpactTool.name, estimateCaffeineSleepImpactTool as ToolDefinition<unknown, unknown>);
 
     reactLoop = {
       plannerAgent: agents!.plannerAgent,
