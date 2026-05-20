@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { randomUUID } from 'node:crypto';
 import { createSuccessResponse, createErrorResponse, ErrorCode, AgentTaskType, PageContextSchema } from '@health-advisor/shared';
 import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 import { AgentRequestSchema } from '@health-advisor/agent-core';
@@ -28,12 +29,12 @@ interface ChatBody {
 }
 
 export async function aiRoutes(app: FastifyInstance) {
-  const briefCache = app.briefCache;
   const orchestrator = new AiOrchestrator({
     registry: app.runtime,
     metrics: app.metrics,
     timeoutMs: app.config.AI_TIMEOUT_MS,
-    briefCache,
+    memoryServices: app.memoryServices,
+    modelVersion: app.config.LLM_MODEL,
   });
 
   /** 将 AI 结果元数据附加到请求上下文，供 onResponse 日志使用 */
@@ -55,7 +56,7 @@ export async function aiRoutes(app: FastifyInstance) {
 
     // 手动刷新时清除该 profile 的当日缓存，确保调用 LLM
     if (bustCache) {
-      briefCache.invalidate(profileId);
+      await app.memoryServices.cache.invalidateProfile({ profileId });
     }
 
     // 后端隐式触发 app_open 同步：将 pending 事件同步到已同步状态，
@@ -64,7 +65,7 @@ export async function aiRoutes(app: FastifyInstance) {
     if (pendingEvents.length > 0) {
       app.runtime.overrideStore.performSync(profileId, 'app_open');
       // 同步后刷新 brief 缓存，避免返回过期的缓存结果
-      briefCache.invalidate(profileId);
+      await app.memoryServices.cache.invalidateProfile({ profileId });
     }
 
     const parsed = PageContextSchema.safeParse(pageContext);
@@ -164,7 +165,49 @@ export async function aiRoutes(app: FastifyInstance) {
 
     const result = await orchestrator.execute(parseResult.data, request.lang);
     attachAiLogMeta(request, result.meta.finishReason);
-    return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
+
+    const memoryCandidates = [];
+
+    if (app.memoryServices.extractor && parseResult.data.userMessage) {
+      const extraction = await app.memoryServices.extractor.extract({
+        userMessage: parseResult.data.userMessage,
+        profileId,
+        sessionId: request.ctx.sessionId!,
+      });
+
+      for (const extracted of extraction.candidates) {
+        const now = Date.now();
+        const candidate = await app.memoryServices.candidates.saveCandidate({
+          id: randomUUID(),
+          userScopeId: app.memoryServices.userScopeId,
+          profileId,
+          sessionId: request.ctx.sessionId!,
+          sourceMessageId: request.ctx.requestId,
+          kind: extracted.kind as import('@health-advisor/agent-core').MemoryKind,
+          canonicalKey: extracted.canonicalKey,
+          payload: extracted.payload,
+          evidenceQuote: extracted.evidenceQuote,
+          confidence: extracted.confidence,
+          proposedConfirmationText: extracted.proposedConfirmationText,
+          status: 'pending',
+          createdAt: now,
+          updatedAt: now,
+          expiresAt: now + app.memoryServices.candidateTtlMs,
+        });
+
+        memoryCandidates.push({
+          id: candidate.id,
+          kind: candidate.kind,
+          proposedConfirmationText: candidate.proposedConfirmationText,
+          evidenceQuote: candidate.evidenceQuote,
+        });
+      }
+    }
+
+    return createSuccessResponse(
+      attachSessionMeta({ ...result, ...(memoryCandidates.length > 0 ? { memoryCandidates } : {}) }, request.ctx.sessionId),
+      buildMeta(request),
+    );
   });
 }
 

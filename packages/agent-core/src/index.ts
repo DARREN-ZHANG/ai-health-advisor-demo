@@ -2,6 +2,18 @@
 
 // Types
 export type { AgentRequest } from './types/agent-request';
+export type {
+  MemoryKind,
+  MemoryCandidateStatus,
+  UserMemoryFactStatus,
+  MemoryConfidence,
+  MemorySensitivity,
+  MemoryCandidateRecord,
+  UserMemoryFact,
+  MemoryRevision,
+  MemoryCandidateStore,
+  DurableMemoryStore,
+} from './types/durable-memory';
 export type { InternalTaskType } from './types/internal-task-type';
 export type { AgentContext, AgentStatusColor, TimelineSyncContext } from './types/agent-context';
 export type {
@@ -13,6 +25,11 @@ export type { LlmProvider, ModelRuntimeConfig, ResolvedProviderConfig, LlmRole, 
 
 // Schemas
 export { AgentRequestSchema } from './types/agent-request';
+export {
+  MemoryKindSchema,
+  MemoryCandidateRecordSchema,
+  UserMemoryFactSchema,
+} from './memory/durable-memory-schema';
 
 // Routing
 export { resolveTaskRoute, TASK_ROUTES } from './routing/task-router';
@@ -31,10 +48,26 @@ export type { AgentConfig, HealthAgent, AgentInvokeInput, AgentInvokeOutput } fr
 export { initializeAgent, initializeAgents } from './executor/agent-initializer';
 
 // Memory
+export { validateExtractedMemoryCandidate } from './memory/memory-candidate-validator';
+export type { ExtractedMemoryCandidate, CandidateValidationResult } from './memory/memory-candidate-validator';
+export { LlmMemoryExtractionService } from './memory/memory-extraction-service';
+export type { MemoryExtractionInput, MemoryExtractionResult, MemoryExtractionService } from './memory/memory-extraction-service';
 export { InMemorySessionMemoryStore } from './memory/session-memory-store';
 export type { SessionMemoryStore } from './memory/session-memory-store';
 export { InMemoryAnalyticalMemoryStore } from './memory/analytical-memory-store';
 export type { AnalyticalMemoryStore } from './memory/analytical-memory-store';
+export { InMemoryDurableMemoryStore } from './memory/in-memory-durable-memory-store';
+export { InMemoryAgentCacheStore } from './memory/in-memory-agent-cache-store';
+export type { AgentCacheEntry, AgentCacheLookup, AgentCacheStore, AgentCacheType } from './types/agent-cache';
+export { InMemoryWorkflowStateStore } from './memory/in-memory-workflow-state-store';
+export type {
+  WorkflowConsent,
+  WorkflowContact,
+  WorkflowContactType,
+  WorkflowEvent,
+  WorkflowOutboxItem,
+  WorkflowStateStore,
+} from './types/workflow-memory';
 export { trimConversationTurns, isSessionExpired } from './memory/memory-policy';
 
 // Context

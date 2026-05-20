@@ -141,3 +141,7 @@ corepack enable && corepack prepare pnpm@9.15.0 --activate
 ### 后端启动报 ZodError / invalid_enum_value
 
 检查 `.env` 中 `LLM_PROVIDER` 的值。必须是 `openai`、`anthropic` 或 `gemini` 之一，**不能为空字符串**。不需要时删掉这行即可（会使用默认值 `openai`）。
+
+## Memory Upgrade Demo
+
+Use `MEMORY_BACKEND=memory` for local development. Use `MEMORY_BACKEND=supabase` with `SUPABASE_DB_URL` only when testing Supabase persistence. The demo does not require Supabase Auth, Storage, Realtime, or Edge Functions.

@@ -4,6 +4,7 @@ import type { PromptLoader, PromptName } from './prompt-loader';
 import type { RuleEvaluationResult } from '../rules/types';
 import type { TaskContextPacket } from '../context/context-packet';
 import { renderTaskContextPacket } from './context-packet-renderer';
+import { renderDurableMemoryFacts } from '../memory/durable-memory-context';
 import { TASK_ROUTES } from '../routing/task-router';
 
 const TASK_PROMPT_MAP: Record<string, PromptName> = {
@@ -115,6 +116,13 @@ export function buildTaskPrompt(
     );
   }
 
+  // 持久化记忆（用户已确认的事实）
+  const durableMemoryContext = renderDurableMemoryFacts(context.memory.durableFacts, locale);
+  if (durableMemoryContext.length > 0) {
+    sections.push('');
+    sections.push(...durableMemoryContext);
+  }
+
   // 对话记忆（如果 packet 未提供，或作为补充）
   if (!packet && context.memory.recentMessages.length > 0) {
     sections.push('');
@@ -131,7 +139,7 @@ export function buildTaskPrompt(
   const analyticalContext = buildAnalyticalContext(context, locale);
   if (analyticalContext.length > 0) {
     sections.push('');
-    sections.push(t(locale, '## 历史分析参考', '## Historical Analysis Reference'));
+    sections.push(t(locale, '## 派生分析缓存', '## Derived Analysis Cache'));
     for (const item of analyticalContext) {
       sections.push(`- ${item}`);
     }

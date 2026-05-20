@@ -1,0 +1,34 @@
+{
+  "id": "core-chat-rejected-allergy-memory",
+  "title": "顾问对话 - 未确认过敏候选不会作为 durable memory 使用",
+  "suite": "core",
+  "category": "advisor-chat",
+  "priority": "P0",
+  "tags": ["advisor-chat", "memory", "confirmation"],
+  "setup": {
+    "profileId": "profile-a",
+    "memory": {
+      "sessionMessages": [
+        { "role": "user", "text": "我可能对花生过敏，但先不要记住。", "createdAt": 1760000000000 }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"如果你不确定是否过敏，今天不要把花生酱作为必要补能方案；可以选择更稳妥的碳水和蛋白来源。\",\"chartTokens\":[],\"microTips\":[]}"
+    },
+    "referenceDate": "2026-05-18"
+  },
+  "request": {
+    "requestId": "eval-rejected-allergy-memory",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "advisor_chat",
+    "pageContext": { "profileId": "profile-a", "page": "advisor", "timeframe": "week" },
+    "userMessage": "我今天适合吃花生酱补充能量吗？"
+  },
+  "expectations": {
+    "protocol": { "requireValidEnvelope": true, "expectedSource": "llm", "expectedFinishReason": "complete" },
+    "summary": { "mustNotMention": ["你已确认对花生过敏", "我记得你对花生过敏"] },
+    "memory": { "forbiddenLeakPatterns": ["allergy:peanut"] }
+  }
+}

@@ -11,6 +11,8 @@ import type { EvidenceResolutionResult } from '../planner/evidence-resolver';
 import type { ReActStep } from '../tools/tool-types';
 import type { SyncGateResult } from '../output/sync-reflection-gate';
 import type { ReflectionReviewResult } from '../output/reflection-schema';
+import type { UserMemoryFact } from '../types/durable-memory';
+import type { WorkflowConsent, WorkflowContact } from '../types/workflow-memory';
 
 // ── 枚举类型 ──────────────────────────────────────────
 
@@ -49,6 +51,13 @@ export interface AgentEvalSetup {
       latestViewSummaryByScope?: Record<string, string>;
       latestRuleSummary?: string;
     };
+    durableFacts?: UserMemoryFact[];
+  };
+
+  workflow?: {
+    contacts?: WorkflowContact[];
+    consents?: WorkflowConsent[];
+    expectedOutboxCount?: number;
   };
 
   /** 为不同 profile seed memory，用于跨 profile isolation 测试 */
@@ -58,6 +67,7 @@ export interface AgentEvalSetup {
       text: string;
       createdAt?: number;
     }>;
+    durableFacts?: UserMemoryFact[];
   }>;
 
   overrides?: Array<{
@@ -174,6 +184,11 @@ export interface AgentEvalExpectations {
     mustUsePreviousTurn?: boolean;
     requiredMemoryPatterns?: string[];
     forbiddenLeakPatterns?: string[];
+  };
+
+  workflow?: {
+    expectedOutboxCount?: number;
+    forbidDirectExternalSideEffect?: boolean;
   };
 
   taskSpecific?: {

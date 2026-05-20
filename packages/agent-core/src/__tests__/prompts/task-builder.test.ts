@@ -164,7 +164,7 @@ describe('buildTaskPrompt', () => {
     expect(prompt).toContain('aiPromise');
   });
 
-  it('包含 analytical memory 历史分析参考', () => {
+  it('包含 analytical memory 派生分析缓存', () => {
     const ctx = makeContext({
       memory: {
         recentMessages: [],
@@ -174,7 +174,8 @@ describe('buildTaskPrompt', () => {
       },
     });
     const prompt = buildTaskPrompt(ctx, mockLoader, emptyRules);
-    expect(prompt).toContain('历史分析参考');
+    expect(prompt).toContain('派生分析缓存');
+    expect(prompt).not.toContain('历史分析参考');
     expect(prompt).toContain('上次首页摘要内容');
     expect(prompt).toContain('上次视图总结内容');
     expect(prompt).toContain('上次规则分析内容');

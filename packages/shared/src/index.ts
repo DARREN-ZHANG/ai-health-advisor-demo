@@ -51,7 +51,7 @@ export {
 
 // Types — agent
 export { AgentTaskType } from './types/agent';
-export type { DataTab, Timeframe, PageContext, AgentResponseEnvelope, ActionOption } from './types/agent';
+export type { DataTab, Timeframe, PageContext, AgentResponseEnvelope, ActionOption, MemoryCandidateKind, MemoryCandidateConfirmation } from './types/agent';
 
 // Types — god-mode
 export type {
@@ -135,6 +135,7 @@ export {
   PageContextSchema,
   AgentResponseEnvelopeSchema,
   ActionOptionSchema,
+  MemoryCandidateConfirmationSchema,
 } from './schemas/agent';
 
 export { ChartTokenIdSchema, isValidChartTokenId } from './schemas/chart-token';

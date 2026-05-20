@@ -1,0 +1,46 @@
+{
+  "id": "core-chat-confirmed-allergy-memory",
+  "title": "顾问对话 - 使用已确认过敏记忆",
+  "suite": "core",
+  "category": "advisor-chat",
+  "priority": "P0",
+  "tags": ["advisor-chat", "memory", "durable-memory", "allergy"],
+  "setup": {
+    "profileId": "profile-a",
+    "memory": {
+      "durableFacts": [
+        {
+          "id": "fact-allergy-peanut",
+          "userScopeId": "demo",
+          "profileId": "profile-a",
+          "kind": "allergy",
+          "canonicalKey": "allergy:peanut",
+          "payload": { "allergen": "peanut", "severity": "unknown" },
+          "status": "active",
+          "sensitivity": "health",
+          "sourceCandidateId": "cand-allergy-peanut",
+          "createdAt": 1760000000000,
+          "updatedAt": 1760000000000
+        }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"你已确认对花生过敏，因此今天不建议用花生酱补充能量，可以选择酸奶、香蕉或燕麦等替代。\",\"chartTokens\":[],\"microTips\":[\"避免含花生成分的零食\"]}"
+    },
+    "referenceDate": "2026-05-18"
+  },
+  "request": {
+    "requestId": "eval-confirmed-allergy-memory",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "advisor_chat",
+    "pageContext": { "profileId": "profile-a", "page": "advisor", "timeframe": "week" },
+    "userMessage": "我今天适合吃花生酱补充能量吗？"
+  },
+  "expectations": {
+    "protocol": { "requireValidEnvelope": true, "expectedSource": "llm", "expectedFinishReason": "complete" },
+    "summary": { "mustMention": ["花生过敏"], "mustNotMention": ["适合吃花生酱"] },
+    "memory": { "requiredMemoryPatterns": ["花生过敏"] }
+  }
+}

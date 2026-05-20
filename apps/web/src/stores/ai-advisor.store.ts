@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ChartTokenId, AgentResponseEnvelope } from '@health-advisor/shared';
+import type { ChartTokenId, AgentResponseEnvelope, MemoryCandidateConfirmation } from '@health-advisor/shared';
 
 /** 消息内 meta 字段，从 AgentResponseEnvelope.meta 派生 */
 type MessageMeta = Pick<AgentResponseEnvelope['meta'], 'taskType' | 'pageContext' | 'finishReason'>;
@@ -10,6 +10,7 @@ export interface Message {
   content: string;
   chartTokens?: ChartTokenId[];
   microTips?: string[];
+  memoryCandidates?: MemoryCandidateConfirmation[];
   source?: AgentResponseEnvelope['source'];
   statusColor?: AgentResponseEnvelope['statusColor'];
   meta?: MessageMeta;

@@ -90,4 +90,16 @@ describe('loadConfig', () => {
     const config = loadConfig({ ...validEnv, LLM_TIMEOUT_MS: '60000' });
     expect(config.LLM_TIMEOUT_MS).toBe(60000);
   });
+
+  it('defaults memory backend to in-memory mode', () => {
+    const config = loadConfig({ FALLBACK_ONLY_MODE: 'true' });
+    expect(config.MEMORY_BACKEND).toBe('memory');
+  });
+
+  it('requires SUPABASE_DB_URL when MEMORY_BACKEND is supabase', () => {
+    expect(() => loadConfig({
+      FALLBACK_ONLY_MODE: 'true',
+      MEMORY_BACKEND: 'supabase',
+    })).toThrow(/SUPABASE_DB_URL/);
+  });
 });

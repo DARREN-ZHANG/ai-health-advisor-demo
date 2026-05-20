@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, test, vi } from 'vitest';
 import path from 'node:path';
 import { cpSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -290,6 +290,56 @@ describe('AI Routes', () => {
       });
 
       expect(response.statusCode).toBe(400);
+    });
+
+    it('returns memory candidate confirmations for advisor chat', async () => {
+      const app = await buildApp({
+        env: {
+          FALLBACK_ONLY_MODE: 'true',
+          ENABLE_GOD_MODE: 'false',
+          MEMORY_BACKEND: 'memory',
+        },
+      });
+
+      app.memoryServices.extractor = {
+        async extract() {
+          return {
+            candidates: [
+              {
+                kind: 'allergy',
+                canonicalKey: 'allergy:peanut',
+                payload: { allergen: 'peanut' },
+                evidenceQuote: '我对花生过敏',
+                source: 'user_declared',
+                confidence: 'explicit',
+                proposedConfirmationText: '是否记住：你对花生过敏？',
+                requiresConfirmation: true,
+              },
+            ],
+            rejectedCount: 0,
+          };
+        },
+      };
+
+      mockedExecuteAgent.mockResolvedValueOnce(chatResponse());
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/chat',
+        headers: { 'x-session-id': 'sess-1' },
+        payload: {
+          profileId: 'profile-a',
+          pageContext: { profileId: 'profile-a', page: 'homepage', timeframe: 'week' },
+          userMessage: '我对花生过敏',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.data.memoryCandidates).toHaveLength(1);
+      expect(body.data.memoryCandidates[0].proposedConfirmationText).toContain('花生');
+
+      await app.close();
     });
   });
 });

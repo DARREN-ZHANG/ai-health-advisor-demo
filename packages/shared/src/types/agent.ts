@@ -28,6 +28,23 @@ export interface ActionOption {
   aiPromise: string;
 }
 
+export type MemoryCandidateKind =
+  | 'allergy'
+  | 'medical_constraint'
+  | 'goal'
+  | 'preference'
+  | 'workflow_contact'
+  | 'workflow_consent'
+  | 'correction'
+  | 'revocation';
+
+export interface MemoryCandidateConfirmation {
+  id: string;
+  kind: MemoryCandidateKind;
+  proposedConfirmationText: string;
+  evidenceQuote: string;
+}
+
 export interface AgentResponseEnvelope {
   summary: string;
   source: string;
@@ -37,6 +54,7 @@ export interface AgentResponseEnvelope {
   actions?: ActionOption[];
   /** LLM 生成的 actions 区段标题，用于替代前端硬编码文案 */
   actionsSectionTitle?: string;
+  memoryCandidates?: MemoryCandidateConfirmation[];
   meta: {
     taskType: AgentTaskType;
     pageContext: PageContext;

@@ -1,5 +1,9 @@
 import type { AnalyticalMemory } from '../types/memory';
 
+/**
+ * Stores derived per-session analysis cache.
+ * This is not durable user memory and must not be used as a source of user facts.
+ */
 export interface AnalyticalMemoryStore {
   get(sessionId: string): AnalyticalMemory | undefined;
   getForProfile(sessionId: string, profileId: string): AnalyticalMemory | undefined;
