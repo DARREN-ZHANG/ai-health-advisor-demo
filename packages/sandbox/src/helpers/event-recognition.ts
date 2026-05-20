@@ -200,7 +200,15 @@ function classifySegment(stats: SegmentStats): RecognizedEvent | null {
   const maxSteps = stats.steps.length > 0 ? Math.max(...stats.steps) : 0;
   const hrStdDev = stdDev(stats.heartRates);
 
-  // 间歇运动：高心率变异性（先于 steady_cardio 检测，避免误匹配）
+  // 力量训练：高心率变异性 + 极低步数（先于 HIIT 检测）
+  if (hrStdDev > 20 && maxSteps < 50 && avgHr >= 90 && avgMotion > 2) {
+    return buildRecognized(stats, 'strength_training', durationMin, evidence, () => {
+      evidence.push(`心率标准差 ${hrStdDev.toFixed(0)}, 低步数 ${maxSteps}, 间歇高强度`);
+      return Math.min(0.85, 0.5 + Math.min(hrStdDev / 50, 0.35));
+    });
+  }
+
+  // 间歇运动：高心率变异性 + 较多步数（先于 steady_cardio 检测，避免误匹配）
   if (stats.heartRates.length > 4 && hrStdDev > 20) {
     return buildRecognized(stats, 'intermittent_exercise', durationMin, evidence, () => {
       evidence.push(`心率标准差 ${hrStdDev.toFixed(0)}, 交替高低强度`);
@@ -242,7 +250,7 @@ function classifySegment(stats: SegmentStats): RecognizedEvent | null {
   return null;
 }
 
-/** 睡眠分类 */
+/** 睡眠/小憩分类 */
 function classifySleep(
   stats: SegmentStats,
   durationMin: number,
@@ -251,18 +259,29 @@ function classifySleep(
   const stageCounts = countBy(stats.sleepStages);
   const avgHr = average(stats.heartRates);
 
-  evidence.push(`睡眠阶段转换 ${stats.sleepStages.length} 次, 持续 ${durationMin} 分钟`);
-  evidence.push(`平均心率 ${avgHr.toFixed(0)}, 阶段分布: ${Object.entries(stageCounts).map(([k, v]) => `${k}=${v}`).join(', ')}`);
+  // 120 分钟为阈值：短于此时长识别为小憩，否则为夜间睡眠
+  const isNap = durationMin < 120;
+  const eventType = isNap ? 'nap' : 'sleep';
 
-  // 信心计算：基于时长和阶段多样性
-  const durationConf = Math.min(durationMin / 360, 0.5);
+  if (isNap) {
+    evidence.push(`小憩持续 ${durationMin} 分钟, 阶段分布: ${Object.entries(stageCounts).map(([k, v]) => `${k}=${v}`).join(', ')}`);
+    evidence.push(`平均心率 ${avgHr.toFixed(0)}, 短时恢复性睡眠`);
+  } else {
+    evidence.push(`睡眠阶段转换 ${stats.sleepStages.length} 次, 持续 ${durationMin} 分钟`);
+    evidence.push(`平均心率 ${avgHr.toFixed(0)}, 阶段分布: ${Object.entries(stageCounts).map(([k, v]) => `${k}=${v}`).join(', ')}`);
+  }
+
+  // 信心计算
+  const durationConf = isNap
+    ? Math.min(durationMin / 60, 0.5)
+    : Math.min(durationMin / 360, 0.5);
   const stageConf = Math.min(Object.keys(stageCounts).length / 4, 0.3);
   const confidence = Math.min(0.95, 0.3 + durationConf + stageConf);
 
   return {
     recognizedEventId: `re-${stats.segmentId}`,
     profileId: stats.profileId,
-    type: 'sleep',
+    type: eventType,
     start: stats.start,
     end: stats.end,
     confidence,

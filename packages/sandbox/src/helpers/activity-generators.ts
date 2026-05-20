@@ -69,6 +69,19 @@ function rangeValue(
   return Math.round(base - range / 2 + d * range);
 }
 
+/** 从 segment.params 提取 profile 基线值，供生成器统一使用 */
+function extractBaselines(params: Record<string, number | string | boolean> | undefined) {
+  const p = params ?? {};
+  return {
+    /** 静息心率基线（默认 56 bpm） */
+    restingHr: typeof p._baselineRestingHr === 'number' ? p._baselineRestingHr : 56,
+    /** HRV (RMSSD) 基线（默认 42 ms） */
+    hrv: typeof p._baselineHrv === 'number' ? p._baselineHrv : 42,
+    /** SpO2 基线（默认 96%） */
+    spo2: typeof p._baselineSpo2 === 'number' ? p._baselineSpo2 : 96,
+  };
+}
+
 // ============================================================
 // 生成器: meal_intake（进餐）
 // ============================================================
@@ -77,6 +90,7 @@ function rangeValue(
 function generateMealIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
   const events: DeviceEvent[] = [];
   const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, spo2: spo2Base } = extractBaselines(segment.params);
   let idx = 0;
 
   // wearState: 片段开始和结束
@@ -84,8 +98,8 @@ function generateMealIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
   events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
 
   for (let m = 0; m < totalMin; m += 1) {
-    // heartRate: 每分钟，65-85 之间，轻微上升后回落
-    const hrBase = 65 + Math.min(m * 0.4, 15) - Math.max(0, (m - 20) * 0.3);
+    // heartRate: 静息 + 9 的进餐消化偏移，轻微上升后回落
+    const hrBase = (restingHr + 9) + Math.min(m * 0.4, 15) - Math.max(0, (m - 20) * 0.3);
     const hr = rangeValue(Math.round(hrBase), 8, m, 1);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
 
@@ -98,9 +112,9 @@ function generateMealIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
-    // spo2: 每5分钟
+    // spo2: 每5分钟，进餐时略高于基线
     if (m % 5 === 0) {
-      const spo2 = rangeValue(97, 3, m, 4);
+      const spo2 = rangeValue(spo2Base + 1, 3, m, 4);
       events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
     }
   }
@@ -117,7 +131,8 @@ function generateSteadyCardioEvents(segment: ActivitySegment): DeviceEvent[] {
   const events: DeviceEvent[] = [];
   const totalMin = diffMinutes(segment.start, segment.end);
   const params = segment.params ?? {};
-  const targetHr = typeof params.targetHr === 'number' ? params.targetHr : 135;
+  const { restingHr, spo2: spo2Base } = extractBaselines(params);
+  const targetHr = typeof params.targetHr === 'number' ? params.targetHr : restingHr + 79;
   const intensityRaw = params.intensity;
   const intensity = intensityRaw === 'low' || intensityRaw === 'high' ? intensityRaw : 'moderate';
 
@@ -132,7 +147,7 @@ function generateSteadyCardioEvents(segment: ActivitySegment): DeviceEvent[] {
   events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
 
   for (let m = 0; m < totalMin; m += 1) {
-    // heartRate: 120-150，围绕目标心率小幅波动
+    // heartRate: 围绕目标心率小幅波动
     const hr = rangeValue(targetHr, 15, m, 10);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
 
@@ -145,9 +160,9 @@ function generateSteadyCardioEvents(segment: ActivitySegment): DeviceEvent[] {
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
-    // spo2: 每5分钟
+    // spo2: 每5分钟，运动时略低于基线
     if (m % 5 === 0) {
-      const spo2 = rangeValue(96, 3, m, 13);
+      const spo2 = rangeValue(spo2Base, 3, m, 13);
       events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
     }
   }
@@ -163,6 +178,7 @@ function generateSteadyCardioEvents(segment: ActivitySegment): DeviceEvent[] {
 function generateProlongedSedentaryEvents(segment: ActivitySegment): DeviceEvent[] {
   const events: DeviceEvent[] = [];
   const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, spo2: spo2Base } = extractBaselines(segment.params);
   let idx = 0;
 
   // wearState
@@ -170,8 +186,8 @@ function generateProlongedSedentaryEvents(segment: ActivitySegment): DeviceEvent
   events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
 
   for (let m = 0; m < totalMin; m += 1) {
-    // heartRate: 60-70，非常低
-    const hr = rangeValue(64, 8, m, 20);
+    // heartRate: 静息 + 8 的久坐偏移
+    const hr = rangeValue(restingHr + 8, 8, m, 20);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
 
     // steps: 累积，几乎为零
@@ -182,9 +198,9 @@ function generateProlongedSedentaryEvents(segment: ActivitySegment): DeviceEvent
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
-    // spo2: 每5分钟
+    // spo2: 每5分钟，久坐时略高于基线
     if (m % 5 === 0) {
-      const spo2 = rangeValue(97, 2, m, 22);
+      const spo2 = rangeValue(spo2Base + 1, 2, m, 22);
       events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
     }
   }
@@ -201,6 +217,7 @@ function generateIntermittentExerciseEvents(segment: ActivitySegment): DeviceEve
   const events: DeviceEvent[] = [];
   const totalMin = diffMinutes(segment.start, segment.end);
   const params = segment.params ?? {};
+  const { restingHr, spo2: spo2Base } = extractBaselines(params);
   const rounds = typeof params.rounds === 'number' ? params.rounds : 8;
   const activeMin = typeof params.activeMinutes === 'number' ? params.activeMinutes : 2;
   const restMin = typeof params.restMinutes === 'number' ? params.restMinutes : 1;
@@ -218,8 +235,8 @@ function generateIntermittentExerciseEvents(segment: ActivitySegment): DeviceEve
     const cyclePos = m % cycleLength;
     const isActive = cyclePos < activeMin;
 
-    // heartRate: 活跃期高（130-170），休息期低（70-90）
-    const hrBase = isActive ? 150 : 80;
+    // heartRate: 活跃期 = 静息 + 94，休息期 = 静息 + 24
+    const hrBase = isActive ? restingHr + 94 : restingHr + 24;
     const hrRange = isActive ? 30 : 15;
     const hr = rangeValue(hrBase, hrRange, m, 30);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
@@ -236,9 +253,63 @@ function generateIntermittentExerciseEvents(segment: ActivitySegment): DeviceEve
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
-    // spo2: 每5分钟
+    // spo2: 每5分钟，活跃期略低于基线，休息期略高于基线
     if (m % 5 === 0) {
-      const spo2 = isActive ? rangeValue(95, 4, m, 35) : rangeValue(97, 2, m, 36);
+      const spo2 = isActive ? rangeValue(spo2Base - 1, 4, m, 35) : rangeValue(spo2Base + 1, 2, m, 36);
+      events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
+    }
+  }
+
+  return events;
+}
+
+// ============================================================
+// 生成器: strength_training（力量训练）
+// ============================================================
+
+/** 力量训练事件生成 — 组内高强度 + 长间歇休息，极低步数 */
+function generateStrengthTrainingEvents(segment: ActivitySegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const params = segment.params ?? {};
+  const { restingHr, spo2: spo2Base } = extractBaselines(params);
+  const setMinutes = typeof params.setMinutes === 'number' ? params.setMinutes : 1;
+  const restMinutes = typeof params.restMinutes === 'number' ? params.restMinutes : 2;
+
+  const cycleLength = setMinutes + restMinutes;
+  let idx = 0;
+  let cumulativeSteps = 0;
+
+  // wearState
+  events.push(makeEvent(segment, 0, 'wearState', true, idx++));
+  events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
+
+  for (let m = 0; m < totalMin; m += 1) {
+    // 判断当前是在组内还是休息期
+    const cyclePos = m % cycleLength;
+    const isActive = cyclePos < setMinutes;
+
+    // heartRate: 组内 restingHr + 84（高强度无氧），休息 restingHr + 34（不完全恢复）
+    const hrBase = isActive ? restingHr + 84 : restingHr + 34;
+    const hrRange = isActive ? 20 : 12;
+    const hr = rangeValue(hrBase, hrRange, m, 40);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    // steps: 极低步数 — 力量训练几乎原地不动
+    const stepsDelta = isActive
+      ? Math.round(deterministic(43, m) * 3)
+      : Math.round(deterministic(44, m) * 2);
+    cumulativeSteps += stepsDelta;
+    events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
+
+    // motion: 基于 IMU 采样聚合（周期性手臂重复动作）
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+
+    // spo2: 每5分钟，组内略低于基线（Valsalva 效应），休息时恢复
+    if (m % 5 === 0) {
+      const spo2 = isActive ? rangeValue(spo2Base - 2, 3, m, 45) : rangeValue(spo2Base, 2, m, 46);
       events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
     }
   }
@@ -255,12 +326,13 @@ function generateWalkEvents(segment: ActivitySegment): DeviceEvent[] {
   const events: DeviceEvent[] = [];
   const totalMin = diffMinutes(segment.start, segment.end);
   const params = segment.params ?? {};
+  const { restingHr, spo2: spo2Base } = extractBaselines(params);
   const paceRaw = params.pace;
   const pace = paceRaw === 'slow' || paceRaw === 'brisk' ? paceRaw : 'moderate';
 
-  // 配速影响步数和心率
+  // 配速影响步数和心率偏移
   const stepsPerMin = pace === 'slow' ? 60 : pace === 'brisk' ? 130 : 100;
-  const hrTarget = pace === 'slow' ? 95 : pace === 'brisk' ? 110 : 100;
+  const hrOffset = pace === 'slow' ? 39 : pace === 'brisk' ? 54 : 44;
 
   let idx = 0;
   let cumulativeSteps = 0;
@@ -270,8 +342,8 @@ function generateWalkEvents(segment: ActivitySegment): DeviceEvent[] {
   events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
 
   for (let m = 0; m < totalMin; m += 1) {
-    // heartRate: 90-110 之间
-    const hr = rangeValue(hrTarget, 15, m, 40);
+    // heartRate: 静息 + 步行偏移
+    const hr = rangeValue(restingHr + hrOffset, 15, m, 40);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
 
     // steps: 稳定累积
@@ -284,9 +356,9 @@ function generateWalkEvents(segment: ActivitySegment): DeviceEvent[] {
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
-    // spo2: 每5分钟
+    // spo2: 每5分钟，步行时略高于基线
     if (m % 5 === 0) {
-      const spo2 = rangeValue(97, 3, m, 43);
+      const spo2 = rangeValue(spo2Base + 1, 3, m, 43);
       events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
     }
   }
@@ -308,10 +380,11 @@ function generateSleepEvents(segment: ActivitySegment): DeviceEvent[] {
   const events: DeviceEvent[] = [];
   const totalMin = diffMinutes(segment.start, segment.end);
   const params = segment.params ?? {};
+  const { restingHr, spo2: spo2Base } = extractBaselines(params);
   const qualityRaw = params.quality;
   const quality = qualityRaw === 'good' || qualityRaw === 'poor' ? qualityRaw : 'fair';
 
-  // 质量影响各阶段持续时间和心率基线
+  // 质量影响各阶段持续时间和心率偏移
   const stageDuration: Record<string, number> =
     quality === 'good'
       ? { light: 20, deep: 30, rem: 25, awake: 5 }
@@ -319,7 +392,7 @@ function generateSleepEvents(segment: ActivitySegment): DeviceEvent[] {
         ? { light: 15, deep: 10, rem: 10, awake: 15 }
         : { light: 20, deep: 20, rem: 20, awake: 10 };
 
-  const hrBase = quality === 'good' ? 55 : quality === 'poor' ? 62 : 58;
+  const hrOffset = quality === 'good' ? -1 : quality === 'poor' ? 6 : 2;
 
   let idx = 0;
   let stageTime = 0;
@@ -371,9 +444,9 @@ function generateSleepEvents(segment: ActivitySegment): DeviceEvent[] {
       events.push(makeEvent(segment, m, 'sleepStage', currentStage, idx++));
     }
 
-    // heartRate: 基于当前阶段
-    const hrOffset = currentStage === 'deep' ? -5 : currentStage === 'rem' ? 5 : currentStage === 'awake' ? 8 : 0;
-    const hr = rangeValue(hrBase + hrOffset, 6, m, 50);
+    // heartRate: 静息 + 睡眠质量偏移 + 阶段偏移
+    const stageHrOffset = currentStage === 'deep' ? -5 : currentStage === 'rem' ? 5 : currentStage === 'awake' ? 8 : 0;
+    const hr = rangeValue(restingHr + hrOffset + stageHrOffset, 6, m, 50);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
 
     // steps: 无
@@ -384,9 +457,102 @@ function generateSleepEvents(segment: ActivitySegment): DeviceEvent[] {
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
-    // spo2: 每5分钟
+    // spo2: 每5分钟，睡眠时接近基线
     if (m % 5 === 0) {
-      const spo2 = rangeValue(96, 3, m, 53);
+      const spo2 = rangeValue(spo2Base, 3, m, 53);
+      events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
+    }
+  }
+
+  return events;
+}
+
+// ============================================================
+// 生成器: nap（小憩，约 1 小时的短时恢复性睡眠）
+// ============================================================
+
+/** 小憩阶段序列：入睡 → 浅睡 → 少量深睡 → 浅睡 → 醒来 */
+const NAP_STAGE_SEQUENCE: Array<'awake' | 'light' | 'deep'> = [
+  'awake', 'light', 'deep', 'light', 'awake',
+];
+
+/** 小憩事件生成 */
+function generateNapEvents(segment: ActivitySegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  let idx = 0;
+
+  // 从 params 读取 profile 基线，回退到典型默认值
+  const { restingHr: hrBase, hrv: hrvBase, spo2: spo2Base } = extractBaselines(segment.params);
+
+  // 各阶段时长分配（总约 60 分钟）
+  const stageDuration: Record<string, number> = {
+    awake: 5,   // 入睡准备
+    light: 20,  // 浅睡
+    deep: 10,   // 短暂深睡
+    // 第二次 light 占据剩余时间
+  };
+
+  // wearState
+  events.push(makeEvent(segment, 0, 'wearState', true, idx++));
+  events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
+
+  // 初始 awake 阶段
+  events.push(makeEvent(segment, 0, 'sleepStage', 'awake', idx++));
+  let currentStage: string = 'awake';
+  let stageTime = 0;
+  let seqIdx = 0;
+
+  for (let m = 1; m < totalMin; m += 1) {
+    stageTime += 1;
+
+    // 阶段切换逻辑
+    let dur: number;
+    if (seqIdx === NAP_STAGE_SEQUENCE.length - 2) {
+      // 最后一个 light 阶段：占据剩余时间
+      dur = totalMin - (stageDuration.awake ?? 5) - (stageDuration.light ?? 20) - (stageDuration.deep ?? 10) - (stageDuration.awake ?? 5);
+    } else {
+      dur = stageDuration[currentStage] ?? 10;
+    }
+
+    if (stageTime >= dur && seqIdx < NAP_STAGE_SEQUENCE.length - 1) {
+      seqIdx += 1;
+      currentStage = NAP_STAGE_SEQUENCE[seqIdx]!;
+      stageTime = 0;
+      events.push(makeEvent(segment, m, 'sleepStage', currentStage, idx++));
+    }
+
+    // 恢复进度（0→1）：越接近小憩末尾恢复效果越明显
+    const recoveryProgress = m / totalMin;
+
+    // heartRate: 深睡最低，浅睡略高，awake 最高
+    const hrOffset = currentStage === 'deep' ? -4 : currentStage === 'awake' ? 6 : 0;
+    const hr = rangeValue(hrBase + hrOffset, 5, m, 50);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    // HRV: 入睡初期因压力略低，深睡期平稳，末段（恢复窗口）明显回升
+    // 前 60% 维持基线附近，后 40% 逐渐回升 +8~15
+    const hrvRecoveryBoost = recoveryProgress > 0.6
+      ? Math.round((recoveryProgress - 0.6) / 0.4 * 12) // 末段回升 0→12
+      : 0;
+    const stageHrvOffset = currentStage === 'deep' ? -5 : currentStage === 'awake' ? -3 : 0;
+    const hrv = rangeValue(hrvBase + stageHrvOffset + hrvRecoveryBoost, 6, m, 70);
+    events.push(makeEvent(segment, m, 'hrvRmssd', hrv, idx++));
+
+    // steps: 无
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+
+    // motion: 几乎无（仰卧静止）
+    const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+
+    // SpO2: 末段因呼吸平稳、氧气充分微升（+1~2%）
+    const spo2Boost = recoveryProgress > 0.5
+      ? Math.round((recoveryProgress - 0.5) / 0.5 * 2) // 末段 +0→2
+      : 0;
+    if (m % 5 === 0) {
+      const spo2 = rangeValue(spo2Base + spo2Boost, 1.5, m, 53);
       events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
     }
   }
@@ -402,20 +568,23 @@ function generateSleepEvents(segment: ActivitySegment): DeviceEvent[] {
 function generateDeepFocusEvents(segment: ActivitySegment): DeviceEvent[] {
   const events: DeviceEvent[] = [];
   const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, spo2: spo2Base } = extractBaselines(segment.params);
   let idx = 0;
 
   events.push(makeEvent(segment, 0, 'wearState', true, idx++));
   events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
 
   for (let m = 0; m < totalMin; m += 1) {
-    const hr = rangeValue(58, 8, m, 60);
+    // heartRate: 静息 + 2 的专注偏移
+    const hr = rangeValue(restingHr + 2, 8, m, 60);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
     const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
+    // spo2: 专注时呼吸平稳，略高于基线
     if (m % 5 === 0) {
-      const spo2 = rangeValue(99, 2, m, 62);
+      const spo2 = rangeValue(spo2Base + 3, 2, m, 62);
       events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
     }
   }
@@ -431,9 +600,11 @@ function generateAnxietyEpisodeEvents(segment: ActivitySegment): DeviceEvent[] {
   const events: DeviceEvent[] = [];
   const totalMin = diffMinutes(segment.start, segment.end);
   const params = segment.params ?? {};
+  const { restingHr, spo2: spo2Base } = extractBaselines(params);
   const triggerRaw = params.trigger;
   const trigger = typeof triggerRaw === 'string' ? triggerRaw : 'work';
-  const hrBase = trigger === 'social' ? 90 : trigger === 'panic' ? 100 : 95;
+  // 焦虑 HR 偏移：social +34, panic +44, work +39
+  const hrOffset = trigger === 'social' ? 34 : trigger === 'panic' ? 44 : 39;
   let idx = 0;
 
   events.push(makeEvent(segment, 0, 'wearState', true, idx++));
@@ -442,7 +613,7 @@ function generateAnxietyEpisodeEvents(segment: ActivitySegment): DeviceEvent[] {
   for (let m = 0; m < totalMin; m += 1) {
     const progress = m / totalMin;
     const hrSpike = Math.sin(progress * Math.PI) * 12;
-    const hr = rangeValue(Math.round(hrBase + hrSpike), 15, m, 70);
+    const hr = rangeValue(Math.round(restingHr + hrOffset + hrSpike), 15, m, 70);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
     const steps = deterministic(71, m) > 0.7 ? Math.round(deterministic(72, m) * 5) : 0;
     events.push(makeEvent(segment, m, 'steps', steps, idx++));
@@ -450,7 +621,7 @@ function generateAnxietyEpisodeEvents(segment: ActivitySegment): DeviceEvent[] {
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
     if (m % 5 === 0) {
-      const spo2 = rangeValue(97, 2, m, 74);
+      const spo2 = rangeValue(spo2Base + 1, 2, m, 74);
       events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
     }
   }
@@ -493,16 +664,16 @@ function generateAlcoholIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
   const events: DeviceEvent[] = [];
   const totalMin = diffMinutes(segment.start, segment.end);
   const params = segment.params ?? {};
+  const { restingHr, hrv: hrvBaseline, spo2: spo2Base } = extractBaselines(params);
   const amountRaw = params.amount;
   const amount: AlcoholAmount =
     amountRaw === 'light' || amountRaw === 'heavy' ? amountRaw : 'moderate';
   const ranges = ALCOHOL_AMOUNT_RANGES[amount];
 
-  // 基线值：使用 profile 典型值
-  const hrBaseline = 68;
-  const rmssdBaseline = 50;
+  // HR 基线 = 静息 + 12（饮酒场景下基础心率略高）
+  const hrBaseline = restingHr + 12;
+  // stressLoad 基线：交感神经基线
   const stressBaseline = 25;
-  const spo2Baseline = 97;
 
   let idx = 0;
   let cumulativeSteps = 0;
@@ -523,7 +694,7 @@ function generateAlcoholIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
 
     // RMSSD：随 factor 下降（副交感神经受抑制）——使用绝对值 drop（ms）
     const rmssdDrop = ranges.rmssdDropMin + (ranges.rmssdDropMax - ranges.rmssdDropMin) * factor;
-    const rmssd = Math.round((rmssdBaseline - rmssdDrop * noise) * 10) / 10;
+    const rmssd = Math.round((hrvBaseline - rmssdDrop * noise) * 10) / 10;
     events.push(makeEvent(segment, m, 'hrvRmssd', Math.max(5, rmssd), idx++));
 
     // stressLoad：随 factor 上升（交感神经相对占优）
@@ -533,7 +704,7 @@ function generateAlcoholIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
 
     // SpO2：稳定或轻微下降 ±1%
     const spo2Noise = deterministic(73, m) * 2 - 1; // -1~1
-    const spo2 = Math.round(spo2Baseline + spo2Noise);
+    const spo2 = Math.round(spo2Base + 1 + spo2Noise);
     events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
 
     // motion：低活动 0.2~1.8（社交饮酒场景下以坐姿为主，略宽松于咖啡因）
@@ -557,20 +728,23 @@ function generateAlcoholIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
 function generateRelaxationEvents(segment: ActivitySegment): DeviceEvent[] {
   const events: DeviceEvent[] = [];
   const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, spo2: spo2Base } = extractBaselines(segment.params);
   let idx = 0;
 
   events.push(makeEvent(segment, 0, 'wearState', true, idx++));
   events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
 
   for (let m = 0; m < totalMin; m += 1) {
-    const hr = rangeValue(52, 5, m, 110);
+    // heartRate: 静息 - 4（放松状态低于静息心率）
+    const hr = rangeValue(restingHr - 4, 5, m, 110);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
     const imuSamples = generateImuSamples(MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
+    // spo2: 放松时呼吸深长，明显高于基线
     if (m % 5 === 0) {
-      const spo2 = rangeValue(99, 2, m, 112);
+      const spo2 = rangeValue(spo2Base + 3, 2, m, 112);
       events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
     }
   }
@@ -611,16 +785,16 @@ function generateCaffeineIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
   const events: DeviceEvent[] = [];
   const totalMin = diffMinutes(segment.start, segment.end);
   const params = segment.params ?? {};
+  const { restingHr, hrv: hrvBaseline, spo2: spo2Base } = extractBaselines(params);
   const doseRaw = params.dose;
   const dose: CaffeineDose =
     doseRaw === 'light' || doseRaw === 'high_or_sensitive' ? doseRaw : 'moderate';
   const ranges = CAFFEINE_DOSE_RANGES[dose];
 
-  // 基线值：使用 profile 典型值
-  const hrBaseline = 68;
-  const rmssdBaseline = 50;
+  // HR 基线 = 静息 + 12（咖啡因场景下基础心率略高）
+  const hrBaseline = restingHr + 12;
+  // stressLoad 基线：交感神经基线
   const stressBaseline = 25;
-  const spo2Baseline = 97;
 
   let idx = 0;
   let cumulativeSteps = 0;
@@ -630,9 +804,9 @@ function generateCaffeineIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
 
   // 在 m=0 生成基线事件（factor=0，真实基线值），供 detector 建立伪基线
   events.push(makeEvent(segment, 0, 'heartRate', hrBaseline, idx++));
-  events.push(makeEvent(segment, 0, 'hrvRmssd', rmssdBaseline, idx++));
+  events.push(makeEvent(segment, 0, 'hrvRmssd', hrvBaseline, idx++));
   events.push(makeEvent(segment, 0, 'stressLoad', stressBaseline, idx++));
-  events.push(makeEvent(segment, 0, 'spo2', spo2Baseline, idx++));
+  events.push(makeEvent(segment, 0, 'spo2', spo2Base + 1, idx++));
   events.push(makeEvent(segment, 0, 'motion', 0.3, idx++));
   events.push(makeEvent(segment, 0, 'steps', 0, idx++));
 
@@ -649,7 +823,7 @@ function generateCaffeineIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
 
     // RMSSD：从基线随 factor 线性下降至 peak drop
     const rmssdDrop = ranges.rmssdDropMax * factor;
-    const rmssd = Math.round((rmssdBaseline * (1 - rmssdDrop * noise)) * 10) / 10;
+    const rmssd = Math.round((hrvBaseline * (1 - rmssdDrop * noise)) * 10) / 10;
     events.push(makeEvent(segment, m, 'hrvRmssd', rmssd, idx++));
 
     // stressLoad：从基线随 factor 线性上升至 peak
@@ -659,7 +833,7 @@ function generateCaffeineIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
 
     // SpO2：保持稳定 ±1%
     const spo2Noise = deterministic(73, m) * 2 - 1; // -1~1
-    const spo2 = Math.round(spo2Baseline + spo2Noise);
+    const spo2 = Math.round(spo2Base + 1 + spo2Noise);
     events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
 
     // motion：低活动 0.2~1.5
@@ -687,11 +861,13 @@ const GENERATOR_MAP: Record<ActivitySegmentType, (segment: ActivitySegment) => D
   intermittent_exercise: generateIntermittentExerciseEvents,
   walk: generateWalkEvents,
   sleep: generateSleepEvents,
+  nap: generateNapEvents,
   deep_focus: generateDeepFocusEvents,
   anxiety_episode: generateAnxietyEpisodeEvents,
   alcohol_intake: generateAlcoholIntakeEvents,
   caffeine_intake: generateCaffeineIntakeEvents,
   relaxation: generateRelaxationEvents,
+  strength_training: generateStrengthTrainingEvents,
 };
 
 /**
@@ -719,4 +895,5 @@ export {
   generateAlcoholIntakeEvents,
   generateCaffeineIntakeEvents,
   generateRelaxationEvents,
+  generateStrengthTrainingEvents,
 };

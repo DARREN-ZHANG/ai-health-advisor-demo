@@ -135,6 +135,7 @@ const PATTERN_CONFIGS: Record<MotionPattern, PatternConfig> = {
 
 export const MOTION_PATTERN_MAP: Record<ActivitySegmentType, MotionPattern> = {
   sleep:               'still_supine',
+  nap:                 'still_supine',
   relaxation:          'still_upright',
   prolonged_sedentary: 'still_upright',
   walk:                'periodic_walk',
@@ -145,6 +146,7 @@ export const MOTION_PATTERN_MAP: Record<ActivitySegmentType, MotionPattern> = {
   deep_focus:          'irregular_fidget',
   intermittent_exercise: 'intermittent_burst',
   anxiety_episode:     'irregular_restless',
+  strength_training:   'periodic_arm_repeat',
 };
 
 // ============================================================

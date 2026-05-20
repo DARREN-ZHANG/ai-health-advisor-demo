@@ -391,6 +391,7 @@ describe('ActivitySegmentTypeSchema', () => {
       'intermittent_exercise', 'walk', 'sleep',
       'deep_focus', 'anxiety_episode',
       'alcohol_intake', 'caffeine_intake', 'relaxation',
+      'strength_training',
     ];
     types.forEach((t) => {
       expect(ActivitySegmentTypeSchema.parse(t)).toBe(t);
@@ -582,6 +583,7 @@ describe('RecognizedEventTypeSchema', () => {
       'intermittent_exercise', 'walk', 'sleep',
       'deep_focus', 'anxiety_episode',
       'alcohol_intake', 'caffeine_intake', 'relaxation',
+      'strength_training',
     ];
     types.forEach((t) => {
       expect(RecognizedEventTypeSchema.parse(t)).toBe(t);

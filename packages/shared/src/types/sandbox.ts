@@ -12,11 +12,13 @@ export type ActivitySegmentType =
   | 'intermittent_exercise'
   | 'walk'
   | 'sleep'
+  | 'nap'
   | 'deep_focus'
   | 'anxiety_episode'
   | 'alcohol_intake'
   | 'caffeine_intake'
-  | 'relaxation';
+  | 'relaxation'
+  | 'strength_training';
 
 /** profile 当前演示时刻 */
 export interface DemoClock {

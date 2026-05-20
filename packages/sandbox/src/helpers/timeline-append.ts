@@ -29,11 +29,13 @@ const DEFAULT_DURATION: Record<ActivitySegmentType, number> = {
   intermittent_exercise: 30,
   walk: 30,
   sleep: 480,
+  nap: 60,
   deep_focus: 120,
   anxiety_episode: 30,
   alcohol_intake: 180,
   caffeine_intake: 240,
   relaxation: 30,
+  strength_training: 30,
 };
 
 /** 给 YYYY-MM-DDTHH:mm 格式的时间戳加 N 分钟（使用本地时间解析） */

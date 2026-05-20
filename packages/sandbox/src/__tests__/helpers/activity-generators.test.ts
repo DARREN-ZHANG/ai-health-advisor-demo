@@ -6,6 +6,7 @@ import {
   generateSteadyCardioEvents,
   generateProlongedSedentaryEvents,
   generateIntermittentExerciseEvents,
+  generateStrengthTrainingEvents,
   generateWalkEvents,
   generateSleepEvents,
   generateCaffeineIntakeEvents,
@@ -902,6 +903,48 @@ describe('activity-generators', () => {
       expect(wearState[0].measuredAt).toBe(segment.start);
       expect(wearState[1].value).toBe(false);
       expect(wearState[1].measuredAt).toBe(segment.end);
+    });
+  });
+
+  describe('generateStrengthTrainingEvents', () => {
+    const segment = makeSegment({
+      segmentId: 'seg-strength-1',
+      type: 'strength_training',
+      start: '2026-04-16T10:00',
+      end: '2026-04-16T10:30',
+      params: { setMinutes: 1, restMinutes: 2 },
+    });
+
+    it('should produce events within time range', () => {
+      const events = generateStrengthTrainingEvents(segment);
+      assertEventsInRange(events, segment.start, segment.end);
+    });
+
+    it('should have alternating high/low heartRate periods', () => {
+      const events = generateStrengthTrainingEvents(segment);
+      const hrEvents = events.filter((e) => e.metric === 'heartRate');
+      const hrValues = hrEvents.map((e) => e.value as number);
+
+      // 组内心率应 >110（restingHr 56 + 84 = 140 附近）
+      const hasHigh = hrValues.some((v) => v > 110);
+      // 休息期心率应 <110（restingHr 56 + 34 = 90 附近）
+      const hasLow = hrValues.some((v) => v < 110);
+      expect(hasHigh).toBe(true);
+      expect(hasLow).toBe(true);
+    });
+
+    it('should produce very few steps (strength training is stationary)', () => {
+      const events = generateStrengthTrainingEvents(segment);
+      const stepEvents = events.filter((e) => e.metric === 'steps');
+      const lastSteps = stepEvents[stepEvents.length - 1]!.value as number;
+      // 30 分钟，每分钟 0-3 步 → 总步数应远低于 100
+      expect(lastSteps).toBeLessThan(100);
+    });
+
+    it('should produce motion values', () => {
+      const events = generateStrengthTrainingEvents(segment);
+      const motionEvents = events.filter((e) => e.metric === 'motion');
+      expect(motionEvents.length).toBeGreaterThan(0);
     });
   });
 });

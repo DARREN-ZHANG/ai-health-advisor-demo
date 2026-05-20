@@ -191,7 +191,7 @@ describe('imu-generator: motion 聚合', () => {
 describe('imu-generator: ActivitySegmentType → MotionPattern 映射', () => {
   it('映射表覆盖所有 ActivitySegmentType', () => {
     const segmentTypes = [
-      'sleep', 'relaxation', 'prolonged_sedentary',
+      'sleep', 'nap', 'relaxation', 'prolonged_sedentary',
       'walk', 'steady_cardio',
       'meal_intake', 'alcohol_intake', 'caffeine_intake',
       'deep_focus', 'intermittent_exercise',
@@ -200,7 +200,7 @@ describe('imu-generator: ActivitySegmentType → MotionPattern 映射', () => {
     for (const type of segmentTypes) {
       expect(MOTION_PATTERN_MAP[type as keyof typeof MOTION_PATTERN_MAP]).toBeDefined();
     }
-    expect(Object.keys(MOTION_PATTERN_MAP).length).toBe(11);
+    expect(Object.keys(MOTION_PATTERN_MAP).length).toBe(13);
   });
 
   it('映射值全部是有效的 MotionPattern', () => {
