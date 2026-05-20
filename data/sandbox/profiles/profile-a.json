@@ -32,10 +32,10 @@
     "dailyBaseline": {
       "avgSleepMinutes": 600,
       "avgSteps": 5000,
-      "hrv": 85
+      "hrv": 93
     }
   },
-  "initialDemoTime": "2026-05-18T07:05",
+  "initialDemoTime": "2026-05-20T07:05",
   "historyRef": {
     "file": "history/profile-a-daily-records.json"
   },
