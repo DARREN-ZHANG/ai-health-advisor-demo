@@ -342,8 +342,9 @@ function analyzeCandidate(
   const responseHasSleep = responseBuckets.some((b) => b.sleepStages.length > 0);
   if (responseHasSleep) return null;
 
-  // 需要足够的基线和响应数据
-  if (baselineBuckets.length < 3 || responseBuckets.length < 6) return null;
+  // 需要足够的响应数据；基线数据不足时可用伪基线窗口（吸收延迟期）兜底
+  if (responseBuckets.length < 6) return null;
+  if (baselineBuckets.length < 3 && pseudoBaselineBuckets.length < 3) return null;
 
   // ── 基线指标计算 ──
 
