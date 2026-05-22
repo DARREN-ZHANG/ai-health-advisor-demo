@@ -161,7 +161,9 @@ function ConfigAreaContent({ className, disabled }: ConfigAreaProps) {
                 role="tooltip"
                 className="pointer-events-none absolute bottom-full right-0 mb-2 w-64 max-h-60 overflow-y-auto rounded-lg bg-slate-800 px-3 py-2 text-[11px] leading-relaxed text-slate-300 opacity-0 invisible group-hover/events:visible group-hover/events:opacity-100 transition-opacity z-50 border border-slate-700 shadow-xl text-left"
               >
-                {(godModeState?.recentRecognizedEvents ?? []).map((event) => {
+                {[...(godModeState?.recentRecognizedEvents ?? [])]
+                    .sort((a, b) => a.start.localeCompare(b.start))
+                    .map((event) => {
                   const display = EVENT_TYPE_DISPLAY[event.type];
                   const label = display ? tSeg(display.labelKey) : event.type;
                   const icon = display?.icon ?? '📋';
