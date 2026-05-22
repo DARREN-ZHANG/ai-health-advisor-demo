@@ -224,7 +224,11 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale, demoNow
         // 计算时间权重标签
         const weightLabel = demoNow ? computeWeightLabel(ev.start, demoNow, locale) : '';
         const weightPrefix = weightLabel ? `${weightLabel} ` : '';
-        lines.push(`- ${weightPrefix}[${ev.type}] ${t(locale, '开始', 'start')}${c}${ev.start}, ${t(locale, '持续', 'duration')}${c}${ev.durationMin} min, ${t(locale, '置信度', 'confidence')}${c}${Math.round(ev.confidence * 100)}%`);
+        // 持续性影响事件标记（咖啡因/饮酒），模板段落2会据此决定是否提及
+        const ongoingTag = isOngoingEffectEvent(ev.type, ev.end, demoNow)
+          ? ` ${t(locale, '⚠ 影响持续中', '⚠ Effect ongoing')}`
+          : '';
+        lines.push(`- ${weightPrefix}[${ev.type}] ${t(locale, '开始', 'start')}${c}${ev.start}, ${t(locale, '持续', 'duration')}${c}${ev.durationMin} min, ${t(locale, '置信度', 'confidence')}${c}${Math.round(ev.confidence * 100)}%${ongoingTag}`);
       } else {
         lines.push(`- [${ev.type}] ${ev.type}`);
       }
@@ -478,6 +482,21 @@ function getChartTokenForTab(tab: DataTab): ChartTokenId | undefined {
 // ────────────────────────────────────────────
 // 辅助：时间权重标签
 // ────────────────────────────────────────────
+
+/** 判断事件是否为持续性影响事件（咖啡因/饮酒）且仍在影响期内 */
+function isOngoingEffectEvent(eventType: string, eventEnd: string, demoNow?: string): boolean {
+  if (!demoNow) return false;
+  const ongoingTypes = ['possible_caffeine_intake', 'possible_alcohol_intake'];
+  if (!ongoingTypes.includes(eventType)) return false;
+
+  // 咖啡因半衰期约5-6小时，饮酒影响持续数小时，使用12小时作为保守阈值
+  const normalizedEnd = eventEnd.length <= 16 ? `${eventEnd}:00` : eventEnd;
+  const endMs = new Date(normalizedEnd).getTime();
+  const nowMs = new Date(`${demoNow}:00`).getTime();
+  const diffHours = (nowMs - endMs) / 3600000;
+
+  return diffHours >= 0 && diffHours <= 12;
+}
 
 /** 计算事件距当前时间的时间差并返回权重标签 */
 function computeWeightLabel(eventStart: string, demoNow: string, locale: Locale): string {
