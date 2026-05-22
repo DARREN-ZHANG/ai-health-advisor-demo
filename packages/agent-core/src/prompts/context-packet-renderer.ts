@@ -33,6 +33,9 @@ function colon(locale: Locale): string {
 export function renderTaskContextPacket(packet: TaskContextPacket, locale: Locale = 'zh', demoNow?: string): string {
   const sections: string[] = [];
 
+  // 检测首页是否有最近事件，用于控制上下文数据的详细程度
+  const hasHomepageEvents = (packet.homepage?.recentEvents?.length ?? 0) > 0;
+
   sections.push(renderTaskPacket(packet.task, locale));
 
   // 注入当前模拟时间（让 LLM 感知 demo timeline 的"现在"）
@@ -40,10 +43,10 @@ export function renderTaskContextPacket(packet: TaskContextPacket, locale: Local
     sections.push(`## ${t(locale, '当前时间', 'Current Time')}\n- ${t(locale, '当前模拟时间', 'Current simulated time')}${colon(locale)}${demoNow}`);
   }
 
-  sections.push(renderUserContext(packet.userContext, locale));
+  sections.push(renderUserContext(packet.userContext, locale, hasHomepageEvents));
   sections.push(renderDataWindow(packet.dataWindow, locale));
   sections.push(renderMissingData(packet.missingData, locale));
-  sections.push(renderVisibleCharts(packet.visibleCharts, locale));
+  sections.push(renderVisibleCharts(packet.visibleCharts, locale, hasHomepageEvents));
   sections.push(renderEvidence(packet.evidence));
 
   if (packet.homepage) sections.push(renderHomepage(packet.homepage, locale, demoNow));
@@ -74,7 +77,7 @@ function renderTaskPacket(task: TaskPacket, locale: Locale): string {
 // User Context
 // ────────────────────────────────────────────
 
-function renderUserContext(user: UserContextPacket, locale: Locale): string {
+function renderUserContext(user: UserContextPacket, locale: Locale, hasHomepageEvents: boolean = false): string {
   const c = colon(locale);
   const lines = [t(locale, '## 用户信息', '## User Info')];
   lines.push(`- ${t(locale, '姓名', 'Name')}${c}${user.name}`);
@@ -84,12 +87,24 @@ function renderUserContext(user: UserContextPacket, locale: Locale): string {
     lines.push(`- ${t(locale, '标签', 'Tags')}${c}${user.tags.join(tagSep)}`);
   }
   lines.push('');
-  lines.push(t(locale, '## 个人参考水平（内部分析用，不要原样写给用户）', '## Personal Reference Levels (internal only)'));
-  lines.push(`- ${t(locale, '静息心率通常水平', 'Resting HR usual level')}${c}${user.baselines.restingHR} bpm`);
-  lines.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}${c}${user.baselines.hrv} ms`);
-  lines.push(`- ${t(locale, 'SpO2 参考水平', 'SpO2 reference level')}${c}${user.baselines.spo2}%`);
-  lines.push(`- ${t(locale, '平均睡眠', 'Average sleep')}${c}${user.baselines.avgSleepMinutes} min`);
-  lines.push(`- ${t(locale, '平均步数', 'Average steps')}${c}${user.baselines.avgSteps} steps`);
+
+  if (hasHomepageEvents) {
+    // 有事件时：压缩为一行，降低 baseline 数据的视觉权重
+    lines.push(t(locale, '## 个人参考水平（仅供交叉验证，禁止在 summary 中展开）', '## Personal Reference Levels (cross-validation only, do not expand in summary)'));
+    const bl = user.baselines;
+    lines.push(t(locale,
+      `静息心率 ${bl.restingHR}bpm, HRV ${bl.hrv}ms, SpO2 ${bl.spo2}%, 睡眠 ${bl.avgSleepMinutes}min, 步数 ${bl.avgSteps}`,
+      `resting HR ${bl.restingHR}bpm, HRV ${bl.hrv}ms, SpO2 ${bl.spo2}%, sleep ${bl.avgSleepMinutes}min, steps ${bl.avgSteps}`,
+    ));
+  } else {
+    lines.push(t(locale, '## 个人参考水平（内部分析用，不要原样写给用户）', '## Personal Reference Levels (internal only)'));
+    lines.push(`- ${t(locale, '静息心率通常水平', 'Resting HR usual level')}${c}${user.baselines.restingHR} bpm`);
+    lines.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}${c}${user.baselines.hrv} ms`);
+    lines.push(`- ${t(locale, 'SpO2 参考水平', 'SpO2 reference level')}${c}${user.baselines.spo2}%`);
+    lines.push(`- ${t(locale, '平均睡眠', 'Average sleep')}${c}${user.baselines.avgSleepMinutes} min`);
+    lines.push(`- ${t(locale, '平均步数', 'Average steps')}${c}${user.baselines.avgSteps} steps`);
+  }
+
   return lines.join('\n');
 }
 
@@ -134,14 +149,25 @@ function renderMissingData(items: MissingDataItem[], locale: Locale): string {
 // Visible Charts
 // ────────────────────────────────────────────
 
-function renderVisibleCharts(charts: VisibleChartPacket[], locale: Locale): string {
+function renderVisibleCharts(charts: VisibleChartPacket[], locale: Locale, hasHomepageEvents: boolean = false): string {
   if (charts.length === 0) return '';
 
   const lines = [t(locale, '## 可见图表', '## Visible Charts')];
-  for (const chart of charts) {
-    lines.push(`- ${chart.chartToken} (${chart.metric}, ${chart.timeframe})`);
-    lines.push(renderMetricSummary(chart.dataSummary, '  ', {}, locale));
+
+  if (hasHomepageEvents) {
+    // 有事件时：压缩为单行摘要，降低图表数据的视觉权重
+    for (const chart of charts) {
+      const latest = chart.dataSummary.latest;
+      const valStr = latest ? `${latest.value}${latest.unit}` : 'N/A';
+      lines.push(`- ${chart.chartToken}: ${valStr}, ${t(locale, '趋势', 'trend')} ${chart.dataSummary.trendDirection}`);
+    }
+  } else {
+    for (const chart of charts) {
+      lines.push(`- ${chart.chartToken} (${chart.metric}, ${chart.timeframe})`);
+      lines.push(renderMetricSummary(chart.dataSummary, '  ', {}, locale));
+    }
   }
+
   return lines.join('\n');
 }
 
@@ -175,9 +201,20 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale, demoNow
   const c = colon(locale);
   const lines: string[] = [];
 
+  const hasEvents = homepage.recentEvents.length > 0;
+
+  // 内容优先级指引
+  if (hasEvents) {
+    lines.push(t(
+      locale,
+      '> 内容优先级：事件详情是主体（≥50%），24h 状态仅作交叉验证（≤30%），趋势数据一句话概括即可',
+      '> Content priority: event details are the main subject (≥50%), 24h status is cross-validation only (≤30%), trend data summarized in one sentence',
+    ));
+  }
+
   // Recent events（附时间权重标签）
-  if (homepage.recentEvents.length > 0) {
-    lines.push(t(locale, '## 最近发生的事件', '## Recent Events'));
+  if (hasEvents) {
+    lines.push(t(locale, '## 最近发生的事件（分析主体）', '## Recent Events (Main Analysis Subject)'));
     // 权重指引注释
     if (demoNow) {
       lines.push(t(locale, '> 数据时效权重：距当前时间越近的数据权重越高，请按权重分配篇幅，高权重详述，低权重概括', '> Data freshness weight: data closer to current time has higher weight. Allocate more detail to high-weight data, summarize low-weight data'));
@@ -194,13 +231,22 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale, demoNow
     }
   }
 
-  // Latest 24h
-  lines.push(t(locale, '## 过去24小时状态', '## Past 24h Status'));
+  // Latest 24h — 当有事件时压缩为摘要格式，无事件时保持详细
+  if (hasEvents) {
+    lines.push(t(locale, '## 过去24小时状态（交叉验证背景，不要展开分析）', '## Past 24h Status (Cross-validation Background Only)'));
+  } else {
+    lines.push(t(locale, '## 过去24小时状态', '## Past 24h Status'));
+  }
   lines.push(`- ${t(locale, '日期', 'Date')}${c}${homepage.latest24h.date}`);
-  for (const m of homepage.latest24h.metrics) {
-    if (m.status === 'missing') {
-      lines.push(`- ${m.metric}${c}${t(locale, '数据缺失', 'data missing')}`);
-    } else {
+
+  // 筛选出需要注意/异常的指标和有数据的指标
+  const notableMetrics = homepage.latest24h.metrics.filter(m => m.status === 'attention' || m.status === 'critical');
+  const normalMetrics = homepage.latest24h.metrics.filter(m => m.status === 'normal');
+  const missingMetrics = homepage.latest24h.metrics.filter(m => m.status === 'missing');
+
+  if (hasEvents) {
+    // 有事件时：只渲染异常指标 + 一句话概括正常指标
+    for (const m of notableMetrics) {
       const parts: string[] = [`- ${m.metric}${c}${m.value}${m.unit}`];
       if (m.baseline !== undefined && m.deltaPctVsBaseline !== undefined) {
         const sign = m.deltaPctVsBaseline > 0 ? '+' : '';
@@ -210,13 +256,45 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale, demoNow
       if (m.status === 'critical') parts.push(`[${t(locale, '异常', 'critical')}${m.clinicalNote ? `: ${m.clinicalNote}` : ''}]`);
       lines.push(parts.join(''));
     }
+    if (normalMetrics.length > 0) {
+      const summary = normalMetrics
+        .map(m => `${m.metric} ${m.value}${m.unit}`)
+        .join(', ');
+      lines.push(`- ${t(locale, '其余指标正常', 'Other metrics normal')}${c}${summary}`);
+    }
+    if (missingMetrics.length > 0) {
+      lines.push(`- ${t(locale, '数据缺失', 'Data missing')}${c}${missingMetrics.map(m => m.metric).join(', ')}`);
+    }
+  } else {
+    // 无事件时：保持完整渲染
+    for (const m of homepage.latest24h.metrics) {
+      if (m.status === 'missing') {
+        lines.push(`- ${m.metric}${c}${t(locale, '数据缺失', 'data missing')}`);
+      } else {
+        const parts: string[] = [`- ${m.metric}${c}${m.value}${m.unit}`];
+        if (m.baseline !== undefined && m.deltaPctVsBaseline !== undefined) {
+          const sign = m.deltaPctVsBaseline > 0 ? '+' : '';
+          parts.push(`（${t(locale, '相对平时', 'vs usual')} ${sign}${m.deltaPctVsBaseline}%）`);
+        }
+        if (m.status === 'attention') parts.push(`[${t(locale, '注意', 'attention')}]`);
+        if (m.status === 'critical') parts.push(`[${t(locale, '异常', 'critical')}${m.clinicalNote ? `: ${m.clinicalNote}` : ''}]`);
+        lines.push(parts.join(''));
+      }
+    }
   }
 
-  // Trend 7d
+  // Trend 7d — 当有事件时压缩为一句话摘要
   if (homepage.trend7d.length > 0) {
-    lines.push(t(locale, '## 过去一周趋势', '## Past Week Trends'));
-    for (const tr of homepage.trend7d) {
-      lines.push(renderMetricSummary(tr, '- ', {}, locale));
+    if (hasEvents) {
+      lines.push(t(locale, '## 过去一周趋势（补充佐证，一句话概括）', '## Past Week Trends (Supplementary, One Sentence)'));
+      for (const tr of homepage.trend7d) {
+        lines.push(renderMetricSummaryCompact(tr, '- ', locale));
+      }
+    } else {
+      lines.push(t(locale, '## 过去一周趋势', '## Past Week Trends'));
+      for (const tr of homepage.trend7d) {
+        lines.push(renderMetricSummary(tr, '- ', {}, locale));
+      }
     }
   }
 
@@ -362,6 +440,22 @@ function renderMetricSummary(
   }
   parts.push(`completeness ${ms.missing.completenessPct}% (${ms.missing.totalCount - ms.missing.missingCount}/${ms.missing.totalCount})`);
   return parts.join(', ');
+}
+
+// ────────────────────────────────────────────
+// 精简版 MetricSummary 渲染（有事件时使用，只保留趋势方向）
+// ────────────────────────────────────────────
+
+function renderMetricSummaryCompact(
+  ms: MetricSummary,
+  prefix: string = '',
+  locale: Locale = 'zh',
+): string {
+  const parts: string[] = [];
+  parts.push(`${prefix}${ms.metric}:`);
+  if (ms.latest) parts.push(`${ms.latest.value}${ms.latest.unit}`);
+  parts.push(`${t(locale, '趋势', 'trend')} ${ms.trendDirection}`);
+  return parts.join(' ');
 }
 
 // ────────────────────────────────────────────

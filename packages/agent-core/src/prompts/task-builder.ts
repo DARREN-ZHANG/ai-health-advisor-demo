@@ -58,6 +58,11 @@ export function buildTaskPrompt(
       '- 摘要长度控制在 220-420 字之间；完整卡片由 summary + actions 组成，整体阅读量约 300-500 字',
       '- Summary length must be between 150-300 words',
     ));
+    sections.push(t(
+      locale,
+      '- 篇幅分配：当有最近事件时，summary 的核心（段落 2）必须以事件为主体，24h 状态和趋势仅作简短交叉验证；禁止逐项罗列各项 baseline 指标',
+      '- Space allocation: when recent events exist, summary paragraph 2 must center on events. 24h status and trends are brief cross-validation only; do not list every baseline metric',
+    ));
   } else {
     sections.push(t(
       locale,
@@ -164,8 +169,8 @@ export function buildTaskPrompt(
     // summary 示例展示 \\n\\n 三段结构，引导 LLM 遵循分段格式
     sections.push(t(
       locale,
-      '  "summary": "小明，刚刚检测到你可能完成了一组有氧运动！心率峰值持续了大约20分钟。\\n\\n从24h数据看，昨晚深睡只有45 min，身体还没完全恢复过来。HRV也提示恢复压力偏高，高强度运动可能加重负担。\\n\\n建议今天不要再追加高强度训练，如果还想动一动，饭后快走15 min是个不错的选择。你觉得呢？",',
-      "  \"summary\": \"Ming, looks like you just finished a cardio session! Heart rate peaked for about 20 minutes.\\n\\nFrom the 24h data, deep sleep was only 45 min last night, and your body hasn't fully recovered. HRV also suggests elevated recovery stress.\\n\\nSuggest skipping high-intensity training today. If you want to move, a 15-min brisk walk after dinner is a solid choice. What do you think?\",",
+      '  "summary": "小明，刚刚检测到你完成了一次约30分钟的有氧运动！心率峰值持续了将近20分钟，说明这组运动强度不小，有氧系统被充分调动起来了。运动过程中心率经历了几个明显的上升-回落周期，很可能是间歇性训练节奏。运动后心率恢复速度不错，几分钟内回到了日常水平，心肺系统状态良好。从恢复指标看，昨晚的睡眠为这次运动提供了不错的底子。\\n\\n运动后记得补充水分，今天可以先缓一缓让身体好好恢复。你觉得呢？",',
+      "  \"summary\": \"Ming, just detected you finished a 30-min cardio session! Heart rate peaked for nearly 20 minutes — solid intensity, your aerobic system was fully engaged. During the workout, heart rate went through several clear rise-recovery cycles, likely an interval training pattern. Post-workout recovery was good, heart rate returned to baseline within minutes. From recovery metrics, last night's sleep provided a solid foundation.\\n\\nRemember to hydrate after exercise, take it easy today for recovery. What do you think?\",",
     ));
     sections.push('  "chartTokens": ["CHART_TOKEN_1"],');
     sections.push(t(
