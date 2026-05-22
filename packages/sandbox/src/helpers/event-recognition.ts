@@ -96,7 +96,21 @@ export function recognizeEvents(
     profileId,
     currentTime,
   );
-  results.push(...alcoholResults);
+
+  // 排除与已检测咖啡因事件重叠的饮酒结果
+  // 两种事件的生理响应模式相似（HR↑、RMSSD↓、stress↑、低活动），
+  // 咖啡因检测更可靠（有 RMSSD onset 约束），因此优先保留咖啡因结果
+  const filteredAlcoholResults = alcoholResults.filter((alcoholEvent) => {
+    if (caffeineResults.length === 0) return true;
+    const significantOverlap = caffeineResults.some((caffeineEvent) => {
+      const overlapStart = alcoholEvent.start > caffeineEvent.start ? alcoholEvent.start : caffeineEvent.start;
+      const overlapEnd = alcoholEvent.end < caffeineEvent.end ? alcoholEvent.end : caffeineEvent.end;
+      const overlapMin = diffMinutes(overlapStart, overlapEnd);
+      return overlapMin > 30;
+    });
+    return !significantOverlap;
+  });
+  results.push(...filteredAlcoholResults);
 
   return results;
 }

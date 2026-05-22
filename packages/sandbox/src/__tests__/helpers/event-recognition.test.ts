@@ -704,4 +704,105 @@ describe('event-recognition', () => {
       expect(alcoholEvent!.confidence).toBeGreaterThanOrEqual(0.70);
     });
   });
+
+  // ============================================================
+  // 咖啡因/饮酒互斥测试
+  // ============================================================
+
+  describe('咖啡因与饮酒互斥', () => {
+    /** 生成咖啡因摄入场景（含前置基线） */
+    function generateCaffeineScenario(
+      dose: 'light' | 'moderate' | 'high_or_sensitive' = 'moderate',
+    ): { events: DeviceEvent[]; caffeineStart: string } {
+      const baselineSegment = makeSegment({
+        segmentId: 'seg-baseline',
+        type: 'prolonged_sedentary',
+        start: '2026-04-16T07:00',
+        end: '2026-04-16T08:00',
+      });
+      const caffeineSegment = makeSegment({
+        segmentId: 'seg-caffeine-test',
+        type: 'caffeine_intake',
+        start: '2026-04-16T08:00',
+        end: '2026-04-16T12:00',
+        params: { dose },
+      });
+      const baselineEvents = generateEventsForSegment(baselineSegment);
+      const caffeineEvents = generateEventsForSegment(caffeineSegment);
+      const events = [...baselineEvents, ...caffeineEvents];
+      return { events, caffeineStart: '2026-04-16T08:00' };
+    }
+
+    it('咖啡因事件不应产生饮酒误判', () => {
+      // 咖啡因和饮酒的生理响应模式相似（HR↑、RMSSD↓、stress↑），
+      // 需确保饮酒检测器不会将咖啡因数据误判为饮酒
+      const { events } = generateCaffeineScenario('moderate');
+      const results = recognizeEvents(events, profileId, currentTime);
+
+      const caffeineEvent = results.find((r) => r.type === 'possible_caffeine_intake');
+      expect(caffeineEvent).toBeDefined();
+
+      // 关键断言：不应同时出现饮酒事件
+      const alcoholEvent = results.find((r) => r.type === 'possible_alcohol_intake');
+      expect(alcoholEvent).toBeUndefined();
+    });
+
+    it('high_or_sensitive 咖啡因也不应产生饮酒误判', () => {
+      const { events } = generateCaffeineScenario('high_or_sensitive');
+      const results = recognizeEvents(events, profileId, currentTime);
+
+      const caffeineEvent = results.find((r) => r.type === 'possible_caffeine_intake');
+      expect(caffeineEvent).toBeDefined();
+
+      const alcoholEvent = results.find((r) => r.type === 'possible_alcohol_intake');
+      expect(alcoholEvent).toBeUndefined();
+    });
+
+    it('不相关的咖啡因和饮酒数据应各自独立识别', () => {
+      // 咖啡因和饮酒间隔足够远（>3小时），应各自独立检测
+      // 需要在饮酒前提供基线数据，否则饮酒检测器无法建立基线
+      const baselineSegment = makeSegment({
+        segmentId: 'seg-baseline',
+        type: 'prolonged_sedentary',
+        start: '2026-04-16T06:00',
+        end: '2026-04-16T07:00',
+      });
+      const caffeineSegment = makeSegment({
+        segmentId: 'seg-caffeine',
+        type: 'caffeine_intake',
+        start: '2026-04-16T07:00',
+        end: '2026-04-16T11:00',
+        params: { dose: 'moderate' },
+      });
+      // 饮酒前的基线段
+      const preAlcoholBaseline = makeSegment({
+        segmentId: 'seg-pre-alcohol-baseline',
+        type: 'prolonged_sedentary',
+        start: '2026-04-16T13:00',
+        end: '2026-04-16T14:00',
+      });
+      const alcoholSegment = makeSegment({
+        segmentId: 'seg-alcohol',
+        type: 'alcohol_intake',
+        start: '2026-04-16T14:00',
+        end: '2026-04-16T17:00',
+        params: { amount: 'moderate' },
+      });
+
+      const events = [
+        ...generateEventsForSegment(baselineSegment),
+        ...generateEventsForSegment(caffeineSegment),
+        ...generateEventsForSegment(preAlcoholBaseline),
+        ...generateEventsForSegment(alcoholSegment),
+      ];
+      const results = recognizeEvents(events, profileId, currentTime);
+
+      const caffeineEvent = results.find((r) => r.type === 'possible_caffeine_intake');
+      const alcoholEvent = results.find((r) => r.type === 'possible_alcohol_intake');
+
+      // 间隔足够远，两者应独立检测到
+      expect(caffeineEvent).toBeDefined();
+      expect(alcoholEvent).toBeDefined();
+    });
+  });
 });
