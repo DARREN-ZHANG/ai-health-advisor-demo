@@ -213,6 +213,8 @@ export async function godModeRoutes(app: FastifyInstance) {
 
     const result = service.resetProfileTimeline(parsed.data.profileId, request.ctx?.sessionId);
     invalidateBriefCache();
+    // 清除 Supabase 持久化缓存，避免重新请求 morning brief 时返回旧的 LLM 输出
+    await app.memoryServices.cache.invalidateProfile({ profileId: parsed.data.profileId });
     return createSuccessResponse(result, buildMeta(request));
   });
 
