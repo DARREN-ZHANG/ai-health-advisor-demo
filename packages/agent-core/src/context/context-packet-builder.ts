@@ -238,13 +238,14 @@ function buildRecentEvents(
   evidence: EvidenceCollector,
 ): RecentEventPacket[] {
   const events: RecentEventPacket[] = [];
+  const maxEvents = 2; // 最多保留 2 个事件，以聚焦核心内容
 
   if (context.timelineSync) {
     const sorted = [...context.timelineSync.recognizedEvents].sort(
       (a, b) => new Date(b.start).getTime() - new Date(a.start).getTime(),
     );
 
-    for (const ev of sorted.slice(0, 5)) {
+    for (const ev of sorted.slice(0, maxEvents)) {
       const durationMin = Math.round(
         (new Date(ev.end).getTime() - new Date(ev.start).getTime()) / 60000,
       );
@@ -280,10 +281,12 @@ function buildRecentEvents(
     }
   }
 
-  // Add injected events
-  if (context.signals.events.length > 0) {
-    for (let i = 0; i < context.signals.events.length; i++) {
-      const evText = context.signals.events[i]!;
+  // 仅在当前事件数未达到 maxEvents 限制时，才追加注入的事件
+  const remainingSlots = maxEvents - events.length;
+  if (context.signals.events.length > 0 && remainingSlots > 0) {
+    const injectedEvents = context.signals.events.slice(0, remainingSlots);
+    for (let i = 0; i < injectedEvents.length; i++) {
+      const evText = injectedEvents[i]!;
       // 解析 "date | eventType" 格式，提取时间戳供权重计算
       const separatorIdx = evText.indexOf(' | ');
       const eventDate = separatorIdx > 0 ? evText.slice(0, separatorIdx) : '';
