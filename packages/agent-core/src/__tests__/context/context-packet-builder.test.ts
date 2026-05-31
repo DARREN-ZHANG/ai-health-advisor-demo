@@ -529,4 +529,60 @@ describe('buildTaskContextPacket', () => {
     expect(packet.homepage?.eventInsights[0]?.eventType).toBe('work_focus');
     expect(packet.homepage?.eventInsights[0]?.actionIntents.length).toBeGreaterThanOrEqual(2);
   });
+
+  it('homepage eventInsights use event-window physiology instead of latest24h daily metrics', () => {
+    const ctx = makeContext({
+      demoNow: '2026-04-10T18:35',
+      timelineSync: {
+        recognizedEvents: [{
+          recognizedEventId: 're-hiit-1',
+          profileId: 'profile-a',
+          type: 'intermittent_exercise',
+          start: '2026-04-10T17:30',
+          end: '2026-04-10T18:30',
+          confidence: 0.92,
+          evidence: ['心率标准差 35, 交替高低强度'],
+          sourceSegmentId: 'seg-hiit-1',
+        }],
+        syncedEvents: [
+          { eventId: 'evt-hr-1', profileId: 'profile-a', measuredAt: '2026-04-10T17:30', metric: 'heartRate', value: 118, source: 'sensor', segmentId: 'seg-hiit-1' },
+          { eventId: 'evt-hr-2', profileId: 'profile-a', measuredAt: '2026-04-10T17:45', metric: 'heartRate', value: 172, source: 'sensor', segmentId: 'seg-hiit-1' },
+          { eventId: 'evt-hr-3', profileId: 'profile-a', measuredAt: '2026-04-10T18:30', metric: 'heartRate', value: 92, source: 'sensor', segmentId: 'seg-hiit-1' },
+          { eventId: 'evt-hrv-1', profileId: 'profile-a', measuredAt: '2026-04-10T17:35', metric: 'hrvRmssd', value: 48, source: 'sensor', segmentId: 'seg-hiit-1' },
+          { eventId: 'evt-hrv-2', profileId: 'profile-a', measuredAt: '2026-04-10T18:30', metric: 'hrvRmssd', value: 35, source: 'sensor', segmentId: 'seg-hiit-1' },
+        ],
+        derivedTemporalStates: [],
+        syncMetadata: { lastSyncedMeasuredAt: '2026-04-10T18:30', pendingEventCount: 0 },
+      },
+      dataWindow: {
+        start: '2026-04-04',
+        end: '2026-04-10',
+        records: [
+          makeRecord('2026-04-04'),
+          makeRecord('2026-04-05'),
+          makeRecord('2026-04-06'),
+          makeRecord('2026-04-07'),
+          makeRecord('2026-04-08'),
+          makeRecord('2026-04-09'),
+          makeRecord('2026-04-10', { hr: [48, 50], hrv: 93, spo2: 99 }),
+        ],
+        missingFields: [],
+      },
+      profile: {
+        profileId: 'profile-a',
+        name: '巅峰',
+        age: 28,
+        tags: ['规律健身'],
+        baselines: { restingHR: 48, hrv: 93, spo2: 99, avgSleepMinutes: 600, avgSteps: 5900 },
+      },
+    });
+
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+    const insight = packet.homepage?.eventInsights[0];
+
+    expect(insight?.eventWindow?.metrics.find((metric) => metric.metric === 'heart_rate')?.max).toBe(172);
+    expect(insight?.physiology.find((item) => item.metric === 'heart_rate')?.value).toBe(172);
+    expect(insight?.physiology.find((item) => item.metric === 'hrv')?.value).toBe(35);
+    expect(insight?.physiology.map((item) => item.interpretation).join('\n')).not.toContain('HRV 状态稳定，可作为恢复背景参考');
+  });
 });

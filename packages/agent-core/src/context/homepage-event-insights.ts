@@ -52,9 +52,9 @@ export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInpu
   const { homepage, demoNow } = input;
   return homepage.recentEvents.map((event, index) => {
     const eventType = normalizeHomepageEventType(event.type);
-    const physiology = buildPhysiology(eventType, homepage.latest24h.metrics);
+    const physiology = buildEventWindowPhysiology(event.eventWindow);
     const recoveryContext = buildRecoveryContext(homepage.latest24h.metrics);
-    const tension = determineEventBodyTension(eventType, homepage.latest24h.metrics, homepage.rulesInsights);
+    const tension = determineEventBodyTension(eventType, event.eventWindow, homepage.latest24h.metrics, homepage.rulesInsights);
     const recommendedFocus = buildRecommendedFocus(eventType, tension);
     return {
       eventId: event.evidenceIds[0] ?? `${event.type}_${event.start}`,
@@ -62,12 +62,17 @@ export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInpu
       priority: index === 0 ? 'high' : 'medium',
       timeRelation: formatTimeRelation(event.end, demoNow),
       headline: buildHeadline(eventType, event.durationMin),
+      eventWindow: event.eventWindow,
       physiology,
       recoveryContext,
       tension,
       recommendedFocus,
       actionIntents: buildActionIntentCandidates(eventType, recommendedFocus),
-      evidenceIds: [...event.evidenceIds, ...collectMetricEvidenceIds(homepage.latest24h.metrics)],
+      evidenceIds: [
+        ...event.evidenceIds,
+        ...event.eventWindow?.evidenceIds ?? [],
+        ...collectMetricEvidenceIds(homepage.latest24h.metrics),
+      ],
     };
   });
 }
@@ -76,87 +81,74 @@ function metric(metrics: Latest24hMetric[], name: string): Latest24hMetric | und
   return metrics.find((m) => m.metric === name);
 }
 
-function buildPhysiology(eventType: ReturnType<typeof normalizeHomepageEventType>, metrics: Latest24hMetric[]): EventPhysiologySummary[] {
-  const hrv = metric(metrics, 'hrv');
-  const restingHr = metric(metrics, 'resting_hr');
-  const spo2 = metric(metrics, 'spo2');
-  const stress = metric(metrics, 'stress_load');
-  const sleep = metric(metrics, 'sleep_total');
+function buildEventWindowPhysiology(
+  eventWindow: HomepageContextPacket['recentEvents'][number]['eventWindow'],
+): EventPhysiologySummary[] {
+  if (!eventWindow || eventWindow.coverage === 'missing') return [];
 
-  const summaries: EventPhysiologySummary[] = [];
-
-  if (hrv?.value !== undefined) {
-    summaries.push({
-      metric: 'hrv',
-      value: hrv.value,
-      unit: hrv.unit,
-      qualifier: hrv.status === 'attention' || hrv.status === 'critical' ? 'compressed' : 'normal',
-      interpretation: hrv.status === 'attention' || hrv.status === 'critical'
-        ? 'HRV 处于压缩状态，提示自主神经恢复压力偏高'
-        : 'HRV 状态稳定，可作为恢复背景参考',
-      evidenceId: hrv.evidenceId,
-    });
-  }
-
-  if (restingHr?.value !== undefined) {
-    summaries.push({
-      metric: 'heart_rate',
-      value: restingHr.value,
-      unit: restingHr.unit,
-      qualifier: restingHr.status === 'attention' || restingHr.status === 'critical' ? 'elevated' : 'normal',
-      interpretation: restingHr.status === 'attention' || restingHr.status === 'critical'
-        ? '心率偏高，说明身体仍处在较高唤醒或负荷状态'
-        : '心率处于平稳范围，可支持当前活动安排',
-      evidenceId: restingHr.evidenceId,
-    });
-  }
-
-  if (spo2?.value !== undefined) {
-    summaries.push({
-      metric: 'spo2',
-      value: spo2.value,
-      unit: spo2.unit,
-      qualifier: spo2.status === 'critical' ? 'low' : spo2.status === 'attention' ? 'low' : 'normal',
-      interpretation: spo2.status === 'critical'
-        ? '血氧处于异常风险区间，需要优先处理安全边界'
-        : spo2.status === 'attention'
-          ? '血氧偏低，需关注呼吸状态和佩戴质量'
-          : '血氧稳定，可作为呼吸状态背景',
-      evidenceId: spo2.evidenceId,
-    });
-  }
-
-  if (stress?.value !== undefined) {
-    summaries.push({
-      metric: 'stress',
-      value: stress.value,
-      unit: stress.unit,
-      qualifier: stress.status === 'attention' || stress.status === 'critical' ? 'elevated' : 'normal',
-      interpretation: stress.status === 'attention' || stress.status === 'critical'
-        ? '压力负荷偏高，当前事件更容易放大疲劳感'
-        : '压力负荷平稳',
-      evidenceId: stress.evidenceId,
-    });
-  }
-
-  if (sleep?.value !== undefined && eventType !== 'sleep_end') {
-    summaries.push({
-      metric: 'sleep',
-      value: sleep.value,
-      unit: sleep.unit,
-      qualifier: sleep.status === 'attention' || sleep.status === 'critical' ? 'low' : 'normal',
-      interpretation: sleep.status === 'attention' || sleep.status === 'critical'
-        ? '过去 24h 睡眠恢复不足，当前事件需要降负荷处理'
-        : '过去 24h 睡眠恢复可作为当前事件的支撑背景',
-      evidenceId: sleep.evidenceId,
-    });
-  }
-
-  return summaries;
+  return eventWindow.metrics.map((metric) => {
+    switch (metric.metric) {
+      case 'heart_rate':
+        return {
+          metric: 'heart_rate',
+          value: metric.max ?? metric.latest,
+          unit: metric.unit,
+          qualifier: metric.qualifier === 'elevated' ? 'elevated' : 'normal',
+          interpretation: metric.interpretation,
+          evidenceId: metric.evidenceId,
+        };
+      case 'hrv_rmssd':
+        return {
+          metric: 'hrv',
+          value: metric.latest,
+          unit: metric.unit,
+          qualifier: metric.qualifier === 'compressed' ? 'compressed' : metric.qualifier === 'recovering' ? 'recovering' : 'normal',
+          interpretation: metric.interpretation,
+          evidenceId: metric.evidenceId,
+        };
+      case 'spo2':
+        return {
+          metric: 'spo2',
+          value: metric.min ?? metric.latest,
+          unit: metric.unit,
+          qualifier: metric.qualifier === 'low' ? 'low' : 'normal',
+          interpretation: metric.interpretation,
+          evidenceId: metric.evidenceId,
+        };
+      case 'motion':
+        return {
+          metric: 'motion',
+          value: metric.average,
+          unit: metric.unit,
+          qualifier: metric.qualifier === 'elevated' ? 'elevated' : 'normal',
+          interpretation: metric.interpretation,
+          evidenceId: metric.evidenceId,
+        };
+      case 'steps':
+        return {
+          metric: 'activity',
+          value: metric.max,
+          unit: metric.unit,
+          qualifier: metric.qualifier === 'elevated' ? 'elevated' : 'normal',
+          interpretation: metric.interpretation,
+          evidenceId: metric.evidenceId,
+        };
+      case 'stress_load':
+        return {
+          metric: 'stress',
+          value: metric.max ?? metric.latest,
+          unit: metric.unit,
+          qualifier: metric.qualifier === 'elevated' ? 'elevated' : 'normal',
+          interpretation: metric.interpretation,
+          evidenceId: metric.evidenceId,
+        };
+    }
+  });
 }
 
 function determineEventBodyTension(
   eventType: ReturnType<typeof normalizeHomepageEventType>,
+  eventWindow: HomepageContextPacket['recentEvents'][number]['eventWindow'],
   metrics: Latest24hMetric[],
   rulesInsights: HomepageContextPacket['rulesInsights'],
 ): EventBodyTension {
@@ -164,22 +156,23 @@ function determineEventBodyTension(
     return { level: 'critical', summary: '当前存在需要优先处理的异常信号', reason: 'critical metric or rule insight present' };
   }
 
-  const hrvAttention = metric(metrics, 'hrv')?.status === 'attention';
-  const hrAttention = metric(metrics, 'resting_hr')?.status === 'attention';
-  const stressAttention = metric(metrics, 'stress_load')?.status === 'attention';
-  const sleepAttention = metric(metrics, 'sleep_total')?.status === 'attention';
+  const eventMetrics = eventWindow?.metrics ?? [];
+  const hrvCompressed = eventMetrics.some((m) => m.metric === 'hrv_rmssd' && m.qualifier === 'compressed');
+  const hrElevated = eventMetrics.some((m) => m.metric === 'heart_rate' && m.qualifier === 'elevated');
+  const stressElevated = eventMetrics.some((m) => m.metric === 'stress_load' && m.qualifier === 'elevated');
+  const lowMotion = eventMetrics.some((m) => m.metric === 'motion' && (m.average ?? 0) < 1);
 
-  if ((eventType === 'work_focus' || eventType === 'work_sedentary') && (hrvAttention || hrAttention || stressAttention)) {
-    return { level: 'high', summary: '认知或静止负荷已经累积，需要主动重置', reason: 'work event with HRV, heart rate, or stress attention' };
+  if ((eventType === 'work_focus' || eventType === 'work_sedentary') && (hrvCompressed || hrElevated || stressElevated || lowMotion)) {
+    return { level: 'high', summary: '这次工作事件内已经出现神经或静止负荷累积', reason: 'event-window work load markers present' };
   }
-  if ((eventType === 'cardio_workout' || eventType === 'hiit_workout') && (sleepAttention || hrvAttention)) {
-    return { level: 'high', summary: '运动负荷与恢复不足叠加，建议调整训练策略', reason: 'workout with sleep or HRV attention' };
+  if ((eventType === 'cardio_workout' || eventType === 'hiit_workout') && (hrvCompressed || hrElevated)) {
+    return { level: 'watch', summary: '运动事件已经进入恢复窗口，需要降低后续刺激', reason: 'event-window workout recovery markers present' };
   }
-  if ((eventType === 'possible_caffeine_intake' || eventType === 'possible_alcohol_intake') && (hrvAttention || hrAttention || stressAttention)) {
-    return { level: 'watch', summary: '摄入相关信号可能影响今晚恢复，需要保护睡眠窗口', reason: 'intake event with recovery attention' };
+  if ((eventType === 'possible_caffeine_intake' || eventType === 'possible_alcohol_intake') && (hrvCompressed || hrElevated || stressElevated)) {
+    return { level: 'watch', summary: '摄入相关事件内存在恢复受压信号，需要保护今晚睡眠窗口', reason: 'event-window intake recovery markers present' };
   }
 
-  return { level: 'positive', summary: '事件与当前恢复状态基本匹配', reason: 'no critical or attention conflict detected' };
+  return { level: 'positive', summary: '事件窗口内没有明显冲突信号', reason: 'event-window markers do not indicate elevated tension' };
 }
 
 function buildRecoveryContext(metrics: Latest24hMetric[]): RecoveryContextSummary[] {

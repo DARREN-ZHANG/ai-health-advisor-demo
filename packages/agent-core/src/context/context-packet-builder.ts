@@ -29,6 +29,7 @@ import { buildVisibleChartPackets, getChartTokenForTab } from './visible-chart-p
 import { parseQuestionIntent } from './advisor-intent';
 import { buildMetricSummary, buildMetricSummaries, getMetricValue } from './metric-summary';
 import { buildHomepageEventInsights } from './homepage-event-insights';
+import { buildHomepageEventWindowSummary } from './homepage-event-window';
 
 // ────────────────────────────────────────────
 // 主入口
@@ -274,6 +275,12 @@ function buildRecentEvents(
         derivation,
       });
 
+      const eventWindow = buildHomepageEventWindowSummary({
+        event: ev,
+        syncedEvents: context.timelineSync.syncedEvents,
+        baselines: context.profile.baselines,
+      });
+
       events.push({
         recognizedEventId: ev.recognizedEventId,
         type: ev.type,
@@ -283,12 +290,13 @@ function buildRecentEvents(
         confidence: ev.confidence,
         sourceSegmentId: ev.sourceSegmentId,
         recognitionEvidence: ev.evidence,
+        eventWindow,
         syncState: {
           lastSyncedMeasuredAt: context.timelineSync.syncMetadata.lastSyncedMeasuredAt,
           pendingEventCount: context.timelineSync.syncMetadata.pendingEventCount,
           fromSyncedWindow: true,
         },
-        evidenceIds: [evidenceId],
+        evidenceIds: [evidenceId, ...eventWindow.evidenceIds],
       });
     }
   }

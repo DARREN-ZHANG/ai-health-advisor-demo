@@ -46,7 +46,7 @@ function makeHomepage(overrides: Partial<HomepageContextPacket> = {}): HomepageC
   };
 }
 
-it('builds a high-tension work focus insight from HRV and heart rate attention metrics', () => {
+it('builds a high-tension work focus insight from event-window HRV compressed and HR elevated', () => {
   const insights = buildHomepageEventInsights({
     homepage: makeHomepage({
       recentEvents: [{
@@ -58,6 +58,21 @@ it('builds a high-tension work focus insight from HRV and heart rate attention m
         confidence: 0.91,
         sourceSegmentId: 'seg-focus-1',
         recognitionEvidence: ['平均心率 72, 低运动, 深度专注'],
+        eventWindow: {
+          source: 'synced_device_samples',
+          coverage: 'complete',
+          recognizedEventId: 're-focus-1',
+          sourceSegmentId: 'seg-focus-1',
+          start: '2026-04-21T10:00',
+          end: '2026-04-21T12:00',
+          durationMin: 120,
+          sampleCount: 4,
+          metrics: [
+            { metric: 'heart_rate', unit: 'bpm', sampleCount: 2, max: 95, latest: 92, average: 93, delta: -3, qualifier: 'elevated', interpretation: 'HR elevated during focus', evidenceId: 'ew_hr' },
+            { metric: 'hrv_rmssd', unit: 'ms', sampleCount: 2, latest: 35, average: 38, delta: -5, qualifier: 'compressed', interpretation: 'HRV compressed during focus', evidenceId: 'ew_hrv' },
+          ],
+          evidenceIds: ['ew_hr', 'ew_hrv'],
+        },
         syncState: { lastSyncedMeasuredAt: '2026-04-21T12:00', pendingEventCount: 0, fromSyncedWindow: true },
         evidenceIds: ['event_deep_focus_2026-04-21T10:00'],
       }],

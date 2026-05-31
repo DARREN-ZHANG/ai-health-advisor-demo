@@ -36,7 +36,7 @@ export function buildHomepageEventWindowSummary(
   input: BuildHomepageEventWindowSummaryInput,
 ): HomepageEventWindowSummary {
   const { event, syncedEvents, baselines } = input;
-  const samples = selectEventSamples(event, syncedEvents);
+  const samples = selectEventSamples(event, syncedEvents ?? []);
   const metrics = buildMetrics(event, samples, baselines);
   const evidenceIds = metrics.map((metric) => metric.evidenceId);
 
