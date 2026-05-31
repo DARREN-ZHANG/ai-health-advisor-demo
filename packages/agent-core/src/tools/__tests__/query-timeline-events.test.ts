@@ -51,11 +51,14 @@ function createMockContext(overrides?: Partial<TaskContextPacket>): ToolExecutio
 
 function makeEvent(overrides?: Partial<RecentEventPacket>): RecentEventPacket {
   return {
+    recognizedEventId: 're-exercise-1',
     type: 'exercise',
     start: '2025-06-05T08:00:00Z',
     end: '2025-06-05T09:00:00Z',
     durationMin: 60,
     confidence: 0.95,
+    sourceSegmentId: 'seg-exercise-1',
+    recognitionEvidence: ['心率标准差 25, 运动模式'],
     syncState: {
       lastSyncedMeasuredAt: '2025-06-05T09:00:00Z',
       pendingEventCount: 0,

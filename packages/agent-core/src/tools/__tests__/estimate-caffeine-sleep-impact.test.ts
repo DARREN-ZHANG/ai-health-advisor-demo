@@ -6,11 +6,14 @@ import { estimateCaffeineSleepImpactTool } from '../estimate-caffeine-sleep-impa
 
 function makeEvent(overrides: Partial<RecentEventPacket> = {}): RecentEventPacket {
   return {
+    recognizedEventId: 're-caffeine-1',
     type: 'possible_caffeine_intake',
     start: '2026-05-19T16:00',
     end: '2026-05-19T18:00',
     durationMin: 120,
     confidence: 0.84,
+    sourceSegmentId: 'seg-caffeine-1',
+    recognitionEvidence: ['心率标准差 12, 轻微上升'],
     syncState: {
       lastSyncedMeasuredAt: '2026-05-19T18:00',
       pendingEventCount: 0,

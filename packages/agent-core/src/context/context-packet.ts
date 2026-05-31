@@ -147,12 +147,55 @@ export interface Latest24hPacket {
   metrics: Latest24hMetric[];
 }
 
+export type HomepageEventWindowMetricName =
+  | 'heart_rate'
+  | 'hrv_rmssd'
+  | 'spo2'
+  | 'motion'
+  | 'steps'
+  | 'stress_load';
+
+export type HomepageEventWindowCoverage = 'complete' | 'partial' | 'missing';
+
+export interface HomepageEventWindowMetric {
+  metric: HomepageEventWindowMetricName;
+  unit: string;
+  sampleCount: number;
+  startValue?: number;
+  endValue?: number;
+  latest?: number;
+  min?: number;
+  max?: number;
+  average?: number;
+  delta?: number;
+  qualifier: 'low' | 'normal' | 'elevated' | 'compressed' | 'recovering' | 'volatile' | 'missing';
+  interpretation: string;
+  evidenceId: string;
+}
+
+export interface HomepageEventWindowSummary {
+  source: 'synced_device_samples';
+  coverage: HomepageEventWindowCoverage;
+  recognizedEventId: string;
+  sourceSegmentId?: string;
+  start: string;
+  end: string;
+  durationMin: number;
+  sampleCount: number;
+  metrics: HomepageEventWindowMetric[];
+  evidenceIds: string[];
+}
+
 export interface RecentEventPacket {
+  recognizedEventId?: string;
   type: string;
   start: string;
   end: string;
   durationMin: number;
   confidence: number;
+  sourceSegmentId?: string;
+  recognitionEvidence: string[];
+  eventWindow?: HomepageEventWindowSummary;
   syncState: {
     lastSyncedMeasuredAt: string | null;
     pendingEventCount: number;
@@ -247,6 +290,7 @@ export interface HomepageEventInsight {
   priority: 'high' | 'medium' | 'low';
   timeRelation: string;
   headline: string;
+  eventWindow?: HomepageEventWindowSummary;
   physiology: EventPhysiologySummary[];
   recoveryContext: RecoveryContextSummary[];
   tension: EventBodyTension;

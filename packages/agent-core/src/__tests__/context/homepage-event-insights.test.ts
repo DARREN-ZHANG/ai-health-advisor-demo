@@ -50,11 +50,14 @@ it('builds a high-tension work focus insight from HRV and heart rate attention m
   const insights = buildHomepageEventInsights({
     homepage: makeHomepage({
       recentEvents: [{
+        recognizedEventId: 're-focus-1',
         type: 'deep_focus',
         start: '2026-04-21T10:00',
         end: '2026-04-21T12:00',
         durationMin: 120,
         confidence: 0.91,
+        sourceSegmentId: 'seg-focus-1',
+        recognitionEvidence: ['平均心率 72, 低运动, 深度专注'],
         syncState: { lastSyncedMeasuredAt: '2026-04-21T12:00', pendingEventCount: 0, fromSyncedWindow: true },
         evidenceIds: ['event_deep_focus_2026-04-21T10:00'],
       }],
@@ -81,11 +84,14 @@ it('marks SpO2 critical context as critical tension', () => {
         ],
       },
       recentEvents: [{
+        recognizedEventId: 're-sleep-1',
         type: 'sleep',
         start: '2026-04-20T23:00',
         end: '2026-04-21T07:00',
         durationMin: 480,
         confidence: 0.95,
+        sourceSegmentId: 'seg-sleep-1',
+        recognitionEvidence: ['低运动, 心率平稳, 睡眠模式'],
         syncState: { lastSyncedMeasuredAt: '2026-04-21T07:00', pendingEventCount: 0, fromSyncedWindow: true },
         evidenceIds: ['event_sleep_2026-04-20T23:00'],
       }],
@@ -102,11 +108,14 @@ it('uses only supported product capabilities in action intents', () => {
   const insights = buildHomepageEventInsights({
     homepage: makeHomepage({
       recentEvents: [{
+        recognizedEventId: 're-sedentary-1',
         type: 'prolonged_sedentary',
         start: '2026-04-21T13:00',
         end: '2026-04-21T16:00',
         durationMin: 180,
         confidence: 0.88,
+        sourceSegmentId: 'seg-sedentary-1',
+        recognitionEvidence: ['低运动, 心率平稳, 久坐模式'],
         syncState: { lastSyncedMeasuredAt: '2026-04-21T16:00', pendingEventCount: 0, fromSyncedWindow: true },
         evidenceIds: ['event_prolonged_sedentary_2026-04-21T13:00'],
       }],
@@ -124,11 +133,14 @@ it('creates event-appropriate action categories for post-workout recovery', () =
   const insights = buildHomepageEventInsights({
     homepage: makeHomepage({
       recentEvents: [{
+        recognizedEventId: 're-cardio-1',
         type: 'steady_cardio',
         start: '2026-04-21T17:30',
         end: '2026-04-21T18:10',
         durationMin: 40,
         confidence: 0.92,
+        sourceSegmentId: 'seg-cardio-1',
+        recognitionEvidence: ['心率标准差 20, 持续有氧运动'],
         syncState: { lastSyncedMeasuredAt: '2026-04-21T18:10', pendingEventCount: 0, fromSyncedWindow: true },
         evidenceIds: ['event_steady_cardio_2026-04-21T17:30'],
       }],

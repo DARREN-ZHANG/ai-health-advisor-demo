@@ -12,11 +12,14 @@ import {
 
 function makeEvent(type: string, confidence = 0.84): RecentEventPacket {
   return {
+    recognizedEventId: `re-${type}-1`,
     type,
     start: '2026-05-19T16:00',
     end: '2026-05-19T18:00',
     durationMin: 120,
     confidence,
+    sourceSegmentId: `seg-${type}-1`,
+    recognitionEvidence: ['测试识别证据'],
     syncState: {
       lastSyncedMeasuredAt: '2026-05-19T18:00',
       pendingEventCount: 0,

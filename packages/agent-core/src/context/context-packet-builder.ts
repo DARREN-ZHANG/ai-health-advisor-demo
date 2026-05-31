@@ -275,11 +275,14 @@ function buildRecentEvents(
       });
 
       events.push({
+        recognizedEventId: ev.recognizedEventId,
         type: ev.type,
         start: ev.start,
         end: ev.end,
         durationMin,
         confidence: ev.confidence,
+        sourceSegmentId: ev.sourceSegmentId,
+        recognitionEvidence: ev.evidence,
         syncState: {
           lastSyncedMeasuredAt: context.timelineSync.syncMetadata.lastSyncedMeasuredAt,
           pendingEventCount: context.timelineSync.syncMetadata.pendingEventCount,
@@ -312,6 +315,7 @@ function buildRecentEvents(
         end: eventDate,
         durationMin: 0,
         confidence: 1,
+        recognitionEvidence: [],
         syncState: {
           lastSyncedMeasuredAt: null,
           pendingEventCount: 0,
