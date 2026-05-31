@@ -621,4 +621,48 @@ describe('renderTaskContextPacket', () => {
     expect(output).toContain('通常水平');
     expect(output).not.toContain('仅用于解读');
   });
+
+  it('renders homepage event insights before raw 24h details', () => {
+    const packet: TaskContextPacket = {
+      task: { type: 'homepage_summary', page: 'home' },
+      userContext: {
+        profileId: 'p1',
+        name: '巅峰',
+        age: 35,
+        tags: [],
+        baselines: { restingHR: 60, hrv: 60, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
+      },
+      dataWindow: { start: '2026-04-15', end: '2026-04-21', recordCount: 7, completenessPct: 100 },
+      missingData: [],
+      evidence: [],
+      visibleCharts: [],
+      homepage: {
+        recentEvents: [],
+        latest24h: { date: '2026-04-21', metrics: [] },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+        eventInsights: [{
+          eventId: 'event_deep_focus_2026-04-21T10:00',
+          eventType: 'work_focus',
+          priority: 'high',
+          timeRelation: '刚结束约 10 min',
+          headline: '连续专注 120 min，身体保持低位移',
+          physiology: [{ metric: 'hrv', value: 55, unit: 'ms', qualifier: 'compressed', interpretation: 'HRV 处于压缩状态', evidenceId: 'e-hrv' }],
+          recoveryContext: [{ source: 'latest24h', metric: 'sleep_total', relation: 'supports', summary: '昨晚睡眠支撑上午输出', evidenceId: 'e-sleep' }],
+          tension: { level: 'watch', summary: '认知负荷已累积', reason: 'work focus with compressed HRV' },
+          recommendedFocus: [{ category: 'movement_reset', action: '起身轻走', durationMin: 10, rationale: '释放静止负荷' }],
+          actionIntents: [{ id: 'a1', emoji: '🚶', title: '要不要轻走一下', description: '起身轻走 10 min', aiPromise: '我会记录你的选择并用于本次建议上下文', productCapability: 'record_choice' }],
+          evidenceIds: ['event_deep_focus_2026-04-21T10:00', 'e-hrv', 'e-sleep'],
+        }],
+      },
+    };
+
+    const output = renderTaskContextPacket(packet, 'zh', '2026-04-21T12:10');
+    expect(output).toContain('事件生理摘要（优先引用）');
+    expect(output).toContain('work_focus');
+    expect(output).toContain('认知负荷已累积');
+    expect(output).toContain('要不要轻走一下');
+    expect(output.indexOf('事件生理摘要（优先引用）')).toBeLessThan(output.indexOf('过去24小时状态'));
+  });
 });

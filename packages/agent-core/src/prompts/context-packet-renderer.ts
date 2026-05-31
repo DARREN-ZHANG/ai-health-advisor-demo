@@ -197,6 +197,39 @@ function renderEvidence(evidence: EvidenceFact[]): string {
 // Homepage
 // ────────────────────────────────────────────
 
+function renderHomepageEventInsights(homepage: HomepageContextPacket, locale: Locale): string {
+  if (!homepage.eventInsights || homepage.eventInsights.length === 0) return '';
+
+  const lines = [t(locale, '## 事件生理摘要（优先引用）', '## Event Physiology Insights (Prioritize)')];
+  lines.push(t(
+    locale,
+    '这些结构化摘要是最近事件的优先解释输入。summary 应自然转写，不要复制列表格式。',
+    'These structured insights are the priority interpretation input for recent events. Rewrite naturally; do not copy the list format.',
+  ));
+
+  for (const insight of homepage.eventInsights) {
+    lines.push(`- [${insight.priority}] ${insight.eventType}, ${insight.timeRelation}`);
+    lines.push(`  - ${t(locale, '事件摘要', 'Event summary')}${colon(locale)}${insight.headline}`);
+    lines.push(`  - ${t(locale, '当前张力', 'Body tension')}${colon(locale)}${insight.tension.level}: ${insight.tension.summary}`);
+    for (const item of insight.physiology) {
+      const value = item.value !== undefined ? ` ${item.value}${item.unit ?? ''}` : '';
+      lines.push(`  - ${t(locale, '生理特征', 'Physiology')}${colon(locale)}${item.metric} ${item.qualifier}${value} — ${item.interpretation}`);
+    }
+    for (const item of insight.recoveryContext) {
+      lines.push(`  - ${t(locale, '恢复背景', 'Recovery context')}${colon(locale)}${item.relation} ${item.metric} — ${item.summary}`);
+    }
+    for (const focus of insight.recommendedFocus) {
+      const timing = focus.durationMin !== undefined ? `${focus.durationMin} min` : focus.timing ?? '';
+      lines.push(`  - ${t(locale, '建议方向', 'Recommended focus')}${colon(locale)}${focus.category} ${timing} — ${focus.action}；${focus.rationale}`);
+    }
+    if (insight.actionIntents.length > 0) {
+      lines.push(`  - ${t(locale, 'actions 候选', 'Action candidates')}${colon(locale)}${insight.actionIntents.map((a) => `${a.emoji}${a.title}`).join(' / ')}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
 function renderHomepage(homepage: HomepageContextPacket, locale: Locale, demoNow?: string): string {
   const c = colon(locale);
   const lines: string[] = [];
@@ -234,6 +267,9 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale, demoNow
       }
     }
   }
+
+  const eventInsightSection = renderHomepageEventInsights(homepage, locale);
+  if (eventInsightSection) lines.push(eventInsightSection);
 
   // Latest 24h — 当有事件时压缩为摘要格式，无事件时保持详细
   if (hasEvents) {

@@ -503,4 +503,30 @@ describe('buildTaskContextPacket', () => {
       expect(spo2Metric!.clinicalNote).toContain('低氧血症');
     });
   });
+
+  it('homepage packet includes eventInsights for synced recent events', () => {
+    const ctx = makeContext({
+      demoNow: '2026-04-10T16:10',
+      timelineSync: {
+        recognizedEvents: [
+          {
+            recognizedEventId: 're-focus-1',
+            profileId: 'profile-a',
+            type: 'deep_focus',
+            start: '2026-04-10T14:00',
+            end: '2026-04-10T16:00',
+            confidence: 0.9,
+            evidence: ['low motion', 'stable work posture'],
+          },
+        ],
+        derivedTemporalStates: [],
+        syncMetadata: { lastSyncedMeasuredAt: '2026-04-10T16:00', pendingEventCount: 0 },
+      },
+    });
+
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+    expect(packet.homepage?.eventInsights.length).toBe(1);
+    expect(packet.homepage?.eventInsights[0]?.eventType).toBe('work_focus');
+    expect(packet.homepage?.eventInsights[0]?.actionIntents.length).toBeGreaterThanOrEqual(2);
+  });
 });

@@ -28,6 +28,7 @@ import { buildMissingDataPacket } from './missing-data-packet';
 import { buildVisibleChartPackets, getChartTokenForTab } from './visible-chart-packet';
 import { parseQuestionIntent } from './advisor-intent';
 import { buildMetricSummary, buildMetricSummaries, getMetricValue } from './metric-summary';
+import { buildHomepageEventInsights } from './homepage-event-insights';
 
 // ────────────────────────────────────────────
 // 主入口
@@ -224,13 +225,20 @@ function buildHomepagePacket(
     message: i.message,
   }));
 
-  return {
+  const homepageWithoutInsights = {
     recentEvents,
     latest24h,
     trend7d,
     rulesInsights,
     suggestedChartTokens: rulesResult.suggestedChartTokens,
-    eventInsights: [],
+  };
+
+  return {
+    ...homepageWithoutInsights,
+    eventInsights: buildHomepageEventInsights({
+      homepage: homepageWithoutInsights,
+      demoNow: context.demoNow,
+    }),
   };
 }
 
