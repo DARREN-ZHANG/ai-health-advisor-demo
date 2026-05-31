@@ -3,6 +3,7 @@ import { buildTaskPrompt } from '../../prompts/task-builder';
 import type { AgentContext } from '../../types/agent-context';
 import { AgentTaskType } from '@health-advisor/shared';
 import type { PromptLoader } from '../../prompts/prompt-loader';
+import { createPromptLoader } from '../../prompts/prompt-loader';
 import type { RuleEvaluationResult } from '../../rules/types';
 import type { TaskContextPacket } from '../../context/context-packet';
 
@@ -179,5 +180,32 @@ describe('buildTaskPrompt', () => {
     expect(prompt).toContain('上次首页摘要内容');
     expect(prompt).toContain('上次视图总结内容');
     expect(prompt).toContain('上次规则分析内容');
+  });
+
+  it('homepage task prompt does not expose baseline jargon in active instructions', () => {
+    const prompt = buildTaskPrompt(makeContext({
+      task: {
+        type: AgentTaskType.HOMEPAGE_SUMMARY,
+        pageContext: { profileId: 'profile-a', page: 'homepage', timeframe: 'week' },
+      },
+    }), createPromptLoader(undefined, '../../data/sandbox/prompts'), emptyRules);
+
+    expect(prompt).not.toMatch(/baseline|基线|基准线|偏离基线/);
+    expect(prompt).toContain('个人参考水平');
+    expect(prompt).toContain('平时水平');
+  });
+
+  it('homepage output example emphasizes actions instead of microTips', () => {
+    const prompt = buildTaskPrompt(makeContext({
+      task: {
+        type: AgentTaskType.HOMEPAGE_SUMMARY,
+        pageContext: { profileId: 'profile-a', page: 'homepage', timeframe: 'week' },
+      },
+    }), createPromptLoader(undefined, '../../data/sandbox/prompts'), emptyRules);
+
+    expect(prompt).toContain('"actions"');
+    expect(prompt).toContain('"actionsSectionTitle"');
+    expect(prompt).not.toContain('"microTips": ["贴士1", "贴士2"]');
+    expect(prompt).not.toContain('returned to baseline');
   });
 });
