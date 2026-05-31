@@ -33,6 +33,7 @@ export function normalizeHomepageEventType(eventType: string): HomepageSemanticE
 }
 
 import type {
+  ActionIntentCandidate,
   EventBodyTension,
   EventPhysiologySummary,
   HomepageContextPacket,
@@ -65,7 +66,7 @@ export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInpu
       recoveryContext,
       tension,
       recommendedFocus,
-      actionIntents: [],
+      actionIntents: buildActionIntentCandidates(eventType, recommendedFocus),
       evidenceIds: [...event.evidenceIds, ...collectMetricEvidenceIds(homepage.latest24h.metrics)],
     };
   });
@@ -227,23 +228,32 @@ function buildRecommendedFocus(
     ];
   }
 
-  if (eventType === 'work_focus' || eventType === 'work_sedentary') {
-    return [
-      { category: 'movement_reset', action: '起身轻走并活动肩颈', durationMin: 10, rationale: '帮助从静止和认知负荷中切换出来' },
-      { category: 'breathing_reset', action: '做一组缓慢呼吸', durationMin: 3, rationale: '用延长呼气降低交感神经兴奋' },
-    ];
+  switch (eventType) {
+    case 'work_focus':
+    case 'work_sedentary':
+      return [
+        { category: 'movement_reset', action: '起身轻走并活动肩颈', durationMin: 10, rationale: '帮助从静止和认知负荷中切换出来' },
+        { category: 'breathing_reset', action: '做一组缓慢呼吸', durationMin: 3, rationale: '用延长呼气降低交感神经兴奋' },
+        { category: 'posture', action: '把接下来的工作切到站姿或挺直坐姿', timing: '接下来 30 min', rationale: '减少久坐对呼吸和循环的压迫' },
+      ];
+    case 'cardio_workout':
+    case 'hiit_workout':
+      return [
+        { category: 'hydration', action: '小口补水并做轻度走动冷身', durationMin: 10, rationale: '帮助心率平稳回落并支持循环恢复' },
+        { category: 'nutrition', action: '补充蛋白质和易消化碳水', timing: '运动后 45 min 内', rationale: '支持糖原回补和肌肉修复' },
+        { category: 'sleep_protection', action: '睡前降低刺激和屏幕暴露', timing: '今晚睡前 60 min', rationale: '保护运动后的深睡恢复窗口' },
+      ];
+    case 'possible_alcohol_intake':
+    case 'possible_caffeine_intake':
+      return [
+        { category: 'sleep_protection', action: '把睡前环境调暗并降低刺激', timing: '今晚睡前 60 min', rationale: '降低摄入相关兴奋对入睡的影响' },
+        { category: 'breathing_reset', action: '做一组延长呼气的呼吸练习', durationMin: 5, rationale: '帮助神经系统从紧绷状态回落' },
+      ];
+    default:
+      return [
+        { category: 'movement_reset', action: '安排一次轻量活动切换状态', durationMin: 10, rationale: '帮助身体从当前事件平稳过渡到下一阶段' },
+      ];
   }
-
-  if (eventType === 'cardio_workout' || eventType === 'hiit_workout') {
-    return [
-      { category: 'hydration', action: '小口补水并做轻度走动冷身', durationMin: 10, rationale: '帮助心率平稳回落并支持循环恢复' },
-      { category: 'sleep_protection', action: '睡前降低刺激和屏幕暴露', timing: '今晚睡前 60 min', rationale: '保护运动后的深睡恢复窗口' },
-    ];
-  }
-
-  return [
-    { category: 'movement_reset', action: '安排一次轻量活动切换状态', durationMin: 10, rationale: '帮助身体从当前事件平稳过渡到下一阶段' },
-  ];
 }
 
 function formatTimeRelation(eventEnd: string, demoNow?: string): string {
@@ -277,4 +287,73 @@ function collectMetricEvidenceIds(metrics: Latest24hMetric[]): string[] {
   return metrics
     .map((item) => item.evidenceId)
     .filter((id): id is string => typeof id === 'string' && id.length > 0);
+}
+
+const RECORD_CHOICE_PROMISE = '我会记录你的选择并用于本次建议上下文';
+
+function buildActionIntentCandidates(
+  eventType: ReturnType<typeof normalizeHomepageEventType>,
+  focusItems: RecommendedFocus[],
+): ActionIntentCandidate[] {
+  return focusItems.slice(0, 3).map((focus, index) => ({
+    id: `event_${eventType}_action_${index + 1}`,
+    emoji: emojiForFocus(focus.category),
+    title: titleForFocus(focus),
+    description: describeFocus(focus),
+    aiPromise: RECORD_CHOICE_PROMISE,
+    productCapability: 'record_choice',
+  }));
+}
+
+function emojiForFocus(category: RecommendedFocus['category']): string {
+  switch (category) {
+    case 'movement_reset':
+      return '🚶';
+    case 'breathing_reset':
+      return '🫁';
+    case 'nutrition':
+      return '🥣';
+    case 'hydration':
+      return '💧';
+    case 'training_adjustment':
+      return '🏃';
+    case 'sleep_protection':
+      return '🌙';
+    case 'posture':
+      return '🪑';
+    case 'data_quality':
+      return '⌚';
+    case 'medical_attention':
+      return '🩺';
+  }
+}
+
+function titleForFocus(focus: RecommendedFocus): string {
+  switch (focus.category) {
+    case 'movement_reset':
+      return '做一次轻量活动重置';
+    case 'breathing_reset':
+      return '用呼吸把紧张降下来';
+    case 'nutrition':
+      return '补一份恢复营养';
+    case 'hydration':
+      return '先把补水做好';
+    case 'training_adjustment':
+      return '把训练强度调保守';
+    case 'sleep_protection':
+      return '保护今晚睡眠窗口';
+    case 'posture':
+      return '调整接下来的姿势';
+    case 'data_quality':
+      return '补齐判断所需数据';
+    case 'medical_attention':
+      return '优先处理安全信号';
+  }
+}
+
+function describeFocus(focus: RecommendedFocus): string {
+  const schedule = focus.durationMin !== undefined
+    ? `${focus.durationMin} min`
+    : focus.timing ?? '现在';
+  return `${schedule}：${focus.action}。${focus.rationale}`;
 }

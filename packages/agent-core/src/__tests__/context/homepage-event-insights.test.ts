@@ -97,3 +97,46 @@ it('marks SpO2 critical context as critical tension', () => {
   expect(insights[0]!.tension.level).toBe('critical');
   expect(insights[0]!.recommendedFocus.some((f) => f.category === 'medical_attention')).toBe(true);
 });
+
+it('uses only supported product capabilities in action intents', () => {
+  const insights = buildHomepageEventInsights({
+    homepage: makeHomepage({
+      recentEvents: [{
+        type: 'prolonged_sedentary',
+        start: '2026-04-21T13:00',
+        end: '2026-04-21T16:00',
+        durationMin: 180,
+        confidence: 0.88,
+        syncState: { lastSyncedMeasuredAt: '2026-04-21T16:00', pendingEventCount: 0, fromSyncedWindow: true },
+        evidenceIds: ['event_prolonged_sedentary_2026-04-21T13:00'],
+      }],
+    }),
+    demoNow: '2026-04-21T16:05',
+  });
+
+  const actions = insights[0]!.actionIntents;
+  expect(actions.length).toBeGreaterThanOrEqual(2);
+  expect(actions.every((a) => a.productCapability === 'record_choice' || a.productCapability === 'contextual_followup')).toBe(true);
+  expect(actions.map((a) => a.aiPromise).join('\n')).not.toMatch(/提醒|开启.*模式|实时监控|调整监测逻辑/);
+});
+
+it('creates event-appropriate action categories for post-workout recovery', () => {
+  const insights = buildHomepageEventInsights({
+    homepage: makeHomepage({
+      recentEvents: [{
+        type: 'steady_cardio',
+        start: '2026-04-21T17:30',
+        end: '2026-04-21T18:10',
+        durationMin: 40,
+        confidence: 0.92,
+        syncState: { lastSyncedMeasuredAt: '2026-04-21T18:10', pendingEventCount: 0, fromSyncedWindow: true },
+        evidenceIds: ['event_steady_cardio_2026-04-21T17:30'],
+      }],
+    }),
+    demoNow: '2026-04-21T18:20',
+  });
+
+  const focusCategories = insights[0]!.recommendedFocus.map((f) => f.category);
+  expect(focusCategories).toContain('hydration');
+  expect(focusCategories).toContain('sleep_protection');
+});
