@@ -84,8 +84,8 @@ describe('AI Routes', () => {
       mockedExecuteAgent.mockReset();
       mockedExecuteAgent.mockResolvedValueOnce(mockResponse);
 
-      // 先注入一个活动片段产生 pending 事件
-      app.runtime.overrideStore.appendSegment('profile-a', 'sleep', { duration: 480 });
+      // 重置时间轴，使 baseline 的 rawEvents 重新变为 pending 状态
+      app.runtime.overrideStore.resetProfileTimeline('profile-a');
       const pendingBefore = app.runtime.overrideStore.getPendingEvents('profile-a');
       expect(pendingBefore.length).toBeGreaterThan(0);
 

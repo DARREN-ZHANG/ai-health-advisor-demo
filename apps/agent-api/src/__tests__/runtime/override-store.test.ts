@@ -221,16 +221,17 @@ describe('OverrideStore — Timeline Sync', () => {
   it('appendSegment 后 pending 事件正确', () => {
     const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
     store.appendSegment('profile-a', 'meal_intake');
-    const pending = store.getPendingEvents('profile-a');
-    expect(pending.length).toBeGreaterThan(0);
-    // 未同步时 synced 为空
-    expect(store.getSyncedEvents('profile-a')).toEqual([]);
+    // appendSegment 自动同步，pending 应为空，synced 应有值
+    expect(store.getPendingEvents('profile-a')).toEqual([]);
+    expect(store.getSyncedEvents('profile-a').length).toBeGreaterThan(0);
   });
 
   it('performSync 创建同步会话并更新水位线', () => {
-    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
-    store.appendSegment('profile-a', 'meal_intake');
+    // 使用 dataDir 初始化，让 baseline sleep segments 产生 rawEvents
+    const store = createOverrideStore('profile-a', { dataDir: DATA_DIR });
+    const clockBefore = store.getDemoClock('profile-a').currentTime;
 
+    // 首次手动同步，将 baseline 的 pending 事件同步
     const session = store.performSync('profile-a', 'app_open');
 
     // 验证 session 基本结构
@@ -238,12 +239,12 @@ describe('OverrideStore — Timeline Sync', () => {
     expect(session.trigger).toBe('app_open');
     expect(session.syncId).toBeTruthy();
 
-    // 水位线更新为当前时间
+    // 水位线更新（baseline 事件有 measuredAt，应被同步）
     const syncState = store.getSyncState('profile-a');
-    expect(syncState.lastSyncedMeasuredAt).toBe(store.getDemoClock('profile-a').currentTime);
+    expect(syncState.lastSyncedMeasuredAt).toBeTruthy();
     expect(syncState.syncSessions).toHaveLength(1);
 
-    // synced 事件有值，pending 为空
+    // synced 有 baseline 事件，pending 为空
     expect(store.getSyncedEvents('profile-a').length).toBeGreaterThan(0);
     expect(store.getPendingEvents('profile-a')).toEqual([]);
   });
@@ -258,18 +259,19 @@ describe('OverrideStore — Timeline Sync', () => {
   it('多次同步：追加后同步，再追加再同步', () => {
     const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
 
-    // 第一次追加 + 同步
+    // 第一次追加（自动同步）+ 手动同步
     store.appendSegment('profile-a', 'meal_intake');
     store.performSync('profile-a', 'app_open');
 
-    // 第二次追加 + 同步
+    // 第二次追加（自动同步）+ 手动同步
     store.appendSegment('profile-a', 'walk');
     const session2 = store.performSync('profile-a', 'manual_refresh');
 
     expect(session2.trigger).toBe('manual_refresh');
 
+    // 每次 appendSegment 自动同步 + 每次手动 performSync = 4 个 session
     const syncState = store.getSyncState('profile-a');
-    expect(syncState.syncSessions).toHaveLength(2);
+    expect(syncState.syncSessions).toHaveLength(4);
     expect(store.getPendingEvents('profile-a')).toEqual([]);
   });
 
@@ -389,19 +391,18 @@ describe('OverrideStore — dataDir 初始化', () => {
   it('同步后追加新片段，pending 包含新事件', () => {
     const store = createOverrideStore('profile-a', { dataDir: DATA_DIR });
 
-    // 首次同步
+    // 首次同步 baseline 睡眠
     store.performSync('profile-a', 'app_open');
+    const syncedAfterFirst = store.getSyncedEvents('profile-a');
+    expect(syncedAfterFirst.length).toBeGreaterThan(0);
 
-    // 追加早餐
+    // 追加早餐（自动同步）
     store.appendSegment('profile-a', 'meal_intake');
 
-    // pending 应只有早餐事件
-    const pending = store.getPendingEvents('profile-a');
-    expect(pending.length).toBeGreaterThan(0);
-
-    // synced 仍然是昨夜睡眠
+    // appendSegment 自动同步后 pending 为空，所有事件都在 synced 中
+    expect(store.getPendingEvents('profile-a')).toEqual([]);
     const synced = store.getSyncedEvents('profile-a');
-    expect(synced.length).toBeGreaterThan(0);
+    expect(synced.length).toBeGreaterThan(syncedAfterFirst.length);
   });
 
   it('resetProfileTimeline 恢复带 baseline 的初始状态', () => {
