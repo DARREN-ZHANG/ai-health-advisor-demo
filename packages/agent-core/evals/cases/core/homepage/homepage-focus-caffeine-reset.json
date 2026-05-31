@@ -1,0 +1,123 @@
+{
+  "id": "H-020",
+  "title": "首页摘要 - 咖啡叠加深度专注后的重置建议",
+  "suite": "core",
+  "category": "homepage",
+  "priority": "P1",
+  "tags": [
+    "homepage",
+    "event-insights",
+    "focus",
+    "caffeine",
+    "actions"
+  ],
+  "setup": {
+    "profileId": "profile-a",
+    "timeline": {
+      "appendSegments": [
+        {
+          "segmentType": "caffeine_intake",
+          "offsetMinutes": 0,
+          "durationMinutes": 10,
+          "advanceClock": true
+        },
+        {
+          "segmentType": "deep_focus",
+          "offsetMinutes": 10,
+          "durationMinutes": 120,
+          "advanceClock": true
+        }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，刚刚这段 120 min 的深度专注已经把大脑推到高负荷档位，需要及时重置来避免后续疲劳累积影响下午的工作效率和专注质量。\\n\\n这次专注前后还叠加了可能的咖啡因影响，心率和 HRV 的组合提示你的神经系统仍在偏紧的状态。现在最重要的不是继续硬扛，而是用短暂的身体切换把注意力和循环拉回来，避免下午后半段出现明显掉电。\\n\\n建议现在起身轻走 10 min，再用 3 min 延长呼气把心率慢慢压下来。你想先试哪个？ 轻走可以帮助下肢血液循环恢复，呼吸练习则能快速降低交感神经兴奋度。\",\"chartTokens\":[\"HRV_7DAYS\"],\"actionsSectionTitle\":\"现在可以这样重置\",\"microTips\":[],\"actions\":[{\"id\":\"a1\",\"emoji\":\"🚶\",\"title\":\"要不要轻走一下\",\"description\":\"现在起身轻走 10 min，让久坐和专注负荷缓下来\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"a2\",\"emoji\":\"🫁\",\"title\":\"要不要做组呼吸\",\"description\":\"做 3 min 延长呼气，帮助神经系统降档\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
+    },
+    "referenceDate": "2026-05-03"
+  },
+  "request": {
+    "requestId": "core-h020",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": [
+        "巅峰"
+      ],
+      "mustMentionAny": [
+        [
+          "专注",
+          "深度专注"
+        ],
+        [
+          "重置",
+          "轻走",
+          "呼吸"
+        ]
+      ],
+      "forbiddenPatterns": [
+        "baseline",
+        "基线",
+        "基准线",
+        "偏离基线"
+      ]
+    },
+    "status": {
+      "allowedStatusColors": [
+        "warning",
+        "good"
+      ]
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
+    },
+    "taskSpecific": {
+      "homepage": {
+        "requireRecentEventFirst": true,
+        "recentEventPatterns": [
+          "专注",
+          "深度专注"
+        ],
+        "require24hCrossAnalysis": true,
+        "crossAnalysisPatterns": {
+          "event": [
+            "专注",
+            "咖啡"
+          ],
+          "metric": [
+            "心率",
+            "HRV",
+            "神经系统",
+            "恢复"
+          ]
+        }
+      }
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true,
+      "forbidTreatmentPromise": true
+    }
+  }
+}

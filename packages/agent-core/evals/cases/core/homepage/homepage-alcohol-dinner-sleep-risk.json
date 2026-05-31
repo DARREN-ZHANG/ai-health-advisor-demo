@@ -1,0 +1,117 @@
+{
+  "id": "H-023",
+  "title": "首页摘要 - 晚餐饮酒后睡眠风险提醒",
+  "suite": "core",
+  "category": "homepage",
+  "priority": "P1",
+  "tags": [
+    "homepage",
+    "event-insights",
+    "alcohol",
+    "sleep",
+    "actions"
+  ],
+  "setup": {
+    "profileId": "profile-a",
+    "timeline": {
+      "appendSegments": [
+        {
+          "segmentType": "alcohol_intake",
+          "offsetMinutes": 0,
+          "durationMinutes": 60,
+          "advanceClock": true
+        }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，晚餐有饮酒记录，心率和 HRV 提示神经系统可能受到一定影响，今晚的睡眠质量需要额外关注和保护。\\n\\n酒精会压缩深睡窗口并增加夜间觉醒概率。今晚最重要的是把睡前环境调暗、降低刺激，帮助神经系统平稳过渡到睡眠，避免半夜频繁醒来影响第二天的精神状态和工作表现。\\n\\n建议睡前 60 min 调暗灯光并减少屏幕暴露，同时做一组延长呼气的呼吸练习，帮助身体更快进入休息状态。 睡前环境的调整是弥补酒精对睡眠结构影响的最有效手段。 睡前环境的调整是弥补酒精对睡眠结构影响的最有效手段，值得认真对待。\",\"chartTokens\":[\"SLEEP_7DAYS\"],\"actionsSectionTitle\":\"今晚可以这样保护睡眠\",\"microTips\":[],\"actions\":[{\"id\":\"a1\",\"emoji\":\"🌙\",\"title\":\"调暗睡前环境\",\"description\":\"睡前 60 min 调暗灯光并减少屏幕暴露\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"a2\",\"emoji\":\"🫁\",\"title\":\"做组呼吸\",\"description\":\"做 5 min 延长呼气呼吸练习，帮助神经系统回落\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
+    },
+    "referenceDate": "2026-05-03"
+  },
+  "request": {
+    "requestId": "core-h023",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": [
+        "巅峰"
+      ],
+      "mustMentionAny": [
+        [
+          "饮酒",
+          "晚餐"
+        ],
+        [
+          "睡眠",
+          "环境",
+          "呼吸"
+        ]
+      ],
+      "forbiddenPatterns": [
+        "baseline",
+        "基线",
+        "基准线",
+        "偏离基线"
+      ]
+    },
+    "status": {
+      "allowedStatusColors": [
+        "warning",
+        "good"
+      ]
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
+    },
+    "taskSpecific": {
+      "homepage": {
+        "requireRecentEventFirst": true,
+        "recentEventPatterns": [
+          "饮酒",
+          "晚餐"
+        ],
+        "require24hCrossAnalysis": true,
+        "crossAnalysisPatterns": {
+          "event": [
+            "饮酒",
+            "晚餐"
+          ],
+          "metric": [
+            "心率",
+            "HRV",
+            "睡眠",
+            "温度"
+          ]
+        }
+      }
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true,
+      "forbidTreatmentPromise": true
+    }
+  }
+}

@@ -2249,4 +2249,53 @@ describe('actionScorer', () => {
     const results = actionScorer.score(input);
     expect(results).toEqual([]);
   });
+
+  it('action scorer checks forbidden patterns across title description and aiPromise', () => {
+    const results = actionScorer.score({
+      evalCase: {
+        id: 'case-action-forbidden',
+        title: 'action forbidden',
+        suite: 'core',
+        category: 'homepage',
+        priority: 'P1',
+        tags: [],
+        request: {
+          requestId: 'r1',
+          sessionId: 's1',
+          profileId: 'profile-a',
+          taskType: 'homepage_summary',
+          pageContext: { profileId: 'profile-a', page: 'home', timeframe: 'week' },
+        },
+        expectations: {
+          actions: {
+            minCount: 1,
+            forbiddenPatterns: ['实时监控', '开启.*模式'],
+          },
+        },
+      } as any,
+      envelope: {
+        summary: 'summary',
+        source: 'llm',
+        statusColor: 'good',
+        chartTokens: [],
+        actions: [{
+          id: 'a1',
+          emoji: '⏰',
+          title: '睡眠模式',
+          description: '今晚开启睡眠模式',
+          aiPromise: '我会实时监控你的睡眠',
+        }],
+        meta: {
+          taskType: 'homepage_summary',
+          pageContext: { profileId: 'profile-a', page: 'home', timeframe: 'week' },
+          finishReason: 'complete',
+        },
+      },
+      contextPacket: undefined,
+      analysisPlan: undefined,
+    } as any);
+
+    const forbidden = results.find((r) => r.checkId.endsWith(':action:forbidden_patterns'));
+    expect(forbidden?.passed).toBe(false);
+  });
 });

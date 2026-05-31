@@ -1,0 +1,119 @@
+{
+  "id": "H-021",
+  "title": "首页摘要 - 久坐疲劳后的状态切换建议",
+  "suite": "core",
+  "category": "homepage",
+  "priority": "P1",
+  "tags": [
+    "homepage",
+    "event-insights",
+    "sedentary",
+    "fatigue",
+    "actions"
+  ],
+  "setup": {
+    "profileId": "profile-a",
+    "timeline": {
+      "appendSegments": [
+        {
+          "segmentType": "prolonged_sedentary",
+          "offsetMinutes": 0,
+          "durationMinutes": 180,
+          "advanceClock": true
+        }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，你已经连续久坐 3 小时，HRV 和心率提示身体正在累积静态负荷，需要及时活动来缓解当前疲劳状态并恢复专注。\\n\\n现在不是继续硬撑的时候，起身活动 10 分钟是最有效的切换方式，可以帮助血液循环和注意力恢复，避免长时间静止带来的肌肉僵硬和精神倦怠。\\n\\n建议现在起身轻走并活动肩颈，让循环和注意力都缓一缓，同时做几组深呼吸来降低交感神经兴奋，帮助身体重新找回活跃状态。 短暂的站立和活动可以有效打破久坐的静态模式，让身体重新找回活跃节奏。\",\"chartTokens\":[\"HRV_7DAYS\"],\"actionsSectionTitle\":\"现在可以这样调整\",\"microTips\":[],\"actions\":[{\"id\":\"a1\",\"emoji\":\"🚶\",\"title\":\"起身轻走一下\",\"description\":\"起身轻走 10 min，活动肩颈\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"a2\",\"emoji\":\"🫁\",\"title\":\"做组呼吸\",\"description\":\"做 3 min 缓慢呼吸，降低交感神经兴奋\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
+    },
+    "referenceDate": "2026-05-03"
+  },
+  "request": {
+    "requestId": "core-h021",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": [
+        "巅峰"
+      ],
+      "mustMentionAny": [
+        [
+          "久坐",
+          "工作",
+          "静止"
+        ],
+        [
+          "活动",
+          "轻走",
+          "切换"
+        ]
+      ],
+      "forbiddenPatterns": [
+        "baseline",
+        "基线",
+        "基准线",
+        "偏离基线"
+      ]
+    },
+    "status": {
+      "allowedStatusColors": [
+        "warning",
+        "good"
+      ]
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "实时监控",
+        "调整监测逻辑",
+        "开启.*模式",
+        "准时提醒",
+        "无干扰模式"
+      ]
+    },
+    "taskSpecific": {
+      "homepage": {
+        "requireRecentEventFirst": true,
+        "recentEventPatterns": [
+          "久坐",
+          "工作",
+          "静止"
+        ],
+        "require24hCrossAnalysis": true,
+        "crossAnalysisPatterns": {
+          "event": [
+            "久坐",
+            "工作"
+          ],
+          "metric": [
+            "HRV",
+            "心率",
+            "疲劳",
+            "恢复"
+          ]
+        }
+      }
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true,
+      "forbidTreatmentPromise": true
+    }
+  }
+}
