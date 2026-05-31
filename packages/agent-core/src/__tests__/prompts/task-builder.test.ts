@@ -208,4 +208,18 @@ describe('buildTaskPrompt', () => {
     expect(prompt).not.toContain('"microTips": ["贴士1", "贴士2"]');
     expect(prompt).not.toContain('returned to baseline');
   });
+
+  it('homepage prompt instructs the model to prioritize eventInsights', () => {
+    const prompt = buildTaskPrompt(makeContext({
+      task: {
+        type: AgentTaskType.HOMEPAGE_SUMMARY,
+        pageContext: { profileId: 'profile-a', page: 'homepage', timeframe: 'week' },
+      },
+    }), createPromptLoader(undefined, '../../data/sandbox/prompts'), emptyRules);
+
+    expect(prompt).toContain('eventInsights');
+    expect(prompt).toContain('事件生理摘要');
+    expect(prompt).toContain('优先于 raw latest24h 指标');
+    expect(prompt).toContain('actions 应优先从 actionIntents 转写');
+  });
 });
