@@ -129,6 +129,12 @@ export { parseQuestionIntent } from './context/advisor-intent';
 export {
   normalizeHomepageEventType,
 } from './context/homepage-event-insights';
+export {
+  buildHomepageEventWindowSummary,
+} from './context/homepage-event-window';
+export type {
+  BuildHomepageEventWindowSummaryInput,
+} from './context/homepage-event-window';
 
 // Constants
 export {
