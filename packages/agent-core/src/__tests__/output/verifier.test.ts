@@ -316,4 +316,64 @@ describe('verifyOutput', () => {
     const evidenceViolation = report.violations.find((v) => v.ruleId === 'evidence:missing_evidence_for_claims');
     expect(evidenceViolation).toBeUndefined();
   });
+
+  it('homepage output containing baseline jargon reports soft violation', () => {
+    const report = verifyOutput({
+      envelope: makeEnvelope({
+        summary: '你的 HRV 低于 baseline，偏离基线明显。',
+        actions: [{
+          id: 'a1',
+          emoji: '🚶',
+          title: '要不要轻走一下',
+          description: '现在起身轻走 10 分钟',
+          aiPromise: '我会记录你的选择并用于本次建议上下文',
+        }],
+      }),
+      context: makeContext(),
+      rulesResult: makeRulesResult(),
+      packet: makePacket(),
+      parseResult: { success: true },
+    });
+
+    const violation = report.violations.find((v) => v.ruleId === 'homepage:forbidden_terms');
+    expect(violation).toBeDefined();
+    expect(violation!.passed).toBe(false);
+    expect(violation!.severity).toBe('soft');
+  });
+
+  it('homepage action promising unsupported capabilities reports soft violation', () => {
+    const report = verifyOutput({
+      envelope: makeEnvelope({
+        actions: [{
+          id: 'a1',
+          emoji: '⏰',
+          title: '开启提醒',
+          description: '我会在 21:00 准时提醒你',
+          aiPromise: '我会开启无干扰模式并实时监控你的睡眠',
+        }],
+      }),
+      context: makeContext(),
+      rulesResult: makeRulesResult(),
+      packet: makePacket(),
+      parseResult: { success: true },
+    });
+
+    const violation = report.violations.find((v) => v.ruleId === 'homepage:action:unsupported_promise');
+    expect(violation).toBeDefined();
+    expect(violation!.passed).toBe(false);
+  });
+
+  it('homepage llm output with fewer than two actions reports soft violation', () => {
+    const report = verifyOutput({
+      envelope: makeEnvelope({ actions: [] }),
+      context: makeContext(),
+      rulesResult: makeRulesResult(),
+      packet: makePacket(),
+      parseResult: { success: true },
+    });
+
+    const violation = report.violations.find((v) => v.ruleId === 'homepage:action:min_count');
+    expect(violation).toBeDefined();
+    expect(violation!.passed).toBe(false);
+  });
 });

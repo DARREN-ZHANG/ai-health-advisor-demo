@@ -61,6 +61,7 @@ export function verifyOutput(input: VerifierInput): VerificationReport {
   violations.push(...checkChartTokens(input));
   violations.push(...checkEvidenceConsistency(input));
   violations.push(...checkTaskRedlines(input));
+  violations.push(...checkHomepageBriefQuality(input));
 
   return buildReport(violations, input);
 }
@@ -250,7 +251,68 @@ function buildMatchText(envelope: AgentResponseEnvelope): string {
   if (envelope.microTips && envelope.microTips.length > 0) {
     parts.push(envelope.microTips.join('\n'));
   }
+  if (envelope.actions && envelope.actions.length > 0) {
+    parts.push(envelope.actions.map((a) => `${a.title}\n${a.description}\n${a.aiPromise}`).join('\n'));
+  }
   return parts.join('\n');
+}
+
+const HOMEPAGE_FORBIDDEN_TERM_PATTERNS = [/baseline/i, /基线/, /基准线/, /偏离基线/];
+const UNSUPPORTED_ACTION_PROMISE_PATTERNS = [
+  /提醒/,
+  /开启.*模式/,
+  /实时监控/,
+  /调整监测逻辑/,
+  /无干扰模式/,
+  /准时提醒/,
+];
+const VAGUE_ACTION_PATTERNS = [/保持良好/, /注意休息/, /多喝水/, /适度运动/];
+
+function checkHomepageBriefQuality(input: VerifierInput): QualityViolation[] {
+  if (input.context.task.type !== 'homepage_summary') return [];
+
+  const text = buildMatchText(input.envelope);
+  const violations: QualityViolation[] = [];
+
+  violations.push(checkPatterns(
+    'homepage:forbidden_terms',
+    text,
+    HOMEPAGE_FORBIDDEN_TERM_PATTERNS,
+    'soft',
+    'homepage 禁用术语',
+  ));
+
+  const actions = input.envelope.actions ?? [];
+  if (input.envelope.source === 'llm') {
+    violations.push({
+      ruleId: 'homepage:action:min_count',
+      severity: 'soft',
+      passed: actions.length >= 2,
+      message: actions.length >= 2 ? 'homepage action 数量充足' : `homepage action 数量不足: ${actions.length} < 2`,
+      details: { count: actions.length },
+    });
+  }
+
+  const actionText = actions.map((a) => `${a.title}\n${a.description}\n${a.aiPromise}`).join('\n');
+  const unsupported = UNSUPPORTED_ACTION_PROMISE_PATTERNS.filter((p) => p.test(actionText)).map((p) => p.source);
+  violations.push({
+    ruleId: 'homepage:action:unsupported_promise',
+    severity: 'soft',
+    passed: unsupported.length === 0,
+    message: unsupported.length === 0 ? 'actions 未承诺未实现能力' : 'actions 承诺了未实现能力',
+    details: unsupported.length === 0 ? undefined : { matchedPatterns: unsupported },
+  });
+
+  const vague = VAGUE_ACTION_PATTERNS.filter((p) => p.test(actionText)).map((p) => p.source);
+  violations.push({
+    ruleId: 'homepage:action:vague',
+    severity: 'soft',
+    passed: vague.length === 0,
+    message: vague.length === 0 ? 'actions 未出现泛泛建议' : 'actions 出现泛泛建议',
+    details: vague.length === 0 ? undefined : { matchedPatterns: vague },
+  });
+
+  return violations;
 }
 
 function checkPatterns(
