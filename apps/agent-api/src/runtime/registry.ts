@@ -45,27 +45,18 @@ import { ProfileManager } from '../modules/god-mode/profile-manager.js';
 import type { MetricsStore } from '../plugins/metrics.js';
 
 /**
- * 用 dailyBaseline 精确值覆盖记录中的抖动数据。
- * 确保 demo 模式下聚合记录与用户设置的 dailyBaseline 完全一致。
+ * 用 dailyBaseline 精确值填充记录中缺失的字段。
+ * 仅当字段不存在（null/undefined）时才填充，避免覆盖已观测数据。
  */
-function patchRecordWithDailyBaseline(
+function patchMissingRecordFieldsWithDailyBaseline(
   record: DailyRecord,
   dailyBaseline: Partial<BaselineMetrics>,
   demoTime?: string,
 ): DailyRecord {
   const patched = { ...record };
 
-  // 睡眠：精确覆盖 totalMinutes 并按比例重算 stages 和时间窗口
-  if (dailyBaseline.avgSleepMinutes != null && record.sleep) {
+  if (dailyBaseline.avgSleepMinutes != null && !record.sleep) {
     const exact = dailyBaseline.avgSleepMinutes;
-    const old = record.sleep.totalMinutes || exact;
-    const ratio = old > 0 ? exact / old : 1;
-    const deep = Math.round(record.sleep.stages.deep * ratio);
-    const rem = Math.round(record.sleep.stages.rem * ratio);
-    const awake = Math.max(1, Math.round(record.sleep.stages.awake * ratio));
-    const light = Math.max(0, exact - deep - rem - awake);
-
-    // 从 demoTime 推导起床时间
     let wakeHour = 6;
     let wakeMin = 0;
     if (demoTime) {
@@ -79,9 +70,12 @@ function patchRecordWithDailyBaseline(
     const wakeTotalMin = wakeHour * 60 + wakeMin;
     let bedTotalMin = wakeTotalMin - exact;
     if (bedTotalMin < 0) bedTotalMin += 24 * 60;
+    const deep = Math.round(exact * 0.22);
+    const rem = Math.round(exact * 0.24);
+    const awake = Math.max(1, Math.round(exact * 0.06));
+    const light = Math.max(0, exact - deep - rem - awake);
 
     patched.sleep = {
-      ...record.sleep,
       totalMinutes: exact,
       stages: { deep, light, rem, awake },
       score: Math.max(5, Math.min(98, Math.round((exact / 480) * 90))),
@@ -90,18 +84,20 @@ function patchRecordWithDailyBaseline(
     };
   }
 
-  if (dailyBaseline.hrv != null) patched.hrv = dailyBaseline.hrv;
+  if (dailyBaseline.hrv != null && record.hrv == null) patched.hrv = dailyBaseline.hrv;
+  if (dailyBaseline.spo2 != null && record.spo2 == null) patched.spo2 = dailyBaseline.spo2;
 
-  if (dailyBaseline.restingHr != null && record.hr && record.hr.length >= 2) {
-    const oldResting = record.hr[1]!;
-    const delta = dailyBaseline.restingHr - oldResting;
-    patched.hr = record.hr.map((v) => Math.round(v + delta));
+  if (dailyBaseline.restingHr != null && (!record.hr || record.hr.length === 0)) {
+    patched.hr = [dailyBaseline.restingHr];
   }
 
-  if (dailyBaseline.spo2 != null) patched.spo2 = dailyBaseline.spo2;
-
-  if (dailyBaseline.avgSteps != null && record.activity) {
-    patched.activity = { ...record.activity, steps: dailyBaseline.avgSteps };
+  if (dailyBaseline.avgSteps != null && !record.activity) {
+    patched.activity = {
+      steps: dailyBaseline.avgSteps,
+      calories: Math.round(dailyBaseline.avgSteps * 0.04),
+      activeMinutes: 0,
+      distanceKm: Math.round(dailyBaseline.avgSteps * 0.0007 * 100) / 100,
+    };
   }
 
   return patched;
@@ -195,9 +191,9 @@ export function createRuntimeRegistry(
       const aggregatedRecord = aggregateCurrentDayRecord(syncedEvents, clock.currentTime);
       let currentDayRecord = mergeCurrentDayRecord(historicalCurrentDay, aggregatedRecord);
 
-      // 用 dailyBaseline 精确值覆盖聚合数据中的抖动/偏差
+      // 用 dailyBaseline 精确值填充聚合数据中缺失的字段（不覆盖已观测数据）
       if (raw.profile.dailyBaseline) {
-        currentDayRecord = patchRecordWithDailyBaseline(currentDayRecord, raw.profile.dailyBaseline, clock.currentTime);
+        currentDayRecord = patchMissingRecordFieldsWithDailyBaseline(currentDayRecord, raw.profile.dailyBaseline, clock.currentTime);
       }
 
       return { ...raw, records: [...historicalRecords, currentDayRecord] };
@@ -241,6 +237,7 @@ export function createRuntimeRegistry(
 
     return {
       recognizedEvents,
+      syncedEvents,
       derivedTemporalStates,
       syncMetadata: {
         lastSyncedMeasuredAt: syncState.lastSyncedMeasuredAt,

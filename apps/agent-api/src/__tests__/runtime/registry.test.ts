@@ -80,7 +80,7 @@ describe('RuntimeRegistry', () => {
     expect(registry.overrideStore.getCurrentProfileId()).toBeDefined();
   });
 
-  it('当前日发生同步后仍保留历史 HRV', () => {
+  it('当前日发生同步后保留已观测 HRV，不用 dailyBaseline 覆盖', () => {
     const clock = registry.overrideStore.getDemoClock('profile-a');
     const currentDate = clock.currentTime.slice(0, 10);
     const rawCurrentDay = registry.getRawProfile('profile-a').records.find((record) => record.date === currentDate);
@@ -91,7 +91,32 @@ describe('RuntimeRegistry', () => {
       registry.overrideStore.performSync('profile-a', 'manual_refresh');
       const currentDay = registry.getProfile('profile-a').records.find((record) => record.date === currentDate);
 
+      expect(currentDay?.hrv).toBeDefined();
       expect(currentDay?.hrv).toBe(rawCurrentDay!.hrv);
+    } finally {
+      registry.overrideStore.reset('all');
+    }
+  });
+
+  it('does not overwrite observed current-day aggregate values with dailyBaseline after activity sync', () => {
+    try {
+      registry.overrideStore.appendSegment(
+        'profile-a',
+        'deep_focus',
+        { durationMinutes: 120 },
+        0,
+        { durationMinutes: 120, advanceClock: true },
+      );
+      registry.overrideStore.performSync('profile-a', 'manual_refresh');
+
+      const profile = registry.getProfile('profile-a');
+      const currentDate = registry.overrideStore.getDemoClock('profile-a').currentTime.slice(0, 10);
+      const currentDay = profile.records.find((record) => record.date === currentDate);
+      const dailyBaseline = registry.getRawProfile('profile-a').profile.dailyBaseline;
+
+      expect(currentDay?.hrv).toBeDefined();
+      expect(dailyBaseline?.hrv).toBeDefined();
+      expect(currentDay?.hrv).not.toBe(dailyBaseline?.hrv);
     } finally {
       registry.overrideStore.reset('all');
     }
