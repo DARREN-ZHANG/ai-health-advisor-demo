@@ -126,6 +126,9 @@ export {
   getMetricForTab,
 } from './context/visible-chart-packet';
 export { parseQuestionIntent } from './context/advisor-intent';
+export {
+  normalizeHomepageEventType,
+} from './context/homepage-event-insights';
 
 // Constants
 export {

@@ -230,6 +230,7 @@ function buildHomepagePacket(
     trend7d,
     rulesInsights,
     suggestedChartTokens: rulesResult.suggestedChartTokens,
+    eventInsights: [],
   };
 }
 

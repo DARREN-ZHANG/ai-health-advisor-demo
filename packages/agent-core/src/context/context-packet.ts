@@ -168,12 +168,100 @@ export interface RuleInsightPacket {
   message: string;
 }
 
+export type HomepageSemanticEventType =
+  | 'sleep_end'
+  | 'meal'
+  | 'work_focus'
+  | 'work_sedentary'
+  | 'rest_break'
+  | 'cardio_workout'
+  | 'hiit_workout'
+  | 'possible_caffeine_intake'
+  | 'possible_alcohol_intake'
+  | 'stress_spike'
+  | 'prepare_sleep'
+  | 'unknown';
+
+export type EventPhysiologyMetric =
+  | 'heart_rate'
+  | 'hrv'
+  | 'spo2'
+  | 'skin_temperature'
+  | 'motion'
+  | 'sleep'
+  | 'stress'
+  | 'activity';
+
+export interface EventPhysiologySummary {
+  metric: EventPhysiologyMetric;
+  value?: number;
+  unit?: string;
+  qualifier: 'low' | 'normal' | 'elevated' | 'compressed' | 'volatile' | 'recovering' | 'missing';
+  interpretation: string;
+  evidenceId?: string;
+}
+
+export interface RecoveryContextSummary {
+  source: 'latest24h' | 'trend7d' | 'profile';
+  metric: string;
+  relation: 'supports' | 'conflicts' | 'neutral' | 'missing';
+  summary: string;
+  evidenceId?: string;
+}
+
+export interface EventBodyTension {
+  level: 'positive' | 'watch' | 'high' | 'critical';
+  summary: string;
+  reason: string;
+}
+
+export interface RecommendedFocus {
+  category:
+    | 'movement_reset'
+    | 'breathing_reset'
+    | 'nutrition'
+    | 'hydration'
+    | 'training_adjustment'
+    | 'sleep_protection'
+    | 'posture'
+    | 'data_quality'
+    | 'medical_attention';
+  action: string;
+  durationMin?: number;
+  timing?: string;
+  rationale: string;
+}
+
+export interface ActionIntentCandidate {
+  id: string;
+  emoji: string;
+  title: string;
+  description: string;
+  aiPromise: string;
+  productCapability: 'record_choice' | 'contextual_followup';
+}
+
+export interface HomepageEventInsight {
+  eventId: string;
+  eventType: HomepageSemanticEventType;
+  priority: 'high' | 'medium' | 'low';
+  timeRelation: string;
+  headline: string;
+  physiology: EventPhysiologySummary[];
+  recoveryContext: RecoveryContextSummary[];
+  tension: EventBodyTension;
+  recommendedFocus: RecommendedFocus[];
+  actionIntents: ActionIntentCandidate[];
+  evidenceIds: string[];
+}
+
 export interface HomepageContextPacket {
   recentEvents: RecentEventPacket[];
   latest24h: Latest24hPacket;
   trend7d: MetricSummary[];
   rulesInsights: RuleInsightPacket[];
   suggestedChartTokens: ChartTokenId[];
+  eventInsights: HomepageEventInsight[];
 }
 
 // ────────────────────────────────────────────
