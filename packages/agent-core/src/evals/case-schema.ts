@@ -337,6 +337,9 @@ const HomepageTaskExpectationSchema = z
       })
       .strict()
       .optional(),
+    requireEventWindowFacts: z.boolean().optional(),
+    eventWindowValuePatterns: z.array(z.string()).optional(),
+    forbidDailyStatusFirstPatterns: z.array(z.string()).optional(),
     requireWeeklyTrendOptional: z.boolean().optional(),
   })
   .strict()
@@ -361,6 +364,16 @@ const HomepageTaskExpectationSchema = z
     {
       message:
         'require24hCrossAnalysis 为 true 时，crossAnalysisPatterns.event 与 crossAnalysisPatterns.metric 必须提供且非空',
+    },
+  )
+  // requireEventWindowFacts 为 true 时，eventWindowValuePatterns 必须非空
+  .refine(
+    (data) =>
+      !data.requireEventWindowFacts ||
+      (Array.isArray(data.eventWindowValuePatterns) && data.eventWindowValuePatterns.length > 0),
+    {
+      message: 'requireEventWindowFacts 为 true 时，eventWindowValuePatterns 必须提供且非空',
+      path: ['eventWindowValuePatterns'],
     },
   );
 

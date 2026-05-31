@@ -200,6 +200,9 @@ export interface AgentEvalExpectations {
         event?: string[];
         metric?: string[];
       };
+      requireEventWindowFacts?: boolean;
+      eventWindowValuePatterns?: string[];
+      forbidDailyStatusFirstPatterns?: string[];
       requireWeeklyTrendOptional?: boolean;
     };
     viewSummary?: {

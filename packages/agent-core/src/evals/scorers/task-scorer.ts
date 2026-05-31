@@ -91,6 +91,16 @@ function checkHomepage(
     results.push(check24hCrossAnalysis(caseId, text, homepage.crossAnalysisPatterns));
   }
 
+  // 检查 3：requireEventWindowFacts - 命中事件窗口事实
+  if (homepage.requireEventWindowFacts) {
+    results.push(checkEventWindowFacts(caseId, text, homepage.eventWindowValuePatterns ?? []));
+  }
+
+  // 检查 4：forbidDailyStatusFirstPatterns - summary 开头不得以整日状态为主体
+  if (homepage.forbidDailyStatusFirstPatterns && homepage.forbidDailyStatusFirstPatterns.length > 0) {
+    results.push(checkDailyStatusNotFirst(caseId, envelope.summary, homepage.forbidDailyStatusFirstPatterns));
+  }
+
   return results;
 }
 
@@ -125,6 +135,57 @@ function checkRecentEventFirst(
       ? `summary 前 40 字符命中 recentEventPatterns`
       : 'summary 前 40 字符未命中任何 recentEventPatterns',
     details: hit ? { matched, summaryHead } : { patterns, summaryHead },
+  };
+}
+
+/** 检查事件窗口事实 */
+function checkEventWindowFacts(
+  caseId: string,
+  text: string,
+  patterns: string[],
+): EvalCheckResult {
+  if (patterns.length === 0) {
+    return {
+      checkId: `${caseId}:task:homepage:event_window_facts`,
+      severity: 'hard',
+      passed: false,
+      score: 0,
+      maxScore: 1,
+      message: 'requireEventWindowFacts 为 true 但缺少 eventWindowValuePatterns',
+      details: { reason: 'missing_event_window_value_patterns' },
+    };
+  }
+
+  const matched = patterns.filter((pattern) => new RegExp(pattern).test(text));
+  const passed = matched.length > 0;
+  return {
+    checkId: `${caseId}:task:homepage:event_window_facts`,
+    severity: 'hard',
+    passed,
+    score: passed ? 1 : 0,
+    maxScore: 1,
+    message: passed ? '命中事件窗口事实' : '未命中任何事件窗口事实',
+    details: passed ? { matched } : { patterns },
+  };
+}
+
+/** 检查 summary 开头不得以整日状态为主体 */
+function checkDailyStatusNotFirst(
+  caseId: string,
+  summary: string,
+  patterns: string[],
+): EvalCheckResult {
+  const summaryHead = summary.slice(0, 80);
+  const matched = patterns.filter((pattern) => new RegExp(pattern).test(summaryHead));
+  const passed = matched.length === 0;
+  return {
+    checkId: `${caseId}:task:homepage:daily_status_not_first`,
+    severity: 'hard',
+    passed,
+    score: passed ? 1 : 0,
+    maxScore: 1,
+    message: passed ? 'summary 开头没有以整日状态为主体' : 'summary 开头以整日状态为主体',
+    details: passed ? undefined : { matched, summaryHead },
   };
 }
 

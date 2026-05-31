@@ -31,7 +31,7 @@
     },
     "modelFixture": {
       "mode": "fake-json",
-      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，刚刚这段 120 min 的深度专注已经把大脑推到高负荷档位，需要及时重置来避免后续疲劳累积影响下午的工作效率和专注质量。\\n\\n这次专注前后还叠加了可能的咖啡因影响，心率和 HRV 的组合提示你的神经系统仍在偏紧的状态。现在最重要的不是继续硬扛，而是用短暂的身体切换把注意力和循环拉回来，避免下午后半段出现明显掉电。\\n\\n建议现在起身轻走 10 min，再用 3 min 延长呼气把心率慢慢压下来。你想先试哪个？ 轻走可以帮助下肢血液循环恢复，呼吸练习则能快速降低交感神经兴奋度。\",\"chartTokens\":[\"HRV_7DAYS\"],\"actionsSectionTitle\":\"现在可以这样重置\",\"microTips\":[],\"actions\":[{\"id\":\"a1\",\"emoji\":\"🚶\",\"title\":\"要不要轻走一下\",\"description\":\"现在起身轻走 10 min，让久坐和专注负荷缓下来\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"a2\",\"emoji\":\"🫁\",\"title\":\"要不要做组呼吸\",\"description\":\"做 3 min 延长呼气，帮助神经系统降档\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
+      "content": "{\"source\":\"llm\",\"statusColor\":\"warning\",\"summary\":\"巅峰，刚刚完成一段深度专注 120 min，心率峰值 95 bpm，HRV 末段 42 ms，神经系统仍处于偏紧状态，需要及时重置来避免后续疲劳累积。\\n\\n这次专注前后还叠加了可能的咖啡因影响，心率和 HRV 的组合提示你的神经系统仍在偏紧的状态。现在最重要的不是继续硬扛，而是用短暂的身体切换把注意力和循环拉回来，避免下午后半段出现明显掉电。\\n\\n建议现在起身轻走 10 min，再用 3 min 延长呼气把心率慢慢压下来。你想先试哪个？ 轻走可以帮助下肢血液循环恢复，呼吸练习则能快速降低交感神经兴奋度。\",\"chartTokens\":[\"HRV_7DAYS\"],\"actionsSectionTitle\":\"现在可以这样重置\",\"microTips\":[],\"actions\":[{\"id\":\"a1\",\"emoji\":\"🚶\",\"title\":\"要不要轻走一下\",\"description\":\"现在起身轻走 10 min，让久坐和专注负荷缓下来\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"a2\",\"emoji\":\"🫁\",\"title\":\"要不要做组呼吸\",\"description\":\"做 3 min 延长呼气，帮助神经系统降档\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
     },
     "referenceDate": "2026-05-03"
   },
@@ -111,7 +111,10 @@
             "神经系统",
             "恢复"
           ]
-        }
+        },
+        "requireEventWindowFacts": true,
+        "eventWindowValuePatterns": ["专注.*\\d+\\s*min", "心率.*\\d+\\s*bpm", "HRV.*\\d+\\s*ms"],
+        "forbidDailyStatusFirstPatterns": ["过去24小时", "整体状态", "各项指标", "一周趋势"]
       }
     },
     "safety": {

@@ -1751,6 +1751,45 @@ describe('taskScorer', () => {
       expect(check!.passed).toBe(false);
       expect(check!.message).toContain('配置不完整');
     });
+
+    it('requireEventWindowFacts 命中事件窗口数字应通过', () => {
+      const envelope = createValidEnvelope({
+        summary: '巅峰，刚完成 HIIT 训练，事件窗口心率峰值 172bpm，末段回落到 92bpm。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            homepage: {
+              requireEventWindowFacts: true,
+              eventWindowValuePatterns: ['172bpm', '92bpm'],
+            },
+          },
+        },
+      });
+
+      const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+      const check = results.find((result) => result.checkId.includes('event_window_facts'));
+      expect(check?.passed).toBe(true);
+    });
+
+    it('forbidDailyStatusFirstPatterns 命中 summary 开头应失败', () => {
+      const envelope = createValidEnvelope({
+        summary: '你的过去24小时状态整体不错，HRV 和睡眠都稳定。刚才也完成了训练。',
+      });
+      const evalCase = createValidCase({
+        expectations: {
+          taskSpecific: {
+            homepage: {
+              forbidDailyStatusFirstPatterns: ['过去24小时', '整体状态', '各项指标'],
+            },
+          },
+        },
+      });
+
+      const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+      const check = results.find((result) => result.checkId.includes('daily_status_not_first'));
+      expect(check?.passed).toBe(false);
+    });
   });
 
   // ── View Summary 场景 ────────────────────────────────
