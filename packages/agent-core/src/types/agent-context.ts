@@ -1,4 +1,4 @@
-import type { AgentTaskType, DataTab, Timeframe, PageContext, RecognizedEvent, DerivedTemporalState, Locale } from '@health-advisor/shared';
+import type { AgentTaskType, DataTab, Timeframe, PageContext, RecognizedEvent, DerivedTemporalState, DeviceEvent, Locale } from '@health-advisor/shared';
 import type { UserMemoryFact } from './durable-memory';
 
 export type AgentStatusColor = 'green' | 'yellow' | 'red';
@@ -7,6 +7,8 @@ export type AgentStatusColor = 'green' | 'yellow' | 'red';
 export interface TimelineSyncContext {
   /** 已识别的活动事件 */
   recognizedEvents: RecognizedEvent[];
+  /** 已同步的原始设备事件样本，用于事件窗口级生理摘要 */
+  syncedEvents: DeviceEvent[];
   /** 派生临时状态（如 recent_meal_30m） */
   derivedTemporalStates: DerivedTemporalState[];
   /** 同步元数据 */

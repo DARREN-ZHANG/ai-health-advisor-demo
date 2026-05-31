@@ -588,6 +588,7 @@ function buildTimelineSyncContext(
 
   return {
     recognizedEvents,
+    syncedEvents,
     derivedTemporalStates,
     syncMetadata: {
       lastSyncedMeasuredAt: syncState.lastSyncedMeasuredAt,

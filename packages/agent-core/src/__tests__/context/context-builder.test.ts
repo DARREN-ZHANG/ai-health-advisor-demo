@@ -199,4 +199,53 @@ describe('buildAgentContext', () => {
     expect(ctx.memory.recentMessages).toHaveLength(1);
     expect(ctx.memory.recentMessages[0]?.text).toBe('profile-a-msg');
   });
+
+  it('carries synced device samples in timelineSync context', () => {
+    const deps = makeDeps();
+    const syncedEvents = [
+      {
+        eventId: 'evt-focus-hr-1',
+        profileId: 'profile-a',
+        measuredAt: '2026-04-10T10:00',
+        metric: 'heartRate',
+        value: 72,
+        source: 'sensor',
+        segmentId: 'seg-focus-1',
+      },
+      {
+        eventId: 'evt-focus-hrv-1',
+        profileId: 'profile-a',
+        measuredAt: '2026-04-10T10:05',
+        metric: 'hrvRmssd',
+        value: 55,
+        source: 'sensor',
+        segmentId: 'seg-focus-1',
+      },
+    ] as const;
+
+    deps.getTimelineSync = () => ({
+      recognizedEvents: [{
+        recognizedEventId: 're-focus-1',
+        profileId: 'profile-a',
+        type: 'deep_focus',
+        start: '2026-04-10T10:00',
+        end: '2026-04-10T12:00',
+        confidence: 0.91,
+        evidence: ['平均心率 72, 低运动, 深度专注'],
+        sourceSegmentId: 'seg-focus-1',
+      }],
+      derivedTemporalStates: [],
+      syncedEvents: [...syncedEvents],
+      syncMetadata: {
+        lastSyncedMeasuredAt: '2026-04-10T12:00',
+        pendingEventCount: 0,
+      },
+    });
+
+    const ctx = buildAgentContext(makeRequest(), deps, '2026-04-10');
+
+    expect(ctx.timelineSync?.syncedEvents).toHaveLength(2);
+    expect(ctx.timelineSync?.syncedEvents?.[0]?.metric).toBe('heartRate');
+    expect(ctx.timelineSync?.recognizedEvents[0]?.sourceSegmentId).toBe('seg-focus-1');
+  });
 });
