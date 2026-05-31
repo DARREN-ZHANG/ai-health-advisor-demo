@@ -1,4 +1,4 @@
-import { AgentTaskType, type DataTab, type Timeframe } from '@health-advisor/shared';
+import { AgentTaskType } from '@health-advisor/shared';
 import type { DailyRecord } from '@health-advisor/shared';
 import type { AgentContext } from '../types/agent-context';
 import type { RuleEvaluationResult } from '../rules/types';
@@ -25,9 +25,9 @@ import type {
 import type { EvidenceCollector } from './evidence-packet';
 import { createEvidenceCollector } from './evidence-packet';
 import { buildMissingDataPacket } from './missing-data-packet';
-import { buildVisibleChartPackets, getChartTokenForTab } from './visible-chart-packet';
+import { buildVisibleChartPackets } from './visible-chart-packet';
 import { parseQuestionIntent } from './advisor-intent';
-import { buildMetricSummary, buildMetricSummaries, getMetricValue } from './metric-summary';
+import { buildMetricSummary, buildMetricSummaries } from './metric-summary';
 import { buildHomepageEventInsights } from './homepage-event-insights';
 import { buildHomepageEventWindowSummary } from './homepage-event-window';
 
@@ -543,9 +543,7 @@ function buildAdvisorChatPacket(
   visibleCharts: ViewSummaryContextPacket['visibleCharts'],
   evidence: EvidenceCollector,
 ): AdvisorChatContextPacket {
-  const records = context.dataWindow.records as DailyRecord[];
   const userMessage = context.task.userMessage ?? '';
-  const baselines = context.profile.baselines;
 
   // Question intent
   const questionIntent = parseQuestionIntent(userMessage);
