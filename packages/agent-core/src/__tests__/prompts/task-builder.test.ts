@@ -219,7 +219,7 @@ describe('buildTaskPrompt', () => {
 
     expect(prompt).toContain('eventInsights');
     expect(prompt).toContain('事件生理摘要');
-    expect(prompt).toContain('优先于 raw latest24h 指标');
+    expect(prompt).toContain('事件窗口指标优先于 raw latest24h');
     expect(prompt).toContain('actions 应优先从 actionIntents 转写');
   });
 });

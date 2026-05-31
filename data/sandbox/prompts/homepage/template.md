@@ -37,10 +37,12 @@
 
 ### eventInsights 使用规则
 
-如果上下文包含 `## 事件生理摘要（优先引用）`，必须优先使用其中的 eventInsights 作为首页简报的主输入。
+如果上下文包含 `## 事件生理摘要（优先引用）`，必须优先使用其中的 eventInsights 和事件窗口指标作为首页简报的主输入。
 
-- eventInsights 优先于 raw latest24h 指标。
-- raw latest24h 和 trend7d 只作为证据背景，不要逐项展开。
+- 事件窗口指标优先于 raw latest24h、trend7d 和个人参考水平。
+- raw latest24h 只用于恢复背景、安全边界或异常交叉验证，不得作为事件本身的心率/HRV/血氧表现来描述。
+- 当事件窗口指标包含峰值、均值、末段或变化值时，summary 的核心分析必须引用其中至少 1 个事件窗口事实。
+- 不得把 `过去24小时状态` 或 `过去一周趋势` 写成 summary 主体。
 - summary 不要复制 eventInsights 的列表结构，要自然转写为用户能读懂的连续表达。
 - 当前张力为 `critical` 时，必须优先说明安全边界和就医/观察建议。
 - actions 应优先从 actionIntents 转写，不自行承诺提醒、模式切换、实时监控或调整监测逻辑。

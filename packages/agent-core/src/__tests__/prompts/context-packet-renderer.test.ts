@@ -666,3 +666,118 @@ describe('renderTaskContextPacket', () => {
     expect(output.indexOf('事件生理摘要（优先引用）')).toBeLessThan(output.indexOf('过去24小时状态'));
   });
 });
+
+
+  it('with homepage events, renders event-window metrics and suppresses expanded normal daily metrics', () => {
+    const packet: TaskContextPacket = {
+      task: { type: 'homepage_summary', page: 'home' },
+      userContext: {
+        profileId: 'profile-a',
+        name: '巅峰',
+        age: 28,
+        tags: ['规律健身'],
+        baselines: { restingHR: 48, hrv: 93, spo2: 99, avgSleepMinutes: 600, avgSteps: 5900 },
+      },
+      dataWindow: { start: '2026-05-25', end: '2026-05-31', recordCount: 7, completenessPct: 100 },
+      missingData: [],
+      evidence: [],
+      visibleCharts: [],
+      homepage: {
+        recentEvents: [{
+          recognizedEventId: 're-hiit-1',
+          type: 'intermittent_exercise',
+          start: '2026-05-31T17:30',
+          end: '2026-05-31T18:30',
+          durationMin: 60,
+          confidence: 0.92,
+          sourceSegmentId: 'seg-hiit-1',
+          recognitionEvidence: ['心率标准差 35, 交替高低强度'],
+          eventWindow: {
+            source: 'synced_device_samples',
+            coverage: 'complete',
+            recognizedEventId: 're-hiit-1',
+            sourceSegmentId: 'seg-hiit-1',
+            start: '2026-05-31T17:30',
+            end: '2026-05-31T18:30',
+            durationMin: 60,
+            sampleCount: 5,
+            evidenceIds: ['event_window_re-hiit-1_heart_rate'],
+            metrics: [{
+              metric: 'heart_rate',
+              unit: 'bpm',
+              sampleCount: 3,
+              startValue: 118,
+              endValue: 92,
+              latest: 92,
+              min: 92,
+              max: 172,
+              average: 134,
+              delta: -26,
+              qualifier: 'elevated',
+              interpretation: '事件窗口心率峰值 172bpm，均值 134bpm，末段 92bpm',
+              evidenceId: 'event_window_re-hiit-1_heart_rate',
+            }],
+          },
+          syncState: { lastSyncedMeasuredAt: '2026-05-31T18:30', pendingEventCount: 0, fromSyncedWindow: true },
+          evidenceIds: ['event_hiit', 'event_window_re-hiit-1_heart_rate'],
+        }],
+        eventInsights: [{
+          eventId: 'event_hiit',
+          eventType: 'hiit_workout',
+          priority: 'high',
+          timeRelation: '刚结束约 5 min',
+          headline: '完成 60 min 训练，身体进入恢复窗口',
+          eventWindow: {
+            source: 'synced_device_samples',
+            coverage: 'complete',
+            recognizedEventId: 're-hiit-1',
+            sourceSegmentId: 'seg-hiit-1',
+            start: '2026-05-31T17:30',
+            end: '2026-05-31T18:30',
+            durationMin: 60,
+            sampleCount: 5,
+            evidenceIds: ['event_window_re-hiit-1_heart_rate'],
+            metrics: [{
+              metric: 'heart_rate',
+              unit: 'bpm',
+              sampleCount: 3,
+              startValue: 118,
+              endValue: 92,
+              latest: 92,
+              min: 92,
+              max: 172,
+              average: 134,
+              delta: -26,
+              qualifier: 'elevated',
+              interpretation: '事件窗口心率峰值 172bpm，均值 134bpm，末段 92bpm',
+              evidenceId: 'event_window_re-hiit-1_heart_rate',
+            }],
+          },
+          physiology: [{ metric: 'heart_rate', value: 172, unit: 'bpm', qualifier: 'elevated', interpretation: '事件窗口心率峰值 172bpm，均值 134bpm，末段 92bpm', evidenceId: 'event_window_re-hiit-1_heart_rate' }],
+          recoveryContext: [],
+          tension: { level: 'watch', summary: '运动事件已经进入恢复窗口，需要降低后续刺激', reason: 'event-window workout recovery markers present' },
+          recommendedFocus: [{ category: 'hydration', action: '小口补水并做轻度走动冷身', durationMin: 10, rationale: '帮助心率平稳回落并支持循环恢复' }],
+          actionIntents: [],
+          evidenceIds: ['event_hiit', 'event_window_re-hiit-1_heart_rate'],
+        }],
+        latest24h: {
+          date: '2026-05-31',
+          metrics: [
+            { metric: 'hrv', value: 93, unit: 'ms', baseline: 93, deltaPctVsBaseline: 0, status: 'normal', evidenceId: 'daily_hrv' },
+            { metric: 'resting_hr', value: 48, unit: 'bpm', baseline: 48, deltaPctVsBaseline: 0, status: 'normal', evidenceId: 'daily_hr' },
+            { metric: 'spo2', value: 99, unit: '%', baseline: 99, deltaPctVsBaseline: 0, status: 'normal', evidenceId: 'daily_spo2' },
+          ],
+        },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+      },
+    };
+
+    const output = renderTaskContextPacket(packet, 'zh', '2026-05-31T18:35');
+
+    expect(output).toContain('## 事件生理摘要（优先引用）');
+    expect(output).toContain('事件窗口');
+    expect(output).toContain('峰值 172bpm');
+    expect(output).not.toContain('其余指标正常：hrv 93ms, resting_hr 48bpm, spo2 99%');
+  });

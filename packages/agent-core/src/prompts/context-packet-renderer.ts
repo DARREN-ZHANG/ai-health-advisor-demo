@@ -210,6 +210,18 @@ function renderHomepageEventInsights(homepage: HomepageContextPacket, locale: Lo
   for (const insight of homepage.eventInsights) {
     lines.push(`- [${insight.priority}] ${insight.eventType}, ${insight.timeRelation}`);
     lines.push(`  - ${t(locale, '事件摘要', 'Event summary')}${colon(locale)}${insight.headline}`);
+    if (insight.eventWindow) {
+      lines.push(`  - ${t(locale, '事件窗口', 'Event window')}${colon(locale)}${insight.eventWindow.start} ~ ${insight.eventWindow.end}, ${t(locale, '样本数', 'samples')}${colon(locale)}${insight.eventWindow.sampleCount}, ${t(locale, '覆盖度', 'coverage')}${colon(locale)}${insight.eventWindow.coverage}`);
+      for (const metric of insight.eventWindow.metrics) {
+        const values = [
+          metric.max !== undefined ? `${t(locale, '峰值', 'max')} ${metric.max}${metric.unit}` : '',
+          metric.average !== undefined ? `${t(locale, '均值', 'avg')} ${metric.average}${metric.unit}` : '',
+          metric.latest !== undefined ? `${t(locale, '末段', 'latest')} ${metric.latest}${metric.unit}` : '',
+          metric.delta !== undefined ? `${t(locale, '变化', 'delta')} ${metric.delta > 0 ? '+' : ''}${metric.delta}${metric.unit}` : '',
+        ].filter(Boolean).join(', ');
+        lines.push(`  - ${t(locale, '事件窗口指标', 'Event-window metric')}${colon(locale)}${metric.metric} ${metric.qualifier}${values ? ` (${values})` : ''} — ${metric.interpretation}`);
+      }
+    }
     lines.push(`  - ${t(locale, '当前张力', 'Body tension')}${colon(locale)}${insight.tension.level}: ${insight.tension.summary}`);
     for (const item of insight.physiology) {
       const value = item.value !== undefined ? ` ${item.value}${item.unit ?? ''}` : '';
@@ -296,11 +308,8 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale, demoNow
       if (m.status === 'critical') parts.push(`[${t(locale, '异常', 'critical')}${m.clinicalNote ? `: ${m.clinicalNote}` : ''}]`);
       lines.push(parts.join(''));
     }
-    if (normalMetrics.length > 0) {
-      const summary = normalMetrics
-        .map(m => `${m.metric} ${m.value}${m.unit}`)
-        .join(', ');
-      lines.push(`- ${t(locale, '其余指标正常', 'Other metrics normal')}${c}${summary}`);
+    if (normalMetrics.length > 0 && notableMetrics.length === 0) {
+      lines.push(`- ${t(locale, '24h 恢复背景', '24h recovery background')}${c}${t(locale, '未见异常指标；仅作为事件解释背景，不展开逐项分析', 'no abnormal metrics; use only as event background, do not expand item by item')}`);
     }
     if (missingMetrics.length > 0) {
       lines.push(`- ${t(locale, '数据缺失', 'Data missing')}${c}${missingMetrics.map(m => m.metric).join(', ')}`);
@@ -323,12 +332,15 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale, demoNow
     }
   }
 
-  // Trend 7d — 当有事件时压缩为一句话摘要
+  // Trend 7d — 当有事件时仅渲染异常趋势
+  const eventTrendEvidence = homepage.trend7d.filter((tr) => tr.anomalyPoints.length > 0);
   if (homepage.trend7d.length > 0) {
     if (hasEvents) {
-      lines.push(t(locale, '## 过去一周趋势（补充佐证，一句话概括）', '## Past Week Trends (Supplementary, One Sentence)'));
-      for (const tr of homepage.trend7d) {
-        lines.push(renderMetricSummaryCompact(tr, '- ', locale));
+      if (eventTrendEvidence.length > 0) {
+        lines.push(t(locale, '## 过去一周趋势（仅异常补充）', '## Past Week Trends (Anomalies Only)'));
+        for (const tr of eventTrendEvidence) {
+          lines.push(renderMetricSummaryCompact(tr, '- ', locale));
+        }
       }
     } else {
       lines.push(t(locale, '## 过去一周趋势', '## Past Week Trends'));
