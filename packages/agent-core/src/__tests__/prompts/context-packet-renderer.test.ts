@@ -665,8 +665,6 @@ describe('renderTaskContextPacket', () => {
     expect(output).toContain('要不要轻走一下');
     expect(output.indexOf('事件生理摘要（优先引用）')).toBeLessThan(output.indexOf('过去24小时状态'));
   });
-});
-
 
   it('with homepage events, renders event-window metrics and suppresses expanded normal daily metrics', () => {
     const packet: TaskContextPacket = {
@@ -781,3 +779,80 @@ describe('renderTaskContextPacket', () => {
     expect(output).toContain('峰值 172bpm');
     expect(output).not.toContain('其余指标正常：hrv 93ms, resting_hr 48bpm, spo2 99%');
   });
+
+  it('does not render sleep latest24h or tonight sleep action context for a 13:00 walk event', () => {
+    const packet: TaskContextPacket = {
+      task: { type: 'homepage_summary', page: 'home' },
+      userContext: {
+        profileId: 'profile-a',
+        name: '林巅峰',
+        age: 34,
+        tags: [],
+        baselines: { restingHR: 48, hrv: 95, spo2: 98, avgSleepMinutes: 600, avgSteps: 9000 },
+      },
+      dataWindow: { start: '2026-05-26', end: '2026-06-01', recordCount: 7, completenessPct: 100 },
+      missingData: [],
+      evidence: [
+        { id: 'latest24h_sleep_total_2026-06-01', source: 'daily_records', metric: 'sleep_total', value: 450, unit: 'min', dateRange: { start: '2026-06-01', end: '2026-06-01' }, derivation: 'latest record for sleep_total' },
+        { id: 'event_walk_2026-06-01T12:30', source: 'timeline_sync', metric: 'walk', dateRange: { start: '2026-06-01T12:30', end: '2026-06-01T13:00' }, derivation: 'recognized event from timeline sync, confidence 91%' },
+      ],
+      visibleCharts: [],
+      homepage: {
+        recentEvents: [{
+          recognizedEventId: 're-walk-1',
+          type: 'walk',
+          start: '2026-06-01T12:30',
+          end: '2026-06-01T13:00',
+          durationMin: 30,
+          confidence: 0.91,
+          sourceSegmentId: 'seg-walk-1',
+          recognitionEvidence: ['步行 30 min'],
+          syncState: { lastSyncedMeasuredAt: '2026-06-01T13:00', pendingEventCount: 0, fromSyncedWindow: true },
+          evidenceIds: ['event_walk_2026-06-01T12:30'],
+        }],
+        latest24h: {
+          date: '2026-06-01',
+          metrics: [
+            { metric: 'sleep_total', value: 450, unit: 'min', baseline: 600, deltaPctVsBaseline: -25, status: 'normal', evidenceId: 'latest24h_sleep_total_2026-06-01' },
+            { metric: 'hrv', value: 93, unit: 'ms', baseline: 95, deltaPctVsBaseline: -2, status: 'normal', evidenceId: 'latest24h_hrv_2026-06-01' },
+          ],
+        },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+        eventInsights: [{
+          eventId: 'event_walk_2026-06-01T12:30',
+          eventType: 'cardio_workout',
+          priority: 'high',
+          timeRelation: '刚结束约 0 min',
+          headline: '完成 30 min 训练，身体进入恢复窗口',
+          physiology: [],
+          recoveryContext: [{
+            source: 'latest24h',
+            metric: 'hrv',
+            relation: 'supports',
+            summary: 'HRV 状态支持当前活动安排',
+            visibility: 'material',
+            reason: 'metric_supports_current_event',
+            evidenceId: 'latest24h_hrv_2026-06-01',
+          }],
+          tension: { level: 'positive', summary: '事件窗口内没有明显冲突信号', reason: 'event-window markers do not indicate elevated tension' },
+          recommendedFocus: [
+            { category: 'hydration', action: '小口补水并做轻度走动冷身', durationMin: 10, rationale: '帮助心率平稳回落并支持循环恢复' },
+          ],
+          actionIntents: [],
+          evidenceIds: ['event_walk_2026-06-01T12:30', 'latest24h_hrv_2026-06-01'],
+        }],
+      },
+    };
+
+    const output = renderTaskContextPacket(packet, 'zh', '2026-06-01T13:00');
+
+    expect(output).toContain('## 事件生理摘要（优先引用）');
+    expect(output).toContain('恢复背景：supports hrv');
+    expect(output).toContain('非显著恢复指标');
+    expect(output).not.toContain('sleep_total：450min');
+    expect(output).not.toContain('latest24h_sleep_total_2026-06-01');
+    expect(output).not.toContain('今晚睡前');
+  });
+});

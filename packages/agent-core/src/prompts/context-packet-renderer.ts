@@ -47,7 +47,7 @@ export function renderTaskContextPacket(packet: TaskContextPacket, locale: Local
   sections.push(renderDataWindow(packet.dataWindow, locale));
   sections.push(renderMissingData(packet.missingData, locale));
   sections.push(renderVisibleCharts(packet.visibleCharts, locale, hasHomepageEvents));
-  sections.push(renderEvidence(packet.evidence));
+  sections.push(renderEvidence(packet.evidence, homepageVisibleEvidenceIds(packet.homepage)));
 
   if (packet.homepage) sections.push(renderHomepage(packet.homepage, locale, demoNow));
   if (packet.viewSummary) sections.push(renderViewSummary(packet.viewSummary, locale));
@@ -175,11 +175,19 @@ function renderVisibleCharts(charts: VisibleChartPacket[], locale: Locale, hasHo
 // Evidence
 // ────────────────────────────────────────────
 
-function renderEvidence(evidence: EvidenceFact[]): string {
-  if (evidence.length === 0) return '';
+function homepageVisibleEvidenceIds(homepage?: HomepageContextPacket): Set<string> | undefined {
+  if (!homepage || homepage.recentEvents.length === 0) return undefined;
+  return new Set(homepage.eventInsights.flatMap((insight) => insight.evidenceIds));
+}
+
+function renderEvidence(evidence: EvidenceFact[], visibleEvidenceIds?: Set<string>): string {
+  const facts = visibleEvidenceIds
+    ? evidence.filter((fact) => visibleEvidenceIds.has(fact.id))
+    : evidence;
+  if (facts.length === 0) return '';
 
   const lines = ['## Evidence Facts'];
-  for (const fact of evidence) {
+  for (const fact of facts) {
     const parts: string[] = [`- ${fact.id}:`];
     parts.push(`source=${fact.source}`);
     if (fact.dateRange) parts.push(`${fact.dateRange.start}~${fact.dateRange.end}`);
@@ -282,6 +290,23 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale, demoNow
 
   const eventInsightSection = renderHomepageEventInsights(homepage, locale);
   if (eventInsightSection) lines.push(eventInsightSection);
+
+  if (hasEvents) {
+    const materialRecoveryMetrics = new Set(
+      homepage.eventInsights.flatMap((insight) => insight.recoveryContext.map((ctx) => ctx.metric)),
+    );
+    const suppressedSleepMetrics = homepage.latest24h.metrics
+      .filter((metric) => ['sleep_total', 'sleep_deep', 'sleep_rem'].includes(metric.metric))
+      .filter((metric) => !materialRecoveryMetrics.has(metric.metric));
+
+    if (suppressedSleepMetrics.length > 0) {
+      lines.push(t(
+        locale,
+        '## 非显著恢复指标（禁止展开）\n- sleep：当前主事件不需要睡眠背景解释；summary 和 actions 不要提及昨晚睡眠、补觉、提前入睡或今晚睡眠安排',
+        '## Non-material Recovery Metrics (Do Not Expand)\n- sleep: current primary event does not require sleep-background explanation; summary and actions must not mention last-night sleep, catching up on sleep, earlier bedtime, or tonight sleep planning',
+      ));
+    }
+  }
 
   // Latest 24h — 当有事件时压缩为摘要格式，无事件时保持详细
   if (hasEvents) {
