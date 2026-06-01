@@ -17,7 +17,10 @@ export function useActionInteractions(profileId: string | undefined) {
   async function selectAction(action: ActionOption) {
     if (action.interaction?.kind !== 'micro_event') {
       setSelectedActionIds((prev) => new Set(prev).add(action.id));
-      showToast(`${action.title}：已记录`, 'success');
+      showToast(
+        `${action.title}：已记录。由于该行为无法通过智能戒指验证，实时简报不会更新。`,
+        'success',
+      );
       return;
     }
 

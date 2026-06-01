@@ -44,6 +44,21 @@ const EVENT_TYPE_DISPLAY: Record<string, { icon: string; labelKey: string }> = {
   strength_training: { icon: '💪', labelKey: 'strengthTraining' },
   possible_alcohol_intake: { icon: '🍺', labelKey: 'alcoholIntake' },
   possible_caffeine_intake: { icon: '☕', labelKey: 'caffeineIntake' },
+  // Micro events
+  micro_deep_breathing: { icon: '🫁', labelKey: 'microDeepBreathing' },
+  micro_short_walk: { icon: '🚶', labelKey: 'microShortWalk' },
+  micro_post_meal_walk: { icon: '🍽️', labelKey: 'microPostMealWalk' },
+  micro_post_workout_slow_walk: { icon: '🏃', labelKey: 'microPostWorkoutSlowWalk' },
+  micro_standing_stretch: { icon: '🧘', labelKey: 'microStandingStretch' },
+  micro_desk_mobility: { icon: '🪑', labelKey: 'microDeskMobility' },
+  micro_offscreen_eye_rest: { icon: '👁️', labelKey: 'microOffscreenEyeRest' },
+  micro_window_gaze_walk: { icon: '🪟', labelKey: 'microWindowGazeWalk' },
+  micro_pre_workout_snack: { icon: '🍌', labelKey: 'microPreWorkoutSnack' },
+  micro_post_workout_snack: { icon: '🥜', labelKey: 'microPostWorkoutSnack' },
+  micro_easy_cardio: { icon: '❤️', labelKey: 'microEasyCardio' },
+  micro_restorative_stretch: { icon: '🧘', labelKey: 'microRestorativeStretch' },
+  micro_low_stimulus_work: { icon: '🧠', labelKey: 'microLowStimulusWork' },
+  micro_sleep_wind_down: { icon: '😴', labelKey: 'microSleepWindDown' },
 };
 
 const PROBABILISTIC_SEGMENT_TYPES = new Set(['alcohol_intake', 'caffeine_intake']);
@@ -159,7 +174,7 @@ function ConfigAreaContent({ className, disabled }: ConfigAreaProps) {
             {(godModeState?.recentRecognizedEvents?.length ?? 0) > 0 && (
               <span
                 role="tooltip"
-                className="pointer-events-none absolute bottom-full right-0 mb-2 w-64 max-h-60 overflow-y-auto rounded-lg bg-slate-800 px-3 py-2 text-[11px] leading-relaxed text-slate-300 opacity-0 invisible group-hover/events:visible group-hover/events:opacity-100 transition-opacity z-50 border border-slate-700 shadow-xl text-left"
+                className="absolute bottom-full right-0 mb-2 w-64 max-h-60 overflow-y-auto rounded-lg bg-slate-800 px-3 py-2 text-[11px] leading-relaxed text-slate-300 opacity-0 invisible group-hover/events:visible group-hover/events:opacity-100 transition-opacity z-50 border border-slate-700 shadow-xl text-left scrollbar-thin"
               >
                 {[...(godModeState?.recentRecognizedEvents ?? [])]
                     .sort((a, b) => a.start.localeCompare(b.start))

@@ -168,7 +168,21 @@
       "alcoholIntake": "Alcohol",
       "caffeineIntake": "Caffeine",
       "relaxation": "Relax",
-      "strengthTraining": "Strength"
+      "strengthTraining": "Strength",
+      "microDeepBreathing": "Deep Breathing",
+      "microShortWalk": "Short Walk",
+      "microPostMealWalk": "Post-Meal Walk",
+      "microPostWorkoutSlowWalk": "Cool Down Walk",
+      "microStandingStretch": "Standing Stretch",
+      "microDeskMobility": "Desk Mobility",
+      "microOffscreenEyeRest": "Eye Rest",
+      "microWindowGazeWalk": "Window Gaze",
+      "microPreWorkoutSnack": "Pre-Workout Snack",
+      "microPostWorkoutSnack": "Post-Workout Snack",
+      "microEasyCardio": "Easy Cardio",
+      "microRestorativeStretch": "Restorative Stretch",
+      "microLowStimulusWork": "Low-Stimulus Work",
+      "microSleepWindDown": "Sleep Wind Down"
     },
     "segmentsHelp": {
       "mealIntake": "HR 65→85 gradual rise then fall, minimal steps, stable SpO2. ~20 min, sampled every minute.",

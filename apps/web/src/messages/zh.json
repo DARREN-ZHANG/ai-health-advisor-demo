@@ -168,7 +168,21 @@
       "alcoholIntake": "饮酒",
       "caffeineIntake": "咖啡因",
       "relaxation": "放松",
-      "strengthTraining": "力量"
+      "strengthTraining": "力量",
+      "microDeepBreathing": "深呼吸",
+      "microShortWalk": "短距离步行",
+      "microPostMealWalk": "餐后慢走",
+      "microPostWorkoutSlowWalk": "运动后冷身",
+      "microStandingStretch": "站立拉伸",
+      "microDeskMobility": "办公桌活动",
+      "microOffscreenEyeRest": "离屏护眼",
+      "microWindowGazeWalk": "窗边远眺",
+      "microPreWorkoutSnack": "运动前加餐",
+      "microPostWorkoutSnack": "运动后加餐",
+      "microEasyCardio": "轻度有氧",
+      "microRestorativeStretch": "恢复性拉伸",
+      "microLowStimulusWork": "低刺激工作",
+      "microSleepWindDown": "睡前放松"
     },
     "segmentsHelp": {
       "mealIntake": "心率 65→85 缓升后回落，步数极少，SpO2 稳定。持续约 20 分钟，每分钟采样。",
