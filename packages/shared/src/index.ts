@@ -31,6 +31,10 @@ export type {
   ProfileData,
 } from './types/sandbox';
 
+// Types — micro-event
+export { MICRO_EVENT_TYPES } from './types/micro-event';
+export type { MicroEventType, MicroEventParamValue, MicroEventParams } from './types/micro-event';
+
 export type {
   DataCenterTimelinePoint,
   DataCenterResponse,
@@ -127,6 +131,9 @@ export {
   DailyRecordSchema,
   ProfileDataSchema,
 } from './schemas/sandbox';
+
+// Schemas — micro-event
+export { MicroEventTypeSchema, MicroEventParamsSchema } from './schemas/micro-event';
 
 export {
   AgentTaskTypeSchema,

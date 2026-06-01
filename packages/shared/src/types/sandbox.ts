@@ -1,4 +1,5 @@
 import type { LocalizableText } from './locale';
+import type { MicroEventType } from './micro-event';
 
 // ============================================================
 // 时间轴与原始流相关类型
@@ -85,7 +86,11 @@ export interface SyncSession {
 }
 
 /** 已识别事件类型 — 包含活动片段和概率推导事件 */
-export type RecognizedEventType = ActivitySegmentType | 'possible_caffeine_intake' | 'possible_alcohol_intake';
+export type RecognizedEventType =
+  | ActivitySegmentType
+  | MicroEventType
+  | 'possible_caffeine_intake'
+  | 'possible_alcohol_intake';
 
 /** 已识别事件 */
 export interface RecognizedEvent {

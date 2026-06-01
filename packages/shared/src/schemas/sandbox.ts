@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MicroEventTypeSchema } from './micro-event';
 
 // 时间戳格式：YYYY-MM-DDTHH:mm
 const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
@@ -82,6 +83,7 @@ export const SyncSessionSchema = z.object({
 
 export const RecognizedEventTypeSchema = z.union([
   ActivitySegmentTypeSchema,
+  MicroEventTypeSchema,
   z.literal('possible_caffeine_intake'),
   z.literal('possible_alcohol_intake'),
 ]);

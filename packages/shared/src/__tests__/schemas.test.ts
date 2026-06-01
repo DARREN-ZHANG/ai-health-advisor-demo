@@ -44,6 +44,8 @@ import {
 import { ErrorCode, createSuccessResponse, createErrorResponse } from '../types/api';
 import { ChartTokenId } from '../types/chart-token';
 import { AgentTaskType } from '../types/agent';
+import { MICRO_EVENT_TYPES } from '../types/micro-event';
+import { MicroEventTypeSchema } from '../schemas/micro-event';
 
 describe('SandboxProfileSchema', () => {
   const validProfile = {
@@ -856,6 +858,20 @@ describe('AgentResponseEnvelopeSchema memory candidates', () => {
     });
 
     expect(result.success).toBe(true);
+  });
+});
+
+describe('MicroEvent schemas', () => {
+  it('accepts all 14 micro event types', () => {
+    for (const type of MICRO_EVENT_TYPES) {
+      expect(MicroEventTypeSchema.safeParse(type).success).toBe(true);
+      expect(RecognizedEventTypeSchema.safeParse(type).success).toBe(true);
+    }
+  });
+
+  it('rejects unknown micro event types', () => {
+    expect(MicroEventTypeSchema.safeParse('micro_hydration_break').success).toBe(false);
+    expect(RecognizedEventTypeSchema.safeParse('micro_breathing_reset').success).toBe(false);
   });
 });
 
