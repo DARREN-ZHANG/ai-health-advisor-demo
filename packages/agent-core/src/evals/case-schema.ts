@@ -341,6 +341,8 @@ const HomepageTaskExpectationSchema = z
     eventWindowValuePatterns: z.array(z.string()).optional(),
     forbidDailyStatusFirstPatterns: z.array(z.string()).optional(),
     requireWeeklyTrendOptional: z.boolean().optional(),
+    forbidSummaryPatterns: z.array(z.string()).optional(),
+    forbidActionPatterns: z.array(z.string()).optional(),
   })
   .strict()
   // requireRecentEventFirst 为 true 时，recentEventPatterns 必须非空

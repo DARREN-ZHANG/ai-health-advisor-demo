@@ -204,6 +204,8 @@ export interface AgentEvalExpectations {
       eventWindowValuePatterns?: string[];
       forbidDailyStatusFirstPatterns?: string[];
       requireWeeklyTrendOptional?: boolean;
+      forbidSummaryPatterns?: string[];
+      forbidActionPatterns?: string[];
     };
     viewSummary?: {
       requiredTab?: string;

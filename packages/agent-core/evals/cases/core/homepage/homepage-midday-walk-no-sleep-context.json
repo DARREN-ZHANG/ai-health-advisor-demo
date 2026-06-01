@@ -1,0 +1,103 @@
+{
+  "id": "H-031",
+  "title": "首页摘要 - 13点步行不展开昨晚睡眠",
+  "suite": "core",
+  "category": "homepage",
+  "priority": "P0",
+  "tags": ["homepage", "event-insights", "walk", "sleep-suppression", "midday"],
+  "setup": {
+    "profileId": "profile-a",
+    "timeline": {
+      "appendSegments": [
+        { "segmentType": "meal_intake", "offsetMinutes": 0, "durationMinutes": 20, "advanceClock": true },
+        { "segmentType": "prolonged_sedentary", "offsetMinutes": 0, "durationMinutes": 240, "advanceClock": true },
+        { "segmentType": "walk", "offsetMinutes": 0, "durationMinutes": 30, "advanceClock": true }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"林巅峰，刚刚这 30 min 步行把上午久坐后的身体重新带动起来了。\\n\\n这次步行里心率峰值达到 107 bpm，均值约 100 bpm，说明循环系统被温和激活，同时它也刚好接在较长的静止工作之后，能帮助身体从低活动状态切回更顺畅的血液循环和肌肉活动。现在重点是让运动后的心率自然回落，不需要把整天的恢复背景展开成主线。\\n\\n接下来先小口补水，走慢一点冷身 5-10 min，再回到坐姿工作。你想先记录这次恢复状态，还是安排一个轻量的收尾动作？\",\"chartTokens\":[\"ACTIVITY_7DAYS\"],\"actionsSectionTitle\":\"现在可以这样收尾\",\"microTips\":[],\"actions\":[{\"id\":\"a1\",\"emoji\":\"💧\",\"title\":\"小口补水\",\"description\":\"先小口补水并慢走几分钟，帮助心率平稳回落\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"a2\",\"emoji\":\"🚶\",\"title\":\"轻量冷身\",\"description\":\"用 5-10 min 低速走动完成冷身，再回到工作节奏\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"}]}"
+    },
+    "referenceDate": "2026-06-01"
+  },
+  "request": {
+    "requestId": "core-h031",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["林巅峰"],
+      "mustMentionAny": [
+        ["步行", "走"],
+        ["心率", "循环", "冷身"]
+      ],
+      "forbiddenPatterns": [
+        "昨晚.*睡",
+        "睡了",
+        "睡眠偏少",
+        "恢复底子",
+        "今晚.*睡",
+        "提前.*(休息|入睡|睡觉)",
+        "调暗灯光",
+        "深睡"
+      ]
+    },
+    "status": {
+      "allowedStatusColors": ["good", "warning"]
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "睡眠",
+        "今晚",
+        "入睡",
+        "深睡",
+        "调暗",
+        "提前.*休息"
+      ]
+    },
+    "taskSpecific": {
+      "homepage": {
+        "requireRecentEventFirst": true,
+        "recentEventPatterns": ["步行", "走"],
+        "requireEventWindowFacts": true,
+        "eventWindowValuePatterns": ["107\\s*bpm", "100\\s*bpm", "心率.*(峰值|均值)"],
+        "forbidSummaryPatterns": [
+          "昨晚.*睡",
+          "睡了",
+          "睡眠偏少",
+          "今晚.*睡",
+          "调暗灯光",
+          "深睡"
+        ],
+        "forbidActionPatterns": [
+          "睡眠",
+          "今晚",
+          "入睡",
+          "深睡",
+          "调暗"
+        ],
+        "forbidDailyStatusFirstPatterns": ["过去24小时", "整体状态", "各项指标", "一周趋势"]
+      }
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true,
+      "forbidTreatmentPromise": true
+    }
+  }
+}

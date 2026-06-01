@@ -101,6 +101,19 @@ function checkHomepage(
     results.push(checkDailyStatusNotFirst(caseId, envelope.summary, homepage.forbidDailyStatusFirstPatterns));
   }
 
+  // 检查 5：forbidSummaryPatterns - summary 中不得出现指定 pattern
+  if (homepage.forbidSummaryPatterns && homepage.forbidSummaryPatterns.length > 0) {
+    results.push(...checkForbidSummaryPatterns(caseId, envelope.summary, homepage.forbidSummaryPatterns));
+  }
+
+  // 检查 6：forbidActionPatterns - actions 中不得出现指定 pattern
+  if (homepage.forbidActionPatterns && homepage.forbidActionPatterns.length > 0) {
+    const actionText = envelope.actions
+      ? envelope.actions.map((action) => `${action.title}\n${action.description}\n${action.aiPromise}`).join('\n')
+      : '';
+    results.push(...checkForbidActionPatterns(caseId, actionText, homepage.forbidActionPatterns));
+  }
+
   return results;
 }
 
@@ -187,6 +200,52 @@ function checkDailyStatusNotFirst(
     message: passed ? 'summary 开头没有以整日状态为主体' : 'summary 开头以整日状态为主体',
     details: passed ? undefined : { matched, summaryHead },
   };
+}
+
+/** 检查 summary 中不得出现指定 forbidden patterns */
+function checkForbidSummaryPatterns(
+  caseId: string,
+  summary: string,
+  patterns: string[],
+): EvalCheckResult[] {
+  return patterns.map((pattern) => {
+    const regex = new RegExp(pattern, 'i');
+    const matched = regex.test(summary);
+    return {
+      checkId: `${caseId}:task:homepage:forbid_summary_pattern:${pattern}`,
+      severity: 'hard',
+      passed: !matched,
+      score: matched ? 0 : 1,
+      maxScore: 1,
+      message: matched
+        ? `summary matched forbidden pattern: ${pattern}`
+        : `summary did not match forbidden pattern: ${pattern}`,
+      details: matched ? { pattern, summarySnippet: summary.slice(0, 200) } : undefined,
+    };
+  });
+}
+
+/** 检查 actions 中不得出现指定 forbidden patterns */
+function checkForbidActionPatterns(
+  caseId: string,
+  actionText: string,
+  patterns: string[],
+): EvalCheckResult[] {
+  return patterns.map((pattern) => {
+    const regex = new RegExp(pattern, 'i');
+    const matched = regex.test(actionText);
+    return {
+      checkId: `${caseId}:task:homepage:forbid_action_pattern:${pattern}`,
+      severity: 'hard',
+      passed: !matched,
+      score: matched ? 0 : 1,
+      maxScore: 1,
+      message: matched
+        ? `actions matched forbidden pattern: ${pattern}`
+        : `actions did not match forbidden pattern: ${pattern}`,
+      details: matched ? { pattern, actionTextSnippet: actionText.slice(0, 200) } : undefined,
+    };
+  });
 }
 
 /** 检查 24h 交叉分析同时命中 event 和 metric */
