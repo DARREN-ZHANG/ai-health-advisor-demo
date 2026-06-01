@@ -1,0 +1,24 @@
+[
+  {
+    "id": "product-sleep-chart-001",
+    "layer": "product_knowledge",
+    "title": "图表 token 说明",
+    "claim": "SLEEP_7DAYS 展示最近 7 天睡眠总时长趋势。",
+    "productAreas": ["chart"],
+    "metrics": ["sleep", "hrv"],
+    "sourceIds": ["source-product-chart-001"],
+    "expiresAt": "2026-12-31",
+    "evidenceId": "product_product-sleep-chart-001"
+  },
+  {
+    "id": "product-spo2-missing-001",
+    "layer": "product_knowledge",
+    "title": "设备数据质量说明",
+    "claim": "血氧数据缺失通常表示当前窗口没有可用采样，Advisor Chat 不能据此推断具体血氧数值。",
+    "productAreas": ["data_quality"],
+    "metrics": ["spo2", "hrv", "sleep"],
+    "sourceIds": ["source-product-chart-001"],
+    "expiresAt": "2026-12-31",
+    "evidenceId": "product_product-spo2-missing-001"
+  }
+]

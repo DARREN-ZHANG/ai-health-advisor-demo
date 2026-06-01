@@ -1,0 +1,10 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-05-10",
+  "healthFactsCount": 2,
+  "productFactsCount": 2,
+  "sources": [
+    "source-hrv-001",
+    "source-product-chart-001"
+  ]
+}
