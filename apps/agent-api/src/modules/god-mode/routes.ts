@@ -8,7 +8,7 @@ import {
   MetricOverridePayloadSchema,
   ResetPayloadSchema,
   TimelineAppendPayloadSchema,
-
+  MicroEventAppendPayloadSchema,
   AdvanceClockPayloadSchema,
   ResetProfileTimelinePayloadSchema,
   UpdateProfileRequestSchema,
@@ -163,6 +163,28 @@ export async function godModeRoutes(app: FastifyInstance) {
   app.get('/god-mode/state', async (request) => {
     const state = service.getState();
     return createSuccessResponse(state, buildMeta(request));
+  });
+
+  // 微事件追加
+  app.post('/god-mode/micro-event-append', async (request, reply) => {
+    const parsed = MicroEventAppendPayloadSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send(
+        createErrorResponse(ErrorCode.VALIDATION_ERROR, parsed.error.issues.map((i) => i.message).join('; '), buildMeta(request)),
+      );
+    }
+
+    const result = service.appendMicroEvent(
+      parsed.data.microEventType,
+      parsed.data.params,
+      request.ctx?.sessionId,
+      {
+        durationMinutes: parsed.data.durationMinutes,
+        advanceClock: parsed.data.advanceClock,
+      },
+    );
+    invalidateBriefCache();
+    return createSuccessResponse(result, buildMeta(request));
   });
 
   // 时间轴追加片段

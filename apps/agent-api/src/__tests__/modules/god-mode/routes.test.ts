@@ -535,6 +535,39 @@ describe('God-Mode Routes', () => {
     });
   });
 
+  describe('POST /god-mode/micro-event-append', () => {
+    test('追加 deep breathing 微事件返回 200 且不触发 Active Sensing', async () => {
+      await app.inject({ method: 'POST', url: '/god-mode/reset', payload: { scope: 'all' } });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/micro-event-append',
+        payload: {
+          microEventType: 'micro_deep_breathing',
+          durationMinutes: 3,
+          params: { pattern: 'extended_exhale' },
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      expect(body.data.pendingEventCount).toBe(0);
+      expect(body.data.activeSensing).toBeNull();
+      expect(body.data.recentRecognizedEvents.some((event: { type: string }) => event.type === 'micro_deep_breathing')).toBe(true);
+    });
+
+    test('拒绝 hydration 微事件类型', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/god-mode/micro-event-append',
+        payload: { microEventType: 'micro_hydration_break' },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
   describe('GET /god-mode/state (时间轴同步字段)', () => {
     test('返回时间轴同步状态字段', async () => {
       // 先重置确保干净状态

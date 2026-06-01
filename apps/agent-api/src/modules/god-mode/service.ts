@@ -18,6 +18,8 @@ import type {
   EventInjectPayload,
   GodModeStateResponse,
   MetricOverridePayload,
+  MicroEventParams,
+  MicroEventType,
   RecognizedEvent,
   ResetPayload,
   UpdateProfilePayload,
@@ -87,6 +89,30 @@ export class GodModeService {
   /** BE-025A: 获取当前 God-Mode 状态 */
   getState(): GodModeStateResponse {
     const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
+    return this.getStateForProfile(currentProfileId);
+  }
+
+  /** 追加微事件到时间轴 */
+  appendMicroEvent(
+    microEventType: MicroEventType,
+    params?: MicroEventParams,
+    sessionId?: string,
+    options?: { durationMinutes?: number; advanceClock?: boolean },
+  ): GodModeStateResponse {
+    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
+    const profile = this.registry.getRawProfile(currentProfileId);
+    const baseline = profile.profile?.dailyBaseline ?? profile.profile?.weeklyBaseline ?? profile.profile?.baseline;
+    const enrichedParams = {
+      ...params,
+      ...(baseline ? {
+        _baselineRestingHr: baseline.restingHr,
+        _baselineHrv: baseline.hrv,
+        _baselineSpo2: baseline.spo2,
+      } : {}),
+    };
+
+    this.registry.overrideStore.appendMicroEvent(currentProfileId, microEventType, enrichedParams, options);
+    this.invalidateSessionAnalytical(sessionId);
     return this.getStateForProfile(currentProfileId);
   }
 
