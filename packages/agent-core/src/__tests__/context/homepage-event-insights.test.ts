@@ -167,3 +167,87 @@ it('creates event-appropriate action categories for post-workout recovery', () =
   expect(focusCategories).toContain('hydration');
   expect(focusCategories).toContain('sleep_protection');
 });
+
+it('does not attach sleep recovery context or sleep evidence to a midday walk insight', () => {
+  const insights = buildHomepageEventInsights({
+    demoNow: '2026-06-01T13:00',
+    homepage: makeHomepage({
+      latest24h: {
+        date: '2026-06-01',
+        metrics: [
+          { metric: 'sleep_total', value: 450, unit: 'min', baseline: 600, deltaPctVsBaseline: -25, status: 'normal', evidenceId: 'latest24h_sleep_total_2026-06-01' },
+          { metric: 'hrv', value: 93, unit: 'ms', baseline: 90, deltaPctVsBaseline: 3, status: 'normal', evidenceId: 'latest24h_hrv_2026-06-01' },
+        ],
+      },
+      recentEvents: [{
+        recognizedEventId: 're-walk-1',
+        type: 'walk',
+        start: '2026-06-01T12:30',
+        end: '2026-06-01T13:00',
+        durationMin: 30,
+        confidence: 0.91,
+        sourceSegmentId: 'seg-walk-1',
+        recognitionEvidence: ['步行 30 min, 心率均值 100'],
+        eventWindow: {
+          source: 'synced_device_samples',
+          coverage: 'complete',
+          recognizedEventId: 're-walk-1',
+          sourceSegmentId: 'seg-walk-1',
+          start: '2026-06-01T12:30',
+          end: '2026-06-01T13:00',
+          durationMin: 30,
+          sampleCount: 12,
+          metrics: [
+            { metric: 'heart_rate', unit: 'bpm', sampleCount: 6, startValue: 84, endValue: 91, latest: 91, min: 84, max: 107, average: 100, delta: 7, qualifier: 'elevated', interpretation: '事件窗口心率峰值 107bpm，均值 100bpm', evidenceId: 'event_window_re-walk-1_heart_rate' },
+            { metric: 'steps', unit: 'steps', sampleCount: 6, startValue: 0, endValue: 3100, latest: 3100, min: 0, max: 3100, average: 1550, delta: 3100, qualifier: 'elevated', interpretation: '事件窗口累计步数 3100steps', evidenceId: 'event_window_re-walk-1_steps' },
+          ],
+          evidenceIds: ['event_window_re-walk-1_heart_rate', 'event_window_re-walk-1_steps'],
+        },
+        syncState: { lastSyncedMeasuredAt: '2026-06-01T13:00', pendingEventCount: 0, fromSyncedWindow: true },
+        evidenceIds: ['event_walk_2026-06-01T12:30'],
+      }],
+      rulesInsights: [],
+    }),
+  });
+
+  expect(insights).toHaveLength(1);
+  expect(insights[0]!.eventType).toBe('cardio_workout');
+  expect(insights[0]!.recoveryContext.map((ctx) => ctx.metric)).not.toContain('sleep_total');
+  expect(insights[0]!.evidenceIds).not.toContain('latest24h_sleep_total_2026-06-01');
+});
+
+it('keeps sleep recovery context for an evening HIIT event when sleep is attention', () => {
+  const insights = buildHomepageEventInsights({
+    demoNow: '2026-06-01T19:30',
+    homepage: makeHomepage({
+      latest24h: {
+        date: '2026-06-01',
+        metrics: [
+          { metric: 'sleep_total', value: 360, unit: 'min', baseline: 600, deltaPctVsBaseline: -40, status: 'attention', evidenceId: 'latest24h_sleep_total_2026-06-01' },
+          { metric: 'hrv', value: 72, unit: 'ms', baseline: 90, deltaPctVsBaseline: -20, status: 'normal', evidenceId: 'latest24h_hrv_2026-06-01' },
+        ],
+      },
+      recentEvents: [{
+        recognizedEventId: 're-hiit-1',
+        type: 'intermittent_exercise',
+        start: '2026-06-01T19:00',
+        end: '2026-06-01T19:30',
+        durationMin: 30,
+        confidence: 0.92,
+        sourceSegmentId: 'seg-hiit-1',
+        recognitionEvidence: ['间歇训练 30 min'],
+        syncState: { lastSyncedMeasuredAt: '2026-06-01T19:30', pendingEventCount: 0, fromSyncedWindow: true },
+        evidenceIds: ['event_hiit'],
+      }],
+      rulesInsights: [],
+    }),
+  });
+
+  expect(insights[0]!.eventType).toBe('hiit_workout');
+  expect(insights[0]!.recoveryContext).toContainEqual(expect.objectContaining({
+    metric: 'sleep_total',
+    visibility: 'material',
+    reason: 'primary_event_has_evening_sleep_risk',
+  }));
+  expect(insights[0]!.evidenceIds).toContain('latest24h_sleep_total_2026-06-01');
+});

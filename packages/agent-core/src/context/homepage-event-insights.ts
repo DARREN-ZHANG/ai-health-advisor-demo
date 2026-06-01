@@ -1,5 +1,8 @@
 import type { HomepageSemanticEventType } from './context-packet';
-import { decideRecoveryMetricRelevance } from './homepage-recovery-relevance';
+import {
+  decideRecoveryMetricRelevance,
+  isSleepMetric,
+} from './homepage-recovery-relevance';
 
 export function normalizeHomepageEventType(eventType: string): HomepageSemanticEventType {
   switch (eventType) {
@@ -57,6 +60,10 @@ export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInpu
     const eventType = normalizeHomepageEventType(event.type);
     const physiology = buildEventWindowPhysiology(event.eventWindow);
     const recoveryContext = buildRecoveryContext(homepage.latest24h.metrics, eventType, demoNow);
+    const visibleRecoveryEvidenceIds = recoveryContext
+      .filter((ctx) => ctx.visibility === 'material')
+      .map((ctx) => ctx.evidenceId)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
     const tension = determineEventBodyTension(eventType, event.eventWindow, homepage.latest24h.metrics, homepage.rulesInsights);
     const recommendedFocus = buildRecommendedFocus(eventType, tension);
     return {
@@ -74,7 +81,7 @@ export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInpu
       evidenceIds: [
         ...event.evidenceIds,
         ...event.eventWindow?.evidenceIds ?? [],
-        ...collectMetricEvidenceIds(homepage.latest24h.metrics),
+        ...visibleRecoveryEvidenceIds,
       ],
     };
   });
@@ -188,20 +195,27 @@ function buildRecoveryContext(
   const contexts: RecoveryContextSummary[] = [];
 
   if (sleep) {
-    const relevance = decideRecoveryMetricRelevance({ metric: sleep, primaryEventType, demoNow });
-    contexts.push({
-      source: 'latest24h',
-      metric: 'sleep_total',
-      relation: sleep.status === 'normal' ? 'supports' : sleep.status === 'missing' ? 'missing' : 'conflicts',
-      summary: sleep.status === 'normal'
-        ? '过去 24h 睡眠可作为当前事件的恢复底子'
-        : sleep.status === 'missing'
-          ? '缺少最近睡眠数据，无法完整判断恢复背景'
-          : '过去 24h 睡眠不足，当前事件需要更保守处理',
-      visibility: relevance.visible ? 'material' : 'suppressed',
-      reason: relevance.reason,
-      evidenceId: sleep.evidenceId,
+    const relevance = decideRecoveryMetricRelevance({
+      metric: sleep,
+      primaryEventType,
+      demoNow,
     });
+
+    if (relevance.visible) {
+      contexts.push({
+        source: 'latest24h',
+        metric: 'sleep_total',
+        relation: sleep.status === 'normal' ? 'supports' : sleep.status === 'missing' ? 'missing' : 'conflicts',
+        summary: sleep.status === 'normal'
+          ? '过去 24h 睡眠可作为当前事件的恢复底子'
+          : sleep.status === 'missing'
+            ? '缺少最近睡眠数据，无法完整判断恢复背景'
+            : '过去 24h 睡眠不足，当前事件需要更保守处理',
+        visibility: 'material',
+        reason: relevance.reason,
+        evidenceId: sleep.evidenceId,
+      });
+    }
   }
 
   if (hrv) {
@@ -220,7 +234,7 @@ function buildRecoveryContext(
     });
   }
 
-  return contexts;
+  return contexts.filter((ctx) => !isSleepMetric(ctx.metric) || ctx.visibility === 'material');
 }
 
 function buildRecommendedFocus(
