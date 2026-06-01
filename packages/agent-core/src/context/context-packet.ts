@@ -286,6 +286,24 @@ export interface RecommendedFocus {
   rationale: string;
 }
 
+export type ActionInteraction =
+  | {
+      kind: 'calendar';
+      calendar: {
+        title: string;
+        timingLabel: string;
+        durationMinutes: number;
+      };
+    }
+  | {
+      kind: 'micro_event';
+      microEvent: {
+        type: string;
+        durationMinutes?: number;
+        params?: Record<string, number | string | boolean>;
+      };
+    };
+
 export interface ActionIntentCandidate {
   id: string;
   emoji: string;
@@ -293,6 +311,7 @@ export interface ActionIntentCandidate {
   description: string;
   aiPromise: string;
   productCapability: 'record_choice' | 'contextual_followup';
+  interaction?: ActionInteraction;
 }
 
 export interface HomepageEventInsight {

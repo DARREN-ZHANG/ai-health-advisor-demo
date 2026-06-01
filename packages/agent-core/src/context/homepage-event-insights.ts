@@ -39,6 +39,7 @@ export function normalizeHomepageEventType(eventType: string): HomepageSemanticE
 
 import type {
   ActionIntentCandidate,
+  ActionInteraction,
   EventBodyTension,
   EventPhysiologySummary,
   HomepageContextPacket,
@@ -310,18 +311,145 @@ function buildHeadline(eventType: ReturnType<typeof normalizeHomepageEventType>,
 
 const RECORD_CHOICE_PROMISE = '我会记录你的选择并用于本次建议上下文';
 
+function interactionForFocus(
+  eventType: HomepageSemanticEventType,
+  focus: RecommendedFocus,
+): ActionInteraction | undefined {
+  switch (focus.category) {
+    case 'breathing_reset':
+      return {
+        kind: 'micro_event',
+        microEvent: { type: 'micro_deep_breathing', durationMinutes: focus.durationMin },
+      };
+
+    case 'movement_reset': {
+      if (eventType === 'meal') {
+        return {
+          kind: 'micro_event',
+          microEvent: { type: 'micro_post_meal_walk', durationMinutes: focus.durationMin ?? 10 },
+        };
+      }
+      if (eventType === 'cardio_workout' || eventType === 'hiit_workout') {
+        return {
+          kind: 'micro_event',
+          microEvent: { type: 'micro_post_workout_slow_walk', durationMinutes: focus.durationMin ?? 10 },
+        };
+      }
+      return {
+        kind: 'micro_event',
+        microEvent: { type: 'micro_short_walk', durationMinutes: focus.durationMin ?? 10 },
+      };
+    }
+
+    case 'posture': {
+      const actionLower = focus.action.toLowerCase();
+      if (actionLower.includes('站') || actionLower.includes('站立')) {
+        return {
+          kind: 'micro_event',
+          microEvent: { type: 'micro_standing_stretch', durationMinutes: focus.durationMin },
+        };
+      }
+      return {
+        kind: 'micro_event',
+        microEvent: { type: 'micro_desk_mobility', durationMinutes: focus.durationMin },
+      };
+    }
+
+    case 'nutrition': {
+      if (eventType === 'cardio_workout' || eventType === 'hiit_workout') {
+        return {
+          kind: 'micro_event',
+          microEvent: { type: 'micro_post_workout_snack' },
+        };
+      }
+      if (eventType === 'prepare_sleep') {
+        return {
+          kind: 'micro_event',
+          microEvent: { type: 'micro_pre_workout_snack' },
+        };
+      }
+      return undefined;
+    }
+
+    case 'training_adjustment': {
+      const actionLower = focus.action.toLowerCase();
+      if (actionLower.includes('有氧') || actionLower.includes('心肺') || actionLower.includes('cardio')) {
+        return {
+          kind: 'micro_event',
+          microEvent: { type: 'micro_easy_cardio', durationMinutes: focus.durationMin },
+        };
+      }
+      if (actionLower.includes('拉伸') || actionLower.includes('恢复') || actionLower.includes('stretch') || actionLower.includes('recovery')) {
+        return {
+          kind: 'micro_event',
+          microEvent: { type: 'micro_restorative_stretch', durationMinutes: focus.durationMin },
+        };
+      }
+      return undefined;
+    }
+
+    case 'sleep_protection': {
+      const timingLower = (focus.timing ?? '').toLowerCase();
+      const actionLower = focus.action.toLowerCase();
+      // Future timing (e.g., "今晚睡前 60 min") -> calendar
+      if (timingLower.includes('今晚') || timingLower.includes('睡前') || timingLower.includes('明天') || timingLower.includes('未来')) {
+        return {
+          kind: 'calendar',
+          calendar: {
+            title: titleForFocus(focus),
+            timingLabel: focus.timing ?? '稍后',
+            durationMinutes: focus.durationMin ?? 60,
+          },
+        };
+      }
+      // Immediate action
+      if (actionLower.includes('调暗') || actionLower.includes('降低') || actionLower.includes('呼吸') || actionLower.includes('放松')) {
+        return {
+          kind: 'micro_event',
+          microEvent: { type: 'micro_sleep_wind_down', durationMinutes: focus.durationMin },
+        };
+      }
+      return undefined;
+    }
+
+    case 'hydration':
+    case 'medical_attention':
+    case 'data_quality':
+      return undefined;
+
+    default:
+      return undefined;
+  }
+}
+
+function promiseForInteraction(interaction: ActionInteraction | undefined): string {
+  if (!interaction) {
+    return '我会记录你的选择并用于本次建议上下文';
+  }
+  switch (interaction.kind) {
+    case 'micro_event':
+      return '我会记录这个微行动并更新实时简报';
+    case 'calendar':
+      return '我会把它作为日程建议记录在 Demo 中';
+  }
+}
+
 function buildActionIntentCandidates(
   eventType: ReturnType<typeof normalizeHomepageEventType>,
   focusItems: RecommendedFocus[],
 ): ActionIntentCandidate[] {
-  return focusItems.slice(0, 3).map((focus, index) => ({
-    id: `event_${eventType}_action_${index + 1}`,
-    emoji: emojiForFocus(focus.category),
-    title: titleForFocus(focus),
-    description: describeFocus(focus),
-    aiPromise: RECORD_CHOICE_PROMISE,
-    productCapability: 'record_choice',
-  }));
+  return focusItems.slice(0, 3).map((focus, index) => {
+    const interaction = interactionForFocus(eventType, focus);
+    return {
+      id: `event_${eventType}_action_${index + 1}`,
+      emoji: emojiForFocus(focus.category),
+      title: titleForFocus(focus, eventType),
+      description: describeFocus(focus),
+      aiPromise: promiseForInteraction(interaction),
+      productCapability: interaction ? 'contextual_followup' : 'record_choice',
+      ...(interaction ? { interaction } : {}),
+    };
+  });
 }
 
 function emojiForFocus(category: RecommendedFocus['category']): string {
@@ -347,22 +475,51 @@ function emojiForFocus(category: RecommendedFocus['category']): string {
   }
 }
 
-function titleForFocus(focus: RecommendedFocus): string {
+function titleForFocus(focus: RecommendedFocus, eventType?: HomepageSemanticEventType): string {
   switch (focus.category) {
-    case 'movement_reset':
-      return '做一次轻量活动重置';
+    case 'movement_reset': {
+      if (eventType === 'meal') {
+        return '餐后轻走一下';
+      }
+      if (eventType === 'cardio_workout' || eventType === 'hiit_workout') {
+        return '运动后慢走放松';
+      }
+      return '起身轻走活动';
+    }
     case 'breathing_reset':
-      return '用呼吸把紧张降下来';
-    case 'nutrition':
+      return '做一组缓慢呼吸';
+    case 'nutrition': {
+      if (eventType === 'cardio_workout' || eventType === 'hiit_workout') {
+        return '补充恢复营养';
+      }
       return '补一份恢复营养';
+    }
     case 'hydration':
-      return '先把补水做好';
-    case 'training_adjustment':
+      return '先小口补水';
+    case 'training_adjustment': {
+      const actionLower = focus.action.toLowerCase();
+      if (actionLower.includes('有氧') || actionLower.includes('心肺') || actionLower.includes('cardio')) {
+        return '轻松有氧恢复';
+      }
+      if (actionLower.includes('拉伸') || actionLower.includes('恢复') || actionLower.includes('stretch') || actionLower.includes('recovery')) {
+        return '做一组恢复拉伸';
+      }
       return '把训练强度调保守';
-    case 'sleep_protection':
-      return '保护今晚睡眠窗口';
-    case 'posture':
-      return '调整接下来的姿势';
+    }
+    case 'sleep_protection': {
+      const timingLower = (focus.timing ?? '').toLowerCase();
+      if (timingLower.includes('今晚') || timingLower.includes('睡前')) {
+        return '今晚提前放松准备入睡';
+      }
+      return '保护睡眠窗口';
+    }
+    case 'posture': {
+      const actionLower = focus.action.toLowerCase();
+      if (actionLower.includes('站') || actionLower.includes('站立')) {
+        return '站起来活动一下';
+      }
+      return '调整坐姿放松身体';
+    }
     case 'data_quality':
       return '补齐判断所需数据';
     case 'medical_attention':

@@ -296,3 +296,82 @@ it('keeps sleep recovery context for an evening HIIT event when sleep is attenti
   }));
   expect(insights[0]!.evidenceIds).toContain('latest24h_sleep_total_2026-06-01');
 });
+
+it('attaches deep breathing micro event interaction for breathing reset', () => {
+  const insights = buildHomepageEventInsights({
+    homepage: makeHomepage({
+      recentEvents: [{
+        recognizedEventId: 're-sedentary-1',
+        type: 'prolonged_sedentary',
+        start: '2026-06-01T10:00',
+        end: '2026-06-01T12:00',
+        durationMin: 120,
+        confidence: 0.9,
+        sourceSegmentId: 'seg-sedentary-1',
+        recognitionEvidence: ['久坐'],
+        syncState: { lastSyncedMeasuredAt: '2026-06-01T12:00', pendingEventCount: 0, fromSyncedWindow: true },
+        evidenceIds: ['event_sedentary'],
+      }],
+    }),
+    demoNow: '2026-06-01T12:05',
+  });
+
+  const breathing = insights[0]!.actionIntents.find((action) => action.interaction?.kind === 'micro_event' && action.interaction.microEvent.type === 'micro_deep_breathing');
+  expect(breathing).toBeDefined();
+  expect(breathing?.title).toMatch(/呼吸/);
+  expect(breathing?.title).not.toMatch(/重置/);
+});
+
+it('keeps hydration action without timeline interaction', () => {
+  const insights = buildHomepageEventInsights({
+    homepage: makeHomepage({
+      recentEvents: [{
+        recognizedEventId: 're-cardio-1',
+        type: 'steady_cardio',
+        start: '2026-06-01T17:30',
+        end: '2026-06-01T18:10',
+        durationMin: 40,
+        confidence: 0.92,
+        sourceSegmentId: 'seg-cardio-1',
+        recognitionEvidence: ['有氧运动'],
+        syncState: { lastSyncedMeasuredAt: '2026-06-01T18:10', pendingEventCount: 0, fromSyncedWindow: true },
+        evidenceIds: ['event_cardio'],
+      }],
+    }),
+    demoNow: '2026-06-01T18:20',
+  });
+
+  const hydration = insights[0]!.actionIntents.find((action) => action.title.includes('补水') || action.description.includes('补水'));
+  expect(hydration).toBeDefined();
+  expect(hydration?.interaction).toBeUndefined();
+});
+
+it('attaches calendar interaction for future sleep protection', () => {
+  const insights = buildHomepageEventInsights({
+    homepage: makeHomepage({
+      recentEvents: [{
+        recognizedEventId: 're-hiit-1',
+        type: 'intermittent_exercise',
+        start: '2026-06-01T19:00',
+        end: '2026-06-01T19:30',
+        durationMin: 30,
+        confidence: 0.92,
+        sourceSegmentId: 'seg-hiit-1',
+        recognitionEvidence: ['间歇训练'],
+        syncState: { lastSyncedMeasuredAt: '2026-06-01T19:30', pendingEventCount: 0, fromSyncedWindow: true },
+        evidenceIds: ['event_hiit'],
+      }],
+    }),
+    demoNow: '2026-06-01T19:30',
+  });
+
+  const sleep = insights[0]!.actionIntents.find((action) => action.interaction?.kind === 'calendar');
+  expect(sleep?.interaction).toEqual({
+    kind: 'calendar',
+    calendar: expect.objectContaining({
+      title: expect.any(String),
+      timingLabel: expect.any(String),
+      durationMinutes: expect.any(Number),
+    }),
+  });
+});
