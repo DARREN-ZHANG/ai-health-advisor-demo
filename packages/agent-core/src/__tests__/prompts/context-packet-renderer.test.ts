@@ -622,6 +622,70 @@ describe('renderTaskContextPacket', () => {
     expect(output).not.toContain('仅用于解读');
   });
 
+  it('renders action candidates with interaction JSON when available', () => {
+    const packet: TaskContextPacket = {
+      task: { type: 'homepage_summary', page: 'home' },
+      userContext: {
+        profileId: 'p1',
+        name: 'Test',
+        age: 30,
+        tags: [],
+        baselines: { restingHR: 60, hrv: 60, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
+      },
+      dataWindow: { start: '2026-04-04', end: '2026-04-10', recordCount: 7, completenessPct: 100 },
+      missingData: [],
+      evidence: [],
+      visibleCharts: [],
+      homepage: {
+        recentEvents: [],
+        latest24h: { date: '2026-04-10', metrics: [] },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+        eventInsights: [{
+          eventId: 'event_deep_focus_2026-04-21T10:00',
+          eventType: 'work_focus',
+          priority: 'high',
+          timeRelation: '刚结束约 10 min',
+          headline: '连续专注 120 min，身体保持低位移',
+          physiology: [],
+          recoveryContext: [],
+          tension: { level: 'watch', summary: '认知负荷已累积', reason: 'work focus with compressed HRV' },
+          recommendedFocus: [{ category: 'movement_reset', action: '起身轻走', durationMin: 10, rationale: '释放静止负荷' }],
+          actionIntents: [
+            {
+              id: 'a1',
+              emoji: '🫁',
+              title: '做几次深呼吸',
+              description: '现在做 3 分钟缓慢呼吸',
+              aiPromise: '我会记录这个微行动并更新实时简报',
+              productCapability: 'contextual_followup',
+              interaction: {
+                kind: 'micro_event',
+                microEvent: { type: 'micro_deep_breathing', durationMinutes: 3, params: { pattern: 'extended_exhale' } },
+              },
+            },
+            {
+              id: 'a2',
+              emoji: '💧',
+              title: '先小口补水',
+              description: '喝一杯温水',
+              aiPromise: '我会记录你的选择并用于本次建议上下文',
+              productCapability: 'record_choice',
+            },
+          ],
+          evidenceIds: ['event_deep_focus_2026-04-21T10:00'],
+        }],
+      },
+    };
+
+    const output = renderTaskContextPacket(packet, 'zh', '2026-04-21T12:10');
+    expect(output).toContain('actions 候选');
+    expect(output).toContain('"kind":"micro_event"');
+    expect(output).toContain('"type":"micro_deep_breathing"');
+    expect(output).toContain('interaction=none');
+  });
+
   it('renders homepage event insights before raw 24h details', () => {
     const packet: TaskContextPacket = {
       task: { type: 'homepage_summary', page: 'home' },

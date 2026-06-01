@@ -243,7 +243,11 @@ function renderHomepageEventInsights(homepage: HomepageContextPacket, locale: Lo
       lines.push(`  - ${t(locale, '建议方向', 'Recommended focus')}${colon(locale)}${focus.category} ${timing} — ${focus.action}；${focus.rationale}`);
     }
     if (insight.actionIntents.length > 0) {
-      lines.push(`  - ${t(locale, 'actions 候选', 'Action candidates')}${colon(locale)}${insight.actionIntents.map((a) => `${a.emoji}${a.title}`).join(' / ')}`);
+      lines.push(`  - ${t(locale, 'actions 候选', 'Action candidates')}${colon(locale)}`);
+      for (const action of insight.actionIntents) {
+        const interaction = action.interaction ? ` interaction=${JSON.stringify(action.interaction)}` : ' interaction=none';
+        lines.push(`    - ${action.emoji}${action.title} | ${action.description} | aiPromise=${action.aiPromise} | ${interaction}`);
+      }
     }
   }
 

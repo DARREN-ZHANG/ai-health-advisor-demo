@@ -265,4 +265,60 @@ describe('actions parsing', () => {
 
     expect(result.success).toBe(false);
   });
+
+  it('parses action interactions from LLM output', () => {
+    const raw = JSON.stringify({
+      summary: '测试',
+      chartTokens: [],
+      actions: [{
+        id: 'a1',
+        emoji: '🫁',
+        title: '做几次深呼吸',
+        description: '现在做 3 分钟缓慢呼吸',
+        aiPromise: '我会记录这个微行动并更新实时简报',
+        interaction: {
+          kind: 'micro_event',
+          microEvent: { type: 'micro_deep_breathing', durationMinutes: 3, params: { pattern: 'extended_exhale' } },
+        },
+      }],
+    });
+
+    const result = parseAgentResponse(raw, {
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: basePageContext,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.envelope.actions?.[0]?.interaction).toEqual({
+        kind: 'micro_event',
+        microEvent: { type: 'micro_deep_breathing', durationMinutes: 3, params: { pattern: 'extended_exhale' } },
+      });
+    }
+  });
+
+  it('rejects invalid action interaction from LLM output', () => {
+    const raw = JSON.stringify({
+      summary: '测试',
+      chartTokens: [],
+      actions: [{
+        id: 'a1',
+        emoji: '💧',
+        title: '补水',
+        description: '喝一杯水',
+        aiPromise: '我会记录你的选择并用于本次建议上下文',
+        interaction: {
+          kind: 'micro_event',
+          microEvent: { type: 'micro_hydration_break' },
+        },
+      }],
+    });
+
+    const result = parseAgentResponse(raw, {
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: basePageContext,
+    });
+
+    expect(result.success).toBe(false);
+  });
 });

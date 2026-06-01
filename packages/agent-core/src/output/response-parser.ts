@@ -1,4 +1,4 @@
-import { AgentResponseEnvelopeSchema, ChartTokenId } from '@health-advisor/shared';
+import { AgentResponseEnvelopeSchema, ChartTokenId, ActionOptionSchema } from '@health-advisor/shared';
 import type { AgentResponseEnvelope, AgentTaskType, PageContext } from '@health-advisor/shared';
 import { ChartTokenIdSchema } from '@health-advisor/shared';
 import { MAX_CHART_TOKENS, MAX_MICRO_TIPS, MAX_ACTIONS } from '../constants/limits';
@@ -93,30 +93,19 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
         raw,
       };
     }
+    const validatedActions: NonNullable<AgentResponseEnvelope['actions']> = [];
     for (const item of obj.actions) {
-      const actionItem = item as Record<string, unknown>;
-      if (
-        !item ||
-        typeof item !== 'object' ||
-        typeof actionItem.id !== 'string' ||
-        actionItem.id.length === 0 ||
-        typeof actionItem.emoji !== 'string' ||
-        actionItem.emoji.length === 0 ||
-        typeof actionItem.title !== 'string' ||
-        actionItem.title.length === 0 ||
-        typeof actionItem.description !== 'string' ||
-        actionItem.description.length === 0 ||
-        typeof actionItem.aiPromise !== 'string' ||
-        actionItem.aiPromise.length === 0
-      ) {
+      const parsedAction = ActionOptionSchema.safeParse(item);
+      if (!parsedAction.success) {
         return {
           success: false,
-          error: 'actions 中包含字段不完整的项',
+          error: `actions 中包含非法项: ${parsedAction.error.issues.map((i) => i.message).join(', ')}`,
           raw,
         };
       }
+      validatedActions.push(parsedAction.data);
     }
-    actions = obj.actions as AgentResponseEnvelope['actions'];
+    actions = validatedActions;
   }
 
   // statusColor 严格类型检查：非字符串值不静默降级，触发 parse 失败走 fallback

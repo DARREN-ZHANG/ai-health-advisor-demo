@@ -75,6 +75,21 @@ export function buildTaskPrompt(
     '- 输出格式必须为 JSON，包含 source、statusColor、summary、chartTokens 字段；microTips 可选',
     '- Output must be valid JSON with fields: source, statusColor, summary, chartTokens; microTips optional',
   ));
+  sections.push(t(
+    locale,
+    '- 使用候选 action 时，必须完整保留其 interaction 字段（如有）；不得修改或臆造 interaction 内容',
+    '- When using a candidate action, preserve its interaction field exactly if present; do not modify or invent interaction content',
+  ));
+  sections.push(t(
+    locale,
+    '- 不得臆造 calendar 或 micro_event 能力；仅当候选 action 明确提供 interaction 时才可输出对应 interaction',
+    '- Do not invent calendar or micro_event capabilities; only output an interaction when the candidate action explicitly provides one',
+  ));
+  sections.push(t(
+    locale,
+    '- 补水、喝水、调暗灯光、调温、洗澡类 action 不得分配 micro_event interaction',
+    '- Hydration, drinking water, dimming lights, temperature adjustment, and bathing actions must not be assigned a micro_event interaction',
+  ));
 
   // 使用 TaskContextPacket 渲染（如果可用）
   if (packet) {
@@ -175,8 +190,8 @@ export function buildTaskPrompt(
     sections.push('  "chartTokens": ["CHART_TOKEN_1"],');
     sections.push(t(
       locale,
-      '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "🚶",\n      "title": "要不要轻走一下",\n      "description": "现在起身走 10 分钟，让心率和注意力缓一缓",\n      "aiPromise": "我会记录你的选择并用于本次建议上下文"\n    }\n  ],',
-      '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "🚶",\n      "title": "Take a light walk",\n      "description": "Stand up and walk for 10 minutes to ease your heart rate and focus load",\n      "aiPromise": "I will record your choice and use it in this advice context"\n    }\n  ],',
+      '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "🚶",\n      "title": "要不要轻走一下",\n      "description": "现在起身走 10 分钟，让心率和注意力缓一缓",\n      "aiPromise": "我会记录你的选择并用于本次建议上下文",\n      "interaction": {\n        "kind": "micro_event",\n        "microEvent": {\n          "type": "micro_short_walk",\n          "durationMinutes": 10\n        }\n      }\n    }\n  ],',
+      '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "🚶",\n      "title": "Take a light walk",\n      "description": "Stand up and walk for 10 minutes to ease your heart rate and focus load",\n      "aiPromise": "I will record your choice and use it in this advice context",\n      "interaction": {\n        "kind": "micro_event",\n        "microEvent": {\n          "type": "micro_short_walk",\n          "durationMinutes": 10\n        }\n      }\n    }\n  ],',
     ));
     sections.push(t(
       locale,
