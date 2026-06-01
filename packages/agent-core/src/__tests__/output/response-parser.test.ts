@@ -297,7 +297,7 @@ describe('actions parsing', () => {
     }
   });
 
-  it('rejects invalid action interaction from LLM output', () => {
+  it('strips invalid action interaction and keeps the base action', () => {
     const raw = JSON.stringify({
       summary: '测试',
       chartTokens: [],
@@ -307,6 +307,35 @@ describe('actions parsing', () => {
         title: '补水',
         description: '喝一杯水',
         aiPromise: '我会记录你的选择并用于本次建议上下文',
+        interaction: {
+          kind: 'micro_event',
+          microEvent: { type: 'micro_hydration_break' },
+        },
+      }],
+    });
+
+    const result = parseAgentResponse(raw, {
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: basePageContext,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.envelope.actions).toHaveLength(1);
+      expect(result.envelope.actions?.[0].id).toBe('a1');
+      expect(result.envelope.actions?.[0].interaction).toBeUndefined();
+    }
+  });
+
+  it('rejects action with incomplete base fields even after stripping interaction', () => {
+    const raw = JSON.stringify({
+      summary: '测试',
+      chartTokens: [],
+      actions: [{
+        id: 'a1',
+        emoji: '💧',
+        title: '补水',
+        // missing description and aiPromise
         interaction: {
           kind: 'micro_event',
           microEvent: { type: 'micro_hydration_break' },

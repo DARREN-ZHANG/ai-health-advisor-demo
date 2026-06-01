@@ -97,6 +97,15 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
     for (const item of obj.actions) {
       const parsedAction = ActionOptionSchema.safeParse(item);
       if (!parsedAction.success) {
+        // 降级：尝试解析为无 interaction 的基础 action，避免单个非法 interaction 导致整体失败
+        const baseParsed = ActionOptionSchema.safeParse({
+          ...((item && typeof item === 'object') ? item : {}),
+          interaction: undefined,
+        });
+        if (baseParsed.success) {
+          validatedActions.push(baseParsed.data);
+          continue;
+        }
         return {
           success: false,
           error: `actions 中包含非法项: ${parsedAction.error.issues.map((i) => i.message).join(', ')}`,
