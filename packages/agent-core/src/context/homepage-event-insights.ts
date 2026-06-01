@@ -446,7 +446,7 @@ function promiseForInteraction(interaction: ActionInteraction | undefined): stri
     case 'micro_event':
       return '我会记录这个微行动并更新实时简报';
     case 'calendar':
-      return '我会把它作为日程建议记录在 Demo 中';
+      return '我会把它作为日程建议记录下来';
   }
 }
 

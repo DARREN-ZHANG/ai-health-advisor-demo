@@ -5,7 +5,7 @@ test.describe('Homepage action interactions', () => {
     await page.goto('/');
   });
 
-  test('calendar action shows add-to-schedule demo button without opening active sensing', async ({ page }) => {
+  test('calendar action shows add-to-schedule button without opening active sensing', async ({ page }) => {
     const calendarButton = page.getByRole('button', { name: '添加进日程' }).first();
     if (!(await calendarButton.isVisible().catch(() => false))) {
       test.skip(true, 'Current brief did not produce a calendar action in this environment');
@@ -14,7 +14,7 @@ test.describe('Homepage action interactions', () => {
 
     await calendarButton.click();
 
-    await expect(page.getByText('已添加进日程（Demo）')).toBeVisible();
+    await expect(page.getByText('已添加进日程')).toBeVisible();
     await expect(page.getByRole('button', { name: '已添加' }).first()).toBeVisible();
     await expect(page.getByText('AI Proactive Insight')).not.toBeVisible();
   });

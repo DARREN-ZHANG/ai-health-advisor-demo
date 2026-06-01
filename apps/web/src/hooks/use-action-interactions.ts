@@ -42,7 +42,7 @@ export function useActionInteractions(profileId: string | undefined) {
 
   function addCalendarAction(action: ActionOption) {
     setCalendarActionIds((prev) => new Set(prev).add(action.id));
-    showToast('已添加进日程（Demo）', 'success');
+    showToast('已添加进日程', 'success');
   }
 
   return {
