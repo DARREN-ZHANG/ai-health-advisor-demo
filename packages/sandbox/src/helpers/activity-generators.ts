@@ -764,8 +764,7 @@ function caffeineResponseFactor(minuteOffset: number): number {
   if (minuteOffset <= 15) return 0.2 * (minuteOffset / 15);
   if (minuteOffset <= 45) return 0.2 + 0.8 * ((minuteOffset - 15) / 30);
   if (minuteOffset <= 75) return 1.0;
-  if (minuteOffset <= 120) return 1.0 - 0.5 * ((minuteOffset - 75) / 45);
-  if (minuteOffset <= 240) return 0.5 * (1 - (minuteOffset - 120) / 120);
+  if (minuteOffset <= 120) return 1.0 - (minuteOffset - 75) / 45;
   return 0;
 }
 
@@ -780,7 +779,7 @@ const CAFFEINE_DOSE_RANGES: Record<CaffeineDose, {
   high_or_sensitive: { hrDeltaMin: 15, hrDeltaMax: 25, rmssdDropMin: 0.25, rmssdDropMax: 0.45, stressDeltaMin: 20, stressDeltaMax: 35 },
 };
 
-/** 咖啡因摄入事件生成（5 分钟间隔，4 小时窗口） */
+/** 咖啡因摄入事件生成（5 分钟间隔，2 小时窗口） */
 function generateCaffeineIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
   const events: DeviceEvent[] = [];
   const totalMin = diffMinutes(segment.start, segment.end);

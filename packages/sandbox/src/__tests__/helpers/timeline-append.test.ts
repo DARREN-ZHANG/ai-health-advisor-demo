@@ -187,11 +187,11 @@ describe('appendSegment', () => {
     currentTime = r2.newCurrentTime;
     expect(currentTime).toBe('2026-04-16T07:50');
 
-    // 追加 prolonged_sedentary (240 min，文档 §8.3 默认)
+    // 追加 prolonged_sedentary (120 min，文档 §8.3 默认)
     const r3 = appendSegment(segments, currentTime, 'prolonged_sedentary', profileId);
     segments = r3.segments;
     currentTime = r3.newCurrentTime;
-    expect(currentTime).toBe('2026-04-16T11:50');
+    expect(currentTime).toBe('2026-04-16T09:50');
 
     // 验证总共有 3 个片段
     expect(segments).toHaveLength(3);
@@ -207,14 +207,14 @@ describe('appendSegment', () => {
     const defaultDurations: Record<string, number> = {
       meal_intake: 20,
       steady_cardio: 15,
-      prolonged_sedentary: 240,
+      prolonged_sedentary: 120,
       intermittent_exercise: 30,
       walk: 30,
       sleep: 480,
       deep_focus: 120,
       anxiety_episode: 30,
       alcohol_intake: 180,
-      caffeine_intake: 240,
+      caffeine_intake: 120,
       relaxation: 30,
     };
 

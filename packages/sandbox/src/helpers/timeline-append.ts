@@ -25,7 +25,7 @@ import type { DeviceEvent } from '@health-advisor/shared';
 const DEFAULT_DURATION: Record<ActivitySegmentType, number> = {
   meal_intake: 20,
   steady_cardio: 15,
-  prolonged_sedentary: 240,
+  prolonged_sedentary: 120,
   intermittent_exercise: 30,
   walk: 30,
   sleep: 480,
@@ -33,7 +33,7 @@ const DEFAULT_DURATION: Record<ActivitySegmentType, number> = {
   deep_focus: 120,
   anxiety_episode: 30,
   alcohol_intake: 180,
-  caffeine_intake: 240,
+  caffeine_intake: 120,
   relaxation: 30,
   strength_training: 30,
 };
