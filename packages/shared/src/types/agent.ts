@@ -1,4 +1,5 @@
 import type { ChartTokenId } from './chart-token';
+import type { MicroEventParams, MicroEventType } from './micro-event';
 
 export enum AgentTaskType {
   HOMEPAGE_SUMMARY = 'homepage_summary',
@@ -20,12 +21,31 @@ export interface PageContext {
 
 export type AgentStatusColor = 'good' | 'warning' | 'error';
 
+export type ActionInteraction =
+  | {
+      kind: 'calendar';
+      calendar: {
+        title: string;
+        timingLabel: string;
+        durationMinutes: number;
+      };
+    }
+  | {
+      kind: 'micro_event';
+      microEvent: {
+        type: MicroEventType;
+        durationMinutes?: number;
+        params?: MicroEventParams;
+      };
+    };
+
 export interface ActionOption {
   id: string;
   emoji: string;
   title: string;
   description: string;
   aiPromise: string;
+  interaction?: ActionInteraction;
 }
 
 export type MemoryCandidateKind =

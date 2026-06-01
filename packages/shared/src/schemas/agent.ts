@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ChartTokenIdSchema } from './chart-token';
 import { AgentTaskType } from '../types/agent';
+import { MicroEventParamsSchema, MicroEventTypeSchema } from './micro-event';
 
 export const AgentTaskTypeSchema = z.nativeEnum(AgentTaskType);
 
@@ -31,12 +32,32 @@ export const PageContextSchema = z
     { message: 'customDateRange is required when timeframe is "custom"', path: ['customDateRange'] },
   );
 
+export const ActionInteractionSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('calendar'),
+    calendar: z.object({
+      title: z.string().min(1),
+      timingLabel: z.string().min(1),
+      durationMinutes: z.number().int().positive(),
+    }),
+  }),
+  z.object({
+    kind: z.literal('micro_event'),
+    microEvent: z.object({
+      type: MicroEventTypeSchema,
+      durationMinutes: z.number().int().positive().optional(),
+      params: MicroEventParamsSchema.optional(),
+    }),
+  }),
+]);
+
 export const ActionOptionSchema = z.object({
   id: z.string().min(1),
   emoji: z.string().min(1),
   title: z.string().min(1),
   description: z.string().min(1),
   aiPromise: z.string().min(1),
+  interaction: ActionInteractionSchema.optional(),
 });
 
 const MemoryCandidateKindSchema = z.enum([

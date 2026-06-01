@@ -19,6 +19,7 @@ import {
   SyncTriggerPayloadSchema,
   AdvanceClockPayloadSchema,
   ResetProfileTimelinePayloadSchema,
+  MicroEventAppendPayloadSchema,
 } from '../schemas/god-mode';
 import {
   ActivitySegmentTypeSchema,
@@ -970,5 +971,93 @@ describe('AgentResponseEnvelopeSchema — actions & microTips optional', () => {
     };
     const result = AgentResponseEnvelopeSchema.safeParse(envelope);
     expect(result.success).toBe(false);
+  });
+
+  it('accepts calendar action interaction', () => {
+    const envelope = {
+      summary: '测试摘要',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      actions: [{
+        id: 'calendar-1',
+        emoji: '☕',
+        title: '延后咖啡',
+        description: '把咖啡安排到 10:30 后',
+        aiPromise: '我会记录你的选择并用于本次建议上下文',
+        interaction: {
+          kind: 'calendar',
+          calendar: { title: '10:30 后再喝咖啡', timingLabel: '今天 10:30', durationMinutes: 15 },
+        },
+      }],
+      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+    };
+
+    expect(AgentResponseEnvelopeSchema.safeParse(envelope).success).toBe(true);
+  });
+
+  it('accepts micro event action interaction', () => {
+    const envelope = {
+      summary: '测试摘要',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      actions: [{
+        id: 'micro-1',
+        emoji: '🫁',
+        title: '做几次深呼吸',
+        description: '现在做 3 分钟缓慢呼吸',
+        aiPromise: '我会记录你的选择并更新实时简报',
+        interaction: {
+          kind: 'micro_event',
+          microEvent: { type: 'micro_deep_breathing', durationMinutes: 3, params: { pattern: 'extended_exhale' } },
+        },
+      }],
+      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+    };
+
+    expect(AgentResponseEnvelopeSchema.safeParse(envelope).success).toBe(true);
+  });
+
+  it('rejects invalid micro event action interaction', () => {
+    const envelope = {
+      summary: '测试摘要',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      actions: [{
+        id: 'micro-invalid',
+        emoji: '💧',
+        title: '补水',
+        description: '喝一杯水',
+        aiPromise: '我会记录你的选择并用于本次建议上下文',
+        interaction: {
+          kind: 'micro_event',
+          microEvent: { type: 'micro_hydration_break' },
+        },
+      }],
+      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+    };
+
+    expect(AgentResponseEnvelopeSchema.safeParse(envelope).success).toBe(false);
+  });
+});
+
+describe('MicroEventAppendPayloadSchema', () => {
+  it('accepts valid micro event append payload', () => {
+    const result = MicroEventAppendPayloadSchema.safeParse({
+      microEventType: 'micro_short_walk',
+      durationMinutes: 5,
+      params: { pace: 'slow' },
+      advanceClock: true,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects hydration micro event payload because hydration is not a micro event type', () => {
+    expect(MicroEventAppendPayloadSchema.safeParse({
+      microEventType: 'micro_hydration_break',
+    }).success).toBe(false);
   });
 });

@@ -3,6 +3,7 @@ import type {
   RecognizedEvent,
   DerivedTemporalState,
 } from './sandbox';
+import type { MicroEventParams, MicroEventType } from './micro-event';
 
 // ============================================================
 // God Mode 时间轴动作载荷（新增）
@@ -35,6 +36,13 @@ export interface AdvanceClockPayload {
 /** 重置 profile 时间轴载荷 */
 export interface ResetProfileTimelinePayload {
   profileId: string;
+}
+
+export interface MicroEventAppendPayload {
+  microEventType: MicroEventType;
+  durationMinutes?: number;
+  params?: MicroEventParams;
+  advanceClock?: boolean;
 }
 
 // ============================================================
@@ -106,4 +114,5 @@ export type GodModeAction =
   | { type: 'sync_trigger'; payload: SyncTriggerPayload }
   | { type: 'advance_clock'; payload: AdvanceClockPayload }
   | { type: 'reset_profile_timeline'; payload: ResetProfileTimelinePayload }
+  | { type: 'micro_event_append'; payload: MicroEventAppendPayload }
   | { type: 'recalibrate'; payload: Record<string, never> };

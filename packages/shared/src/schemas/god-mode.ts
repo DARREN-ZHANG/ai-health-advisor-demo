@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ActivitySegmentTypeSchema } from './sandbox';
+import { MicroEventParamsSchema, MicroEventTypeSchema } from './micro-event';
 
 // ============================================================
 // God Mode 时间轴动作 Schema（新增）
@@ -23,6 +24,13 @@ export const AdvanceClockPayloadSchema = z.object({
 
 export const ResetProfileTimelinePayloadSchema = z.object({
   profileId: z.string().min(1),
+});
+
+export const MicroEventAppendPayloadSchema = z.object({
+  microEventType: MicroEventTypeSchema,
+  durationMinutes: z.number().int().positive().optional(),
+  params: MicroEventParamsSchema.optional(),
+  advanceClock: z.boolean().optional(),
 });
 
 // ============================================================

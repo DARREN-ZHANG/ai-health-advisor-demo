@@ -55,7 +55,7 @@ export {
 
 // Types — agent
 export { AgentTaskType } from './types/agent';
-export type { DataTab, Timeframe, PageContext, AgentResponseEnvelope, ActionOption, MemoryCandidateKind, MemoryCandidateConfirmation } from './types/agent';
+export type { DataTab, Timeframe, PageContext, AgentResponseEnvelope, ActionOption, ActionInteraction, MemoryCandidateKind, MemoryCandidateConfirmation } from './types/agent';
 
 // Types — god-mode
 export type {
@@ -64,6 +64,7 @@ export type {
   SyncTriggerPayload,
   AdvanceClockPayload,
   ResetProfileTimelinePayload,
+  MicroEventAppendPayload,
   // 已有载荷
   ProfileSwitchPayload,
   EventInjectPayload,
@@ -142,6 +143,7 @@ export {
   PageContextSchema,
   AgentResponseEnvelopeSchema,
   ActionOptionSchema,
+  ActionInteractionSchema,
   MemoryCandidateConfirmationSchema,
 } from './schemas/agent';
 
@@ -153,6 +155,7 @@ export {
   SyncTriggerPayloadSchema,
   AdvanceClockPayloadSchema,
   ResetProfileTimelinePayloadSchema,
+  MicroEventAppendPayloadSchema,
   // 已有 Schema
   ProfileSwitchPayloadSchema,
   EventInjectPayloadSchema,
