@@ -39,6 +39,17 @@ export const AnalysisPlanSchema = z.object({
     reason: z.string().min(1),
     required: z.boolean(),
   })),
+  knowledgeNeeds: z.array(z.object({
+    metrics: z.array(z.string()).optional(),
+    intents: z.array(z.string()).optional(),
+    riskLevel: z.enum(['general', 'potential_risk', 'safety_boundary']).optional(),
+    limit: z.number().int().positive().max(10).optional(),
+  })).optional(),
+  productNeeds: z.array(z.object({
+    metrics: z.array(z.string()).optional(),
+    productAreas: z.array(z.string()).optional(),
+    limit: z.number().int().positive().max(10).optional(),
+  })).optional(),
   safetyConstraints: z.array(SafetyConstraint),
   answerShape: z.object({
     includeMissingDataDisclosure: z.boolean(),

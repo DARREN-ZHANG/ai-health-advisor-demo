@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import type { TaskContextPacket } from '../context/context-packet';
 import type { AgentContext } from '../types/agent-context';
+import type { KnowledgeRepository } from '../knowledge/types';
 
 /** 工具执行上下文 */
 export interface ToolExecutionContext {
   packet: TaskContextPacket;
   context: AgentContext;
+  knowledgeRepository?: KnowledgeRepository;
 }
 
 /** 工具执行结果 */
