@@ -12,6 +12,7 @@ import type {
   GodModeStateResponse,
   TimelineAppendPayload,
   ResetProfileTimelinePayload,
+  MicroEventAppendPayload,
 } from '@health-advisor/shared';
 
 export function useGodModeState() {
@@ -132,6 +133,22 @@ export function useGodModeActions() {
     },
   });
 
+  /**
+   * E1: 追加微事件动作
+   */
+  const appendMicroEventMutation = useMutation({
+    mutationFn: async (payload: MicroEventAppendPayload) => {
+      return apiClient.post<GodModeStateResponse>('/god-mode/micro-event-append', payload);
+    },
+    onSuccess: (state) => {
+      setProfileId(state.currentProfileId);
+      syncActiveSensingBanner(state.activeSensing);
+      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
+    },
+  });
+
   return {
     switchProfile: switchProfileMutation.mutateAsync,
     isSwitchingProfile: switchProfileMutation.isPending,
@@ -144,5 +161,8 @@ export function useGodModeActions() {
     isAdvancingClock: advanceClockMutation.isPending,
     resetTimeline: resetTimelineMutation.mutateAsync,
     isResettingTimeline: resetTimelineMutation.isPending,
+
+    appendMicroEvent: appendMicroEventMutation.mutateAsync,
+    isAppendingMicroEvent: appendMicroEventMutation.isPending,
   };
 }
