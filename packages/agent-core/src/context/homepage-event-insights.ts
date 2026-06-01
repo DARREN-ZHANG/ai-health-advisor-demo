@@ -1,6 +1,7 @@
 import type { HomepageSemanticEventType } from './context-packet';
 import {
   decideRecoveryMetricRelevance,
+  isEveningSleepActionWindow,
   isSleepMetric,
 } from './homepage-recovery-relevance';
 
@@ -45,8 +46,6 @@ import type {
   Latest24hMetric,
   RecommendedFocus,
   RecoveryContextSummary,
-  RecoveryContextReason,
-  RecoveryContextVisibility,
 } from './context-packet';
 
 export interface BuildHomepageEventInsightsInput {
@@ -65,7 +64,7 @@ export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInpu
       .map((ctx) => ctx.evidenceId)
       .filter((id): id is string => typeof id === 'string' && id.length > 0);
     const tension = determineEventBodyTension(eventType, event.eventWindow, homepage.latest24h.metrics, homepage.rulesInsights);
-    const recommendedFocus = buildRecommendedFocus(eventType, tension);
+    const recommendedFocus = buildRecommendedFocus(eventType, tension, demoNow);
     return {
       eventId: event.evidenceIds[0] ?? `${event.type}_${event.start}`,
       eventType,
@@ -240,6 +239,7 @@ function buildRecoveryContext(
 function buildRecommendedFocus(
   eventType: ReturnType<typeof normalizeHomepageEventType>,
   tension: EventBodyTension,
+  demoNow?: string,
 ): RecommendedFocus[] {
   if (tension.level === 'critical') {
     return [
@@ -256,12 +256,18 @@ function buildRecommendedFocus(
         { category: 'posture', action: '把接下来的工作切到站姿或挺直坐姿', timing: '接下来 30 min', rationale: '减少久坐对呼吸和循环的压迫' },
       ];
     case 'cardio_workout':
-    case 'hiit_workout':
-      return [
+    case 'hiit_workout': {
+      const focus: RecommendedFocus[] = [
         { category: 'hydration', action: '小口补水并做轻度走动冷身', durationMin: 10, rationale: '帮助心率平稳回落并支持循环恢复' },
         { category: 'nutrition', action: '补充蛋白质和易消化碳水', timing: '运动后 45 min 内', rationale: '支持糖原回补和肌肉修复' },
-        { category: 'sleep_protection', action: '睡前降低刺激和屏幕暴露', timing: '今晚睡前 60 min', rationale: '保护运动后的深睡恢复窗口' },
       ];
+
+      if (eventType === 'hiit_workout' && isEveningSleepActionWindow(demoNow)) {
+        focus.push({ category: 'sleep_protection', action: '睡前降低刺激和屏幕暴露', timing: '今晚睡前 60 min', rationale: '保护高强度运动后的深睡恢复窗口' });
+      }
+
+      return focus;
+    }
     case 'possible_alcohol_intake':
     case 'possible_caffeine_intake':
       return [
@@ -300,12 +306,6 @@ function buildHeadline(eventType: ReturnType<typeof normalizeHomepageEventType>,
     default:
       return `最近事件持续 ${durationMin} min，需要结合恢复背景判断`;
   }
-}
-
-function collectMetricEvidenceIds(metrics: Latest24hMetric[]): string[] {
-  return metrics
-    .map((item) => item.evidenceId)
-    .filter((id): id is string => typeof id === 'string' && id.length > 0);
 }
 
 const RECORD_CHOICE_PROMISE = '我会记录你的选择并用于本次建议上下文';

@@ -165,7 +165,7 @@ it('creates event-appropriate action categories for post-workout recovery', () =
 
   const focusCategories = insights[0]!.recommendedFocus.map((f) => f.category);
   expect(focusCategories).toContain('hydration');
-  expect(focusCategories).toContain('sleep_protection');
+  expect(focusCategories).toContain('nutrition');
 });
 
 it('does not attach sleep recovery context or sleep evidence to a midday walk insight', () => {
@@ -214,6 +214,51 @@ it('does not attach sleep recovery context or sleep evidence to a midday walk in
   expect(insights[0]!.eventType).toBe('cardio_workout');
   expect(insights[0]!.recoveryContext.map((ctx) => ctx.metric)).not.toContain('sleep_total');
   expect(insights[0]!.evidenceIds).not.toContain('latest24h_sleep_total_2026-06-01');
+});
+
+it('does not recommend sleep protection for a 13:00 walk', () => {
+  const insights = buildHomepageEventInsights({
+    demoNow: '2026-06-01T13:00',
+    homepage: makeHomepage({
+      recentEvents: [{
+        recognizedEventId: 're-walk-1',
+        type: 'walk',
+        start: '2026-06-01T12:30',
+        end: '2026-06-01T13:00',
+        durationMin: 30,
+        confidence: 0.91,
+        sourceSegmentId: 'seg-walk-1',
+        recognitionEvidence: ['步行 30 min'],
+        syncState: { lastSyncedMeasuredAt: '2026-06-01T13:00', pendingEventCount: 0, fromSyncedWindow: true },
+        evidenceIds: ['event_walk'],
+      }],
+    }),
+  });
+
+  expect(insights[0]!.recommendedFocus.map((focus) => focus.category)).not.toContain('sleep_protection');
+  expect(insights[0]!.actionIntents.map((action) => action.title).join('\n')).not.toMatch(/睡眠|入睡|调暗|深睡/);
+});
+
+it('keeps sleep protection for evening high intensity workouts', () => {
+  const insights = buildHomepageEventInsights({
+    demoNow: '2026-06-01T19:30',
+    homepage: makeHomepage({
+      recentEvents: [{
+        recognizedEventId: 're-hiit-1',
+        type: 'intermittent_exercise',
+        start: '2026-06-01T19:00',
+        end: '2026-06-01T19:30',
+        durationMin: 30,
+        confidence: 0.92,
+        sourceSegmentId: 'seg-hiit-1',
+        recognitionEvidence: ['间歇训练 30 min'],
+        syncState: { lastSyncedMeasuredAt: '2026-06-01T19:30', pendingEventCount: 0, fromSyncedWindow: true },
+        evidenceIds: ['event_hiit'],
+      }],
+    }),
+  });
+
+  expect(insights[0]!.recommendedFocus.map((focus) => focus.category)).toContain('sleep_protection');
 });
 
 it('keeps sleep recovery context for an evening HIIT event when sleep is attention', () => {
