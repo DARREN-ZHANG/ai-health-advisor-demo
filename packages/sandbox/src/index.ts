@@ -80,6 +80,10 @@ export type { RawEventRepository } from './helpers/raw-event-repository';
 export { appendSegment } from './helpers/timeline-append';
 export type { TimelineAppendResult } from './helpers/timeline-append';
 
+// Helpers — micro event append
+export { appendMicroEvent } from './helpers/micro-event-append';
+export type { MicroEventAppendResult } from './helpers/micro-event-append';
+
 // Helpers — profile write
 export {
   writeProfileFile,

@@ -3,6 +3,7 @@ import type {
   RecognizedEvent,
   RecognizedEventType,
 } from '@health-advisor/shared';
+import { MicroEventTypeSchema } from '@health-advisor/shared';
 import { detectPossibleCaffeineIntake } from './caffeine-detector';
 import { detectPossibleAlcoholIntake } from './alcohol-detector';
 
@@ -199,10 +200,41 @@ function buildStats(segmentId: string, events: DeviceEvent[]): SegmentStats {
 // 分类逻辑
 // ============================================================
 
+/** 从 god-mode segmentId 中提取片段类型（格式：seg-gm-{type}-{timestamp}） */
+function extractGodModeType(segmentId: string): string | null {
+  const match = /^seg-gm-([a-z_]+)-\d+$/.exec(segmentId);
+  return match?.[1] ?? null;
+}
+
+/** 从 micro-event segmentId 中提取微事件类型（格式：seg-micro-{type}-{timestamp}） */
+function extractMicroEventType(segmentId: string): import('@health-advisor/shared').MicroEventType | null {
+  const match = /^seg-micro-(micro_[a-z_]+)-\d+$/.exec(segmentId);
+  const raw = match?.[1];
+  const parsed = raw ? MicroEventTypeSchema.safeParse(raw) : null;
+  return parsed?.success ? parsed.data : null;
+}
+
 /** 分类一个 segment 分组 */
 function classifySegment(stats: SegmentStats): RecognizedEvent | null {
   const evidence: string[] = [];
   const durationMin = diffMinutes(stats.start, stats.end);
+
+  // 微事件片段：直接从 segmentId 提取类型
+  const microEventType = extractMicroEventType(stats.segmentId);
+  if (microEventType) {
+    return buildRecognized(stats, microEventType, durationMin, evidence, () => {
+      evidence.push(`用户选择触发微事件 ${microEventType}，持续 ${durationMin} 分钟`);
+      return 1.0;
+    });
+  }
+
+  // god-mode 片段：直接从 segmentId 提取类型，跳过生理特征分类
+  const godModeType = extractGodModeType(stats.segmentId);
+  if (godModeType) {
+    return buildRecognized(stats, godModeType as RecognizedEventType, durationMin, evidence, () => {
+      return 1.0; // god-mode 片段确定性最高
+    });
+  }
 
   // 检查睡眠阶段事件
   if (stats.sleepStages.length > 0) {

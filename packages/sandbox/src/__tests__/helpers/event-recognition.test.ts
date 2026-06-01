@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { ActivitySegment, DeviceEvent, RecognizedEvent } from '@health-advisor/shared';
 import { generateEventsForSegment } from '../../helpers/activity-generators';
 import { recognizeEvents } from '../../helpers/event-recognition';
+import { appendMicroEvent } from '../../helpers/micro-event-append';
 
 // ============================================================
 // 测试用辅助函数
@@ -804,5 +805,22 @@ describe('event-recognition', () => {
       expect(caffeineEvent).toBeDefined();
       expect(alcoholEvent).toBeDefined();
     });
+  });
+
+  it('recognizes micro event segment ids as micro events', () => {
+    const result = appendMicroEvent(
+      '2026-06-01T09:00',
+      'micro_deep_breathing',
+      'profile-a',
+      { _baselineRestingHr: 58, _baselineHrv: 72, _baselineSpo2: 97 },
+    );
+
+    const recognized = recognizeEvents(result.events, 'profile-a', result.newCurrentTime);
+
+    expect(recognized).toHaveLength(1);
+    expect(recognized[0]!.type).toBe('micro_deep_breathing');
+    expect(recognized[0]!.confidence).toBe(1);
+    expect(recognized[0]!.sourceSegmentId).toBe(result.segmentId);
+    expect(recognized[0]!.evidence.join('\n')).toContain('用户选择触发微事件 micro_deep_breathing');
   });
 });
