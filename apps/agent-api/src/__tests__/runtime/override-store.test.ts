@@ -442,3 +442,84 @@ describe('OverrideStore — dataDir 初始化', () => {
     expect(store.getSegments('profile-c')).toHaveLength(1);
   });
 });
+
+// ============================================================
+// Micro Event 测试
+// ============================================================
+
+describe('OverrideStore — Micro Events', () => {
+  it('appendMicroEvent writes synced raw events without adding activity segments', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    const result = store.appendMicroEvent('profile-a', 'micro_deep_breathing', {
+      _baselineRestingHr: 58,
+      _baselineHrv: 72,
+      _baselineSpo2: 97,
+    });
+
+    expect(result.newCurrentTime).toBe('2026-04-21T08:03');
+    expect(result.events.length).toBeGreaterThan(0);
+    expect(store.getSegments('profile-a')).toEqual([]);
+    expect(store.getPendingEvents('profile-a')).toEqual([]);
+    expect(store.getSyncedEvents('profile-a').some((event) => event.segmentId?.startsWith('seg-micro-micro_deep_breathing-'))).toBe(true);
+  });
+
+  it('appendMicroEvent keeps profile isolation', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    store.appendMicroEvent('profile-a', 'micro_short_walk');
+    store.appendMicroEvent('profile-b', 'micro_offscreen_eye_rest');
+
+    expect(store.getSyncedEvents('profile-a').some((event) => event.segmentId?.includes('micro_short_walk'))).toBe(true);
+    expect(store.getSyncedEvents('profile-b').some((event) => event.segmentId?.includes('micro_offscreen_eye_rest'))).toBe(true);
+    expect(store.getSyncedEvents('profile-a').some((event) => event.segmentId?.includes('micro_offscreen_eye_rest'))).toBe(false);
+  });
+
+  it('appendMicroEvent returns correct eventStart and eventEnd', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    const result = store.appendMicroEvent('profile-a', 'micro_deep_breathing', {
+      _baselineRestingHr: 58,
+      _baselineHrv: 72,
+      _baselineSpo2: 97,
+    });
+
+    expect(result.eventStart).toBe('2026-04-21T08:00');
+    expect(result.eventEnd).toBe('2026-04-21T08:03');
+  });
+
+  it('appendMicroEvent does not advance clock when advanceClock is false', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    const result = store.appendMicroEvent(
+      'profile-a',
+      'micro_short_walk',
+      { _baselineRestingHr: 58, _baselineHrv: 72, _baselineSpo2: 97 },
+      { advanceClock: false },
+    );
+
+    expect(result.newCurrentTime).toBe('2026-04-21T08:00');
+    expect(result.events.length).toBeGreaterThan(0);
+    expect(store.getDemoClock('profile-a').currentTime).toBe('2026-04-21T08:00');
+  });
+
+  it('appendMicroEvent supports custom durationMinutes', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    const result = store.appendMicroEvent(
+      'profile-a',
+      'micro_deep_breathing',
+      { _baselineRestingHr: 58, _baselineHrv: 72, _baselineSpo2: 97 },
+      { durationMinutes: 7 },
+    );
+
+    expect(result.eventEnd).toBe('2026-04-21T08:07');
+    expect(result.newCurrentTime).toBe('2026-04-21T08:07');
+  });
+
+  it('appendMicroEvent does not inject events for active sensing', () => {
+    const store = createOverrideStore('profile-a', { initialDemoTime: INITIAL_TIME });
+    store.appendMicroEvent('profile-a', 'micro_deep_breathing', {
+      _baselineRestingHr: 58,
+      _baselineHrv: 72,
+      _baselineSpo2: 97,
+    });
+
+    expect(store.getInjectedEvents('profile-a')).toEqual([]);
+  });
+});

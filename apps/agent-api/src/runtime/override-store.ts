@@ -4,6 +4,8 @@ import type {
   ActivitySegmentType,
   DeviceEvent,
   SyncSession,
+  MicroEventParams,
+  MicroEventType,
 } from '@health-advisor/shared';
 import type {
   OverrideEntry,
@@ -18,6 +20,7 @@ import {
   performSync as sandboxPerformSync,
   getPendingEvents as sandboxGetPending,
   getSyncedEvents as sandboxGetSynced,
+  appendMicroEvent as sandboxAppendMicroEvent,
 } from '@health-advisor/sandbox';
 
 // ============================================================
@@ -70,6 +73,14 @@ export interface OverrideStoreService {
     offsetMinutes?: number,
     options?: { durationMinutes?: number; advanceClock?: boolean },
   ): { events: DeviceEvent[]; newCurrentTime: string; segmentStart: string; segmentEnd: string };
+
+  // — 追加微事件 —
+  appendMicroEvent(
+    profileId: string,
+    microEventType: MicroEventType,
+    params?: MicroEventParams,
+    options?: { durationMinutes?: number; advanceClock?: boolean },
+  ): { events: DeviceEvent[]; newCurrentTime: string; eventStart: string; eventEnd: string };
 
   // — 同步操作 —
   getSyncState(profileId: string): { lastSyncedMeasuredAt: string | null; syncSessions: SyncSession[] };
@@ -242,6 +253,48 @@ export function createOverrideStore(
         newCurrentTime: result.newCurrentTime,
         segmentStart: newSegment!.start,
         segmentEnd: newSegment!.end,
+      };
+    },
+
+    // — 追加微事件（自动同步，不添加 segment，不注入事件） —
+    appendMicroEvent(
+      profileId: string,
+      microEventType: MicroEventType,
+      params?: MicroEventParams,
+      options?: { durationMinutes?: number; advanceClock?: boolean },
+    ): { events: DeviceEvent[]; newCurrentTime: string; eventStart: string; eventEnd: string } {
+      const state = ensureDemoState(profileId);
+      const result = sandboxAppendMicroEvent(
+        state.clock.currentTime,
+        microEventType,
+        profileId,
+        params,
+        options,
+      );
+
+      const advanceClock = options?.advanceClock !== false;
+      const updatedState: DemoProfileState = {
+        ...state,
+        rawEvents: [...state.rawEvents, ...result.events],
+        ...(advanceClock ? { clock: { ...state.clock, currentTime: result.newCurrentTime } } : {}),
+      };
+
+      const internalSync = rebuildSyncState(updatedState);
+      const { state: newSync } = sandboxPerformSync(internalSync, 'app_open', updatedState.clock.currentTime);
+
+      demoStateByProfile.set(profileId, {
+        ...updatedState,
+        syncState: {
+          lastSyncedMeasuredAt: newSync.lastSyncedMeasuredAt,
+          syncSessions: [...newSync.syncSessions],
+        },
+      });
+
+      return {
+        events: [...result.events],
+        newCurrentTime: result.newCurrentTime,
+        eventStart: result.eventStart,
+        eventEnd: result.eventEnd,
       };
     },
 
