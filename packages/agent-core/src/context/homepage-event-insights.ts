@@ -1,4 +1,5 @@
 import type { HomepageSemanticEventType } from './context-packet';
+import { decideRecoveryMetricRelevance } from './homepage-recovery-relevance';
 
 export function normalizeHomepageEventType(eventType: string): HomepageSemanticEventType {
   switch (eventType) {
@@ -41,6 +42,8 @@ import type {
   Latest24hMetric,
   RecommendedFocus,
   RecoveryContextSummary,
+  RecoveryContextReason,
+  RecoveryContextVisibility,
 } from './context-packet';
 
 export interface BuildHomepageEventInsightsInput {
@@ -53,7 +56,7 @@ export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInpu
   return homepage.recentEvents.map((event, index) => {
     const eventType = normalizeHomepageEventType(event.type);
     const physiology = buildEventWindowPhysiology(event.eventWindow);
-    const recoveryContext = buildRecoveryContext(homepage.latest24h.metrics);
+    const recoveryContext = buildRecoveryContext(homepage.latest24h.metrics, eventType, demoNow);
     const tension = determineEventBodyTension(eventType, event.eventWindow, homepage.latest24h.metrics, homepage.rulesInsights);
     const recommendedFocus = buildRecommendedFocus(eventType, tension);
     return {
@@ -175,12 +178,17 @@ function determineEventBodyTension(
   return { level: 'positive', summary: '事件窗口内没有明显冲突信号', reason: 'event-window markers do not indicate elevated tension' };
 }
 
-function buildRecoveryContext(metrics: Latest24hMetric[]): RecoveryContextSummary[] {
+function buildRecoveryContext(
+  metrics: Latest24hMetric[],
+  primaryEventType: HomepageEventInsight['eventType'],
+  demoNow?: string,
+): RecoveryContextSummary[] {
   const sleep = metric(metrics, 'sleep_total');
   const hrv = metric(metrics, 'hrv');
   const contexts: RecoveryContextSummary[] = [];
 
   if (sleep) {
+    const relevance = decideRecoveryMetricRelevance({ metric: sleep, primaryEventType, demoNow });
     contexts.push({
       source: 'latest24h',
       metric: 'sleep_total',
@@ -190,6 +198,8 @@ function buildRecoveryContext(metrics: Latest24hMetric[]): RecoveryContextSummar
         : sleep.status === 'missing'
           ? '缺少最近睡眠数据，无法完整判断恢复背景'
           : '过去 24h 睡眠不足，当前事件需要更保守处理',
+      visibility: relevance.visible ? 'material' : 'suppressed',
+      reason: relevance.reason,
       evidenceId: sleep.evidenceId,
     });
   }
@@ -204,6 +214,8 @@ function buildRecoveryContext(metrics: Latest24hMetric[]): RecoveryContextSummar
         : hrv.status === 'missing'
           ? '缺少 HRV 数据，无法判断自主神经恢复状态'
           : 'HRV 走弱，提示恢复压力偏高',
+      visibility: 'material',
+      reason: 'metric_supports_current_event',
       evidenceId: hrv.evidenceId,
     });
   }

@@ -46,7 +46,7 @@ export interface MetricSummary {
 // Evidence
 // ────────────────────────────────────────────
 
-export type EvidenceSource = 'daily_records' | 'timeline_sync' | 'profile' | 'rules' | 'memory';
+export type EvidenceSource = 'daily_records' | 'timeline_sync' | 'profile' | 'rules' | 'memory' | 'knowledge_base';
 
 export interface EvidenceFact {
   id: string;
@@ -244,11 +244,22 @@ export interface EventPhysiologySummary {
   evidenceId?: string;
 }
 
+export type RecoveryContextVisibility = 'material' | 'suppressed';
+
+export type RecoveryContextReason =
+  | 'primary_event_is_sleep_related'
+  | 'primary_event_has_evening_sleep_risk'
+  | 'metric_is_attention_or_critical'
+  | 'metric_supports_current_event'
+  | 'not_material_to_current_event';
+
 export interface RecoveryContextSummary {
   source: 'latest24h' | 'trend7d' | 'profile';
   metric: string;
   relation: 'supports' | 'conflicts' | 'neutral' | 'missing';
   summary: string;
+  visibility: RecoveryContextVisibility;
+  reason: RecoveryContextReason;
   evidenceId?: string;
 }
 
@@ -343,7 +354,7 @@ export interface CurrentPagePacket {
 
 export interface RelevantFactPacket {
   label: string;
-  factType: 'metric' | 'trend' | 'missing-data' | 'chart' | 'event' | 'memory';
+  factType: 'metric' | 'trend' | 'missing-data' | 'chart' | 'event' | 'memory' | 'knowledge' | 'product';
   summary: string;
   evidenceIds: string[];
 }
