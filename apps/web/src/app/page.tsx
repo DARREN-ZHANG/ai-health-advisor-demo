@@ -8,9 +8,9 @@ import { ConfigArea } from '@/components/homepage/ConfigArea';
 import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
 import { useProfileStore } from '@/stores/profile.store';
 import { useMorningBrief, useRefetchBrief } from '@/hooks/use-ai-query';
+import { useActionInteractions } from '@/hooks/use-action-interactions';
 import { useUIStore } from '@/stores/ui.store';
 import type { StatusColor } from '@health-advisor/ui';
-import type { ActionOption } from '@health-advisor/shared';
 import { useTranslations } from 'next-intl';
 
 export default function HomePage() {
@@ -21,7 +21,8 @@ export default function HomePage() {
   const t = useTranslations('homepage');
   const [isConfigDrawerOpen, setIsConfigDrawerOpen] = useState(false);
 
-  const isAnyLoading = isLoading || isFetching || refetchBrief.isPending;
+  const actionInteractions = useActionInteractions(currentProfileId);
+  const briefIsLoading = isLoading || isFetching || refetchBrief.isPending;
 
   useEffect(() => {
     if (error) {
@@ -41,7 +42,12 @@ export default function HomePage() {
     summary: data?.summary || (error ? t('briefNetworkError') : t('briefPreparing')),
     actions: data?.actions ?? [],
     actionsSectionTitle: data?.actionsSectionTitle,
-    onActionSelect: (action: ActionOption) => showToast(`${action.title}：已记录`, 'success'),
+    onActionSelect: actionInteractions.selectAction,
+    onAddCalendarAction: actionInteractions.addCalendarAction,
+    pendingActionId: actionInteractions.pendingActionId,
+    selectedActionIds: actionInteractions.selectedActionIds,
+    calendarActionIds: actionInteractions.calendarActionIds,
+    actionsDisabled: actionInteractions.isBusy,
   };
 
   return (
@@ -50,7 +56,7 @@ export default function HomePage() {
         {/* 左侧 Config Area - 仅桌面端显示 */}
         <aside className="hidden lg:block lg:col-span-5 xl:col-span-4">
           <div className="lg:sticky lg:top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-2 scrollbar-hide">
-            <ConfigArea disabled={isAnyLoading} />
+            <ConfigArea disabled={briefIsLoading} />
           </div>
         </aside>
 
@@ -77,7 +83,7 @@ export default function HomePage() {
               <Button
                 variant="ghost"
                 onClick={() => refetchBrief.mutate()}
-                disabled={isAnyLoading}
+                disabled={briefIsLoading}
                 className="text-xs text-slate-500 h-auto py-1 px-2"
               >
                 {refetchBrief.isPending ? t('refreshing') : t('manualRefresh')}
@@ -92,7 +98,7 @@ export default function HomePage() {
           <Section title={t('realtimeBrief')} className="space-y-4">
             <MorningBriefCard
               {...briefData}
-              isLoading={isAnyLoading}
+              isLoading={briefIsLoading}
             />
           </Section>
 
@@ -110,7 +116,7 @@ export default function HomePage() {
         size="lg"
         title={t('configTitle')}
       >
-        <ConfigArea disabled={isAnyLoading} />
+        <ConfigArea disabled={briefIsLoading} />
       </Drawer>
     </Container>
   );

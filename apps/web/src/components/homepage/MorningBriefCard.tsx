@@ -13,6 +13,11 @@ interface MorningBriefCardProps {
   actions?: ActionOption[];
   actionsSectionTitle?: string;
   onActionSelect?: (action: ActionOption) => void;
+  onAddCalendarAction?: (action: ActionOption) => void;
+  pendingActionId?: string | null;
+  selectedActionIds?: ReadonlySet<string>;
+  calendarActionIds?: ReadonlySet<string>;
+  actionsDisabled?: boolean;
   isLoading?: boolean;
 }
 
@@ -23,6 +28,11 @@ export function MorningBriefCard({
   actions = [],
   actionsSectionTitle,
   onActionSelect,
+  onAddCalendarAction,
+  pendingActionId,
+  selectedActionIds,
+  calendarActionIds,
+  actionsDisabled = false,
   isLoading = false,
 }: MorningBriefCardProps) {
   const statusColor = statusColors[status];
@@ -60,7 +70,16 @@ export function MorningBriefCard({
             {summary}
           </div>
 
-          <ActionOptions actions={actions} sectionTitle={actionsSectionTitle} onSelect={onActionSelect} />
+          <ActionOptions
+            actions={actions}
+            sectionTitle={actionsSectionTitle}
+            onSelect={onActionSelect ?? (() => {})}
+            onAddCalendar={onAddCalendarAction ?? (() => {})}
+            pendingActionId={pendingActionId}
+            selectedActionIds={selectedActionIds ?? new Set()}
+            calendarActionIds={calendarActionIds ?? new Set()}
+            disabled={actionsDisabled}
+          />
         </div>
       </Card>
     </m.div>
