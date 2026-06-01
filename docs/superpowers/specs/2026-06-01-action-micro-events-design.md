@@ -58,21 +58,25 @@ type ActionInteraction =
 
 ```ts
 type MicroEventType =
-  | 'micro_breathing_reset'
-  | 'micro_walk_reset'
-  | 'micro_cooldown_walk'
-  | 'micro_stretch_mobility'
-  | 'micro_posture_reset'
-  | 'micro_offscreen_rest'
-  | 'micro_hydration_break'
-  | 'micro_recovery_nutrition'
-  | 'micro_pre_workout_fuel'
+  | 'micro_deep_breathing'
+  | 'micro_short_walk'
+  | 'micro_post_meal_walk'
+  | 'micro_post_workout_slow_walk'
+  | 'micro_standing_stretch'
+  | 'micro_desk_mobility'
+  | 'micro_offscreen_eye_rest'
+  | 'micro_window_gaze_walk'
+  | 'micro_pre_workout_snack'
+  | 'micro_post_workout_snack'
+  | 'micro_easy_cardio'
+  | 'micro_restorative_stretch'
   | 'micro_low_stimulus_work'
-  | 'micro_sleep_wind_down'
-  | 'micro_environment_shift';
+  | 'micro_sleep_wind_down';
 ```
 
-这些微事件是演示行为原语，不是自然语言文案枚举。一个微事件可以服务多条建议文案。例如“做 3 min 箱式呼吸”“延长呼气”“神经降档”都映射到 `micro_breathing_reset`。
+这些微事件是演示行为原语，不是自然语言文案枚举。命名必须面向用户能理解的具体行动，而不是抽象技术词。比如“做几次深呼吸”对应 `micro_deep_breathing`；“起身走几分钟”或“饭后走一小会儿”分别对应 `micro_short_walk` / `micro_post_meal_walk`。用户可见文案只使用自然的日常行动表达。
+
+微事件清单参考了 `docs/profile-case-sample.xlsx` 的 `Sample Feedback interactions` sheet 中 Action Suggestion 1-3 的主题，覆盖深呼吸、饭后走动、短暂离屏、姿势调整、运动前后补给、低刺激工作、运动强度下调、睡前放松等高频建议。咖啡因时间安排、训练计划、睡眠计划这类未来安排优先走 `calendar`；补水、调暗灯光、调室温、洗澡等传感器无法可靠捕捉的行为默认不写 timeline。
 
 每个微事件定义包含：
 
@@ -89,13 +93,24 @@ type MicroEventType =
 
 生成规则必须是确定性的、基于 profile baseline 的通用算法：
 
-- 呼吸重置：低 motion，HR 缓慢下降，HRV/RMSSD 回升，stressLoad 下降。
-- 轻走/冷身：steps 和 motion 上升，HR 温和上升后回落。
-- 拉伸/姿势调整：轻度 motion，HR 小幅变化，stressLoad 轻微下降。
-- 离屏休息/低刺激工作：低 motion，HR 和 stressLoad 下降。
-- 补水：轻微 steps/motion，生理响应温和，不伪造“已喝水”的传感器事实。
-- 恢复营养/训练前补给：用短时餐后响应表达，HR 小幅上升，HRV 轻微压缩。
-- 睡前降刺激：低 motion，HR/stressLoad 下降，不直接伪造睡眠阶段。
+- 做几次深呼吸：低 motion，HR 缓慢下降，HRV/RMSSD 回升，stressLoad 下降。适配“3 min 箱式呼吸”“延长呼气”“4-7-8 呼吸”等建议，具体呼吸法放在 `params.pattern`。
+- 起身走几分钟：steps 和 motion 上升，HR 温和上升后回落，stressLoad 轻微下降。适配久坐后的“走 150 steps”“去茶水间走一圈”等建议，但不声称用户喝了水。
+- 饭后走一小会儿：低到中等 steps/motion，HR 保持温和区间，HRV 轻微压缩后平稳。用于早餐/午餐后的 5 min 走动，不等同于正式运动。
+- 运动后慢走几分钟：steps/motion 温和，HR 从运动后高位继续回落。用户可见文案使用“慢走几分钟”或“让心率慢慢降下来”。
+- 站起来活动肩颈/关节：轻度 motion，steps 很少，HR 小幅变化，stressLoad 轻微下降。适配肩颈活动、脚踝绕环、简单 mobility。
+- 闭眼离屏休息：低 motion，HR/stressLoad 下降，HRV 小幅恢复。适配 10-15 min 无屏闭眼，不生成睡眠阶段。
+- 到窗边看远处：少量 steps 后进入低 motion，stressLoad 温和下降。该事件代表用户主动离开屏幕和改变视线，不声称传感器识别“看远处”。
+- 训练前小点/运动后补给：用短时进食响应表达，HR 小幅上升，HRV 轻微压缩。只在 action 明确是“吃一份小点/补给”时使用；泛泛饮水不使用微事件。
+- 做一段轻松有氧：中等 steps/motion，HR 进入温和运动区间。适配“把大重量改成中等强度有氧/轻松慢跑”。
+- 做一段拉伸恢复：轻到中等 motion，steps 很少，HR 低幅波动，stressLoad 下降。适配“恢复瑜伽/下肢髋部拉伸”。
+- 低刺激收尾工作：低 motion，HR/stressLoad 平稳下降。适配“处理邮件/整理待办/低刺激任务”，不伪造生产力数据。
+- 睡前放松：低 motion，HR/stressLoad 下降，不直接伪造睡眠阶段。适配“睡前 60 min 降低刺激/放下屏幕”，但调暗灯光、调温本身不写入传感器事实。
+
+不进入 timeline 的建议：
+
+- 补水、小口喝水、电解质饮品：维持当前点击交互，只记录选择并显示 toast，不生成 mock sensor data。
+- 调暗灯光、调低室温、开窗、洗温水澡：传感器无法可靠捕捉具体行为，默认只记录选择；如果建议同时包含“睡前放松一段时间”，才可映射到 `micro_sleep_wind_down`。
+- 咖啡因倒计时、今晚训练计划、明早工作安排：属于未来计划或策略，优先使用 `calendar` 或无交互，不立即改 timeline。
 
 ## 后端设计
 
@@ -138,7 +153,7 @@ type RecognizedEventType =
 `event-recognition.ts` 增加对 `seg-micro-{type}-...` 的识别。微事件识别应该保持独立 evidence，例如：
 
 ```text
-用户选择触发微事件 micro_breathing_reset，持续 3 min，低运动伴随 HR 下降和 RMSSD 回升
+用户选择触发微事件 micro_deep_breathing，持续 3 min，低运动伴随 HR 下降和 RMSSD 回升
 ```
 
 ### Override Store
@@ -197,18 +212,23 @@ payload：
 
 建议映射示例：
 
-- `movement_reset` -> `micro_walk_reset`
-- `breathing_reset` -> `micro_breathing_reset`
-- `hydration` -> `micro_hydration_break`
-- `nutrition` -> `micro_recovery_nutrition`
-- `posture` -> `micro_posture_reset`
+- `movement_reset` -> `micro_short_walk`
+- 饭后 `movement_reset` -> `micro_post_meal_walk`
+- 运动后 `movement_reset` -> `micro_post_workout_slow_walk`
+- `breathing_reset` -> `micro_deep_breathing`
+- `hydration` -> 无 `interaction`，只记录选择；如果文案同时包含起身走动，则映射到 `micro_short_walk`
+- `nutrition` -> `micro_pre_workout_snack` 或 `micro_post_workout_snack`
+- `posture` -> `micro_standing_stretch` 或 `micro_desk_mobility`
 - `sleep_protection` -> `calendar` 或 `micro_sleep_wind_down`，按是否“现在执行”区分
+- `training_adjustment` -> `micro_easy_cardio` 或 `micro_restorative_stretch`
+- `work_planning` / 未来工作块 -> `calendar`
 - `medical_attention` -> 无 `interaction`，只记录选择
 
 规则：
 
 - 即时可执行、可用 mock timeline 表达的建议使用 `micro_event`。
 - 明确安排到未来时间的建议使用 `calendar`。
+- 传感器无法可靠捕捉、且没有合理短时生理响应的建议不使用 `micro_event`，保持当前“记录选择”交互。
 - 系统不能真实完成的能力不得写入 `aiPromise`。
 
 ### Prompt 与解析
@@ -300,7 +320,7 @@ payload：
 
 ### Shared
 
-- `MicroEventTypeSchema` 接受 12 个微事件，拒绝非法值。
+- `MicroEventTypeSchema` 接受 14 个微事件，拒绝非法值。
 - `ActionOptionSchema` 兼容旧 action，校验 `calendar` 和 `micro_event`。
 
 ### Sandbox
@@ -308,7 +328,7 @@ payload：
 - 每个微事件生成合法 `DeviceEvent[]`。
 - 事件时间连续且不重叠。
 - 呼吸/休息类事件体现 HR/stress 下降、HRV 回升。
-- 走动/冷身类事件体现 steps/motion。
+- 起身走动、饭后走动、运动后慢走类事件体现 steps/motion。
 
 ### API
 
