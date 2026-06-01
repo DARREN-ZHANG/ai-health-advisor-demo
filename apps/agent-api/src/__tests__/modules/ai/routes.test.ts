@@ -204,6 +204,37 @@ describe('AI Routes', () => {
       expect(second.json().data.summary).toBe('HRV 数据已恢复');
       expect(mockedExecuteAgent).toHaveBeenCalledTimes(2);
     });
+
+    test("micro event append can be followed by bust-cache morning brief regeneration", async () => {
+      mockedExecuteAgent.mockReset();
+      mockedExecuteAgent.mockResolvedValueOnce(mockResponse);
+      app.runtime.overrideStore.reset("all");
+
+      const appendResponse = await app.inject({
+        method: "POST",
+        url: "/god-mode/micro-event-append",
+        payload: { microEventType: "micro_deep_breathing", durationMinutes: 3 },
+      });
+
+      expect(appendResponse.statusCode).toBe(200);
+      expect(appendResponse.json().data.recentRecognizedEvents.some((event: { type: string }) => event.type === "micro_deep_breathing")).toBe(true);
+
+      const briefResponse = await app.inject({
+        method: "POST",
+        url: "/ai/morning-brief",
+        payload: {
+          profileId: "profile-a",
+          pageContext: defaultPageContext,
+          bustCache: true,
+        },
+      });
+
+      expect(briefResponse.statusCode).toBe(200);
+      const body = briefResponse.json();
+      expect(body.success).toBe(true);
+      expect(body.data.summary).toEqual(expect.any(String));
+      expect(Array.isArray(body.data.chartTokens)).toBe(true);
+    });
   });
 
   describe('POST /ai/view-summary', () => {
