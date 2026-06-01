@@ -375,3 +375,36 @@ it('attaches calendar interaction for future sleep protection', () => {
     }),
   });
 });
+
+it('adds a bedtime hot shower calendar action for caffeine intake after 17:00', () => {
+  const insights = buildHomepageEventInsights({
+    homepage: makeHomepage({
+      recentEvents: [{
+        recognizedEventId: 're-caffeine-1',
+        type: 'caffeine_intake',
+        start: '2026-06-01T17:20',
+        end: '2026-06-01T17:40',
+        durationMin: 20,
+        confidence: 0.92,
+        sourceSegmentId: 'seg-caffeine-1',
+        recognitionEvidence: ['咖啡因摄入'],
+        syncState: { lastSyncedMeasuredAt: '2026-06-01T17:40', pendingEventCount: 0, fromSyncedWindow: true },
+        evidenceIds: ['event_caffeine'],
+      }],
+    }),
+    demoNow: '2026-06-01T17:45',
+  });
+
+  const hotShower = insights[0]!.actionIntents.find((action) => action.title === '睡前洗个热水澡');
+
+  expect(hotShower).toBeDefined();
+  expect(hotShower?.description).toContain('今晚睡前 60 min');
+  expect(hotShower?.interaction).toEqual({
+    kind: 'calendar',
+    calendar: {
+      title: '睡前洗个热水澡',
+      timingLabel: '今晚睡前 60 min',
+      durationMinutes: 30,
+    },
+  });
+});

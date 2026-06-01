@@ -65,7 +65,7 @@ export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInpu
       .map((ctx) => ctx.evidenceId)
       .filter((id): id is string => typeof id === 'string' && id.length > 0);
     const tension = determineEventBodyTension(eventType, event.eventWindow, homepage.latest24h.metrics, homepage.rulesInsights);
-    const recommendedFocus = buildRecommendedFocus(eventType, tension, demoNow);
+    const recommendedFocus = buildRecommendedFocus(eventType, tension, demoNow, event.start);
     return {
       eventId: event.evidenceIds[0] ?? `${event.type}_${event.start}`,
       eventType,
@@ -241,6 +241,7 @@ function buildRecommendedFocus(
   eventType: ReturnType<typeof normalizeHomepageEventType>,
   tension: EventBodyTension,
   demoNow?: string,
+  eventStart?: string,
 ): RecommendedFocus[] {
   if (tension.level === 'critical') {
     return [
@@ -270,16 +271,30 @@ function buildRecommendedFocus(
       return focus;
     }
     case 'possible_alcohol_intake':
-    case 'possible_caffeine_intake':
+    case 'possible_caffeine_intake': {
+      if (eventType === 'possible_caffeine_intake' && isAtOrAfterHour(eventStart, 17)) {
+        return [
+          { category: 'sleep_protection', action: '睡前洗个热水澡并降低刺激', timing: '今晚睡前 60 min', rationale: '帮助身体从下午咖啡因兴奋中回落' },
+          { category: 'breathing_reset', action: '做一组延长呼气的呼吸练习', durationMin: 5, rationale: '帮助神经系统从紧绷状态回落' },
+        ];
+      }
       return [
         { category: 'sleep_protection', action: '把睡前环境调暗并降低刺激', timing: '今晚睡前 60 min', rationale: '降低摄入相关兴奋对入睡的影响' },
         { category: 'breathing_reset', action: '做一组延长呼气的呼吸练习', durationMin: 5, rationale: '帮助神经系统从紧绷状态回落' },
       ];
+    }
     default:
       return [
         { category: 'movement_reset', action: '安排一次轻量活动切换状态', durationMin: 10, rationale: '帮助身体从当前事件平稳过渡到下一阶段' },
       ];
   }
+}
+
+function isAtOrAfterHour(timestamp: string | undefined, targetHour: number): boolean {
+  const time = timestamp?.split('T')[1];
+  if (!time) return false;
+  const hour = Number(time.slice(0, 2));
+  return Number.isFinite(hour) && hour >= targetHour;
 }
 
 function formatTimeRelation(eventEnd: string, demoNow?: string): string {
@@ -393,12 +408,13 @@ function interactionForFocus(
       const actionLower = focus.action.toLowerCase();
       // Future timing (e.g., "今晚睡前 60 min") -> calendar
       if (timingLower.includes('今晚') || timingLower.includes('睡前') || timingLower.includes('明天') || timingLower.includes('未来')) {
+        const isHotShower = actionLower.includes('热水澡');
         return {
           kind: 'calendar',
           calendar: {
             title: titleForFocus(focus),
             timingLabel: focus.timing ?? '稍后',
-            durationMinutes: focus.durationMin ?? 60,
+            durationMinutes: focus.durationMin ?? (isHotShower ? 30 : 60),
           },
         };
       }
@@ -508,6 +524,10 @@ function titleForFocus(focus: RecommendedFocus, eventType?: HomepageSemanticEven
     }
     case 'sleep_protection': {
       const timingLower = (focus.timing ?? '').toLowerCase();
+      const actionLower = focus.action.toLowerCase();
+      if (actionLower.includes('热水澡')) {
+        return '睡前洗个热水澡';
+      }
       if (timingLower.includes('今晚') || timingLower.includes('睡前')) {
         return '今晚提前放松准备入睡';
       }
