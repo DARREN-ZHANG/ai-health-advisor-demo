@@ -30,7 +30,7 @@ export const AnalysisPlanSchema = z.object({
     action: ActionIntent,
     riskLevel: z.enum(['general', 'potential_risk', 'safety_boundary']),
     needsClarification: z.boolean(),
-    clarificationQuestion: z.string().optional(),
+    clarificationQuestion: z.string().nullable().optional(),
   }),
   evidenceNeeds: z.array(z.object({
     metric: MetricType,
