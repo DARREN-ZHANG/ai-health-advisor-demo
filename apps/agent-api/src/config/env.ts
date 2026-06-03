@@ -57,12 +57,20 @@ const AppConfigSchema = z.object({
   MEMORY_EXTRACTION_ENABLED: envBool.default('false'),
   MEMORY_CANDIDATE_TTL_HOURS: z.coerce.number().positive().default(24),
   DEMO_USER_SCOPE_ID: z.string().min(1).default('demo'),
+  // Web Search 配置（Tavily）
+  TAVILY_API_KEY: z.string().optional(),
+  WEB_SEARCH_ENABLED: envBool,
+  WEB_SEARCH_MAX_RESULTS: z.coerce.number().int().positive().max(10).default(3),
+  WEB_SEARCH_TIMEOUT_MS: z.coerce.number().positive().default(10000),
 }).refine(
   (data) => data.FALLBACK_ONLY_MODE || data.LLM_API_KEY.length > 0,
   { message: 'LLM_API_KEY is required when FALLBACK_ONLY_MODE is false', path: ['LLM_API_KEY'] },
 ).refine(
   (data) => data.MEMORY_BACKEND !== 'supabase' || Boolean(data.SUPABASE_DB_URL),
   { message: 'SUPABASE_DB_URL is required when MEMORY_BACKEND is supabase', path: ['SUPABASE_DB_URL'] },
+).refine(
+  (data) => !data.WEB_SEARCH_ENABLED || Boolean(data.TAVILY_API_KEY),
+  { message: 'TAVILY_API_KEY is required when WEB_SEARCH_ENABLED is true', path: ['TAVILY_API_KEY'] },
 );
 
 export type AppConfig = z.infer<typeof AppConfigSchema> & {
