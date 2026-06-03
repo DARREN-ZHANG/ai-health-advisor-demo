@@ -241,6 +241,7 @@ export { queryTimelineEventsTool } from './tools/query-timeline-events';
 export { estimateCaffeineSleepImpactTool } from './tools/estimate-caffeine-sleep-impact';
 export type { CaffeineSleepImpactInput, CaffeineSleepImpactOutput } from './tools/estimate-caffeine-sleep-impact';
 export {
+  createWebSearchTool,
   WebSearchInputSchema,
   WebSearchOutputSchema,
 } from './tools/web-search';

@@ -17,6 +17,7 @@ export type { CaffeineSleepImpactInput, CaffeineSleepImpactOutput } from './esti
 
 // WebSearch 类型契约
 export {
+  createWebSearchTool,
   WebSearchInputSchema,
   WebSearchOutputSchema,
 } from './web-search';
