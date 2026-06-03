@@ -208,6 +208,16 @@ export { withTimeout, TimeoutError } from './runtime/timeout-controller';
 export type { TimeoutController } from './runtime/timeout-controller';
 export { executeAgent } from './runtime/agent-runtime';
 export type { AgentRuntimeDeps, AgentRuntimeObserver } from './runtime/agent-runtime';
+export {
+  appendWebSearchEvidenceToPrompt,
+  collectWebSearchEvidence,
+  hasRequiredUnavailableWebSearch,
+} from './runtime/web-search-evidence';
+export type {
+  CollectWebSearchEvidenceDeps,
+  WebSearchEvidence,
+  WebSearchEvidenceStatus,
+} from './runtime/web-search-evidence';
 
 // Planner (P1)
 export {
