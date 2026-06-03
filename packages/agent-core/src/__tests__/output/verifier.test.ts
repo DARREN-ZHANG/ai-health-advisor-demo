@@ -376,4 +376,77 @@ describe('verifyOutput', () => {
     expect(violation).toBeDefined();
     expect(violation!.passed).toBe(false);
   });
+
+  it('homepage forbidden prior-event mention reports hard violation', () => {
+    const report = verifyOutput({
+      envelope: makeEnvelope({
+        summary: '林巅峰，这次运动很好地打断了久坐后的低活跃状态。',
+        actions: [{
+          id: 'a1',
+          emoji: '💧',
+          title: '先小口补水',
+          description: '现在小口补水，观察心率自然回落',
+          aiPromise: '我会记录你的选择并用于本次建议上下文',
+        }],
+      }),
+      context: makeContext(),
+      rulesResult: makeRulesResult(),
+      packet: makePacket({
+        homepage: {
+          recentEvents: [],
+          latest24h: { date: '2026-06-01', metrics: [] },
+          trend7d: [],
+          rulesInsights: [],
+          suggestedChartTokens: [],
+          eventInsights: [
+            {
+              eventId: 'event_cardio',
+              eventType: 'cardio_workout',
+              priority: 'high',
+              timeRelation: '刚结束约 0 min',
+              headline: '完成 30 min 训练，身体进入恢复窗口',
+              physiology: [],
+              recoveryContext: [],
+              tension: { level: 'positive', summary: '事件窗口内没有明显冲突信号', reason: 'test' },
+              recommendedFocus: [],
+              actionIntents: [],
+              mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' },
+              transitionContext: {
+                currentEventId: 'event_cardio',
+                priorEventId: 'event_sedentary',
+                priorEventType: 'work_sedentary',
+                relation: 'post_sedentary_activation',
+                internalFinding: '前一事件提示低活动和静止负荷。',
+                allowedUserFacingAngle: '只表达当前运动让身体从低活跃状态重新被带动。',
+                forbiddenMentions: ['久坐', '久坐后', '之前', '上一轮'],
+                actionSuppressions: [],
+              },
+              evidenceIds: ['event_cardio'],
+            },
+            {
+              eventId: 'event_sedentary',
+              eventType: 'work_sedentary',
+              priority: 'medium',
+              timeRelation: '约 30 min 前结束',
+              headline: '连续静止 240 min，循环和体态需要重置',
+              physiology: [],
+              recoveryContext: [],
+              tension: { level: 'high', summary: '静止负荷累积', reason: 'test' },
+              recommendedFocus: [],
+              actionIntents: [],
+              mentionPolicy: { summary: 'forbidden', actions: 'forbidden', reason: 'prior_event_analysis_only' },
+              evidenceIds: ['event_sedentary'],
+            },
+          ],
+        },
+      }),
+      parseResult: { success: true },
+    });
+
+    const violation = report.violations.find((v) => v.ruleId === 'homepage:event_visibility:forbidden_mention');
+    expect(violation).toBeDefined();
+    expect(violation!.passed).toBe(false);
+    expect(violation!.severity).toBe('hard');
+    expect(report.summary.hardFailures).toBeGreaterThanOrEqual(1);
+  });
 });

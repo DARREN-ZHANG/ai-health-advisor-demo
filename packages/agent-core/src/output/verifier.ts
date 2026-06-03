@@ -258,6 +258,34 @@ function buildMatchText(envelope: AgentResponseEnvelope): string {
 }
 
 const HOMEPAGE_FORBIDDEN_TERM_PATTERNS = [/baseline/i, /基线/, /基准线/, /偏离基线/];
+
+function checkHomepageForbiddenEventMentions(input: VerifierInput): QualityViolation {
+  const homepage = input.packet.homepage;
+  const current = homepage?.eventInsights.find((insight) => insight.mentionPolicy.summary === 'allowed');
+  const forbiddenMentions = current?.transitionContext?.forbiddenMentions ?? [];
+
+  if (forbiddenMentions.length === 0) {
+    return {
+      ruleId: 'homepage:event_visibility:forbidden_mention',
+      severity: 'hard',
+      passed: true,
+      message: '没有需要检查的前一事件 forbidden mentions',
+    };
+  }
+
+  const text = buildMatchText(input.envelope);
+  const matched = forbiddenMentions.filter((term) => text.includes(term));
+  const passed = matched.length === 0;
+  return {
+    ruleId: 'homepage:event_visibility:forbidden_mention',
+    severity: 'hard',
+    passed,
+    message: passed
+      ? '未检测到前一事件 forbidden mention 泄漏'
+      : `检测到前一事件 forbidden mention 泄漏: ${matched.join(', ')}`,
+    details: passed ? undefined : { matchedForbiddenMentions: matched },
+  };
+}
 const UNSUPPORTED_ACTION_PROMISE_PATTERNS = [
   /提醒/,
   /开启.*模式/,
@@ -273,6 +301,8 @@ function checkHomepageBriefQuality(input: VerifierInput): QualityViolation[] {
 
   const text = buildMatchText(input.envelope);
   const violations: QualityViolation[] = [];
+
+  violations.push(checkHomepageForbiddenEventMentions(input));
 
   violations.push(checkPatterns(
     'homepage:forbidden_terms',
