@@ -22,6 +22,23 @@ export const SafetyConstraint = z.enum([
   'disclose_missing_data', 'recommend_doctor_when_critical',
 ]);
 
+/** WebSearch topic 枚举 */
+export const WebSearchTopic = z.enum(['general', 'news']);
+
+/** WebSearch timeRange 枚举 */
+export const WebSearchTimeRange = z.enum(['day', 'week', 'month', 'year']);
+
+/** 单个 WebSearch 需求 schema */
+export const WebSearchNeedSchema = z.object({
+  query: z.string().min(3),
+  reason: z.string().min(1),
+  required: z.boolean(),
+  topic: WebSearchTopic.optional(),
+  timeRange: WebSearchTimeRange.optional(),
+  includeDomains: z.array(z.string().min(1)).optional(),
+  excludeDomains: z.array(z.string().min(1)).optional(),
+});
+
 /** AnalysisPlan schema 定义 */
 export const AnalysisPlanSchema = z.object({
   planId: z.string().min(1),
@@ -50,6 +67,7 @@ export const AnalysisPlanSchema = z.object({
     productAreas: z.array(z.string()).optional(),
     limit: z.number().int().positive().max(10).optional(),
   })).optional(),
+  webSearchNeeds: z.array(WebSearchNeedSchema).optional(),
   safetyConstraints: z.array(SafetyConstraint),
   answerShape: z.object({
     includeMissingDataDisclosure: z.boolean(),
@@ -80,3 +98,9 @@ export type TimeScopeEnum = z.infer<typeof TimeScope>;
 export type ActionIntentEnum = z.infer<typeof ActionIntent>;
 /** SafetyConstraint 枚举推断类型 */
 export type SafetyConstraintEnum = z.infer<typeof SafetyConstraint>;
+/** WebSearch need 推断类型 */
+export type WebSearchNeed = z.infer<typeof WebSearchNeedSchema>;
+/** WebSearch topic 枚举推断类型 */
+export type WebSearchTopicEnum = z.infer<typeof WebSearchTopic>;
+/** WebSearch timeRange 枚举推断类型 */
+export type WebSearchTimeRangeEnum = z.infer<typeof WebSearchTimeRange>;
