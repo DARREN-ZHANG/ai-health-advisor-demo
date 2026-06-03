@@ -130,4 +130,33 @@ describe('RuntimeRegistry', () => {
       registry.overrideStore.reset('all');
     }
   });
+
+  it('does not inject webSearchTool when WEB_SEARCH_ENABLED=false', () => {
+    const config = loadConfig({
+      FALLBACK_ONLY_MODE: 'true',
+      DATA_DIR,
+      WEB_SEARCH_ENABLED: 'false',
+    });
+    const registryWithoutSearch = createRuntimeRegistry(config, registry.metrics);
+
+    expect(registryWithoutSearch.webSearchTool).toBeUndefined();
+  });
+
+  it('injects webSearchTool when WEB_SEARCH_ENABLED=true and keeps it out of react tools', () => {
+    const config = loadConfig({
+      FALLBACK_ONLY_MODE: 'false',
+      LLM_API_KEY: 'sk-test',
+      WEB_SEARCH_ENABLED: 'true',
+      TAVILY_API_KEY: 'tvly-test',
+      WEB_SEARCH_MAX_RESULTS: '4',
+      WEB_SEARCH_TIMEOUT_MS: '12000',
+      DATA_DIR,
+    });
+
+    const registryWithSearch = createRuntimeRegistry(config, registry.metrics);
+
+    expect(registryWithSearch.webSearchTool?.name).toBe('webSearch');
+    expect(registryWithSearch.webSearchConfig).toEqual({ enabled: true, maxResults: 4 });
+    expect(registryWithSearch.reactLoop?.tools.has('webSearch')).toBe(false);
+  });
 });
