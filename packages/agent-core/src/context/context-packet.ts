@@ -314,6 +314,35 @@ export interface ActionIntentCandidate {
   interaction?: ActionInteraction;
 }
 
+export interface HomepageEventMentionPolicy {
+  summary: 'allowed' | 'forbidden';
+  actions: 'allowed' | 'forbidden';
+  reason: string;
+}
+
+export interface ActionSuppression {
+  category?: RecommendedFocus['category'];
+  interactionMicroEventType?: string;
+  textPattern?: string;
+  reason: string;
+}
+
+export interface HomepageEventTransitionContext {
+  currentEventId: string;
+  priorEventId?: string;
+  priorEventType?: HomepageSemanticEventType;
+  relation:
+    | 'post_sedentary_activation'
+    | 'post_workout_recovery'
+    | 'post_intake_sleep_risk'
+    | 'same_category_repeat'
+    | 'neutral';
+  internalFinding: string;
+  allowedUserFacingAngle: string;
+  forbiddenMentions: string[];
+  actionSuppressions: ActionSuppression[];
+}
+
 export interface HomepageEventInsight {
   eventId: string;
   eventType: HomepageSemanticEventType;
@@ -327,6 +356,8 @@ export interface HomepageEventInsight {
   recommendedFocus: RecommendedFocus[];
   actionIntents: ActionIntentCandidate[];
   evidenceIds: string[];
+  mentionPolicy: HomepageEventMentionPolicy;
+  transitionContext?: HomepageEventTransitionContext;
 }
 
 export interface HomepageContextPacket {

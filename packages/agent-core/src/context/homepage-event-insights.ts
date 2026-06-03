@@ -83,6 +83,9 @@ export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInpu
         ...event.eventWindow?.evidenceIds ?? [],
         ...visibleRecoveryEvidenceIds,
       ],
+      mentionPolicy: index === 0
+        ? { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' }
+        : { summary: 'forbidden', actions: 'forbidden', reason: 'prior_event_analysis_only' },
     };
   });
 }
