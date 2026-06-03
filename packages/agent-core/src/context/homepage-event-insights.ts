@@ -79,11 +79,18 @@ export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInpu
       .map((ctx) => ctx.evidenceId)
       .filter((id): id is string => typeof id === 'string' && id.length > 0);
     const tension = determineEventBodyTension(eventType, event.eventWindow, homepage.latest24h.metrics, homepage.rulesInsights);
-    const recommendedFocus = buildRecommendedFocus(eventType, tension, demoNow, event.start);
-    const mentionPolicy = buildMentionPolicy(index);
     const transitionContext = index === 0
       ? buildTransitionContext(sequence[0]!, sequence[1])
       : undefined;
+    const recommendedFocus = buildRecommendedFocus({
+      currentEventType: eventType,
+      priorEventType: sequence[1]?.eventType,
+      tension,
+      transitionContext,
+      demoNow,
+      eventStart: event.start,
+    });
+    const mentionPolicy = buildMentionPolicy(index);
 
     return {
       eventId,
@@ -217,14 +224,54 @@ function buildForbiddenMentions(prior: EventSequenceItem): string[] {
   }
 }
 
+function isWorkoutEvent(eventType: HomepageSemanticEventType | undefined): boolean {
+  return eventType === 'cardio_workout' || eventType === 'hiit_workout';
+}
+
 function buildActionSuppressions(
-  _current: HomepageSemanticEventType,
-  _prior: HomepageSemanticEventType | undefined,
+  current: HomepageSemanticEventType,
+  prior: HomepageSemanticEventType | undefined,
 ): ActionSuppression[] {
-  // TODO: implement action suppression logic in task 2.2+
-  void _current;
-  void _prior;
-  return [];
+  const suppressions: ActionSuppression[] = [];
+
+  if (isWorkoutEvent(current)) {
+    suppressions.push(
+      { category: 'movement_reset', reason: 'current event is already a completed workout' },
+      { interactionMicroEventType: 'micro_short_walk', reason: 'avoid recommending a walk after workout completion' },
+      { interactionMicroEventType: 'micro_easy_cardio', reason: 'avoid recommending more cardio after workout completion' },
+      { textPattern: '散步|轻走活动|继续运动|轻松有氧|再.*有氧', reason: 'avoid repeat movement wording after workout' },
+    );
+  }
+
+  if (isWorkoutEvent(prior) && !isWorkoutEvent(current)) {
+    suppressions.push(
+      { interactionMicroEventType: 'micro_easy_cardio', reason: 'prior event was workout; current action should not add more training' },
+      { textPattern: '继续运动|轻松有氧|再.*运动', reason: 'avoid more training after prior workout' },
+    );
+  }
+
+  if (prior === current) {
+    suppressions.push(
+      { category: 'movement_reset', reason: 'same event category repeated; avoid repeating the same action type' },
+      { textPattern: '再.*一次|继续.*同样', reason: 'avoid repeated same-category instruction' },
+    );
+  }
+
+  return suppressions;
+}
+
+function applyActionSuppressions(
+  focusItems: RecommendedFocus[],
+  suppressions: ActionSuppression[],
+): RecommendedFocus[] {
+  return focusItems.filter((focus) => {
+    if (suppressions.some((suppression) => suppression.category === focus.category)) return false;
+    const text = `${focus.action}\n${focus.rationale}`;
+    return !suppressions.some((suppression) => {
+      if (!suppression.textPattern) return false;
+      return new RegExp(suppression.textPattern).test(text);
+    });
+  });
 }
 
 function metric(metrics: Latest24hMetric[], name: string): Latest24hMetric | undefined {
@@ -377,12 +424,18 @@ function buildRecoveryContext(
   return contexts.filter((ctx) => !isSleepMetric(ctx.metric) || ctx.visibility === 'material');
 }
 
-function buildRecommendedFocus(
-  eventType: ReturnType<typeof normalizeHomepageEventType>,
-  tension: EventBodyTension,
-  demoNow?: string,
-  eventStart?: string,
-): RecommendedFocus[] {
+interface BuildRecommendedFocusInput {
+  currentEventType: ReturnType<typeof normalizeHomepageEventType>;
+  priorEventType?: HomepageSemanticEventType;
+  tension: EventBodyTension;
+  transitionContext?: HomepageEventInsight['transitionContext'];
+  demoNow?: string;
+  eventStart?: string;
+}
+
+function buildRecommendedFocus(input: BuildRecommendedFocusInput): RecommendedFocus[] {
+  const { currentEventType: eventType, priorEventType, tension, transitionContext, demoNow, eventStart } = input;
+
   if (tension.level === 'critical') {
     return [
       { category: 'medical_attention', action: '如伴随胸闷、气短或明显不适，及时就医评估', timing: '现在', rationale: '当前存在异常风险信号，应优先处理安全边界' },
@@ -391,16 +444,18 @@ function buildRecommendedFocus(
 
   switch (eventType) {
     case 'work_focus':
-    case 'work_sedentary':
-      return [
+    case 'work_sedentary': {
+      const focus: RecommendedFocus[] = [
         { category: 'movement_reset', action: '起身轻走并活动肩颈', durationMin: 10, rationale: '帮助从静止和认知负荷中切换出来' },
         { category: 'breathing_reset', action: '做一组缓慢呼吸', durationMin: 3, rationale: '用延长呼气降低交感神经兴奋' },
         { category: 'posture', action: '把接下来的工作切到站姿或挺直坐姿', timing: '接下来 30 min', rationale: '减少久坐对呼吸和循环的压迫' },
       ];
+      return applyActionSuppressions(focus, transitionContext?.actionSuppressions ?? buildActionSuppressions(eventType, priorEventType));
+    }
     case 'cardio_workout':
     case 'hiit_workout': {
       const focus: RecommendedFocus[] = [
-        { category: 'hydration', action: '小口补水并做轻度走动冷身', durationMin: 10, rationale: '帮助心率平稳回落并支持循环恢复' },
+        { category: 'hydration', action: '小口补水，做 5-10 min 低强度冷身拉伸', durationMin: 10, rationale: '帮助心率平稳回落并支持循环恢复' },
         { category: 'nutrition', action: '补充蛋白质和易消化碳水', timing: '运动后 45 min 内', rationale: '支持糖原回补和肌肉修复' },
       ];
 
@@ -408,25 +463,30 @@ function buildRecommendedFocus(
         focus.push({ category: 'sleep_protection', action: '睡前降低刺激和屏幕暴露', timing: '今晚睡前 60 min', rationale: '保护高强度运动后的深睡恢复窗口' });
       }
 
-      return focus;
+      return applyActionSuppressions(focus, transitionContext?.actionSuppressions ?? buildActionSuppressions(eventType, priorEventType));
     }
     case 'possible_alcohol_intake':
     case 'possible_caffeine_intake': {
+      let focus: RecommendedFocus[];
       if (eventType === 'possible_caffeine_intake' && isAtOrAfterHour(eventStart, 17)) {
-        return [
+        focus = [
           { category: 'sleep_protection', action: '睡前洗个热水澡并降低刺激', timing: '今晚睡前 60 min', rationale: '帮助身体从下午咖啡因兴奋中回落' },
           { category: 'breathing_reset', action: '做一组延长呼气的呼吸练习', durationMin: 5, rationale: '帮助神经系统从紧绷状态回落' },
         ];
+      } else {
+        focus = [
+          { category: 'sleep_protection', action: '把睡前环境调暗并降低刺激', timing: '今晚睡前 60 min', rationale: '降低摄入相关兴奋对入睡的影响' },
+          { category: 'breathing_reset', action: '做一组延长呼气的呼吸练习', durationMin: 5, rationale: '帮助神经系统从紧绷状态回落' },
+        ];
       }
-      return [
-        { category: 'sleep_protection', action: '把睡前环境调暗并降低刺激', timing: '今晚睡前 60 min', rationale: '降低摄入相关兴奋对入睡的影响' },
-        { category: 'breathing_reset', action: '做一组延长呼气的呼吸练习', durationMin: 5, rationale: '帮助神经系统从紧绷状态回落' },
-      ];
+      return applyActionSuppressions(focus, transitionContext?.actionSuppressions ?? buildActionSuppressions(eventType, priorEventType));
     }
-    default:
-      return [
+    default: {
+      const focus: RecommendedFocus[] = [
         { category: 'movement_reset', action: '安排一次轻量活动切换状态', durationMin: 10, rationale: '帮助身体从当前事件平稳过渡到下一阶段' },
       ];
+      return applyActionSuppressions(focus, transitionContext?.actionSuppressions ?? buildActionSuppressions(eventType, priorEventType));
+    }
   }
 }
 

@@ -465,3 +465,70 @@ it('marks the latest event displayable and the prior event analysis-only', () =>
     '久坐后',
   ]));
 });
+
+it('suppresses walk-like and repeat-exercise actions after a current cardio event', () => {
+  const insights = buildHomepageEventInsights({
+    demoNow: '2026-06-01T13:30',
+    homepage: makeHomepage({
+      recentEvents: [{
+        recognizedEventId: 're-cardio-1',
+        type: 'walk',
+        start: '2026-06-01T13:00',
+        end: '2026-06-01T13:30',
+        durationMin: 30,
+        confidence: 0.91,
+        sourceSegmentId: 'seg-walk-1',
+        recognitionEvidence: ['步行 30 min'],
+        syncState: { lastSyncedMeasuredAt: '2026-06-01T13:30', pendingEventCount: 0, fromSyncedWindow: true },
+        evidenceIds: ['event_walk'],
+      }],
+    }),
+  });
+
+  const actionText = insights[0]!.actionIntents.map((action) => `${action.title}\n${action.description}`).join('\n');
+  expect(insights[0]!.transitionContext?.actionSuppressions).toEqual(expect.arrayContaining([
+    expect.objectContaining({ category: 'movement_reset' }),
+    expect.objectContaining({ interactionMicroEventType: 'micro_short_walk' }),
+  ]));
+  expect(actionText).not.toMatch(/散步|轻走活动|继续运动|轻松有氧/);
+  expect(actionText).toMatch(/补水|恢复营养|拉伸|心率/);
+  expect(insights[0]!.actionIntents.map((action) => action.interaction?.kind === 'micro_event' ? action.interaction.microEvent.type : '').join('\n')).not.toMatch(/micro_short_walk|micro_post_workout_slow_walk|micro_easy_cardio/);
+});
+
+it('suppresses repeated same-category actions for consecutive current and prior events', () => {
+  const insights = buildHomepageEventInsights({
+    demoNow: '2026-06-01T18:30',
+    homepage: makeHomepage({
+      recentEvents: [
+        {
+          recognizedEventId: 're-cardio-2',
+          type: 'steady_cardio',
+          start: '2026-06-01T18:00',
+          end: '2026-06-01T18:30',
+          durationMin: 30,
+          confidence: 0.92,
+          sourceSegmentId: 'seg-cardio-2',
+          recognitionEvidence: ['有氧运动'],
+          syncState: { lastSyncedMeasuredAt: '2026-06-01T18:30', pendingEventCount: 0, fromSyncedWindow: true },
+          evidenceIds: ['event_cardio_2'],
+        },
+        {
+          recognizedEventId: 're-cardio-1',
+          type: 'steady_cardio',
+          start: '2026-06-01T17:20',
+          end: '2026-06-01T17:50',
+          durationMin: 30,
+          confidence: 0.9,
+          sourceSegmentId: 'seg-cardio-1',
+          recognitionEvidence: ['有氧运动'],
+          syncState: { lastSyncedMeasuredAt: '2026-06-01T18:30', pendingEventCount: 0, fromSyncedWindow: true },
+          evidenceIds: ['event_cardio_1'],
+        },
+      ],
+    }),
+  });
+
+  expect(insights[0]!.transitionContext?.relation).toBe('same_category_repeat');
+  const actionText = insights[0]!.actionIntents.map((action) => `${action.title}\n${action.description}`).join('\n');
+  expect(actionText).not.toMatch(/继续运动|轻松有氧|再.*有氧/);
+});
