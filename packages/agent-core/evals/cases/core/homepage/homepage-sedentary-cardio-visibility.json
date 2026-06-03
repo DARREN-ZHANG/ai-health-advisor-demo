@@ -1,0 +1,116 @@
+{
+  "id": "H-032",
+  "title": "首页摘要 - 久坐后运动只展示当前运动结果",
+  "suite": "core",
+  "category": "homepage",
+  "priority": "P0",
+  "tags": ["homepage", "event-visibility", "transition-context", "sedentary", "cardio", "actions"],
+  "setup": {
+    "profileId": "profile-a",
+    "overrides": [
+      {
+        "metric": "activity.steps",
+        "value": 3200,
+        "dateRange": {
+          "start": "2026-05-19",
+          "end": "2026-06-01"
+        }
+      }
+    ],
+    "timeline": {
+      "appendSegments": [
+        { "segmentType": "prolonged_sedentary", "offsetMinutes": 0, "durationMinutes": 240, "advanceClock": true },
+        { "segmentType": "walk", "offsetMinutes": 0, "durationMinutes": 30, "advanceClock": true }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"林巅峰，这次 30 min 步行把身体从低活跃状态重新带动起来了。\\n\\n这次运动里心率峰值达到 107 bpm，均值约 100 bpm，说明循环系统被温和激活；运动结束后重点是让心率自然回落，把疲劳感从身体里慢慢降下来。保持平稳呼吸，不要立刻停下，给身体足够的缓冲时间让血流和肌肉张力逐步恢复到日常状态，这样收尾会更舒服。\\n\\n接下来先小口补水，做 5-10 min 低强度冷身拉伸，再观察心率是否平稳回落。你想先记录补水，还是做一组放松拉伸？\",\"chartTokens\":[\"ACTIVITY_7DAYS\"],\"actionsSectionTitle\":\"现在可以这样收尾\",\"microTips\":[],\"actions\":[{\"id\":\"a1\",\"emoji\":\"💧\",\"title\":\"先小口补水\",\"description\":\"现在小口补水，观察心率自然回落\",\"aiPromise\":\"我会记录你的选择并用于本次建议上下文\"},{\"id\":\"a2\",\"emoji\":\"🏃\",\"title\":\"做一组恢复拉伸\",\"description\":\"用 5-10 min 低强度冷身拉伸，帮助身体平稳收尾\",\"aiPromise\":\"我会记录这个微行动并更新实时简报\"}]}"
+    },
+    "referenceDate": "2026-06-01"
+  },
+  "request": {
+    "requestId": "core-h032",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    }
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "mustMention": ["林巅峰"],
+      "mustMentionAny": [
+        ["步行", "运动"],
+        ["心率", "循环", "疲劳", "活跃"]
+      ],
+      "forbiddenPatterns": [
+        "久坐",
+        "之前",
+        "上一轮",
+        "前一个事件",
+        "前一次",
+        "久坐后",
+        "刚才坐"
+      ]
+    },
+    "status": {
+      "allowedStatusColors": ["good", "warning"]
+    },
+    "chartTokens": {
+      "required": ["ACTIVITY_7DAYS"]
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "散步",
+        "轻走活动",
+        "继续运动",
+        "轻松有氧",
+        "再.*有氧",
+        "久坐"
+      ]
+    },
+    "taskSpecific": {
+      "homepage": {
+        "requireRecentEventFirst": true,
+        "recentEventPatterns": ["步行", "运动"],
+        "requireEventWindowFacts": true,
+        "eventWindowValuePatterns": ["107\\s*bpm", "100\\s*bpm", "心率.*(峰值|均值)"],
+        "forbidSummaryPatterns": [
+          "久坐",
+          "之前",
+          "上一轮",
+          "前一个事件",
+          "前一次",
+          "久坐后",
+          "刚才坐"
+        ],
+        "forbidActionPatterns": [
+          "散步",
+          "轻走活动",
+          "继续运动",
+          "轻松有氧",
+          "再.*有氧",
+          "久坐"
+        ],
+        "forbidDailyStatusFirstPatterns": ["过去24小时", "整体状态", "各项指标", "一周趋势"]
+      }
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true,
+      "forbidTreatmentPromise": true
+    }
+  }
+}
