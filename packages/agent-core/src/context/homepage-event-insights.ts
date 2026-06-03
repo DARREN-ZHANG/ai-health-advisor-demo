@@ -40,6 +40,7 @@ export function normalizeHomepageEventType(eventType: string): HomepageSemanticE
 import type {
   ActionIntentCandidate,
   ActionInteraction,
+  ActionSuppression,
   EventBodyTension,
   EventPhysiologySummary,
   HomepageContextPacket,
@@ -54,10 +55,23 @@ export interface BuildHomepageEventInsightsInput {
   demoNow?: string;
 }
 
+interface EventSequenceItem {
+  eventId: string;
+  rawType: string;
+  eventType: HomepageSemanticEventType;
+}
+
 export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInput): HomepageEventInsight[] {
   const { homepage, demoNow } = input;
+  const sequence = homepage.recentEvents.map((event) => ({
+    eventId: event.evidenceIds[0] ?? `${event.type}_${event.start}`,
+    rawType: event.type,
+    eventType: normalizeHomepageEventType(event.type),
+  }));
+
   return homepage.recentEvents.map((event, index) => {
-    const eventType = normalizeHomepageEventType(event.type);
+    const eventId = event.evidenceIds[0] ?? `${event.type}_${event.start}`;
+    const eventType = sequence[index]?.eventType ?? normalizeHomepageEventType(event.type);
     const physiology = buildEventWindowPhysiology(event.eventWindow);
     const recoveryContext = buildRecoveryContext(homepage.latest24h.metrics, eventType, demoNow);
     const visibleRecoveryEvidenceIds = recoveryContext
@@ -66,8 +80,13 @@ export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInpu
       .filter((id): id is string => typeof id === 'string' && id.length > 0);
     const tension = determineEventBodyTension(eventType, event.eventWindow, homepage.latest24h.metrics, homepage.rulesInsights);
     const recommendedFocus = buildRecommendedFocus(eventType, tension, demoNow, event.start);
+    const mentionPolicy = buildMentionPolicy(index);
+    const transitionContext = index === 0
+      ? buildTransitionContext(sequence[0]!, sequence[1])
+      : undefined;
+
     return {
-      eventId: event.evidenceIds[0] ?? `${event.type}_${event.start}`,
+      eventId,
       eventType,
       priority: index === 0 ? 'high' : 'medium',
       timeRelation: formatTimeRelation(event.end, demoNow),
@@ -83,11 +102,129 @@ export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInpu
         ...event.eventWindow?.evidenceIds ?? [],
         ...visibleRecoveryEvidenceIds,
       ],
-      mentionPolicy: index === 0
-        ? { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' }
-        : { summary: 'forbidden', actions: 'forbidden', reason: 'prior_event_analysis_only' },
+      mentionPolicy,
+      ...(transitionContext ? { transitionContext } : {}),
     };
   });
+}
+
+function buildMentionPolicy(index: number): HomepageEventInsight['mentionPolicy'] {
+  return index === 0
+    ? { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' }
+    : { summary: 'forbidden', actions: 'forbidden', reason: 'prior_event_analysis_only' };
+}
+
+function buildTransitionContext(
+  current: EventSequenceItem,
+  prior: EventSequenceItem | undefined,
+): HomepageEventInsight['transitionContext'] {
+  if (!prior) {
+    return {
+      currentEventId: current.eventId,
+      relation: 'neutral',
+      internalFinding: '没有可用的前一事件，当前事件独立解释。',
+      allowedUserFacingAngle: '只围绕当前事件解释身体状态。',
+      forbiddenMentions: [],
+      actionSuppressions: buildActionSuppressions(current.eventType, undefined),
+    };
+  }
+
+  const relation = classifyTransitionRelation(current.eventType, prior.eventType);
+  return {
+    currentEventId: current.eventId,
+    priorEventId: prior.eventId,
+    priorEventType: prior.eventType,
+    relation,
+    internalFinding: buildInternalFinding(current.eventType, prior.eventType, relation),
+    allowedUserFacingAngle: buildAllowedUserFacingAngle(current.eventType, relation),
+    forbiddenMentions: buildForbiddenMentions(prior),
+    actionSuppressions: buildActionSuppressions(current.eventType, prior.eventType),
+  };
+}
+
+function classifyTransitionRelation(
+  current: HomepageSemanticEventType,
+  prior: HomepageSemanticEventType,
+): NonNullable<HomepageEventInsight['transitionContext']>['relation'] {
+  if (current === prior) {
+    return 'same_category_repeat';
+  }
+  if ((current === 'cardio_workout' || current === 'hiit_workout') && prior === 'work_sedentary') {
+    return 'post_sedentary_activation';
+  }
+  if (prior === 'cardio_workout' || prior === 'hiit_workout') {
+    return 'post_workout_recovery';
+  }
+  if (prior === 'possible_caffeine_intake' || prior === 'possible_alcohol_intake') {
+    return 'post_intake_sleep_risk';
+  }
+  return 'neutral';
+}
+
+function buildInternalFinding(
+  current: HomepageSemanticEventType,
+  prior: HomepageSemanticEventType,
+  relation: NonNullable<HomepageEventInsight['transitionContext']>['relation'],
+): string {
+  switch (relation) {
+    case 'post_sedentary_activation':
+      return '前一事件提示低活动和静止负荷，当前运动事件可用于判断循环激活和疲劳回落。';
+    case 'post_workout_recovery':
+      return '前一事件是运动负荷，当前事件需要优先判断恢复而不是继续追加活动。';
+    case 'post_intake_sleep_risk':
+      return '前一摄入相关事件可能仍影响神经兴奋度，当前事件建议需要避免增加刺激。';
+    case 'same_category_repeat':
+      return `当前事件与前一事件同为 ${current}，建议应避免重复同类动作。`;
+    case 'neutral':
+      return `前一事件 ${prior} 仅作为内部背景，不应直接进入用户可见表达。`;
+  }
+}
+
+function buildAllowedUserFacingAngle(
+  current: HomepageSemanticEventType,
+  relation: NonNullable<HomepageEventInsight['transitionContext']>['relation'],
+): string {
+  if (relation === 'post_sedentary_activation' && (current === 'cardio_workout' || current === 'hiit_workout')) {
+    return '只表达当前运动让身体从低活跃状态重新被带动，疲劳感和循环状态正在改善。';
+  }
+  if (relation === 'post_workout_recovery') {
+    return '只表达当前事件应帮助身体从当前负荷里平稳恢复。';
+  }
+  if (relation === 'same_category_repeat') {
+    return '只表达当前事件后的收尾和恢复，不建议再次重复同类动作。';
+  }
+  return '只围绕当前事件的事件窗口指标、当前张力和下一步建议表达。';
+}
+
+function buildForbiddenMentions(prior: EventSequenceItem): string[] {
+  const common = ['之前', '上一轮', '前一个事件', '前一次', '刚才'];
+  switch (prior.eventType) {
+    case 'work_sedentary':
+      return ['久坐', '静止工作', '长时间静止', '久坐后', ...common];
+    case 'work_focus':
+      return ['专注', '工作', '深度专注', ...common];
+    case 'meal':
+      return ['进餐', '吃饭', '餐后', ...common];
+    case 'cardio_workout':
+    case 'hiit_workout':
+      return ['上一段运动', '运动后吃饭', '刚运动完又', ...common];
+    case 'possible_caffeine_intake':
+      return ['咖啡因后', '喝咖啡后', ...common];
+    case 'possible_alcohol_intake':
+      return ['饮酒后', '喝酒后', ...common];
+    default:
+      return common;
+  }
+}
+
+function buildActionSuppressions(
+  _current: HomepageSemanticEventType,
+  _prior: HomepageSemanticEventType | undefined,
+): ActionSuppression[] {
+  // TODO: implement action suppression logic in task 2.2+
+  void _current;
+  void _prior;
+  return [];
 }
 
 function metric(metrics: Latest24hMetric[], name: string): Latest24hMetric | undefined {

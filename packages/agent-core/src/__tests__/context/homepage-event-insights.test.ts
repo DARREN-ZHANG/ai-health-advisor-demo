@@ -408,3 +408,60 @@ it('adds a bedtime hot shower calendar action for caffeine intake after 17:00', 
     },
   });
 });
+
+it('marks the latest event displayable and the prior event analysis-only', () => {
+  const insights = buildHomepageEventInsights({
+    demoNow: '2026-06-01T13:30',
+    homepage: makeHomepage({
+      recentEvents: [
+        {
+          recognizedEventId: 're-cardio-1',
+          type: 'steady_cardio',
+          start: '2026-06-01T13:00',
+          end: '2026-06-01T13:30',
+          durationMin: 30,
+          confidence: 0.92,
+          sourceSegmentId: 'seg-cardio-1',
+          recognitionEvidence: ['有氧运动'],
+          syncState: { lastSyncedMeasuredAt: '2026-06-01T13:30', pendingEventCount: 0, fromSyncedWindow: true },
+          evidenceIds: ['event_cardio'],
+        },
+        {
+          recognizedEventId: 're-sedentary-1',
+          type: 'prolonged_sedentary',
+          start: '2026-06-01T09:00',
+          end: '2026-06-01T13:00',
+          durationMin: 240,
+          confidence: 0.9,
+          sourceSegmentId: 'seg-sedentary-1',
+          recognitionEvidence: ['久坐'],
+          syncState: { lastSyncedMeasuredAt: '2026-06-01T13:30', pendingEventCount: 0, fromSyncedWindow: true },
+          evidenceIds: ['event_sedentary'],
+        },
+      ],
+    }),
+  });
+
+  expect(insights).toHaveLength(2);
+  expect(insights[0]!.mentionPolicy).toEqual({
+    summary: 'allowed',
+    actions: 'allowed',
+    reason: 'current_latest_event',
+  });
+  expect(insights[1]!.mentionPolicy).toEqual({
+    summary: 'forbidden',
+    actions: 'forbidden',
+    reason: 'prior_event_analysis_only',
+  });
+  expect(insights[0]!.transitionContext).toEqual(expect.objectContaining({
+    priorEventType: 'work_sedentary',
+    relation: 'post_sedentary_activation',
+  }));
+  expect(insights[0]!.transitionContext?.forbiddenMentions).toEqual(expect.arrayContaining([
+    '久坐',
+    '之前',
+    '上一轮',
+    '前一个事件',
+    '久坐后',
+  ]));
+});
