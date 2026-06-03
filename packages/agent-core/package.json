@@ -21,11 +21,12 @@
     "eval:agent:case": "tsx src/evals/eval-runner.ts --provider fake --report both --case"
   },
   "dependencies": {
-    "@health-advisor/shared": "workspace:*",
     "@health-advisor/sandbox": "workspace:*",
+    "@health-advisor/shared": "workspace:*",
     "@langchain/core": "^0.3.0",
     "@langchain/google-genai": "^0.2.0",
     "@langchain/openai": "^0.4.0",
+    "@langchain/tavily": "^1.2.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {

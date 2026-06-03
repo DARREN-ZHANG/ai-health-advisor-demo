@@ -240,6 +240,17 @@ export { queryMissingDataTool } from './tools/query-missing-data';
 export { queryTimelineEventsTool } from './tools/query-timeline-events';
 export { estimateCaffeineSleepImpactTool } from './tools/estimate-caffeine-sleep-impact';
 export type { CaffeineSleepImpactInput, CaffeineSleepImpactOutput } from './tools/estimate-caffeine-sleep-impact';
+export {
+  WebSearchInputSchema,
+  WebSearchOutputSchema,
+} from './tools/web-search';
+export type {
+  WebSearchInput,
+  WebSearchOutput,
+  WebSearchResult,
+  TavilySearchInvoker,
+  CreateWebSearchToolOptions,
+} from './tools/web-search';
 
 // Evidence Resolver (P2)
 export { resolveEvidenceByPlan } from './planner/evidence-resolver';
