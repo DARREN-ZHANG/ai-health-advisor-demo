@@ -49,7 +49,7 @@ export function renderTaskContextPacket(packet: TaskContextPacket, locale: Local
   sections.push(renderVisibleCharts(packet.visibleCharts, locale, hasHomepageEvents));
   sections.push(renderEvidence(packet.evidence, homepageVisibleEvidenceIds(packet.homepage)));
 
-  if (packet.homepage) sections.push(renderHomepage(packet.homepage, locale, demoNow));
+  if (packet.homepage) sections.push(renderHomepage(packet.homepage, locale));
   if (packet.viewSummary) sections.push(renderViewSummary(packet.viewSummary, locale));
   if (packet.advisorChat) sections.push(renderAdvisorChat(packet.advisorChat, locale));
 
@@ -177,7 +177,8 @@ function renderVisibleCharts(charts: VisibleChartPacket[], locale: Locale, hasHo
 
 function homepageVisibleEvidenceIds(homepage?: HomepageContextPacket): Set<string> | undefined {
   if (!homepage || homepage.recentEvents.length === 0) return undefined;
-  return new Set(homepage.eventInsights.flatMap((insight) => insight.evidenceIds));
+  const displayableInsights = homepage.eventInsights.filter((insight) => insight.mentionPolicy?.summary === 'allowed');
+  return new Set(displayableInsights.flatMap((insight) => insight.evidenceIds));
 }
 
 function renderEvidence(evidence: EvidenceFact[], visibleEvidenceIds?: Set<string>): string {
@@ -205,56 +206,81 @@ function renderEvidence(evidence: EvidenceFact[], visibleEvidenceIds?: Set<strin
 // Homepage
 // ────────────────────────────────────────────
 
-function renderHomepageEventInsights(homepage: HomepageContextPacket, locale: Locale): string {
-  if (!homepage.eventInsights || homepage.eventInsights.length === 0) return '';
+function renderDisplayableHomepageEvent(homepage: HomepageContextPacket, locale: Locale): string {
+  const current = homepage.eventInsights?.find((insight) => insight.mentionPolicy?.summary === 'allowed');
+  if (!current) return '';
 
-  const lines = [t(locale, '## 事件生理摘要（优先引用）', '## Event Physiology Insights (Prioritize)')];
+  const lines = [t(locale, '## 当前可提及事件', '## Current Mentionable Event')];
   lines.push(t(
     locale,
-    '这些结构化摘要是最近事件的优先解释输入。summary 应自然转写，不要复制列表格式。',
-    'These structured insights are the priority interpretation input for recent events. Rewrite naturally; do not copy the list format.',
+    'summary 和 actions 只能明确提及本区块事件。内部分析上下文只能用于推理，不能直接写给用户。',
+    'Summary and actions may explicitly mention only this event. Internal analysis context is reasoning-only.',
   ));
-
-  for (const insight of homepage.eventInsights) {
-    lines.push(`- [${insight.priority}] ${insight.eventType}, ${insight.timeRelation}`);
-    lines.push(`  - ${t(locale, '事件摘要', 'Event summary')}${colon(locale)}${insight.headline}`);
-    if (insight.eventWindow) {
-      lines.push(`  - ${t(locale, '事件窗口', 'Event window')}${colon(locale)}${insight.eventWindow.start} ~ ${insight.eventWindow.end}, ${t(locale, '样本数', 'samples')}${colon(locale)}${insight.eventWindow.sampleCount}, ${t(locale, '覆盖度', 'coverage')}${colon(locale)}${insight.eventWindow.coverage}`);
-      for (const metric of insight.eventWindow.metrics) {
-        const values = [
-          metric.max !== undefined ? `${t(locale, '峰值', 'max')} ${metric.max}${metric.unit}` : '',
-          metric.average !== undefined ? `${t(locale, '均值', 'avg')} ${metric.average}${metric.unit}` : '',
-          metric.latest !== undefined ? `${t(locale, '末段', 'latest')} ${metric.latest}${metric.unit}` : '',
-          metric.delta !== undefined ? `${t(locale, '变化', 'delta')} ${metric.delta > 0 ? '+' : ''}${metric.delta}${metric.unit}` : '',
-        ].filter(Boolean).join(', ');
-        lines.push(`  - ${t(locale, '事件窗口指标', 'Event-window metric')}${colon(locale)}${metric.metric} ${metric.qualifier}${values ? ` (${values})` : ''} — ${metric.interpretation}`);
-      }
-    }
-    lines.push(`  - ${t(locale, '当前张力', 'Body tension')}${colon(locale)}${insight.tension.level}: ${insight.tension.summary}`);
-    for (const item of insight.physiology) {
-      const value = item.value !== undefined ? ` ${item.value}${item.unit ?? ''}` : '';
-      lines.push(`  - ${t(locale, '生理特征', 'Physiology')}${colon(locale)}${item.metric} ${item.qualifier}${value} — ${item.interpretation}`);
-    }
-    for (const item of insight.recoveryContext) {
-      lines.push(`  - ${t(locale, '恢复背景', 'Recovery context')}${colon(locale)}${item.relation} ${item.metric} — ${item.summary}`);
-    }
-    for (const focus of insight.recommendedFocus) {
-      const timing = focus.durationMin !== undefined ? `${focus.durationMin} min` : focus.timing ?? '';
-      lines.push(`  - ${t(locale, '建议方向', 'Recommended focus')}${colon(locale)}${focus.category} ${timing} — ${focus.action}；${focus.rationale}`);
-    }
-    if (insight.actionIntents.length > 0) {
-      lines.push(`  - ${t(locale, 'actions 候选', 'Action candidates')}${colon(locale)}`);
-      for (const action of insight.actionIntents) {
-        const interaction = action.interaction ? ` interaction=${JSON.stringify(action.interaction)}` : ' interaction=none';
-        lines.push(`    - ${action.emoji}${action.title} | ${action.description} | aiPromise=${action.aiPromise} | ${interaction}`);
-      }
+  lines.push(`- [${current.priority}] ${current.eventType}, ${current.timeRelation}`);
+  lines.push(`  - ${t(locale, '事件摘要', 'Event summary')}${colon(locale)}${current.headline}`);
+  if (current.eventWindow) {
+    lines.push(`  - ${t(locale, '事件窗口', 'Event window')}${colon(locale)}${current.eventWindow.start} ~ ${current.eventWindow.end}, ${t(locale, '样本数', 'samples')}${colon(locale)}${current.eventWindow.sampleCount}, ${t(locale, '覆盖度', 'coverage')}${colon(locale)}${current.eventWindow.coverage}`);
+    for (const metric of current.eventWindow.metrics) {
+      const values = [
+        metric.max !== undefined ? `${t(locale, '峰值', 'max')} ${metric.max}${metric.unit}` : '',
+        metric.average !== undefined ? `${t(locale, '均值', 'avg')} ${metric.average}${metric.unit}` : '',
+        metric.latest !== undefined ? `${t(locale, '末段', 'latest')} ${metric.latest}${metric.unit}` : '',
+        metric.delta !== undefined ? `${t(locale, '变化', 'delta')} ${metric.delta > 0 ? '+' : ''}${metric.delta}${metric.unit}` : '',
+      ].filter(Boolean).join(', ');
+      lines.push(`  - ${t(locale, '事件窗口指标', 'Event-window metric')}${colon(locale)}${metric.metric} ${metric.qualifier}${values ? ` (${values})` : ''} — ${metric.interpretation}`);
     }
   }
-
+  lines.push(`  - ${t(locale, '当前张力', 'Body tension')}${colon(locale)}${current.tension.level}: ${current.tension.summary}`);
+  for (const item of current.physiology) {
+    const value = item.value !== undefined ? ` ${item.value}${item.unit ?? ''}` : '';
+    lines.push(`  - ${t(locale, '生理特征', 'Physiology')}${colon(locale)}${item.metric} ${item.qualifier}${value} — ${item.interpretation}`);
+  }
+  for (const item of current.recoveryContext) {
+    lines.push(`  - ${t(locale, '恢复背景', 'Recovery context')}${colon(locale)}${item.relation} ${item.metric} — ${item.summary}`);
+  }
+  for (const focus of current.recommendedFocus) {
+    const timing = focus.durationMin !== undefined ? `${focus.durationMin} min` : focus.timing ?? '';
+    lines.push(`  - ${t(locale, '建议方向', 'Recommended focus')}${colon(locale)}${focus.category} ${timing} — ${focus.action}；${focus.rationale}`);
+  }
+  if (current.actionIntents.length > 0) {
+    lines.push(`  - ${t(locale, 'actions 候选', 'Action candidates')}${colon(locale)}`);
+    for (const action of current.actionIntents) {
+      const interaction = action.interaction ? ` interaction=${JSON.stringify(action.interaction)}` : ' interaction=none';
+      lines.push(`    - ${action.emoji}${action.title} | ${action.description} | aiPromise=${action.aiPromise} | ${interaction}`);
+    }
+  }
   return lines.join('\n');
 }
 
-function renderHomepage(homepage: HomepageContextPacket, locale: Locale, demoNow?: string): string {
+function renderInternalHomepageAnalysisContext(homepage: HomepageContextPacket, locale: Locale): string {
+  const current = homepage.eventInsights?.find((insight) => insight.mentionPolicy?.summary === 'allowed');
+  const transition = current?.transitionContext;
+  if (!transition || (!transition.priorEventId && transition.relation === 'neutral')) return '';
+
+  const lines = [t(locale, '## 内部分析上下文（禁止显式提及）', '## Internal Analysis Context (Do Not Mention Explicitly)')];
+  lines.push(t(
+    locale,
+    '本区块只能用于推理当前事件的影响。summary 和 actions 禁止直接提及 priorEventType、priorEventId、forbiddenMentions 或前一事件动作链路。',
+    'Use this only to reason about the current event. Summary and actions must not mention priorEventType, priorEventId, forbiddenMentions, or prior event chains.',
+  ));
+  lines.push(`- relation: ${transition.relation}`);
+  if (transition.priorEventType) lines.push(`- priorEventType: ${transition.priorEventType}`);
+  if (transition.priorEventId) lines.push(`- priorEventId: ${transition.priorEventId}`);
+  lines.push(`- internalFinding: ${transition.internalFinding}`);
+  lines.push(`- allowedUserFacingAngle: ${transition.allowedUserFacingAngle}`);
+  if (transition.forbiddenMentions.length > 0) {
+    lines.push(`- forbiddenMentions: ${transition.forbiddenMentions.join(', ')}`);
+  }
+  if (transition.actionSuppressions.length > 0) {
+    lines.push('- actionSuppressions:');
+    for (const suppression of transition.actionSuppressions) {
+      lines.push(`  - category=${suppression.category ?? 'none'}, interactionMicroEventType=${suppression.interactionMicroEventType ?? 'none'}, textPattern=${suppression.textPattern ?? 'none'}, reason=${suppression.reason}`);
+    }
+  }
+  return lines.join('\n');
+}
+
+function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string {
   const c = colon(locale);
   const lines: string[] = [];
 
@@ -264,36 +290,16 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale, demoNow
   if (hasEvents) {
     lines.push(t(
       locale,
-      '> 内容优先级：事件详情是主体（≥50%），24h 状态仅作交叉验证（≤30%），趋势数据一句话概括即可',
-      '> Content priority: event details are the main subject (≥50%), 24h status is cross-validation only (≤30%), trend data summarized in one sentence',
+      '> 内容优先级：当前可提及事件是主体（≥70%），内部分析上下文只能影响推理，24h 状态仅作交叉验证（≤15%）',
+      '> Content priority: current mentionable event is the main subject (≥70%); internal analysis context is reasoning-only; 24h status is cross-validation only (≤15%)',
     ));
   }
 
-  // Recent events（附时间权重标签）
-  if (hasEvents) {
-    lines.push(t(locale, '## 最近发生的事件（分析主体）', '## Recent Events (Main Analysis Subject)'));
-    // 权重指引注释
-    if (demoNow) {
-      lines.push(t(locale, '> 数据时效权重：距当前时间越近的数据权重越高，请按权重分配篇幅，高权重详述，低权重概括', '> Data freshness weight: data closer to current time has higher weight. Allocate more detail to high-weight data, summarize low-weight data'));
-    }
-    for (const ev of homepage.recentEvents) {
-      if (ev.start && ev.end) {
-        // 计算时间权重标签
-        const weightLabel = demoNow ? computeWeightLabel(ev.start, demoNow, locale) : '';
-        const weightPrefix = weightLabel ? `${weightLabel} ` : '';
-        // 持续性影响事件标记（咖啡因/饮酒），模板段落2会据此决定是否提及
-        const ongoingTag = isOngoingEffectEvent(ev.type, ev.end, demoNow)
-          ? ` ${t(locale, '⚠ 影响持续中', '⚠ Effect ongoing')}`
-          : '';
-        lines.push(`- ${weightPrefix}[${ev.type}] ${t(locale, '开始', 'start')}${c}${ev.start}, ${t(locale, '持续', 'duration')}${c}${ev.durationMin} min, ${t(locale, '置信度', 'confidence')}${c}${Math.round(ev.confidence * 100)}%${ongoingTag}`);
-      } else {
-        lines.push(`- [${ev.type}] ${ev.type}`);
-      }
-    }
-  }
+  const displayableEventSection = renderDisplayableHomepageEvent(homepage, locale);
+  if (displayableEventSection) lines.push(displayableEventSection);
 
-  const eventInsightSection = renderHomepageEventInsights(homepage, locale);
-  if (eventInsightSection) lines.push(eventInsightSection);
+  const internalAnalysisSection = renderInternalHomepageAnalysisContext(homepage, locale);
+  if (internalAnalysisSection) lines.push(internalAnalysisSection);
 
   if (hasEvents) {
     const materialRecoveryMetrics = new Set(
@@ -556,48 +562,4 @@ function getChartTokenForTab(tab: DataTab): ChartTokenId | undefined {
   return map[tab];
 }
 
-// ────────────────────────────────────────────
-// 辅助：时间权重标签
-// ────────────────────────────────────────────
 
-/** 判断事件是否为持续性影响事件（咖啡因/饮酒）且仍在影响期内 */
-function isOngoingEffectEvent(eventType: string, eventEnd: string, demoNow?: string): boolean {
-  if (!demoNow) return false;
-  const ongoingTypes = ['possible_caffeine_intake', 'possible_alcohol_intake'];
-  if (!ongoingTypes.includes(eventType)) return false;
-
-  // 咖啡因半衰期约5-6小时，饮酒影响持续数小时，使用12小时作为保守阈值
-  const normalizedEnd = eventEnd.length <= 16 ? `${eventEnd}:00` : eventEnd;
-  const endMs = new Date(normalizedEnd).getTime();
-  const nowMs = new Date(`${demoNow}:00`).getTime();
-  const diffHours = (nowMs - endMs) / 3600000;
-
-  return diffHours >= 0 && diffHours <= 12;
-}
-
-/** 计算事件距当前时间的时间差并返回权重标签 */
-function computeWeightLabel(eventStart: string, demoNow: string, locale: Locale): string {
-  // 兼容 YYYY-MM-DDTHH:mm 和完整 ISO 格式
-  const normalizedStart = eventStart.length <= 16 ? `${eventStart}:00` : eventStart;
-  const eventMs = new Date(normalizedStart).getTime();
-  const nowMs = new Date(`${demoNow}:00`).getTime();
-  const diffMin = Math.round((nowMs - eventMs) / 60000);
-
-  if (diffMin < 0) {
-    // 未来事件（不应出现但做保护）
-    return `[${t(locale, '权重:高', 'weight:high')}]`;
-  }
-
-  // 格式化时间差
-  const diffLabel = diffMin < 60
-    ? `${diffMin} min ago`
-    : `${Math.floor(diffMin / 60)}h${diffMin % 60 > 0 ? `${diffMin % 60}m` : ''} ago`;
-
-  if (diffMin <= 30) {
-    return `[${t(locale, '权重:高', 'weight:high')}|${diffLabel}]`;
-  }
-  if (diffMin <= 120) {
-    return `[${t(locale, '权重:中', 'weight:medium')}|${diffLabel}]`;
-  }
-  return `[${t(locale, '权重:低', 'weight:low')}|${diffLabel}]`;
-}

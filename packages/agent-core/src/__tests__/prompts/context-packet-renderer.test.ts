@@ -675,6 +675,7 @@ describe('renderTaskContextPacket', () => {
             },
           ],
           evidenceIds: ['event_deep_focus_2026-04-21T10:00'],
+          mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' },
         }],
       },
     };
@@ -718,16 +719,17 @@ describe('renderTaskContextPacket', () => {
           recommendedFocus: [{ category: 'movement_reset', action: '起身轻走', durationMin: 10, rationale: '释放静止负荷' }],
           actionIntents: [{ id: 'a1', emoji: '🚶', title: '要不要轻走一下', description: '起身轻走 10 min', aiPromise: '我会记录你的选择并用于本次建议上下文', productCapability: 'record_choice' }],
           evidenceIds: ['event_deep_focus_2026-04-21T10:00', 'e-hrv', 'e-sleep'],
+          mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' },
         }],
       },
     };
 
     const output = renderTaskContextPacket(packet, 'zh', '2026-04-21T12:10');
-    expect(output).toContain('事件生理摘要（优先引用）');
+    expect(output).toContain('## 当前可提及事件');
     expect(output).toContain('work_focus');
     expect(output).toContain('认知负荷已累积');
     expect(output).toContain('要不要轻走一下');
-    expect(output.indexOf('事件生理摘要（优先引用）')).toBeLessThan(output.indexOf('过去24小时状态'));
+    expect(output.indexOf('## 当前可提及事件')).toBeLessThan(output.indexOf('过去24小时状态'));
   });
 
   it('with homepage events, renders event-window metrics and suppresses expanded normal daily metrics', () => {
@@ -821,6 +823,7 @@ describe('renderTaskContextPacket', () => {
           recommendedFocus: [{ category: 'hydration', action: '小口补水并做轻度走动冷身', durationMin: 10, rationale: '帮助心率平稳回落并支持循环恢复' }],
           actionIntents: [],
           evidenceIds: ['event_hiit', 'event_window_re-hiit-1_heart_rate'],
+          mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' },
         }],
         latest24h: {
           date: '2026-05-31',
@@ -838,7 +841,7 @@ describe('renderTaskContextPacket', () => {
 
     const output = renderTaskContextPacket(packet, 'zh', '2026-05-31T18:35');
 
-    expect(output).toContain('## 事件生理摘要（优先引用）');
+    expect(output).toContain('## 当前可提及事件');
     expect(output).toContain('事件窗口');
     expect(output).toContain('峰值 172bpm');
     expect(output).not.toContain('其余指标正常：hrv 93ms, resting_hr 48bpm, spo2 99%');
@@ -906,17 +909,122 @@ describe('renderTaskContextPacket', () => {
           ],
           actionIntents: [],
           evidenceIds: ['event_walk_2026-06-01T12:30', 'latest24h_hrv_2026-06-01'],
+          mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' },
         }],
       },
     };
 
     const output = renderTaskContextPacket(packet, 'zh', '2026-06-01T13:00');
 
-    expect(output).toContain('## 事件生理摘要（优先引用）');
+    expect(output).toContain('## 当前可提及事件');
     expect(output).toContain('恢复背景：supports hrv');
     expect(output).toContain('非显著恢复指标');
     expect(output).not.toContain('sleep_total：450min');
     expect(output).not.toContain('latest24h_sleep_total_2026-06-01');
     expect(output).not.toContain('今晚睡前');
+  });
+
+  it('separates displayable current event from analysis-only prior event', () => {
+    const packet: TaskContextPacket = {
+      task: { type: 'homepage_summary', page: 'home' },
+      userContext: {
+        profileId: 'profile-a',
+        name: '林巅峰',
+        age: 32,
+        tags: [],
+        baselines: { restingHR: 48, hrv: 90, spo2: 98, avgSleepMinutes: 480, avgSteps: 10000 },
+      },
+      dataWindow: { start: '2026-06-01', end: '2026-06-01', recordCount: 1, completenessPct: 100 },
+      missingData: [],
+      evidence: [
+        { id: 'event_cardio', source: 'timeline_sync', derivation: 'current displayable event' },
+        { id: 'event_sedentary', source: 'timeline_sync', derivation: 'prior analysis-only event' },
+      ],
+      visibleCharts: [],
+      homepage: {
+        recentEvents: [
+          {
+            recognizedEventId: 're-cardio-1',
+            type: 'steady_cardio',
+            start: '2026-06-01T13:00',
+            end: '2026-06-01T13:30',
+            durationMin: 30,
+            confidence: 0.92,
+            sourceSegmentId: 'seg-cardio-1',
+            recognitionEvidence: ['有氧运动'],
+            syncState: { lastSyncedMeasuredAt: '2026-06-01T13:30', pendingEventCount: 0, fromSyncedWindow: true },
+            evidenceIds: ['event_cardio'],
+          },
+          {
+            recognizedEventId: 're-sedentary-1',
+            type: 'prolonged_sedentary',
+            start: '2026-06-01T09:00',
+            end: '2026-06-01T13:00',
+            durationMin: 240,
+            confidence: 0.9,
+            sourceSegmentId: 'seg-sedentary-1',
+            recognitionEvidence: ['久坐'],
+            syncState: { lastSyncedMeasuredAt: '2026-06-01T13:30', pendingEventCount: 0, fromSyncedWindow: true },
+            evidenceIds: ['event_sedentary'],
+          },
+        ],
+        latest24h: { date: '2026-06-01', metrics: [] },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+        eventInsights: [
+          {
+            eventId: 'event_cardio',
+            eventType: 'cardio_workout',
+            priority: 'high',
+            timeRelation: '刚结束约 0 min',
+            headline: '完成 30 min 训练，身体进入恢复窗口',
+            physiology: [],
+            recoveryContext: [],
+            tension: { level: 'positive', summary: '事件窗口内没有明显冲突信号', reason: 'test' },
+            recommendedFocus: [],
+            actionIntents: [],
+            mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' },
+            transitionContext: {
+              currentEventId: 'event_cardio',
+              priorEventId: 'event_sedentary',
+              priorEventType: 'work_sedentary',
+              relation: 'post_sedentary_activation',
+              internalFinding: '前一事件提示低活动和静止负荷，当前运动事件可用于判断循环激活和疲劳回落。',
+              allowedUserFacingAngle: '只表达当前运动让身体从低活跃状态重新被带动。',
+              forbiddenMentions: ['久坐', '之前', '上一轮'],
+              actionSuppressions: [],
+            },
+            evidenceIds: ['event_cardio'],
+          },
+          {
+            eventId: 'event_sedentary',
+            eventType: 'work_sedentary',
+            priority: 'medium',
+            timeRelation: '约 0 min 前结束',
+            headline: '连续静止 240 min，循环和体态需要重置',
+            physiology: [],
+            recoveryContext: [],
+            tension: { level: 'high', summary: '这次工作事件内已经出现神经或静止负荷累积', reason: 'test' },
+            recommendedFocus: [],
+            actionIntents: [],
+            mentionPolicy: { summary: 'forbidden', actions: 'forbidden', reason: 'prior_event_analysis_only' },
+            evidenceIds: ['event_sedentary'],
+          },
+        ],
+      },
+    };
+
+    const output = renderTaskContextPacket(packet, 'zh', '2026-06-01T13:30');
+    const displayableSection = output.split('## 当前可提及事件')[1]!.split('## 内部分析上下文（禁止显式提及）')[0]!;
+    expect(output).toContain('## 当前可提及事件');
+    expect(output).toContain('## 内部分析上下文（禁止显式提及）');
+    expect(displayableSection).toContain('cardio_workout');
+    expect(displayableSection).not.toContain('prolonged_sedentary');
+    expect(displayableSection).not.toContain('work_sedentary');
+    expect(output).toContain('forbiddenMentions: 久坐, 之前, 上一轮');
+    expect(output).toContain('只表达当前运动让身体从低活跃状态重新被带动。');
+    expect(output).toContain('current displayable event');
+    expect(output).not.toContain('prior analysis-only event');
   });
 });
