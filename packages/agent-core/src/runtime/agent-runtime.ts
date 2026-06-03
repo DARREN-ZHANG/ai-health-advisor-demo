@@ -43,12 +43,19 @@ import { resolveEvidenceByPlan } from '../planner/evidence-resolver';
 import type { EvidenceResolutionResult } from '../planner/evidence-resolver';
 import { runConstrainedReAct } from '../executor/react-loop';
 import type { ReActLoopDeps, ReActLoopResult } from '../executor/react-loop';
-import type { ReActStep } from '../tools/tool-types';
+import type { ReActStep, ToolDefinition } from '../tools/tool-types';
+import type { WebSearchInput, WebSearchOutput } from '../tools/web-search';
 import {
   appendRealtimeBriefToolEvidenceToPrompt,
   buildRealtimeBriefToolInvocationPlan,
   executeRealtimeBriefToolPlan,
 } from './realtime-brief-tool-orchestrator';
+import {
+  appendWebSearchEvidenceToPrompt,
+  collectWebSearchEvidence,
+  hasRequiredUnavailableWebSearch,
+} from './web-search-evidence';
+import type { WebSearchEvidence } from './web-search-evidence';
 
 export interface AgentRuntimeDeps extends ContextBuilderDeps {
   agent: HealthAgent;
@@ -70,6 +77,13 @@ export interface AgentRuntimeDeps extends ContextBuilderDeps {
   };
   /** 用户范围标识（用于 durable memory 查询） */
   userScopeId?: string;
+  /** WebSearch 工具（可选，不设置时不执行外部搜索） */
+  webSearchTool?: ToolDefinition<WebSearchInput, WebSearchOutput>;
+  /** WebSearch 配置 */
+  webSearchConfig?: {
+    enabled: boolean;
+    maxResults: number;
+  };
 }
 
 /**
@@ -104,6 +118,8 @@ export interface AgentRuntimeObserver {
   onEvidenceResolved?(result: EvidenceResolutionResult): void;
   /** P2 新增：ReAct 步骤完成后触发 */
   onReActStep?(step: ReActStep): void;
+  /** WebSearch evidence 收集完成后触发 */
+  onWebSearchEvidence?(evidence: WebSearchEvidence[]): void;
 }
 
 /**
@@ -269,6 +285,24 @@ export async function executeAgent(
       }
     }
 
+    // WebSearch: 当 plan 包含 webSearchNeeds 时执行外部搜索
+    let webSearchEvidence: WebSearchEvidence[] = [];
+    if (analysisPlan && analysisPlan.webSearchNeeds && analysisPlan.webSearchNeeds.length > 0) {
+      webSearchEvidence = await collectWebSearchEvidence(
+        analysisPlan,
+        {
+          webSearchTool: deps.webSearchTool,
+          maxResults: deps.webSearchConfig?.maxResults ?? 3,
+        },
+        { packet, context },
+      );
+      tryNotify(() => observer?.onWebSearchEvidence?.(webSearchEvidence));
+
+      if (hasRequiredUnavailableWebSearch(webSearchEvidence)) {
+        return toRequiredWebSearchUnavailableResponse(request);
+      }
+    }
+
     // 6. 构建 prompts（传入 packet）
     const systemPrompt = buildSystemPrompt(context, deps.promptLoader, packet.missingData);
     let taskPrompt = buildTaskPrompt(context, deps.promptLoader, rulesResult, packet);
@@ -282,6 +316,11 @@ export async function executeAgent(
     // P1: 如有 plan，将 plan 上下文追加到 task prompt
     if (analysisPlan) {
       taskPrompt = appendPlanContextToPrompt(taskPrompt, analysisPlan, packet, resolvedEvidence);
+    }
+
+    // WebSearch evidence 注入 prompt
+    if (webSearchEvidence.length > 0) {
+      taskPrompt = appendWebSearchEvidenceToPrompt(taskPrompt, webSearchEvidence);
     }
 
     tryNotify(() => observer?.onPromptBuilt?.({ systemPrompt, taskPrompt }));
@@ -693,6 +732,25 @@ function appendPlanContextToPrompt(
   }
 
   return sections.join('\n');
+}
+
+/** required=true 的 WebSearch 搜索不可用时的安全响应 */
+function toRequiredWebSearchUnavailableResponse(
+  request: AgentRequest,
+): AgentResponseEnvelope {
+  return {
+    summary: '当前无法获取外部资料，因此我不能可靠回答这个需要最新外部信息的问题。你可以稍后重试，或改问基于本地健康数据的问题。',
+    source: 'planner',
+    statusColor: 'warning',
+    chartTokens: [],
+    microTips: [],
+    meta: {
+      taskType: request.taskType,
+      pageContext: request.pageContext,
+      finishReason: 'complete',
+      sessionId: request.sessionId,
+    },
+  };
 }
 
 /** 构造 clarification 响应（用户意图不明确时） */

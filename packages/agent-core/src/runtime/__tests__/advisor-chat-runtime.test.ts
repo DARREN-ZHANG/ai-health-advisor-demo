@@ -19,6 +19,8 @@ import type { PromptLoader } from '../../prompts/prompt-loader';
 import type { FallbackEngine } from '../../fallback/fallback-engine';
 import type { PlanBuilderDeps } from '../../planner/advisor-plan-builder';
 import type { AnalysisPlan } from '../../planner/analysis-plan';
+import type { ToolDefinition, ToolResult } from '../../tools/tool-types';
+import type { WebSearchInput, WebSearchOutput } from '../../tools/web-search';
 import type { ProfileData, DailyRecord } from '@health-advisor/shared';
 import type { DatedEvent } from '@health-advisor/sandbox';
 import { AgentTaskType, ChartTokenId } from '@health-advisor/shared';
@@ -141,10 +143,14 @@ function makeAnalysisPlan(overrides: Partial<AnalysisPlan> = {}): AnalysisPlan {
   };
 }
 
-/** 构造 deps，可注入 planBuilder */
+/** 构造 deps，可注入 planBuilder 和 webSearch */
 function makeDeps(
   agentOverrides: Partial<HealthAgent> = {},
   planBuilder?: PlanBuilderDeps,
+  webSearch?: {
+    tool?: ToolDefinition<WebSearchInput, WebSearchOutput>;
+    maxResults?: number;
+  },
 ): AgentRuntimeDeps {
   const data = makeProfileData();
   return {
@@ -169,6 +175,8 @@ function makeDeps(
     promptLoader: mockPromptLoader,
     fallbackEngine: mockFallbackEngine,
     planBuilder,
+    webSearchTool: webSearch?.tool,
+    webSearchConfig: webSearch ? { enabled: Boolean(webSearch.tool), maxResults: webSearch.maxResults ?? 3 } : undefined,
   };
 }
 
@@ -185,6 +193,18 @@ function makePlanBuilderDeps(planResult: { success: boolean; plan?: AnalysisPlan
     plannerPrompt: '你是一个健康数据分析规划师',
   };
   return { deps, plannerInvoke };
+}
+
+function makeWebSearchTool(
+  result: ToolResult<WebSearchOutput>,
+): ToolDefinition<WebSearchInput, WebSearchOutput> {
+  return {
+    name: 'webSearch',
+    description: 'test web search',
+    inputSchema: { parse: (value: WebSearchInput) => value } as never,
+    outputSchema: { parse: (value: WebSearchOutput) => value } as never,
+    execute: vi.fn(async () => result),
+  };
 }
 
 // ── 测试用例 ──────────────────────────────────────
@@ -621,5 +641,147 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
       expect(result.source).toBe('planner');
       expect(result.meta.finishReason).toBe('complete');
     });
+  });
+});
+
+describe('Advisor Chat WebSearch runtime', () => {
+  it('webSearchNeeds 成功时调用 tool 并把结果注入 solver prompt', async () => {
+    const plan = makeAnalysisPlan({
+      evidenceNeeds: [],
+      webSearchNeeds: [
+        {
+          query: 'recent caffeine sleep research',
+          reason: '用户询问最近公开研究',
+          required: true,
+          topic: 'general',
+          timeRange: 'year',
+        },
+      ],
+    });
+    const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+    const tool = makeWebSearchTool({
+      success: true,
+      data: {
+        results: [
+          {
+            title: 'Caffeine and sleep',
+            url: 'https://example.com/caffeine',
+            content: 'Research snippet.',
+            publishedDate: '2026-05-01',
+          },
+        ],
+      },
+      evidenceIds: ['web:https://example.com/caffeine'],
+    });
+    const solverInvoke = vi.fn(async () => ({
+      content: JSON.stringify({ summary: '已结合外部资料保守说明。', chartTokens: [], microTips: [] }),
+    }));
+    const onPromptBuilt = vi.fn();
+    const onWebSearchEvidence = vi.fn();
+
+    const result = await executeAgent(
+      makeAdvisorChatRequest({ userMessage: '最近有什么关于咖啡因和睡眠的研究？' }),
+      makeDeps({ invoke: solverInvoke }, planBuilder, { tool, maxResults: 3 }),
+      undefined,
+      { onPromptBuilt, onWebSearchEvidence },
+    );
+
+    expect(result.summary).toBe('已结合外部资料保守说明。');
+    expect(tool.execute).toHaveBeenCalledTimes(1);
+    expect(solverInvoke).toHaveBeenCalledTimes(1);
+    expect(onWebSearchEvidence).toHaveBeenCalledTimes(1);
+    const promptInput = onPromptBuilt.mock.calls[0]![0];
+    expect(promptInput.taskPrompt).toContain('## Web Search Evidence');
+    expect(promptInput.taskPrompt).toContain('[web:https://example.com/caffeine] Caffeine and sleep');
+  });
+
+  it('required=true 且 tool 未注入时返回安全说明并且不调用 solver', async () => {
+    const plan = makeAnalysisPlan({
+      evidenceNeeds: [],
+      webSearchNeeds: [
+        {
+          query: 'latest public sleep guideline',
+          reason: '用户要求最新外部指南',
+          required: true,
+        },
+      ],
+    });
+    const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+    const solverInvoke = vi.fn(async () => ({
+      content: JSON.stringify({ summary: '不应该被调用', chartTokens: [], microTips: [] }),
+    }));
+    const onWebSearchEvidence = vi.fn();
+
+    const result = await executeAgent(
+      makeAdvisorChatRequest({ userMessage: '最新睡眠指南怎么说？' }),
+      makeDeps({ invoke: solverInvoke }, planBuilder),
+      undefined,
+      { onWebSearchEvidence },
+    );
+
+    expect(result.summary).toContain('当前无法获取外部资料');
+    expect(result.source).toBe('planner');
+    expect(result.meta.finishReason).toBe('complete');
+    expect(solverInvoke).not.toHaveBeenCalled();
+    expect(onWebSearchEvidence).toHaveBeenCalledTimes(1);
+  });
+
+  it('required=true 且搜索空结果时不调用 solver', async () => {
+    const plan = makeAnalysisPlan({
+      evidenceNeeds: [],
+      webSearchNeeds: [{ query: 'latest public sleep guideline', reason: '用户要求最新外部指南', required: true }],
+    });
+    const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+    const tool = makeWebSearchTool({ success: true, data: { results: [] }, evidenceIds: [] });
+    const solverInvoke = vi.fn(async () => ({
+      content: JSON.stringify({ summary: '不应该被调用', chartTokens: [], microTips: [] }),
+    }));
+
+    const result = await executeAgent(
+      makeAdvisorChatRequest({ userMessage: '最新睡眠指南怎么说？' }),
+      makeDeps({ invoke: solverInvoke }, planBuilder, { tool }),
+    );
+
+    expect(result.summary).toContain('当前无法获取外部资料');
+    expect(solverInvoke).not.toHaveBeenCalled();
+  });
+
+  it('required=false 且搜索失败时继续调用 solver 并注入 unavailable', async () => {
+    const plan = makeAnalysisPlan({
+      evidenceNeeds: [],
+      webSearchNeeds: [{ query: 'recent sleep news', reason: '补充外部背景资料', required: false }],
+    });
+    const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+    const tool = makeWebSearchTool({ success: false, error: { code: 'web_search_error', message: 'Tavily unavailable' } });
+    const solverInvoke = vi.fn(async () => ({
+      content: JSON.stringify({ summary: '基于本地上下文回答。', chartTokens: [], microTips: [] }),
+    }));
+    const onPromptBuilt = vi.fn();
+
+    const result = await executeAgent(
+      makeAdvisorChatRequest({ userMessage: '最近睡眠新闻有哪些？' }),
+      makeDeps({ invoke: solverInvoke }, planBuilder, { tool }),
+      undefined,
+      { onPromptBuilt },
+    );
+
+    expect(result.summary).toBe('基于本地上下文回答。');
+    expect(solverInvoke).toHaveBeenCalledTimes(1);
+    const promptInput = onPromptBuilt.mock.calls[0]![0];
+    expect(promptInput.taskPrompt).toContain('状态: unavailable');
+    expect(promptInput.taskPrompt).toContain('不得声称已查到外部资料');
+  });
+
+  it('plan 没有 webSearchNeeds 时不调用 webSearchTool', async () => {
+    const plan = makeAnalysisPlan({ webSearchNeeds: undefined });
+    const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+    const tool = makeWebSearchTool({ success: true, data: { results: [] }, evidenceIds: [] });
+
+    await executeAgent(
+      makeAdvisorChatRequest({ userMessage: '我最近的睡眠怎么样？' }),
+      makeDeps({}, planBuilder, { tool }),
+    );
+
+    expect(tool.execute).not.toHaveBeenCalled();
   });
 });
