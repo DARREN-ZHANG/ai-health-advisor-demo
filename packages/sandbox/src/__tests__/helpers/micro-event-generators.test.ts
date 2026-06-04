@@ -29,18 +29,30 @@ describe('generateEventsForMicroEvent', () => {
 
   it('deep breathing lowers heart rate and raises HRV', () => {
     const events = generateEventsForMicroEvent(makeSegment('micro_deep_breathing'));
-    const hr = events.filter((event) => event.metric === 'heartRate').map((event) => Number(event.value));
-    const hrv = events.filter((event) => event.metric === 'hrvRmssd').map((event) => Number(event.value));
+    const hr = events
+      .filter((event) => event.metric === 'heartRate')
+      .map((event) => Number(event.value));
+    const hrv = events
+      .filter((event) => event.metric === 'hrvRmssd')
+      .map((event) => Number(event.value));
 
     expect(hr.at(-1)!).toBeLessThan(hr[0]!);
     expect(hrv.at(-1)!).toBeGreaterThan(hrv[0]!);
-    expect(events.filter((event) => event.metric === 'steps').every((event) => Number(event.value) === 0)).toBe(true);
+    expect(
+      events
+        .filter((event) => event.metric === 'steps')
+        .every((event) => Number(event.value) === 0),
+    ).toBe(true);
   });
 
   it('short walk produces steps and motion without hydration claims', () => {
     const events = generateEventsForMicroEvent(makeSegment('micro_short_walk'));
-    const steps = events.filter((event) => event.metric === 'steps').map((event) => Number(event.value));
-    const motions = events.filter((event) => event.metric === 'motion').map((event) => Number(event.value));
+    const steps = events
+      .filter((event) => event.metric === 'steps')
+      .map((event) => Number(event.value));
+    const motions = events
+      .filter((event) => event.metric === 'motion')
+      .map((event) => Number(event.value));
 
     expect(steps.at(-1)!).toBeGreaterThan(200);
     expect(Math.max(...motions)).toBeGreaterThan(1);
@@ -59,7 +71,9 @@ describe('generateEventsForMicroEvent', () => {
 
     expect(hr.at(-1)!).toBeLessThan(hr[0]! - 6); // 至少下降 6 bpm
     expect(hrv.at(-1)!).toBeGreaterThan(hrv[0]! + 8); // 至少上升 8 ms
-    expect(events.filter((e) => e.metric === 'steps').every((e) => Number(e.value) === 0)).toBe(true);
+    expect(events.filter((e) => e.metric === 'steps').every((e) => Number(e.value) === 0)).toBe(
+      true,
+    );
   });
 
   it('stair climb produces high steps and HR rise', () => {
@@ -78,7 +92,9 @@ describe('generateEventsForMicroEvent', () => {
 
     expect(hr.at(-1)!).toBeLessThan(hr[0]! - 6); // 心率骤降
     expect(hrv.at(-1)!).toBeGreaterThan(hrv[0]! + 8); // HRV 大幅拉升
-    expect(events.filter((e) => e.metric === 'steps').every((e) => Number(e.value) === 0)).toBe(true);
+    expect(events.filter((e) => e.metric === 'steps').every((e) => Number(e.value) === 0)).toBe(
+      true,
+    );
   });
 
   it('power nap lowers HR below resting baseline and raises HRV', () => {
@@ -88,6 +104,8 @@ describe('generateEventsForMicroEvent', () => {
 
     expect(hr.at(-1)!).toBeLessThan(58); // 低于 restingHr baseline
     expect(hrv.at(-1)!).toBeGreaterThan(hrv[0]! + 6); // HRV 显著上升
-    expect(events.filter((e) => e.metric === 'steps').every((e) => Number(e.value) === 0)).toBe(true);
+    expect(events.filter((e) => e.metric === 'steps').every((e) => Number(e.value) === 0)).toBe(
+      true,
+    );
   });
 });

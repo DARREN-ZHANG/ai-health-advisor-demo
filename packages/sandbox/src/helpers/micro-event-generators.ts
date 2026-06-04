@@ -53,12 +53,7 @@ function deterministic(seed: number, offset: number): number {
 }
 
 /** 基于范围和偏移计算确定性值 */
-function rangeValue(
-  base: number,
-  range: number,
-  minuteOffset: number,
-  seed: number,
-): number {
+function rangeValue(base: number, range: number, minuteOffset: number, seed: number): number {
   const d = deterministic(seed, minuteOffset);
   return Math.round(base - range / 2 + d * range);
 }
@@ -87,7 +82,10 @@ export interface MicroEventSegment {
 }
 
 /** 微事件类型到 MotionPattern 的映射（用于 IMU 生成） */
-const MICRO_MOTION_PATTERN_MAP: Record<MicroEventType, import('@health-advisor/shared').MotionPattern> = {
+const MICRO_MOTION_PATTERN_MAP: Record<
+  MicroEventType,
+  import('@health-advisor/shared').MotionPattern
+> = {
   micro_deep_breathing: 'still_upright',
   micro_short_walk: 'periodic_walk',
   micro_post_meal_walk: 'periodic_stroll',
@@ -148,7 +146,12 @@ function generateDeepBreathing(segment: MicroEventSegment): DeviceEvent[] {
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -178,7 +181,12 @@ function generateShortWalk(segment: MicroEventSegment): DeviceEvent[] {
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
   }
@@ -205,7 +213,12 @@ function generatePostMealWalk(segment: MicroEventSegment): DeviceEvent[] {
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
   }
@@ -232,7 +245,12 @@ function generatePostWorkoutSlowWalk(segment: MicroEventSegment): DeviceEvent[] 
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
   }
@@ -256,7 +274,12 @@ function generateStandingStretch(segment: MicroEventSegment): DeviceEvent[] {
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -284,7 +307,12 @@ function generateDeskMobility(segment: MicroEventSegment): DeviceEvent[] {
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -315,7 +343,12 @@ function generateOffscreenRest(segment: MicroEventSegment): DeviceEvent[] {
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -344,7 +377,12 @@ function generateWindowGazeWalk(segment: MicroEventSegment): DeviceEvent[] {
     const hr = rangeValue(restingHr + (isMoving ? 8 : 2), 5, m, 71);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -377,7 +415,12 @@ function generateSnack(segment: MicroEventSegment): DeviceEvent[] {
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
   }
@@ -401,7 +444,12 @@ function generateEasyCardio(segment: MicroEventSegment): DeviceEvent[] {
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
   }
@@ -425,7 +473,12 @@ function generateRestorativeStretch(segment: MicroEventSegment): DeviceEvent[] {
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -455,7 +508,12 @@ function generateLowStimulus(segment: MicroEventSegment): DeviceEvent[] {
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -485,7 +543,12 @@ function generateSleepWindDown(segment: MicroEventSegment): DeviceEvent[] {
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -515,7 +578,12 @@ function generateBoxBreathing(segment: MicroEventSegment): DeviceEvent[] {
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -546,7 +614,12 @@ function generateCalmingBreathing(segment: MicroEventSegment): DeviceEvent[] {
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -576,7 +649,12 @@ function generateHydrationWalk(segment: MicroEventSegment): DeviceEvent[] {
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
   }
@@ -614,7 +692,12 @@ function generateWarmShower(segment: MicroEventSegment): DeviceEvent[] {
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -648,7 +731,12 @@ function generatePostureCorrection(segment: MicroEventSegment): DeviceEvent[] {
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -669,14 +757,24 @@ function generateNeuroWarmup(segment: MicroEventSegment): DeviceEvent[] {
 
   for (let m = 0; m < totalMin; m += 1) {
     const progress = m / Math.max(totalMin - 1, 1);
-    const hr = rangeValue(Math.round(restingHr + 5 + Math.sin(progress * Math.PI * 2) * 3), 3, m, 180);
+    const hr = rangeValue(
+      Math.round(restingHr + 5 + Math.sin(progress * Math.PI * 2) * 3),
+      3,
+      m,
+      180,
+    );
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
 
     const stepsDelta = Math.round(5 + deterministic(181, m) * 10); // 5-15 步/分钟
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
   }
@@ -705,7 +803,12 @@ function generateRecoveryMeal(segment: MicroEventSegment): DeviceEvent[] {
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
   }
@@ -732,7 +835,12 @@ function generatePowerNap(segment: MicroEventSegment): DeviceEvent[] {
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -760,7 +868,12 @@ function generateScreenDimming(segment: MicroEventSegment): DeviceEvent[] {
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -801,7 +914,12 @@ function generateCoolShower(segment: MicroEventSegment): DeviceEvent[] {
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -832,13 +950,19 @@ function generateOutdoorBreather(segment: MicroEventSegment): DeviceEvent[] {
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
 
     // 前半段 40-60 步/分，后半段 20-30 步/分
-    const stepsPerMin = progress < 0.5
-      ? Math.round(40 + deterministic(231, m) * 20)
-      : Math.round(20 + deterministic(231, m) * 10);
+    const stepsPerMin =
+      progress < 0.5
+        ? Math.round(40 + deterministic(231, m) * 20)
+        : Math.round(20 + deterministic(231, m) * 10);
     cumulativeSteps += stepsPerMin;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -872,7 +996,12 @@ function generateStairClimb(segment: MicroEventSegment): DeviceEvent[] {
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
   }
@@ -897,7 +1026,12 @@ function generateStandingWork(segment: MicroEventSegment): DeviceEvent[] {
     cumulativeSteps += stepsDelta;
     events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -917,7 +1051,12 @@ function generateFoamRolling(segment: MicroEventSegment): DeviceEvent[] {
 
   for (let m = 0; m < totalMin; m += 1) {
     const progress = m / Math.max(totalMin - 1, 1);
-    const hr = rangeValue(Math.round(restingHr + 3 + Math.sin(progress * Math.PI * 4) * 3), 3, m, 260);
+    const hr = rangeValue(
+      Math.round(restingHr + 3 + Math.sin(progress * Math.PI * 4) * 3),
+      3,
+      m,
+      260,
+    );
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
 
     const hrvVal = rangeValue(Math.round(hrv + progress * 4), 4, m, 261);
@@ -925,7 +1064,12 @@ function generateFoamRolling(segment: MicroEventSegment): DeviceEvent[] {
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
   }
@@ -964,7 +1108,12 @@ function generateColdFaceDip(segment: MicroEventSegment): DeviceEvent[] {
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -1000,7 +1149,12 @@ function generateMindfulnessMeditation(segment: MicroEventSegment): DeviceEvent[
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -1021,7 +1175,12 @@ function generateMuscleRelaxation(segment: MicroEventSegment): DeviceEvent[] {
   for (let m = 0; m < totalMin; m += 1) {
     const progress = m / Math.max(totalMin - 1, 1);
     // 锯齿形：整体下降但有周期性波动
-    const hr = rangeValue(Math.round(restingHr - progress * 4 + Math.sin(progress * Math.PI * 6) * 3), 2, m, 290);
+    const hr = rangeValue(
+      Math.round(restingHr - progress * 4 + Math.sin(progress * Math.PI * 6) * 3),
+      2,
+      m,
+      290,
+    );
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
 
     // 阶梯式上升：基础上升 + 每 1/3 段跳一个台阶
@@ -1031,7 +1190,12 @@ function generateMuscleRelaxation(segment: MicroEventSegment): DeviceEvent[] {
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
 
@@ -1061,7 +1225,12 @@ function generateLightMeal(segment: MicroEventSegment): DeviceEvent[] {
 
     events.push(makeEvent(segment, m, 'steps', 0, idx++));
 
-    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const imuSamples = generateImuSamples(
+      MICRO_MOTION_PATTERN_MAP[segment.type],
+      m,
+      totalMin,
+      segment.segmentId.length + m,
+    );
     const motion = aggregateMotion(imuSamples);
     events.push(makeEvent(segment, m, 'motion', motion, idx++));
   }

@@ -554,7 +554,11 @@ describe('God-Mode Routes', () => {
       expect(body.success).toBe(true);
       expect(body.data.pendingEventCount).toBe(0);
       expect(body.data.activeSensing).toBeNull();
-      expect(body.data.recentRecognizedEvents.some((event: { type: string }) => event.type === 'micro_deep_breathing')).toBe(true);
+      expect(
+        body.data.recentRecognizedEvents.some(
+          (event: { type: string }) => event.type === 'micro_deep_breathing',
+        ),
+      ).toBe(true);
     });
 
     test('拒绝无效的微事件类型', async () => {

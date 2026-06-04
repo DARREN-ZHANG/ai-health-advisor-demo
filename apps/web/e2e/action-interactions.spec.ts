@@ -5,7 +5,9 @@ test.describe('Homepage action interactions', () => {
     await page.goto('/');
   });
 
-  test('calendar action shows add-to-schedule button without opening active sensing', async ({ page }) => {
+  test('calendar action shows add-to-schedule button without opening active sensing', async ({
+    page,
+  }) => {
     const calendarButton = page.getByRole('button', { name: '添加进日程' }).first();
     if (!(await calendarButton.isVisible().catch(() => false))) {
       test.skip(true, 'Current brief did not produce a calendar action in this environment');
@@ -19,8 +21,14 @@ test.describe('Homepage action interactions', () => {
     await expect(page.getByText('AI Proactive Insight')).not.toBeVisible();
   });
 
-  test('micro event action updates realtime brief and does not show active sensing banner', async ({ page }) => {
-    const microAction = page.getByText(/深呼吸|箱式呼吸|舒缓调息|起身走|饭后走|慢走|补水|离屏|肩颈|拉伸|低刺激|恢复餐|小憩|冥想|站姿|泡沫轴|爬楼梯|户外|温水|微凉|降光|冷敷|轻食|肌肉放松/).first();
+  test('micro event action updates realtime brief and does not show active sensing banner', async ({
+    page,
+  }) => {
+    const microAction = page
+      .getByText(
+        /深呼吸|箱式呼吸|舒缓调息|起身走|饭后走|慢走|补水|离屏|肩颈|拉伸|低刺激|恢复餐|小憩|冥想|站姿|泡沫轴|爬楼梯|户外|温水|微凉|降光|冷敷|轻食|肌肉放松/,
+      )
+      .first();
     if (!(await microAction.isVisible().catch(() => false))) {
       test.skip(true, 'Current brief did not produce a micro event action in this environment');
       return;
