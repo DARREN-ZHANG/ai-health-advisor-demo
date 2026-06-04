@@ -634,83 +634,97 @@ function interactionForFocus(
   eventType: HomepageSemanticEventType,
   focus: RecommendedFocus,
 ): ActionInteraction | undefined {
+  const actionLower = focus.action.toLowerCase();
+
   switch (focus.category) {
-    case 'breathing_reset':
-      return {
-        kind: 'micro_event',
-        microEvent: { type: 'micro_deep_breathing', durationMinutes: focus.durationMin },
-      };
+    case 'breathing_reset': {
+      if (actionLower.includes('箱式') || actionLower.includes('box') || actionLower.includes('紧急') || actionLower.includes('rescue')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_box_breathing', durationMinutes: focus.durationMin ?? 3 } };
+      }
+      if (actionLower.includes('舒缓') || actionLower.includes('calming') || actionLower.includes('延长呼气') || actionLower.includes('4-7-8')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_calming_breathing', durationMinutes: focus.durationMin ?? 5 } };
+      }
+      if (actionLower.includes('冷水') || actionLower.includes('cold') || actionLower.includes('敷面') || actionLower.includes('冰敷')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_cold_face_dip', durationMinutes: focus.durationMin ?? 3 } };
+      }
+      if (actionLower.includes('小憩') || actionLower.includes('nap') || actionLower.includes('闭目小憩')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_power_nap', durationMinutes: focus.durationMin ?? 20 } };
+      }
+      if (actionLower.includes('冥想') || actionLower.includes('meditation') || actionLower.includes('正念')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_mindfulness_meditation', durationMinutes: focus.durationMin ?? 15 } };
+      }
+      if (actionLower.includes('肌肉放松') || actionLower.includes('muscle relaxation') || actionLower.includes('渐进')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_muscle_relaxation', durationMinutes: focus.durationMin ?? 10 } };
+      }
+      return { kind: 'micro_event', microEvent: { type: 'micro_deep_breathing', durationMinutes: focus.durationMin } };
+    }
 
     case 'movement_reset': {
       if (eventType === 'meal') {
-        return {
-          kind: 'micro_event',
-          microEvent: { type: 'micro_post_meal_walk', durationMinutes: focus.durationMin ?? 10 },
-        };
+        return { kind: 'micro_event', microEvent: { type: 'micro_post_meal_walk', durationMinutes: focus.durationMin ?? 10 } };
       }
       if (eventType === 'cardio_workout' || eventType === 'hiit_workout') {
-        return {
-          kind: 'micro_event',
-          microEvent: { type: 'micro_post_workout_slow_walk', durationMinutes: focus.durationMin ?? 10 },
-        };
+        return { kind: 'micro_event', microEvent: { type: 'micro_post_workout_slow_walk', durationMinutes: focus.durationMin ?? 10 } };
       }
-      return {
-        kind: 'micro_event',
-        microEvent: { type: 'micro_short_walk', durationMinutes: focus.durationMin ?? 10 },
-      };
+      if (actionLower.includes('补水') || actionLower.includes('接水') || actionLower.includes('hydration')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_hydration_walk', durationMinutes: focus.durationMin ?? 5 } };
+      }
+      if (actionLower.includes('户外') || actionLower.includes('outdoor') || actionLower.includes('窗外') || actionLower.includes('新鲜空气')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_outdoor_breather', durationMinutes: focus.durationMin ?? 10 } };
+      }
+      if (actionLower.includes('楼梯') || actionLower.includes('stair')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_stair_climb', durationMinutes: focus.durationMin ?? 5 } };
+      }
+      return { kind: 'micro_event', microEvent: { type: 'micro_short_walk', durationMinutes: focus.durationMin ?? 10 } };
     }
 
     case 'posture': {
-      const actionLower = focus.action.toLowerCase();
-      if (actionLower.includes('站') || actionLower.includes('站立')) {
-        return {
-          kind: 'micro_event',
-          microEvent: { type: 'micro_standing_stretch', durationMinutes: focus.durationMin },
-        };
+      if (actionLower.includes('站姿办公') || actionLower.includes('站立办公') || actionLower.includes('standing desk')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_standing_work', durationMinutes: focus.durationMin ?? 20 } };
       }
-      return {
-        kind: 'micro_event',
-        microEvent: { type: 'micro_desk_mobility', durationMinutes: focus.durationMin },
-      };
+      if (actionLower.includes('纠正') || actionLower.includes('坐姿') || actionLower.includes('posture correction') || actionLower.includes('挺直')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_posture_correction', durationMinutes: focus.durationMin ?? 15 } };
+      }
+      if (actionLower.includes('站') || actionLower.includes('站立')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_standing_stretch', durationMinutes: focus.durationMin } };
+      }
+      return { kind: 'micro_event', microEvent: { type: 'micro_desk_mobility', durationMinutes: focus.durationMin } };
     }
 
     case 'nutrition': {
       if (eventType === 'cardio_workout' || eventType === 'hiit_workout') {
-        return {
-          kind: 'micro_event',
-          microEvent: { type: 'micro_post_workout_snack' },
-        };
+        return { kind: 'micro_event', microEvent: { type: 'micro_post_workout_snack' } };
       }
       if (eventType === 'prepare_sleep') {
-        return {
-          kind: 'micro_event',
-          microEvent: { type: 'micro_pre_workout_snack' },
-        };
+        return { kind: 'micro_event', microEvent: { type: 'micro_pre_workout_snack' } };
+      }
+      if (actionLower.includes('恢复餐') || actionLower.includes('recovery meal') || actionLower.includes('练后')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_recovery_meal', durationMinutes: focus.durationMin ?? 15 } };
+      }
+      if (actionLower.includes('轻食') || actionLower.includes('清淡') || actionLower.includes('light meal') || actionLower.includes('减负')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_light_meal', durationMinutes: focus.durationMin ?? 15 } };
       }
       return undefined;
     }
 
     case 'training_adjustment': {
-      const actionLower = focus.action.toLowerCase();
       if (actionLower.includes('有氧') || actionLower.includes('心肺') || actionLower.includes('cardio')) {
-        return {
-          kind: 'micro_event',
-          microEvent: { type: 'micro_easy_cardio', durationMinutes: focus.durationMin },
-        };
+        return { kind: 'micro_event', microEvent: { type: 'micro_easy_cardio', durationMinutes: focus.durationMin } };
+      }
+      if (actionLower.includes('泡沫轴') || actionLower.includes('foam roll') || actionLower.includes('筋膜')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_foam_rolling', durationMinutes: focus.durationMin ?? 10 } };
       }
       if (actionLower.includes('拉伸') || actionLower.includes('恢复') || actionLower.includes('stretch') || actionLower.includes('recovery')) {
-        return {
-          kind: 'micro_event',
-          microEvent: { type: 'micro_restorative_stretch', durationMinutes: focus.durationMin },
-        };
+        return { kind: 'micro_event', microEvent: { type: 'micro_restorative_stretch', durationMinutes: focus.durationMin } };
+      }
+      if (actionLower.includes('热身') || actionLower.includes('唤醒') || actionLower.includes('warm up') || actionLower.includes('激活')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_neuro_warmup', durationMinutes: focus.durationMin ?? 5 } };
       }
       return undefined;
     }
 
     case 'sleep_protection': {
       const timingLower = (focus.timing ?? '').toLowerCase();
-      const actionLower = focus.action.toLowerCase();
-      // Future timing (e.g., "今晚睡前 60 min") -> calendar
       if (timingLower.includes('今晚') || timingLower.includes('睡前') || timingLower.includes('明天') || timingLower.includes('未来')) {
         const isHotShower = actionLower.includes('热水澡');
         return {
@@ -722,12 +736,23 @@ function interactionForFocus(
           },
         };
       }
-      // Immediate action
+      if (actionLower.includes('温水澡') || actionLower.includes('warm shower') || actionLower.includes('洗澡')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_warm_shower', durationMinutes: focus.durationMin ?? 10 } };
+      }
+      if (actionLower.includes('微凉') || actionLower.includes('cool shower') || actionLower.includes('冷水淋浴')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_cool_shower', durationMinutes: focus.durationMin ?? 8 } };
+      }
+      if (actionLower.includes('降光') || actionLower.includes('关屏') || actionLower.includes('dim') || actionLower.includes('褪黑素')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_screen_dimming', durationMinutes: focus.durationMin ?? 15 } };
+      }
+      if (actionLower.includes('冥想') || actionLower.includes('meditation') || actionLower.includes('正念')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_mindfulness_meditation', durationMinutes: focus.durationMin ?? 15 } };
+      }
+      if (actionLower.includes('肌肉放松') || actionLower.includes('muscle relaxation') || actionLower.includes('渐进')) {
+        return { kind: 'micro_event', microEvent: { type: 'micro_muscle_relaxation', durationMinutes: focus.durationMin ?? 10 } };
+      }
       if (actionLower.includes('调暗') || actionLower.includes('降低') || actionLower.includes('呼吸') || actionLower.includes('放松')) {
-        return {
-          kind: 'micro_event',
-          microEvent: { type: 'micro_sleep_wind_down', durationMinutes: focus.durationMin },
-        };
+        return { kind: 'micro_event', microEvent: { type: 'micro_sleep_wind_down', durationMinutes: focus.durationMin } };
       }
       return undefined;
     }
