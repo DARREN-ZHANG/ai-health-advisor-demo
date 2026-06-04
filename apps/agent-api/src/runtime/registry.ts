@@ -20,6 +20,7 @@ import {
   queryMissingDataTool,
   queryTimelineEventsTool,
   estimateCaffeineSleepImpactTool,
+  createWebSearchTool,
 } from '@health-advisor/agent-core';
 import type {
   PlanBuilderDeps,
@@ -266,6 +267,21 @@ export function createRuntimeRegistry(
   let syncReviewer: SyncReflectionReviewer | undefined;
   let reflectionObserver: ReflectionObserver | undefined;
 
+  // WebSearch 工具（按配置创建，不加入 ReAct 白名单）
+  let webSearchTool: AgentRuntimeDeps['webSearchTool'];
+  const webSearchConfig = {
+    enabled: config.WEB_SEARCH_ENABLED,
+    maxResults: config.WEB_SEARCH_MAX_RESULTS,
+  };
+
+  if (config.WEB_SEARCH_ENABLED) {
+    process.env.TAVILY_API_KEY = config.TAVILY_API_KEY;
+    webSearchTool = createWebSearchTool({
+      maxResults: config.WEB_SEARCH_MAX_RESULTS,
+      timeoutMs: config.WEB_SEARCH_TIMEOUT_MS,
+    });
+  }
+
   if (!config.FALLBACK_ONLY_MODE) {
     const plannerPrompt = loadPromptFile(
       join(config.dataDir, 'prompts', 'advisor-plan.md'),
@@ -331,6 +347,10 @@ export function createRuntimeRegistry(
     agent: effectiveAgent,
     promptLoader,
     fallbackEngine,
+
+    // WebSearch 依赖注入
+    webSearchTool,
+    webSearchConfig,
 
     // C-1: P0/P1/P2/P3 依赖注入
     planBuilder,

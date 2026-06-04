@@ -208,6 +208,16 @@ export { withTimeout, TimeoutError } from './runtime/timeout-controller';
 export type { TimeoutController } from './runtime/timeout-controller';
 export { executeAgent } from './runtime/agent-runtime';
 export type { AgentRuntimeDeps, AgentRuntimeObserver } from './runtime/agent-runtime';
+export {
+  appendWebSearchEvidenceToPrompt,
+  collectWebSearchEvidence,
+  hasRequiredUnavailableWebSearch,
+} from './runtime/web-search-evidence';
+export type {
+  CollectWebSearchEvidenceDeps,
+  WebSearchEvidence,
+  WebSearchEvidenceStatus,
+} from './runtime/web-search-evidence';
 
 // Planner (P1)
 export {
@@ -240,6 +250,18 @@ export { queryMissingDataTool } from './tools/query-missing-data';
 export { queryTimelineEventsTool } from './tools/query-timeline-events';
 export { estimateCaffeineSleepImpactTool } from './tools/estimate-caffeine-sleep-impact';
 export type { CaffeineSleepImpactInput, CaffeineSleepImpactOutput } from './tools/estimate-caffeine-sleep-impact';
+export {
+  createWebSearchTool,
+  WebSearchInputSchema,
+  WebSearchOutputSchema,
+} from './tools/web-search';
+export type {
+  WebSearchInput,
+  WebSearchOutput,
+  WebSearchResult,
+  TavilySearchInvoker,
+  CreateWebSearchToolOptions,
+} from './tools/web-search';
 
 // Evidence Resolver (P2)
 export { resolveEvidenceByPlan } from './planner/evidence-resolver';

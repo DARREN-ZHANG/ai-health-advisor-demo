@@ -102,4 +102,44 @@ describe('loadConfig', () => {
       MEMORY_BACKEND: 'supabase',
     })).toThrow(/SUPABASE_DB_URL/);
   });
+
+  it('defaults web search to disabled without requiring Tavily API key', () => {
+    const config = loadConfig({ FALLBACK_ONLY_MODE: 'true' });
+
+    expect(config.WEB_SEARCH_ENABLED).toBe(false);
+    expect(config.TAVILY_API_KEY).toBeUndefined();
+    expect(config.WEB_SEARCH_MAX_RESULTS).toBe(3);
+    expect(config.WEB_SEARCH_TIMEOUT_MS).toBe(10000);
+  });
+
+  it('requires TAVILY_API_KEY when WEB_SEARCH_ENABLED=true', () => {
+    expect(() => loadConfig({
+      ...validEnv,
+      WEB_SEARCH_ENABLED: 'true',
+    })).toThrow(/TAVILY_API_KEY/);
+  });
+
+  it('accepts Tavily config when web search is enabled', () => {
+    const config = loadConfig({
+      ...validEnv,
+      WEB_SEARCH_ENABLED: 'true',
+      TAVILY_API_KEY: 'tvly-test',
+      WEB_SEARCH_MAX_RESULTS: '5',
+      WEB_SEARCH_TIMEOUT_MS: '15000',
+    });
+
+    expect(config.WEB_SEARCH_ENABLED).toBe(true);
+    expect(config.TAVILY_API_KEY).toBe('tvly-test');
+    expect(config.WEB_SEARCH_MAX_RESULTS).toBe(5);
+    expect(config.WEB_SEARCH_TIMEOUT_MS).toBe(15000);
+  });
+
+  it('rejects WEB_SEARCH_MAX_RESULTS greater than 10', () => {
+    expect(() => loadConfig({
+      ...validEnv,
+      WEB_SEARCH_ENABLED: 'true',
+      TAVILY_API_KEY: 'tvly-test',
+      WEB_SEARCH_MAX_RESULTS: '11',
+    })).toThrow();
+  });
 });

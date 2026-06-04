@@ -1,36 +1,37 @@
 import { describe, it, expect } from 'vitest';
-import { AnalysisPlanSchema, MetricType, TimeScope, ActionIntent, SafetyConstraint } from '../analysis-plan';
+import { AnalysisPlanSchema, MetricType, TimeScope, ActionIntent, SafetyConstraint, WebSearchNeedSchema } from '../analysis-plan';
+
+/** 构造最小合法的 AnalysisPlan */
+function createValidPlan(overrides?: Record<string, unknown>) {
+  return {
+    planId: 'plan-test-001',
+    taskType: 'advisor_chat',
+    userIntent: {
+      action: 'status_summary',
+      riskLevel: 'general',
+      needsClarification: false,
+    },
+    evidenceNeeds: [
+      {
+        metric: 'hrv',
+        timeScope: 'week',
+        dateRange: { start: '2025-06-01', end: '2025-06-07' },
+        reason: '用户询问 HRV',
+        required: true,
+      },
+    ],
+    safetyConstraints: ['no_diagnosis'],
+    answerShape: {
+      includeMissingDataDisclosure: true,
+      includeChartTokens: false,
+      maxSummaryLength: 300,
+      tone: 'concise',
+    },
+    ...overrides,
+  };
+}
 
 describe('AnalysisPlanSchema', () => {
-  /** 构造最小合法的 AnalysisPlan */
-  function createValidPlan(overrides?: Record<string, unknown>) {
-    return {
-      planId: 'plan-test-001',
-      taskType: 'advisor_chat',
-      userIntent: {
-        action: 'status_summary',
-        riskLevel: 'general',
-        needsClarification: false,
-      },
-      evidenceNeeds: [
-        {
-          metric: 'hrv',
-          timeScope: 'week',
-          dateRange: { start: '2025-06-01', end: '2025-06-07' },
-          reason: '用户询问 HRV',
-          required: true,
-        },
-      ],
-      safetyConstraints: ['no_diagnosis'],
-      answerShape: {
-        includeMissingDataDisclosure: true,
-        includeChartTokens: false,
-        maxSummaryLength: 300,
-        tone: 'concise',
-      },
-      ...overrides,
-    };
-  }
 
   it('合法 plan 通过校验', () => {
     const result = AnalysisPlanSchema.safeParse(createValidPlan());
@@ -120,5 +121,64 @@ describe('导出的枚举', () => {
     const values = SafetyConstraint.options;
     expect(values).toHaveLength(5);
     expect(values).toContain('disclose_missing_data');
+  });
+});
+
+describe('webSearchNeeds', () => {
+  it('接受合法 webSearchNeeds', () => {
+    const result = AnalysisPlanSchema.safeParse(createValidPlan({
+      evidenceNeeds: [],
+      webSearchNeeds: [
+        {
+          query: 'latest caffeine sleep research 2026',
+          reason: '用户询问最新公开研究，现有本地健康数据无法覆盖',
+          required: true,
+          topic: 'general',
+          timeRange: 'year',
+          includeDomains: ['nih.gov'],
+          excludeDomains: ['example.com'],
+        },
+      ],
+    }));
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.webSearchNeeds).toHaveLength(1);
+      expect(result.data.webSearchNeeds?.[0]?.query).toBe('latest caffeine sleep research 2026');
+    }
+  });
+
+  it('缺少 webSearchNeeds 时仍保持向后兼容', () => {
+    const result = AnalysisPlanSchema.safeParse(createValidPlan());
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.webSearchNeeds).toBeUndefined();
+    }
+  });
+
+  it('拒绝过短 query', () => {
+    const result = WebSearchNeedSchema.safeParse({
+      query: 'ai',
+      reason: 'query 过短',
+      required: true,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('拒绝非法 topic 和 timeRange', () => {
+    const result = AnalysisPlanSchema.safeParse(createValidPlan({
+      webSearchNeeds: [
+        {
+          query: 'recent sleep guideline',
+          reason: '用户询问外部指南',
+          required: false,
+          topic: 'finance',
+          timeRange: 'hour',
+        },
+      ],
+    }));
+
+    expect(result.success).toBe(false);
   });
 });

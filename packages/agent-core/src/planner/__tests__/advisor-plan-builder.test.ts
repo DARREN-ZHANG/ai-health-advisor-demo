@@ -175,6 +175,28 @@ describe('buildAnalysisPlan', () => {
     expect(callArgs.userPrompt).toContain('我最近 HRV 怎么样？');
   });
 
+  it('解析包含 webSearchNeeds 的合法 plan', async () => {
+    const planWithSearch = {
+      ...createValidPlanJson(),
+      evidenceNeeds: [],
+      webSearchNeeds: [
+        {
+          query: 'recent caffeine sleep research',
+          reason: '用户询问最近公开研究，现有本地数据无法回答外部研究进展',
+          required: true,
+          topic: 'general',
+          timeRange: 'year',
+        },
+      ],
+    };
+    const agent = createMockAgent(JSON.stringify(planWithSearch));
+    const result = await buildAnalysisPlan(createDeps(agent), createValidInput());
+
+    expect(result.success).toBe(true);
+    expect(result.plan?.webSearchNeeds).toHaveLength(1);
+    expect(result.plan?.webSearchNeeds?.[0]?.required).toBe(true);
+  });
+
   it('previousViolations 被包含在 userPrompt 中', async () => {
     const validPlan = createValidPlanJson();
     const mockInvoke = vi.fn().mockResolvedValue({ content: JSON.stringify(validPlan) });
