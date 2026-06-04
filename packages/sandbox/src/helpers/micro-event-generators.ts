@@ -102,6 +102,27 @@ const MICRO_MOTION_PATTERN_MAP: Record<MicroEventType, import('@health-advisor/s
   micro_restorative_stretch: 'intermittent_reach',
   micro_low_stimulus_work: 'still_upright',
   micro_sleep_wind_down: 'still_supine',
+  // === R1 ===
+  micro_box_breathing: 'still_upright',
+  micro_calming_breathing: 'still_upright',
+  micro_hydration_walk: 'periodic_stroll',
+  micro_warm_shower: 'still_with_micro',
+  micro_posture_correction: 'still_upright',
+  micro_neuro_warmup: 'intermittent_burst',
+  // === R2 ===
+  micro_recovery_meal: 'still_with_micro',
+  micro_power_nap: 'still_supine',
+  micro_screen_dimming: 'still_upright',
+  micro_cool_shower: 'still_with_micro',
+  micro_outdoor_breather: 'periodic_walk',
+  micro_stair_climb: 'periodic_run',
+  // === R3 ===
+  micro_standing_work: 'still_upright',
+  micro_foam_rolling: 'intermittent_reach',
+  micro_cold_face_dip: 'still_with_micro',
+  micro_mindfulness_meditation: 'still_supine',
+  micro_muscle_relaxation: 'still_supine',
+  micro_light_meal: 'still_with_micro',
 };
 
 // ============================================================
@@ -496,6 +517,27 @@ const PROFILE_GENERATOR_MAP: Record<
   restorative_stretch: generateRestorativeStretch,
   low_stimulus: generateLowStimulus,
   sleep_wind_down: generateSleepWindDown,
+  // === R1 ===
+  box_breathing: generateDeepBreathing,
+  calming_breathing: generateDeepBreathing,
+  hydration_walk: generatePostMealWalk,
+  warm_shower: generateOffscreenRest,
+  posture_correction: generateDeskMobility,
+  neuro_warmup: generateStandingStretch,
+  // === R2 ===
+  recovery_meal: generateSnack,
+  power_nap: generateSleepWindDown,
+  screen_dimming: generateLowStimulus,
+  cool_shower: generateOffscreenRest,
+  outdoor_breather: generateShortWalk,
+  stair_climb: generateEasyCardio,
+  // === R3 ===
+  standing_work: generateLowStimulus,
+  foam_rolling: generateRestorativeStretch,
+  cold_face_dip: generateOffscreenRest,
+  mindfulness_meditation: generateSleepWindDown,
+  muscle_relaxation: generateSleepWindDown,
+  light_meal: generateSnack,
 };
 
 import type { MicroEventDefinition } from './micro-event-registry';
