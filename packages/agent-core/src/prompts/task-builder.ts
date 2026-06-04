@@ -87,8 +87,8 @@ export function buildTaskPrompt(
   ));
   sections.push(t(
     locale,
-    '- 补水、喝水、调暗灯光、调温、洗澡类 action 不得分配 micro_event interaction',
-    '- Hydration, drinking water, dimming lights, temperature adjustment, and bathing actions must not be assigned a micro_event interaction',
+    '- 单纯喝水（无走动）、单纯调温（无洗澡）、高刺激游戏类 action 不得分配 micro_event interaction；但"补水+走动"、"洗温水澡"、"冲微凉淋浴"等组合行为可以分配',
+    '- Drinking water alone (without walking), temperature adjustment alone (without showering), and high-stimulus gaming actions must not be assigned a micro_event interaction; however, combined behaviors like "hydration walk", "warm shower", "cool shower" are allowed',
   ));
 
   // 使用 TaskContextPacket 渲染（如果可用）
