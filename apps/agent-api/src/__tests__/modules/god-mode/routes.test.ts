@@ -557,11 +557,11 @@ describe('God-Mode Routes', () => {
       expect(body.data.recentRecognizedEvents.some((event: { type: string }) => event.type === 'micro_deep_breathing')).toBe(true);
     });
 
-    test('拒绝 hydration 微事件类型', async () => {
+    test('拒绝无效的微事件类型', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/god-mode/micro-event-append',
-        payload: { microEventType: 'micro_hydration_break' },
+        payload: { microEventType: 'micro_invalid_type' },
       });
 
       expect(response.statusCode).toBe(400);
