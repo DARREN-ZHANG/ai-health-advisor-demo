@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildHomepageEventInsights, normalizeHomepageEventType } from '../../context/homepage-event-insights';
+import { buildHomepageEventInsights, normalizeHomepageEventType, buildHistoryBasedSuppressions, ACTION_SEMANTIC_GROUPS } from '../../context/homepage-event-insights';
+import type { RecentRecommendedAction } from '../../types/memory';
 import type { HomepageContextPacket } from '../../context/context-packet';
 
 describe('homepage event insights', () => {
@@ -531,4 +532,106 @@ it('suppresses repeated same-category actions for consecutive current and prior 
   expect(insights[0]!.transitionContext?.relation).toBe('same_category_repeat');
   const actionText = insights[0]!.actionIntents.map((action) => `${action.title}\n${action.description}`).join('\n');
   expect(actionText).not.toMatch(/继续运动|轻松有氧|再.*有氧/);
+});
+
+
+describe('buildHistoryBasedSuppressions', () => {
+  const BASE_NOW = 1_000_000_000;
+
+  it('returns empty for empty history', () => {
+    expect(buildHistoryBasedSuppressions([], BASE_NOW)).toEqual([]);
+  });
+
+  it('suppresses same semantic group within 4h cooldown', () => {
+    const now = BASE_NOW;
+    const actions: RecentRecommendedAction[] = [
+      { category: 'movement_reset', microEventType: 'micro_short_walk', title: '短距离步行', timestamp: now - 20 * 60 * 1000 },
+    ];
+    const suppressions = buildHistoryBasedSuppressions(actions, now);
+
+    // strenuous_activity 组下两个 category 都应被抑制
+    expect(suppressions.some(s => s.category === 'movement_reset')).toBe(true);
+    expect(suppressions.some(s => s.category === 'training_adjustment')).toBe(true);
+    // microEventType 也应被抑制
+    expect(suppressions.some(s => s.interactionMicroEventType === 'micro_short_walk')).toBe(true);
+    // 不同组不受影响
+    expect(suppressions.some(s => s.category === 'hydration')).toBe(false);
+    expect(suppressions.some(s => s.category === 'breathing_reset')).toBe(false);
+  });
+
+  it('does not suppress after cooldown expires and under daily cap', () => {
+    const now = BASE_NOW;
+    const actions: RecentRecommendedAction[] = [
+      { category: 'movement_reset', title: '短距离步行', timestamp: now - 5 * 60 * 60 * 1000 },
+    ];
+    const suppressions = buildHistoryBasedSuppressions(actions, now);
+    expect(suppressions.some(s => s.category === 'movement_reset')).toBe(false);
+  });
+
+  it('suppresses when daily cap reached even after cooldown expires', () => {
+    const now = BASE_NOW;
+    const actions: RecentRecommendedAction[] = [
+      { category: 'movement_reset', title: '步行 A', timestamp: now - 12 * 60 * 60 * 1000 },
+      { category: 'movement_reset', title: '步行 B', timestamp: now - 6 * 60 * 60 * 1000 },
+    ];
+    const suppressions = buildHistoryBasedSuppressions(actions, now);
+    expect(suppressions.some(s => s.category === 'movement_reset')).toBe(true);
+  });
+
+  it('allows category after cooldown and under cap', () => {
+    const now = BASE_NOW;
+    const actions: RecentRecommendedAction[] = [
+      { category: 'movement_reset', title: '步行', timestamp: now - 6 * 60 * 60 * 1000 },
+    ];
+    const suppressions = buildHistoryBasedSuppressions(actions, now);
+    expect(suppressions.some(s => s.category === 'movement_reset')).toBe(false);
+  });
+
+  it('does not suppress hydration when only movement_reset is in cooldown', () => {
+    const now = BASE_NOW;
+    const actions: RecentRecommendedAction[] = [
+      { category: 'movement_reset', title: '步行', timestamp: now - 20 * 60 * 1000 },
+    ];
+    const suppressions = buildHistoryBasedSuppressions(actions, now);
+    expect(suppressions.some(s => s.category === 'hydration')).toBe(false);
+    expect(suppressions.some(s => s.category === 'nutrition')).toBe(false);
+  });
+
+  it('suppresses both breathing_reset and sleep_protection when nervous_system_reset group is in cooldown', () => {
+    const now = BASE_NOW;
+    const actions: RecentRecommendedAction[] = [
+      { category: 'breathing_reset', title: '呼吸练习', timestamp: now - 30 * 60 * 1000 },
+    ];
+    const suppressions = buildHistoryBasedSuppressions(actions, now);
+    expect(suppressions.some(s => s.category === 'breathing_reset')).toBe(true);
+    expect(suppressions.some(s => s.category === 'sleep_protection')).toBe(true);
+  });
+
+  it('ignores actions outside 24h window for daily cap check', () => {
+    const now = BASE_NOW;
+    const actions: RecentRecommendedAction[] = [
+      { category: 'movement_reset', title: '步行 A', timestamp: now - 25 * 60 * 60 * 1000 },
+      { category: 'movement_reset', title: '步行 B', timestamp: now - 6 * 60 * 60 * 1000 },
+    ];
+    const suppressions = buildHistoryBasedSuppressions(actions, now);
+    // 24h 内只有 1 次，冷却期已过，不应抑制
+    expect(suppressions.some(s => s.category === 'movement_reset')).toBe(false);
+  });
+});
+
+describe('ACTION_SEMANTIC_GROUPS', () => {
+  it('maps all 9 focus categories', () => {
+    const categories = [
+      'movement_reset', 'breathing_reset', 'nutrition', 'hydration',
+      'training_adjustment', 'sleep_protection', 'posture',
+      'data_quality', 'medical_attention',
+    ];
+    for (const cat of categories) {
+      expect(ACTION_SEMANTIC_GROUPS[cat]).toBeDefined();
+    }
+  });
+
+  it('maps movement_reset and training_adjustment to the same group', () => {
+    expect(ACTION_SEMANTIC_GROUPS.movement_reset).toBe(ACTION_SEMANTIC_GROUPS.training_adjustment);
+  });
 });

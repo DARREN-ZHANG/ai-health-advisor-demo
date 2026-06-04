@@ -1,4 +1,5 @@
 import type { HomepageSemanticEventType } from './context-packet';
+import type { RecentRecommendedAction } from '../types/memory';
 import {
   decideRecoveryMetricRelevance,
   isEveningSleepActionWindow,
@@ -222,6 +223,87 @@ function buildForbiddenMentions(prior: EventSequenceItem): string[] {
     default:
       return common;
   }
+}
+
+/** 行动类别到语义组的映射 */
+export const ACTION_SEMANTIC_GROUPS: Record<string, string> = {
+  movement_reset: 'strenuous_activity',
+  training_adjustment: 'strenuous_activity',
+  posture: 'light_posture',
+  breathing_reset: 'nervous_system_reset',
+  sleep_protection: 'nervous_system_reset',
+  hydration: 'recovery_intake',
+  nutrition: 'recovery_intake',
+  data_quality: 'data',
+  medical_attention: 'safety',
+};
+
+const COOLDOWN_MS = 4 * 60 * 60 * 1000;       // 4h 冷却
+const DAILY_CAP = 2;                            // 每语义组 24h 内最多 2 次
+const DAILY_WINDOW_MS = 24 * 60 * 60 * 1000;   // 24h 滑动窗口
+
+/**
+ * 基于历史行动推荐记录构建抑制规则。
+ * 双维度：冷却（同语义组距上次 < 4h）+ 频率（同语义组 24h 内 ≥ 2 次）。
+ * 使用真实时间（Date.now()），不受 demoNow 影响。
+ */
+export function buildHistoryBasedSuppressions(
+  previousActions: RecentRecommendedAction[],
+  now: number = Date.now(),
+): ActionSuppression[] {
+  if (previousActions.length === 0) return [];
+
+  const suppressions: ActionSuppression[] = [];
+
+  // 按语义组聚合
+  const groupEntries = new Map<string, RecentRecommendedAction[]>();
+  for (const action of previousActions) {
+    const group = ACTION_SEMANTIC_GROUPS[action.category];
+    if (!group) continue;
+    const list = groupEntries.get(group) ?? [];
+    list.push(action);
+    groupEntries.set(group, list);
+  }
+
+  // 对每个语义组判断是否抑制
+  for (const [, actions] of groupEntries) {
+    const sorted = [...actions].sort((a, b) => b.timestamp - a.timestamp);
+    const lastTime = sorted[0]!.timestamp;
+    const group = ACTION_SEMANTIC_GROUPS[sorted[0]!.category]!;
+
+    // 维度一：冷却检查（距上次 < 4h）
+    const inCooldown = (now - lastTime) < COOLDOWN_MS;
+
+    // 维度二：24h 频率检查
+    const recentCount = sorted.filter(a => (now - a.timestamp) < DAILY_WINDOW_MS).length;
+    const overDailyCap = recentCount >= DAILY_CAP;
+
+    if (inCooldown || overDailyCap) {
+      // 抑制该语义组下所有 category
+      for (const [category, g] of Object.entries(ACTION_SEMANTIC_GROUPS)) {
+        if (g === group) {
+          suppressions.push({
+            category: category as RecommendedFocus['category'],
+            reason: inCooldown
+              ? `语义组 '${group}' 在冷却期内（距上次 ${Math.round((now - lastTime) / 60000)} min）`
+              : `语义组 '${group}' 24h 内已推荐 ${recentCount} 次，达到每日上限`,
+          });
+        }
+      }
+
+      // 同时抑制该组下的 microEventType
+      for (const action of sorted) {
+        if (action.microEventType) {
+          suppressions.push({
+            interactionMicroEventType: action.microEventType,
+            reason: `属于已抑制语义组 '${group}'`,
+          });
+        }
+      }
+    }
+  }
+
+  return suppressions;
 }
 
 function isWorkoutEvent(eventType: HomepageSemanticEventType | undefined): boolean {
