@@ -59,6 +59,27 @@ const EVENT_TYPE_DISPLAY: Record<string, { icon: string; labelKey: string }> = {
   micro_restorative_stretch: { icon: '🧘', labelKey: 'microRestorativeStretch' },
   micro_low_stimulus_work: { icon: '🧠', labelKey: 'microLowStimulusWork' },
   micro_sleep_wind_down: { icon: '😴', labelKey: 'microSleepWindDown' },
+  // === R1 ===
+  micro_box_breathing: { icon: '🫁', labelKey: 'microBoxBreathing' },
+  micro_calming_breathing: { icon: '💨', labelKey: 'microCalmingBreathing' },
+  micro_hydration_walk: { icon: '💧', labelKey: 'microHydrationWalk' },
+  micro_warm_shower: { icon: '🚿', labelKey: 'microWarmShower' },
+  micro_posture_correction: { icon: '🪑', labelKey: 'microPostureCorrection' },
+  micro_neuro_warmup: { icon: '⚡', labelKey: 'microNeuroWarmup' },
+  // === R2 ===
+  micro_recovery_meal: { icon: '🍲', labelKey: 'microRecoveryMeal' },
+  micro_power_nap: { icon: '💤', labelKey: 'microPowerNap' },
+  micro_screen_dimming: { icon: '🌙', labelKey: 'microScreenDimming' },
+  micro_cool_shower: { icon: '🚿', labelKey: 'microCoolShower' },
+  micro_outdoor_breather: { icon: '🌲', labelKey: 'microOutdoorBreather' },
+  micro_stair_climb: { icon: '🪜', labelKey: 'microStairClimb' },
+  // === R3 ===
+  micro_standing_work: { icon: '🧍', labelKey: 'microStandingWork' },
+  micro_foam_rolling: { icon: '🧹', labelKey: 'microFoamRolling' },
+  micro_cold_face_dip: { icon: '🧊', labelKey: 'microColdFaceDip' },
+  micro_mindfulness_meditation: { icon: '🧘', labelKey: 'microMindfulnessMeditation' },
+  micro_muscle_relaxation: { icon: '💆', labelKey: 'microMuscleRelaxation' },
+  micro_light_meal: { icon: '🥗', labelKey: 'microLightMeal' },
 };
 
 const PROBABILISTIC_SEGMENT_TYPES = new Set(['alcohol_intake', 'caffeine_intake']);
