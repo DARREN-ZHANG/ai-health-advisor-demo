@@ -6,6 +6,7 @@ import type { HealthAgent } from '../executor/create-agent';
 import type { PromptLoader } from '../prompts/prompt-loader';
 import type { FallbackEngine, FallbackLookupKey } from '../fallback/fallback-engine';
 import type { AgentContext } from '../types/agent-context';
+import type { RecentRecommendedAction } from '../types/memory';
 import type { UserMemoryFact } from '../types/durable-memory';
 import { buildAgentContext } from '../context/context-builder';
 import { evaluateHomepageRules } from '../rules/homepage-rules';
@@ -385,7 +386,7 @@ export async function executeAgent(
     writeSessionMemory(deps, request, result.summary);
 
     // 12. 写回 analytical memory
-    writeAnalyticalMemory(deps, request, context, result.summary, rulesResult);
+    writeAnalyticalMemory(deps, request, context, result.summary, rulesResult, packet);
 
     // P0: 确定性验证（同步，不阻断输出，但产生观测 artifact）
     const verifierInput: VerifierInput = {
@@ -599,12 +600,33 @@ function writeAnalyticalMemory(
   context: AgentContext,
   summary: string,
   rulesResult: RuleEvaluationResult,
+  packet?: TaskContextPacket,
 ): void {
   const { sessionId, profileId, taskType } = request;
 
   switch (taskType) {
     case AgentTaskType.HOMEPAGE_SUMMARY:
       deps.analyticalMemory.setHomepageBrief(sessionId, profileId, summary);
+      // 写回行动历史
+      if (packet?.homepage) {
+        const currentInsight = packet.homepage.eventInsights.find(
+          (i) => i.mentionPolicy?.summary === 'allowed',
+        );
+        if (currentInsight && currentInsight.recommendedFocus.length > 0) {
+          const newActions: RecentRecommendedAction[] = currentInsight.recommendedFocus.map((focus, idx) => {
+            const intent = currentInsight.actionIntents[idx];
+            return {
+              category: focus.category,
+              microEventType: intent?.interaction?.kind === 'micro_event'
+                ? intent.interaction.microEvent.type
+                : undefined,
+              title: intent?.title ?? focus.action,
+              timestamp: Date.now(),
+            };
+          });
+          deps.analyticalMemory.setHomepageActions(sessionId, profileId, newActions);
+        }
+      }
       break;
     case AgentTaskType.VIEW_SUMMARY: {
       const scope = context.task.tab && context.task.timeframe
