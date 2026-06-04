@@ -119,7 +119,7 @@ const MICRO_MOTION_PATTERN_MAP: Record<MicroEventType, import('@health-advisor/s
   // === R3 ===
   micro_standing_work: 'still_upright',
   micro_foam_rolling: 'intermittent_reach',
-  micro_cold_face_dip: 'still_with_micro',
+  micro_cold_face_dip: 'still_upright',
   micro_mindfulness_meditation: 'still_supine',
   micro_muscle_relaxation: 'still_supine',
   micro_light_meal: 'still_with_micro',
@@ -880,6 +880,195 @@ function generateStairClimb(segment: MicroEventSegment): DeviceEvent[] {
   return events;
 }
 
+/** standing_work: 站姿办公，心率比坐姿高 3-5 bpm，SpO2 维持高位 */
+function generateStandingWork(segment: MicroEventSegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, spo2 } = extractBaselines(segment.params);
+  let idx = 0;
+  let cumulativeSteps = 0;
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / Math.max(totalMin - 1, 1);
+    const hr = rangeValue(Math.round(restingHr + 4 - progress * 1), 3, m, 250);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    const stepsDelta = deterministic(251, m) > 0.85 ? Math.round(1 + deterministic(252, m) * 1) : 0;
+    cumulativeSteps += stepsDelta;
+    events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
+
+    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+
+    const spo2Val = rangeValue(Math.min(spo2 + 2, 99), 1, m, 253);
+    events.push(makeEvent(segment, m, 'spo2', spo2Val, idx++));
+  }
+
+  return events;
+}
+
+/** foam_rolling: 按压时心率短暂波动，HRV 在间隙上升 */
+function generateFoamRolling(segment: MicroEventSegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, hrv } = extractBaselines(segment.params);
+  let idx = 0;
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / Math.max(totalMin - 1, 1);
+    const hr = rangeValue(Math.round(restingHr + 3 + Math.sin(progress * Math.PI * 4) * 3), 3, m, 260);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    const hrvVal = rangeValue(Math.round(hrv + progress * 4), 4, m, 261);
+    events.push(makeEvent(segment, m, 'hrvRmssd', hrvVal, idx++));
+
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+
+    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+  }
+
+  return events;
+}
+
+/** cold_face_dip: 冷水敷面触发潜水反射，心率骤降 */
+function generateColdFaceDip(segment: MicroEventSegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, hrv } = extractBaselines(segment.params);
+  let idx = 0;
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / Math.max(totalMin - 1, 1);
+    // 前 20% 微升，后 80% 急降
+    let hr: number;
+    if (progress < 0.2) {
+      hr = rangeValue(Math.round(restingHr + 2), 2, m, 270);
+    } else {
+      const dropProgress = (progress - 0.2) / 0.8;
+      hr = rangeValue(Math.round(restingHr - (8 + dropProgress * 7)), 3, m, 271);
+    }
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    // 前 20% 无变化，后 80% HRV 大幅拉升
+    let hrvVal: number;
+    if (progress < 0.2) {
+      hrvVal = rangeValue(hrv, 2, m, 272);
+    } else {
+      const riseProgress = (progress - 0.2) / 0.8;
+      hrvVal = rangeValue(Math.round(hrv + 10 + riseProgress * 8), 4, m, 273);
+    }
+    events.push(makeEvent(segment, m, 'hrvRmssd', hrvVal, idx++));
+
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+
+    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+
+    // 前 20% 压力高，后 80% 急剧下降
+    let stress: number;
+    if (progress < 0.2) {
+      stress = rangeValue(30, 2, m, 274);
+    } else {
+      stress = rangeValue(Math.round(30 - ((progress - 0.2) / 0.8) * 15), 2, m, 274);
+    }
+    events.push(makeEvent(segment, m, 'stressLoad', stress, idx++));
+  }
+
+  return events;
+}
+
+/** mindfulness_meditation: 心率缓慢持续下降，HRV 平稳上升 */
+function generateMindfulnessMeditation(segment: MicroEventSegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, hrv } = extractBaselines(segment.params);
+  let idx = 0;
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / Math.max(totalMin - 1, 1);
+    const hrDrop = 2 + progress * 6; // 2 → 8
+    const hr = rangeValue(Math.round(restingHr - hrDrop), 2, m, 280);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    const hrvRise = 5 + progress * 8; // 5 → 13
+    const hrvVal = rangeValue(Math.round(hrv + hrvRise), 3, m, 281);
+    events.push(makeEvent(segment, m, 'hrvRmssd', hrvVal, idx++));
+
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+
+    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+
+    const stress = rangeValue(Math.round(26 - progress * 10), 2, m, 282);
+    events.push(makeEvent(segment, m, 'stressLoad', stress, idx++));
+  }
+
+  return events;
+}
+
+/** muscle_relaxation: 心率锯齿形下降（紧-松循环），HRV 阶梯式上升 */
+function generateMuscleRelaxation(segment: MicroEventSegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, hrv } = extractBaselines(segment.params);
+  let idx = 0;
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / Math.max(totalMin - 1, 1);
+    // 锯齿形：整体下降但有周期性波动
+    const hr = rangeValue(Math.round(restingHr - progress * 4 + Math.sin(progress * Math.PI * 6) * 3), 2, m, 290);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    // 阶梯式上升：基础上升 + 每 1/3 段跳一个台阶
+    const stepBonus = Math.floor(progress * 3) * 2;
+    const hrvVal = rangeValue(Math.round(hrv + progress * 6 + stepBonus), 3, m, 291);
+    events.push(makeEvent(segment, m, 'hrvRmssd', hrvVal, idx++));
+
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+
+    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+
+    const stress = rangeValue(Math.round(28 - progress * 9), 2, m, 292);
+    events.push(makeEvent(segment, m, 'stressLoad', stress, idx++));
+  }
+
+  return events;
+}
+
+/** light_meal: 消化活动极轻，HRV 下降幅度小 */
+function generateLightMeal(segment: MicroEventSegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, hrv } = extractBaselines(segment.params);
+  let idx = 0;
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / Math.max(totalMin - 1, 1);
+    const hr = rangeValue(Math.round(restingHr + 3 - progress * 1), 3, m, 300);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    // 消化负担极轻，HRV 略降后恢复
+    const hrvChange = -2 + progress * 1;
+    const hrvVal = rangeValue(Math.round(hrv + hrvChange), 3, m, 301);
+    events.push(makeEvent(segment, m, 'hrvRmssd', hrvVal, idx++));
+
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+
+    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+  }
+
+  return events;
+}
+
 // ============================================================
 // 公共调度函数
 // ============================================================
@@ -916,12 +1105,12 @@ const PROFILE_GENERATOR_MAP: Record<
   outdoor_breather: generateOutdoorBreather,
   stair_climb: generateStairClimb,
   // === R3 ===
-  standing_work: generateLowStimulus,
-  foam_rolling: generateRestorativeStretch,
-  cold_face_dip: generateOffscreenRest,
-  mindfulness_meditation: generateSleepWindDown,
-  muscle_relaxation: generateSleepWindDown,
-  light_meal: generateSnack,
+  standing_work: generateStandingWork,
+  foam_rolling: generateFoamRolling,
+  cold_face_dip: generateColdFaceDip,
+  mindfulness_meditation: generateMindfulnessMeditation,
+  muscle_relaxation: generateMuscleRelaxation,
+  light_meal: generateLightMeal,
 };
 
 import type { MicroEventDefinition } from './micro-event-registry';
