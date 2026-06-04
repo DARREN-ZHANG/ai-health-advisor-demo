@@ -106,9 +106,9 @@ const MICRO_MOTION_PATTERN_MAP: Record<MicroEventType, import('@health-advisor/s
   micro_box_breathing: 'still_upright',
   micro_calming_breathing: 'still_upright',
   micro_hydration_walk: 'periodic_stroll',
-  micro_warm_shower: 'still_with_micro',
+  micro_warm_shower: 'still_upright',
   micro_posture_correction: 'still_upright',
-  micro_neuro_warmup: 'intermittent_burst',
+  micro_neuro_warmup: 'intermittent_gesture',
   // === R2 ===
   micro_recovery_meal: 'still_with_micro',
   micro_power_nap: 'still_supine',
@@ -496,6 +496,194 @@ function generateSleepWindDown(segment: MicroEventSegment): DeviceEvent[] {
   return events;
 }
 
+/** box_breathing: 急性应激 HRV 救援，心率急降、HRV 大幅拉升 */
+function generateBoxBreathing(segment: MicroEventSegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, hrv } = extractBaselines(segment.params);
+  let idx = 0;
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / Math.max(totalMin - 1, 1);
+    const hrDrop = 8 + progress * 4; // 8 → 12
+    const hr = rangeValue(Math.round(restingHr - hrDrop), 3, m, 130);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    const hrvRise = 10 + progress * 8; // 10 → 18
+    const hrvVal = rangeValue(Math.round(hrv + hrvRise), 4, m, 131);
+    events.push(makeEvent(segment, m, 'hrvRmssd', hrvVal, idx++));
+
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+
+    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+
+    const stressDrop = progress * 10;
+    const stress = rangeValue(Math.round(28 - stressDrop), 2, m, 132);
+    events.push(makeEvent(segment, m, 'stressLoad', stress, idx++));
+  }
+
+  return events;
+}
+
+/** calming_breathing: 温和持续心率下降、HRV 稳步上升 */
+function generateCalmingBreathing(segment: MicroEventSegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, hrv } = extractBaselines(segment.params);
+  let idx = 0;
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / Math.max(totalMin - 1, 1);
+    const hrDrop = 3 + progress * 5; // 3 → 8
+    const hr = rangeValue(Math.round(restingHr - hrDrop), 3, m, 140);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    const hrvRise = 6 + progress * 6; // 6 → 12
+    const hrvVal = rangeValue(Math.round(hrv + hrvRise), 3, m, 141);
+    events.push(makeEvent(segment, m, 'hrvRmssd', hrvVal, idx++));
+
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+
+    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+
+    const stressDrop = progress * 8;
+    const stress = rangeValue(Math.round(26 - stressDrop), 3, m, 142);
+    events.push(makeEvent(segment, m, 'stressLoad', stress, idx++));
+  }
+
+  return events;
+}
+
+/** hydration_walk: 轻度步行+补水，步数少于 short_walk */
+function generateHydrationWalk(segment: MicroEventSegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr } = extractBaselines(segment.params);
+  let idx = 0;
+  let cumulativeSteps = 0;
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / Math.max(totalMin - 1, 1);
+    const hrRise = 3 + Math.sin(progress * Math.PI) * 4 - progress * 3;
+    const hr = rangeValue(Math.round(restingHr + hrRise), 5, m, 150);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    const stepsDelta = Math.round(20 + deterministic(151, m) * 20); // 20-40 步/分钟
+    cumulativeSteps += stepsDelta;
+    events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
+
+    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+  }
+
+  return events;
+}
+
+/** warm_shower: 心率先微升后下降，沐浴后血氧微升（用 spo2 替代 skinTemp） */
+function generateWarmShower(segment: MicroEventSegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, hrv, spo2 } = extractBaselines(segment.params);
+  let idx = 0;
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / Math.max(totalMin - 1, 1);
+    // 前 40% 微升 3-5 bpm，后 60% 下降至 restingHr - 2
+    let hr: number;
+    if (progress < 0.4) {
+      hr = rangeValue(Math.round(restingHr + 4), 3, m, 160);
+    } else {
+      const dropProgress = (progress - 0.4) / 0.6;
+      hr = rangeValue(Math.round(restingHr + 4 - dropProgress * 6), 3, m, 161);
+    }
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    // 后 60% HRV 温和上升 3-6 ms
+    if (progress >= 0.4) {
+      const hrvRise = ((progress - 0.4) / 0.6) * 6;
+      const hrvVal = rangeValue(Math.round(hrv + hrvRise), 3, m, 162);
+      events.push(makeEvent(segment, m, 'hrvRmssd', hrvVal, idx++));
+    } else {
+      events.push(makeEvent(segment, m, 'hrvRmssd', rangeValue(hrv, 2, m, 163), idx++));
+    }
+
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+
+    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+
+    // 沐浴后血氧微升 1-2%
+    const spo2Rise = progress >= 0.5 ? Math.round((progress - 0.5) * 2 * 2) : 0;
+    const spo2Val = rangeValue(Math.min(spo2 + spo2Rise, 100), 1, m, 164);
+    events.push(makeEvent(segment, m, 'spo2', spo2Val, idx++));
+
+    const stressDrop = progress * 6;
+    const stress = rangeValue(Math.round(25 - stressDrop), 2, m, 165);
+    events.push(makeEvent(segment, m, 'stressLoad', stress, idx++));
+  }
+
+  return events;
+}
+
+/** posture_correction: 近乎静止，心率极平稳，血氧维持高位 */
+function generatePostureCorrection(segment: MicroEventSegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, spo2 } = extractBaselines(segment.params);
+  let idx = 0;
+  let cumulativeSteps = 0;
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / Math.max(totalMin - 1, 1);
+    const hr = rangeValue(Math.round(restingHr + 2 - progress * 1), 2, m, 170);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    const stepsDelta = deterministic(171, m) > 0.9 ? 1 : 0;
+    cumulativeSteps += stepsDelta;
+    events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
+
+    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+
+    const spo2Val = rangeValue(Math.min(spo2 + 1, 99), 1, m, 172);
+    events.push(makeEvent(segment, m, 'spo2', spo2Val, idx++));
+  }
+
+  return events;
+}
+
+/** neuro_warmup: 原地活动，心率微升，步数极少 */
+function generateNeuroWarmup(segment: MicroEventSegment): DeviceEvent[] {
+  const events: DeviceEvent[] = [];
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr } = extractBaselines(segment.params);
+  let idx = 0;
+  let cumulativeSteps = 0;
+
+  for (let m = 0; m < totalMin; m += 1) {
+    const progress = m / Math.max(totalMin - 1, 1);
+    const hr = rangeValue(Math.round(restingHr + 5 + Math.sin(progress * Math.PI * 2) * 3), 3, m, 180);
+    events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
+
+    const stepsDelta = Math.round(5 + deterministic(181, m) * 10); // 5-15 步/分钟
+    cumulativeSteps += stepsDelta;
+    events.push(makeEvent(segment, m, 'steps', cumulativeSteps, idx++));
+
+    const imuSamples = generateImuSamples(MICRO_MOTION_PATTERN_MAP[segment.type], m, totalMin, segment.segmentId.length + m);
+    const motion = aggregateMotion(imuSamples);
+    events.push(makeEvent(segment, m, 'motion', motion, idx++));
+  }
+
+  return events;
+}
+
 // ============================================================
 // 公共调度函数
 // ============================================================
@@ -518,12 +706,12 @@ const PROFILE_GENERATOR_MAP: Record<
   low_stimulus: generateLowStimulus,
   sleep_wind_down: generateSleepWindDown,
   // === R1 ===
-  box_breathing: generateDeepBreathing,
-  calming_breathing: generateDeepBreathing,
-  hydration_walk: generatePostMealWalk,
-  warm_shower: generateOffscreenRest,
-  posture_correction: generateDeskMobility,
-  neuro_warmup: generateStandingStretch,
+  box_breathing: generateBoxBreathing,
+  calming_breathing: generateCalmingBreathing,
+  hydration_walk: generateHydrationWalk,
+  warm_shower: generateWarmShower,
+  posture_correction: generatePostureCorrection,
+  neuro_warmup: generateNeuroWarmup,
   // === R2 ===
   recovery_meal: generateSnack,
   power_nap: generateSleepWindDown,
