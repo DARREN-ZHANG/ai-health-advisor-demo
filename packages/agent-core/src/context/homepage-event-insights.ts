@@ -64,7 +64,12 @@ interface EventSequenceItem {
 }
 
 export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInput): HomepageEventInsight[] {
-  const { homepage, demoNow } = input;
+  const { homepage, demoNow, previousRecommendedActions } = input;
+
+  // 构建历史抑制规则（使用真实时间，不受 demoNow 影响）
+  const historySuppressions = previousRecommendedActions && previousRecommendedActions.length > 0
+    ? buildHistoryBasedSuppressions(previousRecommendedActions)
+    : [];
   const sequence = homepage.recentEvents.map((event) => ({
     eventId: event.evidenceIds[0] ?? `${event.type}_${event.start}`,
     rawType: event.type,
@@ -91,6 +96,7 @@ export function buildHomepageEventInsights(input: BuildHomepageEventInsightsInpu
       transitionContext,
       demoNow,
       eventStart: event.start,
+      historySuppressions,
     });
     const mentionPolicy = buildMentionPolicy(index);
 
@@ -514,10 +520,17 @@ interface BuildRecommendedFocusInput {
   transitionContext?: HomepageEventInsight['transitionContext'];
   demoNow?: string;
   eventStart?: string;
+  historySuppressions?: ActionSuppression[];
 }
 
 function buildRecommendedFocus(input: BuildRecommendedFocusInput): RecommendedFocus[] {
-  const { currentEventType: eventType, priorEventType, tension, transitionContext, demoNow, eventStart } = input;
+  const { currentEventType: eventType, priorEventType, tension, transitionContext, demoNow, eventStart, historySuppressions } = input;
+
+  // 统一合并事件转换抑制 + 历史抑制
+  const allSuppressions = [
+    ...(transitionContext?.actionSuppressions ?? buildActionSuppressions(eventType, priorEventType)),
+    ...(historySuppressions ?? []),
+  ];
 
   if (tension.level === 'critical') {
     return [
@@ -533,7 +546,7 @@ function buildRecommendedFocus(input: BuildRecommendedFocusInput): RecommendedFo
         { category: 'breathing_reset', action: '做一组缓慢呼吸', durationMin: 3, rationale: '用延长呼气降低交感神经兴奋' },
         { category: 'posture', action: '把接下来的工作切到站姿或挺直坐姿', timing: '接下来 30 min', rationale: '减少久坐对呼吸和循环的压迫' },
       ];
-      return applyActionSuppressions(focus, transitionContext?.actionSuppressions ?? buildActionSuppressions(eventType, priorEventType));
+      return applyActionSuppressions(focus, allSuppressions);
     }
     case 'cardio_workout':
     case 'hiit_workout': {
@@ -546,7 +559,7 @@ function buildRecommendedFocus(input: BuildRecommendedFocusInput): RecommendedFo
         focus.push({ category: 'sleep_protection', action: '睡前降低刺激和屏幕暴露', timing: '今晚睡前 60 min', rationale: '保护高强度运动后的深睡恢复窗口' });
       }
 
-      return applyActionSuppressions(focus, transitionContext?.actionSuppressions ?? buildActionSuppressions(eventType, priorEventType));
+      return applyActionSuppressions(focus, allSuppressions);
     }
     case 'possible_alcohol_intake':
     case 'possible_caffeine_intake': {
@@ -562,13 +575,21 @@ function buildRecommendedFocus(input: BuildRecommendedFocusInput): RecommendedFo
           { category: 'breathing_reset', action: '做一组延长呼气的呼吸练习', durationMin: 5, rationale: '帮助神经系统从紧绷状态回落' },
         ];
       }
-      return applyActionSuppressions(focus, transitionContext?.actionSuppressions ?? buildActionSuppressions(eventType, priorEventType));
+      return applyActionSuppressions(focus, allSuppressions);
+    }
+    case 'meal': {
+      const focus: RecommendedFocus[] = [
+        { category: 'movement_reset', action: '餐后轻走帮助消化', durationMin: 10, rationale: '帮助餐后血糖平稳和消化' },
+        { category: 'hydration', action: '小口补充温水', timing: '接下来 30 min', rationale: '帮助消化和代谢' },
+        { category: 'breathing_reset', action: '做一组延长呼气的呼吸练习', durationMin: 5, rationale: '帮助副交感神经激活，促进消化' },
+      ];
+      return applyActionSuppressions(focus, allSuppressions);
     }
     default: {
       const focus: RecommendedFocus[] = [
         { category: 'movement_reset', action: '安排一次轻量活动切换状态', durationMin: 10, rationale: '帮助身体从当前事件平稳过渡到下一阶段' },
       ];
-      return applyActionSuppressions(focus, transitionContext?.actionSuppressions ?? buildActionSuppressions(eventType, priorEventType));
+      return applyActionSuppressions(focus, allSuppressions);
     }
   }
 }

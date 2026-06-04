@@ -635,3 +635,114 @@ describe('ACTION_SEMANTIC_GROUPS', () => {
     expect(ACTION_SEMANTIC_GROUPS.movement_reset).toBe(ACTION_SEMANTIC_GROUPS.training_adjustment);
   });
 });
+
+describe('history-based suppression in buildHomepageEventInsights', () => {
+  it('suppresses movement_reset for meal event when walk was recently recommended', () => {
+    const now = Date.now();
+    const previousActions: RecentRecommendedAction[] = [
+      { category: 'movement_reset', microEventType: 'micro_short_walk', title: '短距离步行', timestamp: now - 20 * 60 * 1000 },
+    ];
+
+    const insights = buildHomepageEventInsights({
+      homepage: makeHomepage({
+        recentEvents: [{
+          type: 'meal_intake',
+          start: '2026-06-01T08:20',
+          end: '2026-06-01T08:40',
+          durationMin: 20,
+          confidence: 0.9,
+          recognitionEvidence: ['进餐'],
+          syncState: { lastSyncedMeasuredAt: null, pendingEventCount: 0, fromSyncedWindow: false },
+          evidenceIds: ['event_meal'],
+        }],
+      }),
+      demoNow: '2026-06-01T08:40',
+      previousRecommendedActions: previousActions,
+    });
+
+    const focusCategories = insights[0]!.recommendedFocus.map(f => f.category);
+    expect(focusCategories).not.toContain('movement_reset');
+    // 应保留 hydration 和 breathing_reset（不同语义组）
+    expect(focusCategories).toContain('hydration');
+    expect(focusCategories).toContain('breathing_reset');
+  });
+
+  it('allows movement_reset after cooldown expires and under daily cap', () => {
+    const now = Date.now();
+    const previousActions: RecentRecommendedAction[] = [
+      { category: 'movement_reset', title: '短距离步行', timestamp: now - 5 * 60 * 60 * 1000 },
+    ];
+
+    const insights = buildHomepageEventInsights({
+      homepage: makeHomepage({
+        recentEvents: [{
+          type: 'meal_intake',
+          start: '2026-06-01T12:30',
+          end: '2026-06-01T12:50',
+          durationMin: 20,
+          confidence: 0.9,
+          recognitionEvidence: ['进餐'],
+          syncState: { lastSyncedMeasuredAt: null, pendingEventCount: 0, fromSyncedWindow: false },
+          evidenceIds: ['event_meal'],
+        }],
+      }),
+      demoNow: '2026-06-01T12:50',
+      previousRecommendedActions: previousActions,
+    });
+
+    const focusCategories = insights[0]!.recommendedFocus.map(f => f.category);
+    expect(focusCategories).toContain('movement_reset');
+  });
+
+  it('suppresses movement_reset when daily cap reached', () => {
+    const now = Date.now();
+    const previousActions: RecentRecommendedAction[] = [
+      { category: 'movement_reset', title: '步行 A', timestamp: now - 12 * 60 * 60 * 1000 },
+      { category: 'movement_reset', title: '步行 B', timestamp: now - 6 * 60 * 60 * 1000 },
+    ];
+
+    const insights = buildHomepageEventInsights({
+      homepage: makeHomepage({
+        recentEvents: [{
+          type: 'prolonged_sedentary',
+          start: '2026-06-01T14:00',
+          end: '2026-06-01T16:00',
+          durationMin: 120,
+          confidence: 0.9,
+          recognitionEvidence: ['久坐'],
+          syncState: { lastSyncedMeasuredAt: null, pendingEventCount: 0, fromSyncedWindow: false },
+          evidenceIds: ['event_sedentary'],
+        }],
+      }),
+      demoNow: '2026-06-01T16:05',
+      previousRecommendedActions: previousActions,
+    });
+
+    const focusCategories = insights[0]!.recommendedFocus.map(f => f.category);
+    expect(focusCategories).not.toContain('movement_reset');
+    // posture 属于 light_posture，不受 strenuous_activity 抑制
+    expect(focusCategories).toContain('posture');
+  });
+
+  it('does not affect behavior when no previous actions', () => {
+    const insights = buildHomepageEventInsights({
+      homepage: makeHomepage({
+        recentEvents: [{
+          type: 'work_sedentary',
+          start: '2026-06-01T10:00',
+          end: '2026-06-01T12:00',
+          durationMin: 120,
+          confidence: 0.9,
+          recognitionEvidence: ['久坐'],
+          syncState: { lastSyncedMeasuredAt: null, pendingEventCount: 0, fromSyncedWindow: false },
+          evidenceIds: ['event_sedentary'],
+        }],
+      }),
+      demoNow: '2026-06-01T12:05',
+    });
+
+    const focusCategories = insights[0]!.recommendedFocus.map(f => f.category);
+    // 无历史时行为不变：movement_reset 应存在
+    expect(focusCategories).toContain('movement_reset');
+  });
+});
