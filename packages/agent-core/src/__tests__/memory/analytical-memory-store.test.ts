@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { InMemoryAnalyticalMemoryStore } from '../../memory/analytical-memory-store';
+import type { RecentRecommendedAction } from '../../types/memory';
 
 describe('InMemoryAnalyticalMemoryStore', () => {
   it('returns undefined for non-existent session', () => {
@@ -90,5 +91,67 @@ describe('InMemoryAnalyticalMemoryStore', () => {
 
     expect(store.get('sess-1')).toBeUndefined();
     expect(store.get('sess-2')).toBeUndefined();
+  });
+
+  describe('setHomepageActions', () => {
+    it('appends actions to empty list', () => {
+      const store = new InMemoryAnalyticalMemoryStore();
+      const actions: RecentRecommendedAction[] = [
+        { category: 'movement_reset', microEventType: 'micro_short_walk', title: '短距离步行', timestamp: 1000 },
+      ];
+      store.setHomepageActions('s1', 'p1', actions);
+      const memory = store.get('s1');
+      expect(memory?.latestHomepageActions).toEqual(actions);
+    });
+
+    it('appends actions to existing list', () => {
+      const store = new InMemoryAnalyticalMemoryStore();
+      store.setHomepageActions('s1', 'p1', [
+        { category: 'hydration', title: '补水', timestamp: 1000 },
+      ]);
+      store.setHomepageActions('s1', 'p1', [
+        { category: 'movement_reset', title: '步行', timestamp: 2000 },
+      ]);
+      const memory = store.get('s1');
+      expect(memory?.latestHomepageActions).toHaveLength(2);
+      expect(memory?.latestHomepageActions?.[0]?.category).toBe('hydration');
+      expect(memory?.latestHomepageActions?.[1]?.category).toBe('movement_reset');
+    });
+
+    it('caps list at 20 items (FIFO)', () => {
+      const store = new InMemoryAnalyticalMemoryStore();
+      // 插入 25 条
+      for (let i = 0; i < 25; i++) {
+        store.setHomepageActions('s1', 'p1', [
+          { category: 'hydration', title: `补水 ${i}`, timestamp: i },
+        ]);
+      }
+      const memory = store.get('s1');
+      expect(memory?.latestHomepageActions).toHaveLength(20);
+      // 最旧的 5 条被淘汰，保留 index 5-24
+      expect(memory?.latestHomepageActions?.[0]?.title).toBe('补水 5');
+    });
+
+    it('clears latestHomepageActions on invalidateOnOverride', () => {
+      const store = new InMemoryAnalyticalMemoryStore();
+      store.setHomepageBrief('s1', 'p1', 'test brief');
+      store.setHomepageActions('s1', 'p1', [
+        { category: 'hydration', title: '补水', timestamp: 1000 },
+      ]);
+      store.invalidateOnOverride('s1');
+      const memory = store.get('s1');
+      expect(memory?.latestHomepageActions).toBeUndefined();
+      // latestHomepageBrief 应保留（override 不清除 brief）
+      expect(memory?.latestHomepageBrief).toBe('test brief');
+    });
+
+    it('clears latestHomepageActions on invalidateOnProfileSwitch', () => {
+      const store = new InMemoryAnalyticalMemoryStore();
+      store.setHomepageActions('s1', 'p1', [
+        { category: 'hydration', title: '补水', timestamp: 1000 },
+      ]);
+      store.invalidateOnProfileSwitch('s1');
+      expect(store.get('s1')).toBeUndefined();
+    });
   });
 });

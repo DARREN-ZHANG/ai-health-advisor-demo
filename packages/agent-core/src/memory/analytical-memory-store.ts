@@ -1,4 +1,4 @@
-import type { AnalyticalMemory } from '../types/memory';
+import type { AnalyticalMemory, RecentRecommendedAction } from '../types/memory';
 
 /**
  * Stores derived per-session analysis cache.
@@ -10,6 +10,7 @@ export interface AnalyticalMemoryStore {
   setHomepageBrief(sessionId: string, profileId: string, brief: string): void;
   setViewSummary(sessionId: string, profileId: string, scope: string, summary: string): void;
   setRuleSummary(sessionId: string, profileId: string, summary: string): void;
+  setHomepageActions(sessionId: string, profileId: string, actions: RecentRecommendedAction[]): void;
   invalidateOnProfileSwitch(sessionId: string): void;
   invalidateOnOverride(sessionId: string): void;
   clearAll(): void;
@@ -62,6 +63,13 @@ export class InMemoryAnalyticalMemoryStore implements AnalyticalMemoryStore {
     this.store.set(sessionId, { ...memory, latestRuleSummary: summary, updatedAt: Date.now() });
   }
 
+  setHomepageActions(sessionId: string, profileId: string, actions: RecentRecommendedAction[]): void {
+    const memory = this.getOrCreate(sessionId, profileId);
+    const existing = memory.latestHomepageActions ?? [];
+    const merged = [...existing, ...actions].slice(-20);
+    this.store.set(sessionId, { ...memory, latestHomepageActions: merged, updatedAt: Date.now() });
+  }
+
   invalidateOnProfileSwitch(sessionId: string): void {
     this.store.delete(sessionId);
   }
@@ -73,6 +81,7 @@ export class InMemoryAnalyticalMemoryStore implements AnalyticalMemoryStore {
       ...memory,
       latestViewSummaryByScope: undefined,
       latestRuleSummary: undefined,
+      latestHomepageActions: undefined,
       updatedAt: Date.now(),
     });
   }
