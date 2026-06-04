@@ -11,6 +11,8 @@ import type {
   AdvisorChatContextPacket,
   MetricSummary,
 } from '../context/context-packet';
+import type { RecentRecommendedAction } from '../types/memory';
+import { ACTION_SEMANTIC_GROUPS } from '../context/homepage-event-insights';
 import { ChartTokenId, type DataTab, type Locale } from '@health-advisor/shared';
 
 // ────────────────────────────────────────────
@@ -280,6 +282,31 @@ function renderInternalHomepageAnalysisContext(homepage: HomepageContextPacket, 
   return lines.join('\n');
 }
 
+function renderPreviousActions(actions: RecentRecommendedAction[], locale: Locale): string {
+  const lines: string[] = [];
+  lines.push(t(locale, '## 近期已推荐行动（禁止重复）', '## Recently Recommended Actions (Do Not Repeat)'));
+  lines.push(t(
+    locale,
+    '以下行动类型近期已推荐过，本轮 summary 和 actions 中不得出现相同或语义相近的建议：',
+    'The following action types were recently recommended. This round\'s summary and actions must not repeat or approximate them:',
+  ));
+
+  // 按语义组聚合渲染
+  const groups = new Map<string, string[]>();
+  for (const action of actions) {
+    const group = ACTION_SEMANTIC_GROUPS[action.category] ?? action.category;
+    const list = groups.get(group) ?? [];
+    list.push(`${action.title}（${action.category}）`);
+    groups.set(group, list);
+  }
+
+  for (const [group, items] of groups) {
+    lines.push(`- ${t(locale, '语义组', 'Group')}: ${group} — ${items.join('、')}`);
+  }
+
+  return lines.join('\n');
+}
+
 function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string {
   const c = colon(locale);
   const lines: string[] = [];
@@ -300,6 +327,11 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string
 
   const internalAnalysisSection = renderInternalHomepageAnalysisContext(homepage, locale);
   if (internalAnalysisSection) lines.push(internalAnalysisSection);
+
+  // 近期已推荐行动区块
+  if (homepage.previousRecommendedActions && homepage.previousRecommendedActions.length > 0) {
+    lines.push(renderPreviousActions(homepage.previousRecommendedActions, locale));
+  }
 
   if (hasEvents) {
     const materialRecoveryMetrics = new Set(
