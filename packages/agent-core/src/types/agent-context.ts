@@ -1,5 +1,6 @@
 import type { AgentTaskType, DataTab, Timeframe, PageContext, RecognizedEvent, DerivedTemporalState, DeviceEvent, Locale } from '@health-advisor/shared';
 import type { UserMemoryFact } from './durable-memory';
+import type { RecentRecommendedAction } from './memory';
 
 export type AgentStatusColor = 'green' | 'yellow' | 'red';
 
@@ -63,6 +64,7 @@ export interface AgentContext {
     latestViewSummary?: string;
     latestRuleSummary?: string;
     durableFacts: UserMemoryFact[];
+    latestHomepageActions?: RecentRecommendedAction[];
   };
   /** 时间轴同步上下文（demo timeline 模式下可用） */
   timelineSync?: TimelineSyncContext;

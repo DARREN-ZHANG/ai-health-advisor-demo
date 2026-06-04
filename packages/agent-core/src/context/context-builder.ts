@@ -112,6 +112,7 @@ export function buildAgentContext(
       latestHomepageBrief: analytical?.latestHomepageBrief,
       latestViewSummary: scope ? analytical?.latestViewSummaryByScope?.[scope] : undefined,
       latestRuleSummary: analytical?.latestRuleSummary,
+      latestHomepageActions: analytical?.latestHomepageActions,
       durableFacts,
     },
     ...(timelineSync ? { timelineSync } : {}),
