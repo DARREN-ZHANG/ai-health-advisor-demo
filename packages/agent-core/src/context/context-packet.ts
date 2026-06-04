@@ -1,6 +1,7 @@
 import type { ChartTokenId, DataTab, Timeframe } from '@health-advisor/shared';
 import { z } from 'zod';
 import { MetricType } from '../planner/analysis-plan';
+import type { RecentRecommendedAction } from '../types/memory';
 
 // ────────────────────────────────────────────
 // 核心 Metric 类型
@@ -367,6 +368,7 @@ export interface HomepageContextPacket {
   rulesInsights: RuleInsightPacket[];
   suggestedChartTokens: ChartTokenId[];
   eventInsights: HomepageEventInsight[];
+  previousRecommendedActions?: RecentRecommendedAction[];
 }
 
 // ────────────────────────────────────────────

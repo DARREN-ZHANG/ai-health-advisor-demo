@@ -234,12 +234,16 @@ function buildHomepagePacket(
     suggestedChartTokens: rulesResult.suggestedChartTokens,
   };
 
+  const previousActions = context.memory.latestHomepageActions;
+
   return {
     ...homepageWithoutInsights,
     eventInsights: buildHomepageEventInsights({
       homepage: homepageWithoutInsights,
       demoNow: context.demoNow,
+      previousRecommendedActions: previousActions,
     }),
+    previousRecommendedActions: previousActions,
   };
 }
 

@@ -54,6 +54,7 @@ import type {
 export interface BuildHomepageEventInsightsInput {
   homepage: Pick<HomepageContextPacket, 'recentEvents' | 'latest24h' | 'trend7d' | 'rulesInsights'>;
   demoNow?: string;
+  previousRecommendedActions?: RecentRecommendedAction[];
 }
 
 interface EventSequenceItem {
