@@ -505,11 +505,11 @@ function generateBoxBreathing(segment: MicroEventSegment): DeviceEvent[] {
 
   for (let m = 0; m < totalMin; m += 1) {
     const progress = m / Math.max(totalMin - 1, 1);
-    const hrDrop = 8 + progress * 4; // 8 → 12
+    const hrDrop = 12 + progress * 10; // 12 → 22
     const hr = rangeValue(Math.round(restingHr - hrDrop), 3, m, 130);
     events.push(makeEvent(segment, m, 'heartRate', hr, idx++));
 
-    const hrvRise = 10 + progress * 8; // 10 → 18
+    const hrvRise = 14 + progress * 12; // 14 → 26
     const hrvVal = rangeValue(Math.round(hrv + hrvRise), 4, m, 131);
     events.push(makeEvent(segment, m, 'hrvRmssd', hrvVal, idx++));
 

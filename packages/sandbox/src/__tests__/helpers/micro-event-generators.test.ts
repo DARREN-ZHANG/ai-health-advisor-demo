@@ -51,4 +51,43 @@ describe('generateEventsForMicroEvent', () => {
     const events = generateEventsForMicroEvent(makeSegment('micro_sleep_wind_down'));
     expect(events.some((event) => event.metric === 'sleepStage')).toBe(false);
   });
+
+  it('box breathing has larger HR drop and HRV rise than deep breathing', () => {
+    const events = generateEventsForMicroEvent(makeSegment('micro_box_breathing'));
+    const hr = events.filter((e) => e.metric === 'heartRate').map((e) => Number(e.value));
+    const hrv = events.filter((e) => e.metric === 'hrvRmssd').map((e) => Number(e.value));
+
+    expect(hr.at(-1)!).toBeLessThan(hr[0]! - 6); // 至少下降 6 bpm
+    expect(hrv.at(-1)!).toBeGreaterThan(hrv[0]! + 8); // 至少上升 8 ms
+    expect(events.filter((e) => e.metric === 'steps').every((e) => Number(e.value) === 0)).toBe(true);
+  });
+
+  it('stair climb produces high steps and HR rise', () => {
+    const events = generateEventsForMicroEvent(makeSegment('micro_stair_climb'));
+    const steps = events.filter((e) => e.metric === 'steps').map((e) => Number(e.value));
+    const hr = events.filter((e) => e.metric === 'heartRate').map((e) => Number(e.value));
+
+    expect(steps.at(-1)!).toBeGreaterThan(200); // 总步数 > 200
+    expect(Math.max(...hr)).toBeGreaterThan(58 + 15); // 最高心率 > restingHr + 15
+  });
+
+  it('cold face dip triggers dive reflex with sharp HR drop', () => {
+    const events = generateEventsForMicroEvent(makeSegment('micro_cold_face_dip'));
+    const hr = events.filter((e) => e.metric === 'heartRate').map((e) => Number(e.value));
+    const hrv = events.filter((e) => e.metric === 'hrvRmssd').map((e) => Number(e.value));
+
+    expect(hr.at(-1)!).toBeLessThan(hr[0]! - 6); // 心率骤降
+    expect(hrv.at(-1)!).toBeGreaterThan(hrv[0]! + 8); // HRV 大幅拉升
+    expect(events.filter((e) => e.metric === 'steps').every((e) => Number(e.value) === 0)).toBe(true);
+  });
+
+  it('power nap lowers HR below resting baseline and raises HRV', () => {
+    const events = generateEventsForMicroEvent(makeSegment('micro_power_nap'));
+    const hr = events.filter((e) => e.metric === 'heartRate').map((e) => Number(e.value));
+    const hrv = events.filter((e) => e.metric === 'hrvRmssd').map((e) => Number(e.value));
+
+    expect(hr.at(-1)!).toBeLessThan(58); // 低于 restingHr baseline
+    expect(hrv.at(-1)!).toBeGreaterThan(hrv[0]! + 6); // HRV 显著上升
+    expect(events.filter((e) => e.metric === 'steps').every((e) => Number(e.value) === 0)).toBe(true);
+  });
 });
