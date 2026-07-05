@@ -12,6 +12,7 @@ playwright-report
 .omx
 .claude
 .kimi
+.agents
 .github
 docs/superpowers/*
 
