@@ -6,18 +6,25 @@ import type {
   DataCenterResponse,
   SandboxProfile,
 } from '@health-advisor/shared';
+import { useLocale } from 'next-intl';
 import { ValoCard } from '@/components/valo/ValoCard';
+import { formatSnapshotDate } from './format-snapshot-date';
 
 /**
- * SleepDetailView —— Sleep tab 的"今日快照"详情卡。
+ * SleepDetailView —— Sleep tab 的"快照"详情卡。
  *
- * 数据来源：DataCenterResponse.timeline 最后一个采样点（最近一日）。
+ * 数据来源：DataCenterResponse.timeline 最后一个采样点。该点代表的是
+ * **当前 timeframe 的最后一日**，并非一定是「今天」：day 视图下确实是今日，
+ * 但 week/month 视图下是窗口的最后一天。Header 渲染的 `snapshotDate` 副标题
+ * 让用户明确看到具体是哪一天。
+ *
  * timeline 每个点的 values 仅包含后端 TAB_METRICS.sleep 声明的字段：
  *   - sleep.totalMinutes
  *   - sleep.score
- *   - sleep.stages.deep / rem / light
- *   （sleep.stages.awake 由每日记录的 intraday 推导，未在 TAB_METRICS 中，
- *    因此本组件对其缺失保持宽容，显示 "—"）
+ *   - sleep.stages.deep / rem / light / awake
+ *
+ * sleep.stages.awake 已加入 TAB_METRICS.sleep；本组件对仍然缺失的值保持宽容，
+ * 显示 "—"（demo 数据或同步中断等场景可能缺失某个分期）。
  *
  * 设计规则（与 I4.2 plan 对齐）：
  * - 不伪造 sleep.score —— score 是独立字段，不通过其他指标推算
@@ -65,10 +72,15 @@ function formatDuration(totalMinutes: number, unitH: string, unitM: string): str
 
 export function SleepDetailView({ data, profile }: SleepDetailViewProps) {
   const t = useTranslations('dataCenter.sleepDetail');
+  const locale = useLocale();
 
   // 取最近一日采样点（timeline 末尾）；缺失时整体渲染空态
   const latest = data?.timeline?.at(-1);
   const values = latest?.values ?? {};
+
+  // 快照日期副标题文本（locale-aware）。week/month 视图下不一定为今日
+  const snapshotDate = latest?.date ?? null;
+  const snapshotLabel = snapshotDate ? formatSnapshotDate(snapshotDate, locale) : null;
 
   const totalMinutes = values['sleep.totalMinutes'] ?? null;
   const score = values['sleep.score'] ?? null;
@@ -90,7 +102,8 @@ export function SleepDetailView({ data, profile }: SleepDetailViewProps) {
 
   // 睡眠效率 = 睡眠时长 / (睡眠时长 + 清醒时长)，等价于 totalMinutes / 在床时长
   // sleep.startTime / endTime 未在 TAB_METRICS 暴露，故不直接用 ISO 时长计算；
-  // 当 awake 缺失或 totalMinutes 缺失时，效率不可推导 → 显示 —（不伪造）
+  // awake 虽已加入 TAB_METRICS.sleep，但 demo/同步异常时仍可能缺失；
+  // 当 awake 或 totalMinutes 任一缺失时，效率不可推导 → 显示 —（不伪造）
   const efficiencyPct = useMemo(() => {
     if (totalMinutes == null || totalMinutes <= 0) return null;
     if (stages.awake == null) return null;
@@ -103,6 +116,15 @@ export function SleepDetailView({ data, profile }: SleepDetailViewProps) {
 
   return (
     <div className="space-y-4" data-valo-trends-sleep-detail>
+      {/* 快照日期副标题：week/month 视图下并非总是今日；缺失时整体隐藏 */}
+      {snapshotLabel && snapshotDate ? (
+        <p
+          className="text-xs text-[var(--valo-text-secondary)]"
+          data-valo-sleep-snapshot-date
+        >
+          <time dateTime={snapshotDate}>{t('snapshotLabel')}: {snapshotLabel}</time>
+        </p>
+      ) : null}
       {/* 时长 + 目标完成 */}
       <ValoCard as="section" aria-label={t('durationTitle')}>
         <div className="flex items-baseline justify-between gap-4">

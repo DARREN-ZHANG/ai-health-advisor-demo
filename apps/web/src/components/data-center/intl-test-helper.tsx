@@ -35,6 +35,7 @@ const ZH_MESSAGES = {
       efficiencyTitle: '睡眠效率',
       efficiencyUnit: '%',
       scoreTitle: '睡眠得分',
+      snapshotLabel: '快照',
       noData: '—',
     },
     activityDetail: {
@@ -45,6 +46,7 @@ const ZH_MESSAGES = {
       caloriesUnit: '千卡',
       activeMinutesLabel: '活动',
       activeMinutesUnit: '分钟',
+      snapshotLabel: '快照',
       noData: '—',
     },
     reflection: {

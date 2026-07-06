@@ -206,6 +206,7 @@
       "efficiencyTitle": "Efficiency",
       "efficiencyUnit": "%",
       "scoreTitle": "Score",
+      "snapshotLabel": "Snapshot",
       "noData": "—"
     },
     "activityDetail": {
@@ -216,6 +217,7 @@
       "caloriesUnit": "kcal",
       "activeMinutesLabel": "Active",
       "activeMinutesUnit": "min",
+      "snapshotLabel": "Snapshot",
       "noData": "—"
     },
     "reflection": {

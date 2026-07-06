@@ -186,4 +186,24 @@ describe('SleepDetailView', () => {
     );
     expect(document.querySelector('[data-valo-sleep-score]')?.textContent).toBe('70');
   });
+
+  it('渲染快照日期副标题（locale=zh: "6月21日"）', () => {
+    renderWithIntl(
+      <SleepDetailView
+        data={makeTimeline({ 'sleep.totalMinutes': 452 }, '2026-06-21')}
+        profile={BASE_PROFILE}
+      />,
+    );
+    const node = document.querySelector('[data-valo-sleep-snapshot-date]');
+    expect(node).not.toBeNull();
+    expect(node?.textContent).toContain('6月21日');
+    // dateTime 属性应保留 ISO 形式，便于辅助技术
+    const time = node?.querySelector('time');
+    expect(time?.getAttribute('dateTime')).toBe('2026-06-21');
+  });
+
+  it('timeline 缺失时（data=null）不渲染快照日期副标题', () => {
+    renderWithIntl(<SleepDetailView data={null} profile={null} />);
+    expect(document.querySelector('[data-valo-sleep-snapshot-date]')).toBeNull();
+  });
 });
