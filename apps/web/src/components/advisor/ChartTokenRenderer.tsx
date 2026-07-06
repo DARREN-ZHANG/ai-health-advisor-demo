@@ -35,6 +35,12 @@ function hideAxis(axis: AxisOption): Record<string, unknown> {
   };
 }
 
+/**
+ * 单个 chart token 渲染器 —— Valo 视觉统一（I5.2）。
+ *
+ * 仅做"颜色字面量"层面的最小修复：把旧的 slate-/blue- 类名替换为
+ * `var(--valo-*)` token；不改动内部图表 option 构造逻辑。
+ */
 export function ChartTokenRenderer({ tokenId }: ChartTokenRendererProps) {
   const { currentProfileId } = useProfileStore();
   const { data, isLoading } = useChartDataQuery(currentProfileId, [tokenId]);
@@ -64,28 +70,49 @@ export function ChartTokenRenderer({ tokenId }: ChartTokenRendererProps) {
   }, [data, tokenId]);
 
   return (
-    <Card className="bg-slate-900 border-slate-700 p-4 flex flex-col gap-3 w-full">
+    <Card
+      className={
+        'p-4 flex flex-col gap-3 w-full border ' +
+        'border-[var(--valo-border)] bg-[var(--valo-surface)] text-[var(--valo-text-primary)]'
+      }
+    >
       <div className="flex justify-between items-center">
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-2 border-slate-700 pl-2">
+        <span
+          className={
+            'text-xs font-bold uppercase tracking-widest pl-2 ' +
+            'text-[var(--valo-text-secondary)] border-l-2 border-[var(--valo-border)]'
+          }
+        >
           {tokenMeta ? localize(tokenMeta.label, DEFAULT_LOCALE) : tokenId}
         </span>
-        <button className="text-[10px] text-blue-500 font-bold hover:text-blue-400 transition-colors bg-blue-500/5 px-2 py-1 rounded">
+        <button
+          className={
+            'text-[10px] font-bold px-2 py-1 rounded transition-colors ' +
+            'text-[var(--valo-prime)] hover:opacity-80 ' +
+            'bg-[color-mix(in_srgb,var(--valo-prime)_8%,transparent)]'
+          }
+        >
           {t('viewDetail')}
         </button>
       </div>
-      <div className="h-32 w-full bg-slate-950/40 rounded-lg flex items-center justify-center overflow-hidden border border-slate-800/50">
+      <div
+        className={
+          'h-32 w-full rounded-lg flex items-center justify-center overflow-hidden ' +
+          'bg-[var(--valo-canvas)]/40 border border-[var(--valo-border)]/50'
+        }
+      >
         {isLoading ? (
-          <div className="w-full h-full bg-slate-900/50 animate-pulse flex items-center justify-center">
+          <div className="w-full h-full bg-[var(--valo-surface)]/50 animate-pulse flex items-center justify-center">
             <div className="flex gap-1">
-              <div className="w-1 h-1 bg-slate-700 rounded-full animate-bounce" />
-              <div className="w-1 h-1 bg-slate-700 rounded-full animate-bounce [animation-delay:0.2s]" />
-              <div className="w-1 h-1 bg-slate-700 rounded-full animate-bounce [animation-delay:0.4s]" />
+              <div className="w-1 h-1 rounded-full bg-[var(--valo-text-secondary)] animate-bounce" />
+              <div className="w-1 h-1 rounded-full bg-[var(--valo-text-secondary)] animate-bounce [animation-delay:0.2s]" />
+              <div className="w-1 h-1 rounded-full bg-[var(--valo-text-secondary)] animate-bounce [animation-delay:0.4s]" />
             </div>
           </div>
         ) : option ? (
           <MicroChart option={option} height={110} />
         ) : (
-          <span className="text-xs text-slate-600 font-medium">
+          <span className="text-xs font-medium text-[var(--valo-text-secondary)]">
             {!getChartBuilder(tokenId) ? t('noRenderer') : t('noDataShort')}
           </span>
         )}

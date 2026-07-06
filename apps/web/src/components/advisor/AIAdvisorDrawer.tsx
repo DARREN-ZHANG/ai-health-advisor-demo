@@ -274,6 +274,7 @@ function ChatContent({
             <h2
               className="text-base font-semibold text-[var(--valo-text-primary)]"
               data-valo-serif="true"
+              data-valo-advisor-title="true"
             >
               {t('title')}
             </h2>
@@ -342,6 +343,7 @@ function ChatContent({
               onChange={(e) => setComposerValue(e.target.value)}
               aria-label={t('composerLabel')}
               placeholder={t('composerPlaceholder')}
+              data-valo-advisor-composer="true"
               className={
                 'flex-1 min-h-[44px] max-h-32 resize-none rounded-xl px-4 py-2.5 text-sm ' +
                 'border border-[var(--valo-border)] bg-[var(--valo-canvas)] ' +
@@ -361,6 +363,7 @@ function ChatContent({
               disabled={!composerValue.trim() || isLoading}
               aria-label={t('send')}
               data-valo-touch="true"
+              data-valo-advisor-send="true"
               className={
                 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-opacity ' +
                 'disabled:opacity-40 hover:opacity-90 focus:outline-none ' +
@@ -430,7 +433,7 @@ function EmptyState() {
 function LoadingBubble({ isTimeoutHint }: { isTimeoutHint: boolean }) {
   const t = useTranslations('advisor');
   return (
-    <div className="flex justify-start my-3 px-1" data-valo-loading="true">
+    <div className="flex justify-start my-3 px-1" data-valo-loading="true" data-valo-advisor-loading="true">
       <div
         className={
           'flex items-center gap-1 rounded-2xl rounded-tl-none border px-4 py-2 ' +
@@ -516,6 +519,7 @@ function MoreMenu({
                   setOpen(false);
                 }}
                 disabled={disabled}
+                data-valo-advisor-clear="true"
                 className={
                   'flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-semibold ' +
                   'text-[var(--valo-depleted)] transition-colors hover:bg-[var(--valo-border)] ' +

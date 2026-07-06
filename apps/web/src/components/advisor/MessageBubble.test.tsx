@@ -1,0 +1,261 @@
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, cleanup } from '@testing-library/react';
+import { AgentTaskType } from '@health-advisor/shared';
+import type { Message } from '@/stores/ai-advisor.store';
+import { MessageBubble } from './MessageBubble';
+
+/**
+ * MessageBubble 单元测试（I5.2）。
+ *
+ * 覆盖：
+ * - data-valo-message-* 锚点齐全。
+ * - 仅引用 var(--valo-*)，无散落的 slate-/blue-/red-/yellow- 类名。
+ * - 三种角色（user/assistant/system）的视觉分支。
+ * - 状态色映射（error/warning/active）。
+ * - chartTokens / memoryCandidates 子节点 data 锚点（不渲染图表本身）。
+ */
+
+// ChartTokenRenderer / MemoryCandidateCard 依赖 React Query / 数据 hook，
+// 单测 MessageBubble 时把它们 stub 掉，只关心外壳是否挂出 data 锚点。
+vi.mock('./ChartTokenRenderer', () => ({
+  ChartTokenRenderer: ({ tokenId }: { tokenId: string }) => (
+    <div data-mock-chart-token={tokenId} />
+  ),
+}));
+
+vi.mock('./MemoryCandidateCard', () => ({
+  MemoryCandidateCard: ({ candidate }: { candidate: { id: string } }) => (
+    <div data-mock-memory-card={candidate.id} />
+  ),
+}));
+
+// next-intl 不被 MessageBubble 直接使用，无需 provider。
+function renderBubble(message: Message) {
+  return render(<MessageBubble message={message} />);
+}
+
+function baseMessage(overrides: Partial<Message> = {}): Message {
+  return {
+    id: 'm1',
+    role: 'user',
+    content: 'hello',
+    timestamp: new Date('2026-07-05T08:30:00Z').getTime(),
+    ...overrides,
+  };
+}
+
+describe('MessageBubble', () => {
+  afterEach(() => cleanup());
+
+  // ---------- data 锚点 ----------
+
+  it('user 消息挂出 data-valo-message-role="user" 与 message-id', () => {
+    renderBubble(baseMessage({ role: 'user', id: 'u1' }));
+    const node = document.querySelector('[data-valo-message-role="user"]');
+    expect(node).not.toBeNull();
+    expect(node?.getAttribute('data-valo-message-id')).toBe('u1');
+  });
+
+  it('assistant 消息挂出 data-valo-message-role="assistant"', () => {
+    renderBubble(baseMessage({ role: 'assistant', id: 'a1' }));
+    expect(
+      document.querySelector('[data-valo-message-role="assistant"]'),
+    ).not.toBeNull();
+  });
+
+  it('system 消息挂出 data-valo-message-role="system"', () => {
+    renderBubble(baseMessage({ role: 'system', content: '系统提示' }));
+    expect(
+      document.querySelector('[data-valo-message-role="system"]'),
+    ).not.toBeNull();
+  });
+
+  it('挂出 data-valo-message-timestamp（ISO 字符串）', () => {
+    const ts = new Date('2026-07-05T08:30:00Z').getTime();
+    renderBubble(baseMessage({ timestamp: ts }));
+    const node = document.querySelector('[data-valo-message-timestamp]');
+    expect(node?.getAttribute('data-valo-message-timestamp')).toBe(
+      new Date(ts).toISOString(),
+    );
+  });
+
+  // ---------- 状态色映射 ----------
+
+  it('error 状态色映射到 var(--valo-depleted) 并挂 data-valo-message-status="error"', () => {
+    renderBubble(
+      baseMessage({ role: 'assistant', statusColor: 'error' }),
+    );
+    const badge = document.querySelector('[data-valo-message-status="error"]');
+    expect(badge).not.toBeNull();
+    expect(badge?.getAttribute('style') ?? '').toContain('var(--valo-depleted)');
+  });
+
+  it('warning 状态色映射到 var(--valo-sluggish)', () => {
+    renderBubble(
+      baseMessage({ role: 'assistant', statusColor: 'warning' }),
+    );
+    const badge = document.querySelector('[data-valo-message-status="warning"]');
+    expect(badge?.getAttribute('style') ?? '').toContain('var(--valo-sluggish)');
+  });
+
+  it('active 状态色映射到 var(--valo-active)', () => {
+    renderBubble(
+      baseMessage({ role: 'assistant', statusColor: 'good' }),
+    );
+    const badge = document.querySelector('[data-valo-message-status="good"]');
+    expect(badge?.getAttribute('style') ?? '').toContain('var(--valo-active)');
+  });
+
+  it('无 statusColor 时不渲染状态徽标', () => {
+    renderBubble(baseMessage({ role: 'assistant', statusColor: undefined }));
+    expect(document.querySelector('[data-valo-message-status]')).toBeNull();
+  });
+
+  // ---------- source 徽标 ----------
+
+  it('source="llm" 渲染 source 徽标并挂 data-valo-message-source', () => {
+    renderBubble(baseMessage({ role: 'assistant', source: 'llm' }));
+    const badge = document.querySelector('[data-valo-message-source="llm"]');
+    expect(badge).not.toBeNull();
+    expect(badge?.textContent).toContain('AI Advisor');
+  });
+
+  it('source="fallback" 显示 Fallback 文案', () => {
+    renderBubble(baseMessage({ role: 'assistant', source: 'fallback' }));
+    const badge = document.querySelector(
+      '[data-valo-message-source="fallback"]',
+    );
+    expect(badge?.textContent).toContain('Fallback');
+  });
+
+  // ---------- token-only colors ----------
+
+  it('user 气泡背景使用 var(--valo-prime)，文字 var(--valo-canvas)', () => {
+    renderBubble(baseMessage({ role: 'user', content: 'bubble-content' }));
+    // 气泡 div 是包含消息文本的元素。
+    const bubble = Array.from(
+      document.querySelectorAll('[data-valo-message-role="user"] div'),
+    ).find((el) => el.textContent === 'bubble-content') as
+      | HTMLElement
+      | undefined;
+    expect(bubble).toBeDefined();
+    const style = bubble?.getAttribute('style') ?? '';
+    expect(style).toContain('var(--valo-prime)');
+    expect(bubble?.className ?? '').toContain('text-[var(--valo-canvas)]');
+  });
+
+  it('assistant 气泡使用 var(--valo-surface) + border + text-primary', () => {
+    renderBubble(
+      baseMessage({ role: 'assistant', content: 'assistant-bubble' }),
+    );
+    const bubble = Array.from(
+      document.querySelectorAll('[data-valo-message-role="assistant"] div'),
+    ).find((el) => el.textContent === 'assistant-bubble') as
+      | HTMLElement
+      | undefined;
+    expect(bubble).toBeDefined();
+    const style = bubble?.getAttribute('style') ?? '';
+    expect(style).toContain('var(--valo-surface)');
+    const cls = bubble?.className ?? '';
+    expect(cls).toContain('border-[var(--valo-border)]');
+    expect(cls).toContain('text-[var(--valo-text-primary)]');
+  });
+
+  it('整棵 MessageBubble 子树不再出现散落的 slate-/blue-/red-/yellow- 类名', () => {
+    const { container } = renderBubble(
+      baseMessage({ role: 'assistant', statusColor: 'error', source: 'llm' }),
+    );
+    const allClassNames = Array.from(
+      container.querySelectorAll('[class]'),
+    ).flatMap((el) => (el.getAttribute('class') ?? '').split(/\s+/));
+    const offenders = allClassNames.filter(
+      (cls) =>
+        cls.startsWith('bg-slate') ||
+        cls.startsWith('text-slate') ||
+        cls.startsWith('border-slate') ||
+        cls.startsWith('bg-blue') ||
+        cls.startsWith('text-blue') ||
+        cls.startsWith('border-blue') ||
+        cls.startsWith('bg-red') ||
+        cls.startsWith('text-red') ||
+        cls.startsWith('bg-yellow') ||
+        cls.startsWith('text-yellow'),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  // ---------- 子节点锚点 ----------
+
+  it('chartTokens 存在时挂出 data-valo-message-charts="true" 容器', () => {
+    renderBubble(
+      baseMessage({
+        role: 'assistant',
+        chartTokens: ['sleep-duration' as never],
+      }),
+    );
+    expect(
+      document.querySelector('[data-valo-message-charts="true"]'),
+    ).not.toBeNull();
+  });
+
+  it('memoryCandidates 存在时挂出 data-valo-message-memory="true" 容器', () => {
+    renderBubble(
+      baseMessage({
+        role: 'assistant',
+        memoryCandidates: [
+          { id: 'mem-1', proposedConfirmationText: 'x', evidenceQuote: 'y' } as never,
+        ],
+      }),
+    );
+    expect(
+      document.querySelector('[data-valo-message-memory="true"]'),
+    ).not.toBeNull();
+  });
+
+  // ---------- 错误分支 ----------
+
+  it('system 错误消息（以"发送失败"开头）使用 var(--valo-depleted) 边框/文字', () => {
+    renderBubble(
+      baseMessage({ role: 'system', content: '发送失败: network down' }),
+    );
+    const sysNode = document.querySelector(
+      '[data-valo-message-role="system"]',
+    ) as HTMLElement | null;
+    expect(sysNode?.className ?? '').toContain('var(--valo-depleted)');
+  });
+
+  it('普通系统提示（非错误）使用 text-secondary 而非 depleted', () => {
+    renderBubble(baseMessage({ role: 'system', content: '一般提示' }));
+    const sysNode = document.querySelector(
+      '[data-valo-message-role="system"]',
+    ) as HTMLElement | null;
+    expect(sysNode?.className ?? '').toContain('text-[var(--valo-text-secondary)]');
+    expect(sysNode?.className ?? '').not.toContain('var(--valo-depleted)');
+  });
+
+  // ---------- finishReason fallback 提示 ----------
+
+  it('meta.finishReason="fallback" 渲染橙色 fallback 提示', () => {
+    renderBubble(
+      baseMessage({
+        role: 'assistant',
+        meta: {
+          taskType: AgentTaskType.ADVISOR_CHAT,
+          pageContext: {
+            profileId: 'p1',
+            page: 'homepage',
+            timeframe: 'week',
+          },
+          finishReason: 'fallback',
+        },
+      }),
+    );
+    const tsNode = document.querySelector('[data-valo-message-timestamp]');
+    expect(tsNode?.textContent).toContain('Fallback');
+    // 检查提示元素是否使用 sluggish 色。
+    const fallbackSpan = tsNode?.querySelector('span[style]');
+    const fallbackStyle =
+      fallbackSpan?.getAttribute('style') ?? '';
+    expect(fallbackStyle).toContain('var(--valo-sluggish)');
+  });
+});

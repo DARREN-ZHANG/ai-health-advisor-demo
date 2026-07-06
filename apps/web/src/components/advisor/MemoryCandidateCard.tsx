@@ -8,6 +8,12 @@ interface MemoryCandidateCardProps {
   candidate: MemoryCandidateConfirmation;
 }
 
+/**
+ * 记忆候选卡 —— Valo 视觉统一（I5.2）。
+ *
+ * 仅做"颜色字面量"层面的最小修复：把旧的 slate-/blue-/emerald- 类名替换为
+ * `var(--valo-*)` token；不改动 confirm/reject 行为。
+ */
 export function MemoryCandidateCard({ candidate }: MemoryCandidateCardProps) {
   const { currentProfileId } = useProfileStore();
   const confirm = useConfirmMemoryCandidate(currentProfileId);
@@ -17,18 +23,27 @@ export function MemoryCandidateCard({ candidate }: MemoryCandidateCardProps) {
   const status = confirm.isSuccess ? '已记住' : reject.isSuccess ? '已忽略' : null;
 
   return (
-    <div className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-200">
+    <div
+      className={
+        'w-full rounded-lg border px-3 py-2 text-xs ' +
+        'border-[var(--valo-border)] bg-[var(--valo-surface)] ' +
+        'text-[var(--valo-text-primary)]'
+      }
+    >
       <p className="font-medium">{candidate.proposedConfirmationText}</p>
-      <p className="mt-1 text-slate-500">来源：{candidate.evidenceQuote}</p>
+      <p className="mt-1 text-[var(--valo-text-secondary)]">
+        来源：{candidate.evidenceQuote}
+      </p>
       {status ? (
-        <p className="mt-2 text-emerald-400">{status}</p>
+        <p className="mt-2 text-[var(--valo-active)]">{status}</p>
       ) : (
         <div className="mt-2 flex gap-2">
           <button
             type="button"
             disabled={disabled}
             onClick={() => confirm.mutate(candidate.id)}
-            className="rounded bg-blue-600 px-3 py-1 font-medium text-white disabled:opacity-50"
+            className="rounded px-3 py-1 font-medium disabled:opacity-50 text-[var(--valo-canvas)]"
+            style={{ backgroundColor: 'var(--valo-prime)' }}
           >
             记住
           </button>
@@ -36,7 +51,7 @@ export function MemoryCandidateCard({ candidate }: MemoryCandidateCardProps) {
             type="button"
             disabled={disabled}
             onClick={() => reject.mutate(candidate.id)}
-            className="rounded bg-slate-800 px-3 py-1 font-medium text-slate-300 disabled:opacity-50"
+            className="rounded px-3 py-1 font-medium border disabled:opacity-50 text-[var(--valo-text-primary)] border-[var(--valo-border)] bg-[var(--valo-canvas)]"
           >
             忽略
           </button>
