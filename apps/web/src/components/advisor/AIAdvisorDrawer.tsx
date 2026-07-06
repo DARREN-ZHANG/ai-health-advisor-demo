@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useId } from 'react';
 import { usePathname } from 'next/navigation';
 import { m, AnimatePresence } from 'framer-motion';
 import { useUIStore } from '@/stores/ui.store';
@@ -395,6 +395,9 @@ function ChatContent({
  */
 function EmptyState() {
   const t = useTranslations('advisor');
+  // 用 useId 生成唯一 id，避免 mobile + desktop 双 overlay 同时挂载时
+  // linearGradient id 重复导致渐变引用错乱（React 18 稳定 API）。
+  const ringGradientId = useId();
   return (
     <div
       className="flex flex-col items-center justify-center gap-6 px-6 py-10 text-center"
@@ -410,11 +413,11 @@ function EmptyState() {
         className="drop-shadow-[0_0_24px_rgba(167,139,250,0.45)]"
       >
         <defs>
-          <linearGradient id="valo-empty-ring" x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id={ringGradientId} x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="var(--valo-active)" />
-            <stop offset="35%" stopColor="#60a5fa" />
+            <stop offset="35%" stopColor="var(--valo-accent-cool)" />
             <stop offset="70%" stopColor="var(--valo-prime)" />
-            <stop offset="100%" stopColor="#f472b6" />
+            <stop offset="100%" stopColor="var(--valo-accent-warm)" />
           </linearGradient>
         </defs>
         <circle
@@ -422,7 +425,7 @@ function EmptyState() {
           cy="100"
           r="80"
           fill="none"
-          stroke="url(#valo-empty-ring)"
+          stroke={`url(#${ringGradientId})`}
           strokeWidth="6"
         />
         <circle
@@ -430,7 +433,7 @@ function EmptyState() {
           cy="100"
           r="64"
           fill="none"
-          stroke="url(#valo-empty-ring)"
+          stroke={`url(#${ringGradientId})`}
           strokeWidth="2"
           opacity="0.6"
         />

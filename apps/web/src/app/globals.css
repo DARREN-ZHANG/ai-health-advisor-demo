@@ -43,6 +43,16 @@
   /** Glycogen Depleted：红色光谱；error */
   --valo-depleted: #f87171;
 
+  /* ---------- 辅助光谱（AI Chat 空态环形渐变专用） ---------- */
+  /**
+   * 这两个 token 专为 AI Chat 空态霓虹环的 4-stop 渐变补充：
+   * 主四态（prime/active/sluggish/depleted）已覆盖健康状态语义，
+   * 环形渐变需要蓝/粉两个辅助色完成"全光谱"过渡，统一以 token 收口
+   * 避免散落 hex 字面量。
+   */
+  --valo-accent-cool: #60a5fa;
+  --valo-accent-warm: #f472b6;
+
   /* ---------- 字体 ---------- */
   /** 正文 / 按钮 / 导航 / 表单：SF Pro + 系统无衬线回退 */
   --valo-font-sans:
