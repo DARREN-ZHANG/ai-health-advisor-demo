@@ -117,6 +117,21 @@ describe('ValoConfirmDialog', () => {
     );
   });
 
+  it('确认按钮前景色引用 --valo-canvas token，禁止硬编码 hex', () => {
+    render(
+      <ValoConfirmDialog
+        open
+        onClose={() => {}}
+        onConfirm={() => {}}
+        title="测试"
+      />,
+    );
+    const confirmButton = screen.getByRole('button', { name: '确认' });
+    const className = confirmButton.getAttribute('class') ?? '';
+    expect(className).toContain('text-[var(--valo-canvas)]');
+    expect(className).not.toMatch(/text-\[#[0-9a-fA-F]{3,8}\]/);
+  });
+
   it('confirmDisabled=true 时确认按钮被禁用', () => {
     render(
       <ValoConfirmDialog

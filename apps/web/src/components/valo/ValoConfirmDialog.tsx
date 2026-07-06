@@ -86,7 +86,7 @@ export function ValoConfirmDialog({
             disabled={confirmDisabled}
             data-valo-touch="true"
             style={{ backgroundColor: confirmToken }}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-[#111118] hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="px-4 py-2 rounded-xl text-sm font-semibold text-[var(--valo-canvas)] hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {confirmLabel}
           </button>
