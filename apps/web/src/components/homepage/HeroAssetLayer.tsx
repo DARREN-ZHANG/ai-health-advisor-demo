@@ -35,8 +35,7 @@ export function HeroAssetLayer({ state, className = '' }: HeroAssetLayerProps) {
         width={entry.width}
         height={entry.height}
         loading="eager"
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- React 18.3 类型未声明 fetchPriority
-        fetchPriority={'high' as any}
+        fetchPriority="high"
         decoding="async"
         draggable={false}
         className="w-full h-full object-cover select-none"
