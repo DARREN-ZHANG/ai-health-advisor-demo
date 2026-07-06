@@ -61,7 +61,21 @@
     "manualRefresh": "手动刷新",
     "refreshing": "正在刷新...",
     "openConfig": "配置",
-    "configTitle": "配置面板"
+    "configTitle": "配置面板",
+    "avatarPlaceholder": "账户切换（即将上线）"
+  },
+  "health": {
+    "state": {
+      "prime-readiness": "最佳准备",
+      "active-recovery": "积极恢复",
+      "metabolic-sluggish": "代谢迟缓",
+      "glycogen-depleted": "糖原耗尽"
+    },
+    "switchStatus": {
+      "title": "切换状态",
+      "legend": "选择健康状态",
+      "ringLabel": "切换健康状态"
+    }
   },
   "dataCenter": {
     "overview": "概览",

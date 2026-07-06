@@ -1,0 +1,125 @@
+'use client';
+
+import { forwardRef, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
+import { HEALTH_STATE_METADATA } from '@/lib/valo-theme';
+import type { HealthVisualState } from '@/lib/valo-theme';
+import { HEALTH_STATE_GRADIENTS } from '@/lib/health-visual-state';
+
+/**
+ * HealthHero —— 首页 Hero 区，承载"四态健康状态环"。
+ *
+ * 设计要点（参见 docs/ui/valo/design-manifest.md）：
+ * - 整个圆环就是一个 `<button type="button">`，是 SwitchStatusDialog 的唯一
+ *   入口；不存在"装饰圆 + 透明 overlay"的二层结构。
+ * - 圆环颜色与径向渐变完全由该状态的 CSS 变量驱动（`--valo-prime` 等），
+ *   不出现 hex 字面量。
+ * - 状态切换通过 CSS transition 平滑过渡，避免突变。
+ * - 圆心展示状态名（i18n 翻译），可访问名通过 `aria-label` 提供。
+ * - 移动端 / 桌面端均满足 40px 最小触达（`data-valo-touch="true"`）。
+ *
+ * 状态来源：父组件从 `useHealthStatusStore(selectActiveVisualState)` 选取后
+ * 通过 `state` prop 传入；本组件不直接订阅 store，便于测试与复用。
+ */
+export interface HealthHeroProps {
+  /** 当前生效的视觉状态（由父组件从 store 选取） */
+  state: HealthVisualState;
+  /** 圆环点击：打开 Switch Status 弹窗 */
+  onOpenSwitchStatus: () => void;
+  /** 圆环是否处于 expanded 态（弹窗已打开），驱动 aria-expanded */
+  isSwitchStatusOpen?: boolean;
+  /**
+   * SwitchStatusDialog 的 DOM id，用于 `aria-controls` 关联。
+   * 调用方应保证弹窗根元素挂上同 id（移动端 / 桌面端任一即可）。
+   */
+  switchStatusDialogId?: string;
+  /** 可选：在 Hero 内部追加的子内容（如时间段标题）。不强求。 */
+  children?: ReactNode;
+}
+
+/**
+ * 用 `forwardRef` 暴露圆环 button 的 ref，让父组件可以把焦点还给圆环
+ * （虽然 ValoSheet/ValoDialog 内部的 useOverlayBehavior 已经处理焦点返回，
+ * 但显式暴露 ref 让集成测试与未来扩展更稳健）。
+ */
+export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
+  function HealthHero(
+    { state, onOpenSwitchStatus, isSwitchStatusOpen = false, switchStatusDialogId, children },
+    ref,
+  ) {
+    const t = useTranslations('health');
+    const meta = HEALTH_STATE_METADATA[state];
+    const gradient = HEALTH_STATE_GRADIENTS[state];
+    const stateLabel = t(`state.${state}` as const);
+    const ringLabel = t('switchStatus.ringLabel');
+
+    return (
+      <section
+        className="flex flex-col items-center gap-4 px-4 py-6"
+        data-valo-hero="true"
+        data-valo-state={state}
+      >
+        {/*
+         * 整个圆环就是 button 本身：
+         * - 外层圆形 button 通过 padding 给出尺寸，背景渐变 + 双层 box-shadow
+         *   形成"环 + 内圈光晕"的视觉。
+         * - 内层 div 是圆心文字与可访问名锚点，pointer-events:none 防止
+         *   文字层吞点击事件。
+         * - aria-label 由 i18n 提供，确保双语 SR 朗读正确。
+         * - box-shadow 用 var(--valo-state-color) 内嵌变量：父级通过 style
+         *   注入该状态对应颜色，圆环高光随之改变。
+         */}
+        <button
+          ref={ref}
+          type="button"
+          onClick={onOpenSwitchStatus}
+          aria-haspopup="dialog"
+          aria-expanded={isSwitchStatusOpen}
+          {...(switchStatusDialogId ? { 'aria-controls': switchStatusDialogId } : {})}
+          aria-label={ringLabel}
+          data-valo-touch="true"
+          data-valo-ring="true"
+          className={
+            'relative inline-flex h-56 w-56 items-center justify-center rounded-full ' +
+            'border border-[var(--valo-border)] bg-[var(--valo-surface)] ' +
+            'outline-none transition-all duration-500 ease-out ' +
+            'focus-visible:shadow-[var(--valo-focus-ring)] ' +
+            'hover:scale-[1.02] active:scale-[0.99]'
+          }
+          style={{
+            // 状态色作为内嵌变量，供 box-shadow 与渐变共用
+            // @ts-expect-error -- CSS custom property in style object
+            '--valo-state-color': meta.cssVar,
+            backgroundImage: gradient,
+            // 外圈柔光 + 内圈描边形成"环 + 光晕"。
+            // 用 color-mix 派生半透明色，避免在 var(--valo-*) 引用上拼接
+            // hex alpha（拼接对 CSS 变量无效）。color-mix 在 Safari 16.4+、
+            // Chrome 111+、Firefox 113+ 普遍支持。
+            boxShadow: `0 0 0 2px ${meta.cssVar}, 0 0 48px 4px color-mix(in srgb, ${meta.cssVar} 22%, transparent), inset 0 0 32px 4px color-mix(in srgb, ${meta.cssVar} 12%, transparent)`,
+          }}
+        >
+          {/* 圆心状态名：纯文字，pointer-events:none 不阻断点击 */}
+          <span
+            className="pointer-events-none flex flex-col items-center gap-1 select-none"
+            data-valo-state-label="true"
+          >
+            <span
+              className="text-2xl font-semibold text-[var(--valo-text-primary)]"
+              style={{ fontFamily: 'var(--valo-font-serif)' }}
+            >
+              {stateLabel}
+            </span>
+            <span className="text-xs text-[var(--valo-text-secondary)]">
+              {ringLabel}
+            </span>
+          </span>
+        </button>
+        {children ? (
+          <div className="text-center" data-valo-hero-children="true">
+            {children}
+          </div>
+        ) : null}
+      </section>
+    );
+  },
+);

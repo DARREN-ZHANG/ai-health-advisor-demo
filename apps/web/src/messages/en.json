@@ -61,7 +61,21 @@
     "manualRefresh": "Refresh",
     "refreshing": "Refreshing...",
     "openConfig": "Config",
-    "configTitle": "Configuration"
+    "configTitle": "Configuration",
+    "avatarPlaceholder": "Profile switch (coming soon)"
+  },
+  "health": {
+    "state": {
+      "prime-readiness": "Prime Readiness",
+      "active-recovery": "Active Recovery",
+      "metabolic-sluggish": "Metabolic Sluggish",
+      "glycogen-depleted": "Glycogen Depleted"
+    },
+    "switchStatus": {
+      "title": "Switch Status",
+      "legend": "Select a health status",
+      "ringLabel": "Switch health status"
+    }
   },
   "dataCenter": {
     "overview": "Overview",

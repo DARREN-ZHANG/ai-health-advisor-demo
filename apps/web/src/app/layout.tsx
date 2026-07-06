@@ -7,11 +7,10 @@ import { AppShell } from '@/components/layout/AppShell';
 import { ToastContainer } from '@/components/layout/ToastContainer';
 import { AIAdvisorTrigger } from '@/components/advisor/AIAdvisorTrigger';
 import { AIAdvisorDrawer } from '@/components/advisor/AIAdvisorDrawer';
-// TEMP（I2.2）：Demo Control 入口与抽屉临时挂载到 layout，
-// 用于在 God Mode 启用时手动验证抽屉开合。I6.1 会按设计把入口
-// 移到 HomeHeader 的 Avatar 旁，并移除这里的临时挂载点。
-// I2.3：MountedDemoControl 把 trigger + drawer + useDemoControlActions
-// 封装为 client island，让 server layout 保持服务端渲染。
+// I3.1：DemoControlTrigger 已迁回 HomeHeader（Avatar 旁，符合设计稿）。
+// 这里仍全局挂载 DemoControlDrawer（通过 MountedDemoControl 包装），
+// 让 HomeHeader 里的 Trigger 通过 `useGodModeStore.toggleOpen` 跨组件
+// 控制开合；本组件不再渲染任何可见入口，故无需 fixed 定位。
 import { MountedDemoControl } from '@/components/demo-control/MountedDemoControl';
 import './globals.css';
 
@@ -49,13 +48,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             bottomNav={<BottomNav />}
             floating={
               <>
-                {/* TEMP（I2.2）：Demo Control 临时浮动入口；I6.1 会迁移到 HomeHeader。
-                    位置选 left-4 top-4（左上角），与 AIAdvisorTrigger（右下角
-                    `fixed bottom-24 right-6` / `md:bottom-8`）在不同象限，
-                    不会与触发器或抽屉面板视觉冲突。 */}
-                <div className="fixed left-4 top-4 z-40">
-                  <MountedDemoControl />
-                </div>
+                {/*
+                  DemoControlDrawer 全局挂载：HomeHeader 内的 Trigger 通过
+                  useGodModeStore.toggleOpen 跨组件控制开合。这里不需要可见入口，
+                  因此不再 fixed 定位；Drawer 自身会以 fixed 遮罩形式呈现。
+                */}
+                <MountedDemoControl />
                 <AIAdvisorTrigger />
                 <AIAdvisorDrawer />
               </>
