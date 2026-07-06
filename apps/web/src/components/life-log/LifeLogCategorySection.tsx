@@ -13,9 +13,9 @@ import { LifeLogEntryRow } from './LifeLogEntryRow';
  * LifeLogCategorySection —— 单个类目的展示与交互区块。
  *
  * 内容：
- * - 类目标题 + 当前 cups 总和（与对应物理量）。
- * - 两个 CTA：快捷新增（+1 杯）、自定义新增（打开 Sheet）。
- * - 该类目下的所有 entries（按时间倒序，由父组件传入）。
+ * - 类目标题 + 与 Figma 原稿一致的右侧单位摘要。
+ * - 两个紧凑 icon CTA：快捷新增（+1 杯）、自定义新增（打开 Sheet）。
+ * - 该类目下的已有 entries 以紧凑子行展示。
  *
  * 交互：
  * - `onQuickAdd(type)` —— 快捷加 1 杯。
@@ -46,71 +46,75 @@ export function LifeLogCategorySection({
 
   const totalCups = entries.reduce((sum, e) => sum + e.cups, 0);
   const raw = computeRawAmount(totalCups, config);
+  const visualUnit = type === 'hydration' ? 'ml' : 'drinks';
+  const visualAmount = totalCups > 0 ? raw.amount : '-';
 
   return (
     <section
       data-valo-life-log-section={type}
-      className="rounded-lg bg-[var(--valo-surface)] px-3.5 py-3 shadow-[var(--valo-shadow-card)]"
+      className="rounded-lg border border-white/[0.03]
+                 bg-[rgba(24,23,35,0.94)]
+                 shadow-[0_12px_28px_rgba(0,0,0,0.22),inset_0_-10px_22px_rgba(79,42,160,0.16)]"
     >
-      <header className="flex items-center justify-between gap-3">
+      <header className="flex min-h-[56px] items-center justify-between gap-3 px-3.5">
         <div className="flex min-w-0 items-center gap-2">
-          <span aria-hidden="true" className="text-base leading-none">
+          <span aria-hidden="true" className="text-[15px] leading-none">
             {config.icon}
           </span>
-          <h3 className="truncate text-base font-semibold text-[var(--valo-text-primary)]">
+          <h3 className="truncate text-[16px] font-semibold leading-none text-[var(--valo-text-primary)]">
             {t(`category.${type}`)}
           </h3>
         </div>
-        <span
-          className="shrink-0 text-sm tabular-nums text-[var(--valo-text-secondary)]"
-          style={{ color: `var(${config.accentToken})` }}
-          aria-label={t('totalToday', {
-            cups: totalCups,
-            amount: raw.amount,
-            unit: raw.unit,
-          })}
-        >
-          {t('totalToday', {
-            cups: totalCups,
-            amount: raw.amount,
-            unit: raw.unit,
-          })}
-        </span>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span
+            className="text-[14px] leading-none text-[var(--valo-text-secondary)]"
+            aria-hidden="true"
+          >
+            {visualAmount} {visualUnit}
+          </span>
+          <span className="sr-only">
+            {t('totalToday', {
+              cups: totalCups,
+              amount: raw.amount,
+              unit: raw.unit,
+            })}
+          </span>
+          <button
+            type="button"
+            onClick={() => onQuickAdd(type)}
+            data-valo-touch="true"
+            data-valo-life-log-quick-add=""
+            className="grid h-6 w-6 place-items-center rounded-[5px]
+                       border border-white/15 bg-white/[0.03]
+                       text-[15px] leading-none text-[var(--valo-text-secondary)]
+                       transition-colors hover:border-white/30 hover:text-[var(--valo-text-primary)]
+                       focus-visible:outline-none
+                       focus-visible:[box-shadow:var(--valo-focus-ring)]"
+          >
+            <span aria-hidden="true">↗</span>
+            <span className="sr-only">{t('quickAdd')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onCustomAdd(type)}
+            data-valo-touch="true"
+            data-valo-life-log-custom-add=""
+            className="grid h-6 w-6 place-items-center rounded-[5px]
+                       border border-white/15 bg-white/[0.03]
+                       text-[14px] leading-none text-[var(--valo-text-secondary)]
+                       transition-colors hover:border-white/30 hover:text-[var(--valo-text-primary)]
+                       focus-visible:outline-none
+                       focus-visible:[box-shadow:var(--valo-focus-ring)]"
+          >
+            <span aria-hidden="true">+</span>
+            <span className="sr-only">{t('customAdd')}</span>
+          </button>
+        </div>
       </header>
 
-      <div className="mt-3 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => onQuickAdd(type)}
-          data-valo-touch="true"
-          data-valo-life-log-quick-add=""
-          className="flex-1 rounded-md px-3 py-2 text-xs font-semibold
-                     text-[var(--valo-canvas)]
-                     transition-opacity hover:opacity-90
-                     focus-visible:outline-none
-                     focus-visible:[box-shadow:var(--valo-focus-ring)]"
-          style={{ backgroundColor: `var(${config.accentToken})` }}
-        >
-          {t('quickAdd')}
-        </button>
-        <button
-          type="button"
-          onClick={() => onCustomAdd(type)}
-          data-valo-touch="true"
-          data-valo-life-log-custom-add=""
-          className="rounded-md px-3 py-2 text-xs font-semibold
-                     border border-[var(--valo-border)]
-                     text-[var(--valo-text-primary)]
-                     hover:border-[var(--valo-text-secondary)] transition-colors
-                     focus-visible:outline-none
-                     focus-visible:[box-shadow:var(--valo-focus-ring)]"
-        >
-          {t('customAdd')}
-        </button>
-      </div>
-
       {entries.length > 0 ? (
-        <ul className="mt-3 divide-y divide-[var(--valo-border)]">
+        <ul className="space-y-1 border-t border-white/[0.04] px-3.5 py-2">
           {entries.map((entry) => (
             <LifeLogEntryRow
               key={entry.id}
@@ -122,7 +126,7 @@ export function LifeLogCategorySection({
         </ul>
       ) : (
         <p
-          className="mt-2 text-xs text-[var(--valo-text-secondary)] italic"
+          className="sr-only"
           data-valo-life-log-empty=""
         >
           {t('empty')}

@@ -124,23 +124,22 @@ export function LifeLogPanel() {
 
   return (
     <section aria-label={t('title')} data-valo-life-log-panel="">
-      <header className="mb-5 space-y-1">
+      <header className="mb-4 space-y-1">
         <div className="flex items-baseline gap-2">
           <h2
-            className="text-[22px] leading-none text-[var(--valo-text-primary)]"
+            className="text-[23px] leading-none text-[var(--valo-text-primary)]"
             data-valo-serif="true"
           >
             {t('title')}
           </h2>
           <span
-            className="text-[10px] tracking-widest
-                       text-[var(--valo-text-secondary)]"
+            className="sr-only"
             data-valo-life-log-session-badge=""
           >
             {t('sessionOnlyBadge')}
           </span>
         </div>
-        <p className="max-w-[34ch] text-sm leading-5 text-[var(--valo-text-secondary)]">
+        <p className="max-w-[31ch] text-[13px] leading-[1.28] text-[var(--valo-text-secondary)]">
           {t('description')}
         </p>
       </header>

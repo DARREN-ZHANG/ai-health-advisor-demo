@@ -36,27 +36,20 @@ export function LifeLogEntryRow({
 
   return (
     <li
-      className="flex items-start gap-3 py-2"
+      className="flex items-center gap-2 rounded-md bg-black/10 px-2 py-1.5"
       data-valo-life-log-entry={entry.id}
     >
-      <span
-        aria-hidden="true"
-        className="text-lg leading-none mt-0.5"
-      >
-        {config.icon}
-      </span>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2 flex-wrap">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <time
             dateTime={entry.timestamp}
             title={entry.timestamp}
-            className="text-sm font-medium text-[var(--valo-text-primary)]"
+            className="text-[12px] font-medium text-[var(--valo-text-secondary)]"
           >
             {time}
           </time>
           <span
-            className="text-xs font-semibold"
+            className="text-[12px] font-semibold leading-none"
             style={{ color: `var(${config.accentToken})` }}
           >
             {entry.cups}
@@ -65,42 +58,42 @@ export function LifeLogEntryRow({
           </span>
         </div>
         {entry.note ? (
-          <p className="text-xs text-[var(--valo-text-secondary)] leading-relaxed mt-0.5 break-words">
+          <p className="mt-0.5 break-words text-[12px] leading-snug text-[var(--valo-text-secondary)]">
             {entry.note}
           </p>
         ) : null}
       </div>
 
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex shrink-0 items-center gap-1">
         <button
           type="button"
           onClick={() => onEdit(entry)}
           aria-label={t('edit')}
           data-valo-touch="true"
-          className="rounded-full px-2 py-1 text-xs
-                     text-[var(--valo-text-secondary)]
-                     hover:text-[var(--valo-text-primary)]
-                     hover:bg-[var(--valo-border)]
+          className="grid h-6 w-6 place-items-center rounded-[5px]
+                     border border-white/10 bg-white/[0.02]
+                     text-[12px] text-[var(--valo-text-secondary)]
+                     hover:border-white/25 hover:text-[var(--valo-text-primary)]
                      transition-colors
                      focus-visible:outline-none
                      focus-visible:[box-shadow:var(--valo-focus-ring)]"
         >
-          {t('edit')}
+          <span aria-hidden="true">✓</span>
         </button>
         <button
           type="button"
           onClick={() => onDelete(entry)}
           aria-label={t('delete')}
           data-valo-touch="true"
-          className="rounded-full px-2 py-1 text-xs
-                     text-[var(--valo-text-secondary)]
-                     hover:text-[var(--valo-depleted)]
-                     hover:bg-[var(--valo-border)]
+          className="grid h-6 w-6 place-items-center rounded-[5px]
+                     border border-white/10 bg-white/[0.02]
+                     text-[12px] text-[var(--valo-text-secondary)]
+                     hover:border-white/25 hover:text-[var(--valo-depleted)]
                      transition-colors
                      focus-visible:outline-none
                      focus-visible:[box-shadow:var(--valo-focus-ring)]"
         >
-          {t('delete')}
+          <span aria-hidden="true">×</span>
         </button>
       </div>
     </li>
