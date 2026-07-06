@@ -44,8 +44,8 @@
   "nav": {
     "home": "首页",
     "homeShort": "首页",
-    "dataCenter": "数据中心",
-    "dataCenterShort": "数据"
+    "trends": "趋势",
+    "my": "我的"
   },
   "homepage": {
     "morningBriefTitle": "今日健康概览",

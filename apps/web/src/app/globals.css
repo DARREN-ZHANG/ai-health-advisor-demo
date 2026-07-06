@@ -117,6 +117,17 @@ textarea:focus-visible,
   cursor: not-allowed;
 }
 
+/* ---------- 底部导航安全区 ---------- */
+/*
+ * iPhone 等带 home indicator 的设备，底部固定栏需要预留安全区。
+ * 通过 data 属性 + 工具类双钩子写入 padding-bottom；jsdom 不解析 CSS，
+ * 组件层面无需 inline，避免 React 对 env() 内联值的过滤。
+ */
+.valo-bottomnav-safe,
+[data-valo-bottomnav='true'] {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* ---------- 滚动行为：尊重用户动效偏好 ---------- */
 @media (prefers-reduced-motion: reduce) {
   *,

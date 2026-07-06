@@ -44,8 +44,8 @@
   "nav": {
     "home": "Home",
     "homeShort": "Home",
-    "dataCenter": "Data Center",
-    "dataCenterShort": "Data"
+    "trends": "Trends",
+    "my": "My"
   },
   "homepage": {
     "morningBriefTitle": "Today's Health Overview",

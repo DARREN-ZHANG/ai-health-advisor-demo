@@ -7,22 +7,39 @@ import { Container } from '@health-advisor/ui';
 import { HeartIcon } from '@heroicons/react/24/solid';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
+/**
+ * 桌面端顶部导航 IA：Home / Trends / My。
+ *
+ * I6.2 起与移动端 BottomNav 共用同一导航 IA；
+ * 颜色全部走 var(--valo-*) token。
+ */
 const NAV_KEYS = [
   { href: '/', key: 'home' as const },
-  { href: '/data-center', key: 'dataCenter' as const },
+  { href: '/data-center', key: 'trends' as const },
+  { href: '/my', key: 'my' as const },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
   const t = useTranslations('nav');
   return (
-    <nav className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
+    <nav
+      data-valo-navbar="true"
+      className="sticky top-0 z-50 backdrop-blur-md border-b"
+      style={{
+        backgroundColor: 'var(--valo-glass)',
+        borderColor: 'var(--valo-border)',
+      }}
+    >
       <Container className="h-14 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/" className="font-bold text-slate-100 tracking-tight flex items-center gap-2">
-            <HeartIcon className="w-6 h-6 text-blue-500" />
+          <Link
+            href="/"
+            className="font-bold tracking-tight flex items-center gap-2 text-[var(--valo-text-primary)]"
+          >
+            <HeartIcon className="w-6 h-6 text-[var(--valo-prime)]" />
             <span>
-              HEALTH <span className="text-blue-500">ADVISOR</span>
+              HEALTH <span className="text-[var(--valo-prime)]">ADVISOR</span>
             </span>
           </Link>
           <div className="hidden md:flex items-center gap-6">
@@ -30,10 +47,12 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
+                data-valo-nav-item={item.key}
+                aria-current={pathname === item.href ? 'page' : undefined}
                 className={`text-sm font-medium transition-colors ${
                   pathname === item.href
-                    ? 'text-blue-500'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'text-[var(--valo-prime)]'
+                    : 'text-[var(--valo-text-secondary)] hover:text-[var(--valo-text-primary)]'
                 }`}
               >
                 {t(item.key)}
