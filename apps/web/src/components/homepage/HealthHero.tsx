@@ -12,9 +12,10 @@ import { HeroAssetLayer } from './HeroAssetLayer';
  * 设计要点（参见 docs/ui/valo/design-manifest.md）：
  * - 整个圆环就是一个 `<button type="button">`，是 SwitchStatusDialog 的唯一
  *   入口；不存在"装饰圆 + 透明 overlay"的二层结构。
- * - 圆环颜色与径向渐变完全由该状态的 CSS 变量驱动（`--valo-prime` 等），
- *   不出现 hex 字面量。
- * - 状态切换通过 CSS transition 平滑过渡，避免突变。
+ * - 圆环 box-shadow 仍由状态对应的 CSS 变量驱动（`--valo-prime` 等），
+ *   位图装饰由 HeroAssetLayer 按 state 消费；不出现 hex 字面量。
+ * - 圆环 box-shadow 在状态切换时走 transition 过渡；位图通过 onLoad 渐显
+ *   避免硬切（详见 HeroAssetLayer 的 loaded 状态）。
  * - 圆心展示状态名（i18n 翻译），可访问名通过 `aria-label` 提供。
  * - 移动端 / 桌面端均满足 40px 最小触达（`data-valo-touch="true"`）。
  *

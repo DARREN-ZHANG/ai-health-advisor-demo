@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { render, cleanup, fireEvent } from '@testing-library/react';
 import { HeroAssetLayer } from './HeroAssetLayer';
 import { heroAssetManifest } from '@/lib/hero-asset-manifest';
 import { HEALTH_VISUAL_STATES } from '@/lib/valo-theme';
@@ -51,5 +51,33 @@ describe('HeroAssetLayer', () => {
     const wrapper = container.firstElementChild as HTMLElement;
     const style = wrapper.getAttribute('style') ?? '';
     expect(style).not.toMatch(/#[0-9a-fA-F]{3,8}/);
+  });
+
+  it('初始 img 为 opacity-0，onLoad 后渐显为 opacity-100', () => {
+    const { container } = render(<HeroAssetLayer state="prime-readiness" />);
+    const img = container.querySelector('img') as HTMLImageElement;
+    // 初始未加载完：保持透明，避免硬切白闪
+    expect(img.className).toContain('opacity-0');
+    expect(img.className).toContain('transition-opacity');
+    // 模拟浏览器解码完成触发 onLoad
+    fireEvent.load(img);
+    expect(img.className).toContain('opacity-100');
+    expect(img.className).not.toContain('opacity-0');
+  });
+
+  it('切换 state 时 loaded 重置，img 回到 opacity-0 直到新位图 onLoad', () => {
+    const { container, rerender } = render(<HeroAssetLayer state="prime-readiness" />);
+    const imgBefore = container.querySelector('img') as HTMLImageElement;
+    fireEvent.load(imgBefore);
+    expect(imgBefore.className).toContain('opacity-100');
+
+    // 切到 active-recovery：state 变 → effect 重置 loaded → img 重新 opacity-0
+    rerender(<HeroAssetLayer state="active-recovery" />);
+    const imgAfter = container.querySelector('img') as HTMLImageElement;
+    expect(imgAfter.className).toContain('opacity-0');
+    expect(imgAfter.className).not.toContain('opacity-100');
+    // 新位图 onLoad 完成后才渐显
+    fireEvent.load(imgAfter);
+    expect(imgAfter.className).toContain('opacity-100');
   });
 });
