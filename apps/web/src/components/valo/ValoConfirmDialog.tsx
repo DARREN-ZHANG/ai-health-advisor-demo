@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { ValoDialog } from './ValoDialog';
+import { ValoDialog, type ValoDialogWidth } from './ValoDialog';
 
 /**
  * ValoConfirmDialog —— 基于 ValoDialog 的确认弹窗。
@@ -31,6 +31,11 @@ export interface ValoConfirmDialogProps {
   tone?: ValoConfirmTone;
   /** 禁用确认按钮（例如异步进行中） */
   confirmDisabled?: boolean;
+  /**
+   * 弹窗宽度，透传给底层 ValoDialog。默认 `'sm'`（420px）。
+   * 不暴露 `variant`：确认弹窗应始终居中。
+   */
+  width?: ValoDialogWidth;
   ariaLabelledBy?: string;
   ariaLabel?: string;
 }
@@ -48,6 +53,7 @@ export function ValoConfirmDialog({
   cancelLabel = CANCEL_TEXT_DEFAULT,
   tone = 'default',
   confirmDisabled = false,
+  width = 'sm',
   ariaLabelledBy,
   ariaLabel,
 }: ValoConfirmDialogProps) {
@@ -61,7 +67,7 @@ export function ValoConfirmDialog({
       open={open}
       onClose={onClose}
       title={title}
-      width="sm"
+      width={width}
       ariaLabelledBy={ariaLabelledBy}
       ariaLabel={ariaLabel}
     >

@@ -10,9 +10,12 @@ import {
 } from 'react';
 import { AnimatePresence, m } from 'framer-motion';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { useScrollLock } from './hooks/useScrollLock';
-import { useFocusTrap } from './hooks/useFocusTrap';
-import { useFocusReturn } from './hooks/useFocusReturn';
+import { useOverlayBehavior } from './hooks/useOverlayBehavior';
+import {
+  MOTION_BOTTOM_SHEET,
+  MOTION_FULL_SCREEN,
+  MOTION_SCRIM,
+} from './motion';
 
 /**
  * ValoSheet —— Valo 设计系统的移动端优先遮罩层。
@@ -63,27 +66,6 @@ export interface ValoSheetProps {
   className?: string;
 }
 
-const MOTION_BOTTOM = {
-  initial: { y: '100%' },
-  animate: { y: 0 },
-  exit: { y: '100%' },
-  transition: { type: 'tween' as const, duration: 0.25, ease: 'easeOut' as const },
-};
-
-const MOTION_FULLSCREEN = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit: { opacity: 0 },
-  transition: { type: 'tween' as const, duration: 0.2, ease: 'easeOut' as const },
-};
-
-const MOTION_SCRIM = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit: { opacity: 0 },
-  transition: { type: 'tween' as const, duration: 0.2 },
-};
-
 export function ValoSheet({
   open,
   onClose,
@@ -110,28 +92,14 @@ export function ValoSheet({
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useScrollLock(open);
-  useFocusTrap({
-    active: open,
+  const { handleScrimClick } = useOverlayBehavior({
+    open,
     containerRef,
-    onEscape: closeOnEscape ? onClose : undefined,
+    onClose,
+    closeOnScrimClick,
+    closeOnEscape,
+    initialFocusRef,
   });
-  useFocusReturn({ open });
-
-  // 打开时把焦点移到 initialFocusRef 或容器自身
-  // jsdom 无法保证焦点真实移动，浏览器验证
-  const handleEnterComplete = () => {
-    const target = initialFocusRef?.current ?? containerRef.current;
-    target?.focus();
-  };
-
-  const handleScrimClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (!closeOnScrimClick) return;
-    // 仅响应遮罩自身的点击，避免穿透到内容
-    if (event.target === event.currentTarget) {
-      onClose();
-    }
-  };
 
   const isFullscreen = variant === 'full-screen';
 
@@ -154,7 +122,7 @@ export function ValoSheet({
             aria-label={ariaLabel}
             tabIndex={-1}
             ref={containerRef}
-            {...(isFullscreen ? MOTION_FULLSCREEN : MOTION_BOTTOM)}
+            {...(isFullscreen ? MOTION_FULL_SCREEN : MOTION_BOTTOM_SHEET)}
             className={
               isFullscreen
                 ? 'absolute inset-0 flex flex-col bg-[var(--valo-surface)] ' +
@@ -175,9 +143,7 @@ export function ValoSheet({
                   ? { maxHeight: typeof height === 'number' ? `${height}px` : height }
                   : undefined
             }
-            onClick={(e: MouseEvent<HTMLDivElement>) =>
-              e.stopPropagation()
-            }
+            onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
             onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
               // 兜底：焦点已无 tabbable 时 Escape 仍能关闭
               if (e.key === 'Escape' && closeOnEscape) {
@@ -186,7 +152,6 @@ export function ValoSheet({
               }
             }}
             data-valo-touch="true"
-            onAnimationComplete={handleEnterComplete}
           >
             {isFullscreen ? null : (
               // 顶部抓手，提示可下拉关闭

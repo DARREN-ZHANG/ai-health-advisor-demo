@@ -12,6 +12,11 @@ import { useEffect } from 'react';
  *   unlock 才还原，避免提前解锁。
  * - 仅在浏览器环境生效，SSR 安全。
  *
+ * 边界假设：
+ * - 假定 lock 期间没有其它代码并发修改 `document.body.style.overflow`。
+ *   引用计数的 lock/unlock 仅还原 lock 瞬间记录的原始值；并发外部修改
+ *   会被还原覆盖。
+ *
  * 注意：jsdom 不会真正阻止滚动，本 hook 的真实效果需在浏览器中验证。
  */
 const LOCK_COUNT_ATTR = 'data-valo-scroll-lock-count';

@@ -10,9 +10,12 @@ import {
 } from 'react';
 import { AnimatePresence, m } from 'framer-motion';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { useScrollLock } from './hooks/useScrollLock';
-import { useFocusTrap } from './hooks/useFocusTrap';
-import { useFocusReturn } from './hooks/useFocusReturn';
+import { useOverlayBehavior } from './hooks/useOverlayBehavior';
+import {
+  MOTION_CENTERED,
+  MOTION_DRAWER,
+  MOTION_SCRIM,
+} from './motion';
 
 /**
  * ValoDialog —— Valo 设计系统的居中弹窗与右侧 Drawer。
@@ -56,27 +59,6 @@ export interface ValoDialogProps {
   className?: string;
 }
 
-const MOTION_CENTERED = {
-  initial: { opacity: 0, scale: 0.96, y: 8 },
-  animate: { opacity: 1, scale: 1, y: 0 },
-  exit: { opacity: 0, scale: 0.96, y: 8 },
-  transition: { type: 'tween' as const, duration: 0.2, ease: 'easeOut' as const },
-};
-
-const MOTION_DRAWER = {
-  initial: { x: '100%' },
-  animate: { x: 0 },
-  exit: { x: '100%' },
-  transition: { type: 'tween' as const, duration: 0.25, ease: 'easeOut' as const },
-};
-
-const MOTION_SCRIM = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit: { opacity: 0 },
-  transition: { type: 'tween' as const, duration: 0.2 },
-};
-
 export function ValoDialog({
   open,
   onClose,
@@ -102,25 +84,14 @@ export function ValoDialog({
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useScrollLock(open);
-  useFocusTrap({
-    active: open,
+  const { handleScrimClick } = useOverlayBehavior({
+    open,
     containerRef,
-    onEscape: closeOnEscape ? onClose : undefined,
+    onClose,
+    closeOnScrimClick,
+    closeOnEscape,
+    initialFocusRef,
   });
-  useFocusReturn({ open });
-
-  const handleEnterComplete = () => {
-    const target = initialFocusRef?.current ?? containerRef.current;
-    target?.focus();
-  };
-
-  const handleScrimClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (!closeOnScrimClick) return;
-    if (event.target === event.currentTarget) {
-      onClose();
-    }
-  };
 
   const resolvedWidth =
     typeof width === 'number' ? `${width}px` : (WIDTH_MAP[width] ?? width);
@@ -175,7 +146,6 @@ export function ValoDialog({
               }
             }}
             data-valo-touch="true"
-            onAnimationComplete={handleEnterComplete}
           >
             {title ? (
               <DialogHeader title={title} titleId={titleId} onClose={onClose} />
