@@ -340,6 +340,7 @@ function ChatContent({
               rows={1}
               value={composerValue}
               onChange={(e) => setComposerValue(e.target.value)}
+              aria-label={t('composerLabel')}
               placeholder={t('composerPlaceholder')}
               className={
                 'flex-1 min-h-[44px] max-h-32 resize-none rounded-xl px-4 py-2.5 text-sm ' +
