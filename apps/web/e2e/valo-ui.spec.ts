@@ -250,12 +250,9 @@ test.describe('Valo UI 关键路径', () => {
       page.locator(visible('[data-valo-option="glycogen-depleted"]')),
     ).toHaveCount(0);
 
-    // 焦点应已归还状态圆环
-    const focused = await page.evaluate(() => {
-      const el = document.activeElement;
-      return el?.getAttribute('data-valo-ring') ?? null;
-    });
-    expect(focused).toBe('true');
+    // 焦点应已归还状态圆环（用 toBeFocused 让 Playwright 自动重试，
+    // 吸收 framer-motion exit 动画期间 activeElement 切换的时序波动）
+    await expect(page.locator(visible('[data-valo-ring="true"]'))).toBeFocused();
   });
 
   test('Avatar 打开 AccountSwitcherSheet 并切换 Profile', async ({ page }) => {
