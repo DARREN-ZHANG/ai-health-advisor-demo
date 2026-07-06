@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DM_Serif_Display } from 'next/font/google';
 import { Providers } from './providers';
 import { Navbar } from '@/components/layout/Navbar';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -6,6 +7,18 @@ import { ToastContainer } from '@/components/layout/ToastContainer';
 import { AIAdvisorTrigger } from '@/components/advisor/AIAdvisorTrigger';
 import { AIAdvisorDrawer } from '@/components/advisor/AIAdvisorDrawer';
 import './globals.css';
+
+/**
+ * DM Serif Display：Hero 状态标题、时间段标题专用。
+ * 通过 next/font 在构建期自托管，避免运行期外部请求与 CLS。
+ * 变量名 --font-serif 与 globals.css 中 --font-serif 栈首字面对齐。
+ */
+const dmSerif = DM_Serif_Display({
+  weight: '400',
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-dm-serif',
+});
 
 export const metadata: Metadata = {
   title: 'AI Health Advisor',
@@ -15,7 +28,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
-      <body className="antialiased min-h-screen bg-slate-950 text-slate-200">
+      <body
+        className={`${dmSerif.variable} antialiased min-h-screen`}
+        style={{
+          backgroundColor: 'var(--valo-canvas)',
+          color: 'var(--valo-text-primary)',
+        }}
+      >
         <Providers>
           <div className="relative flex flex-col min-h-screen pb-16 md:pb-0">
             <Navbar />

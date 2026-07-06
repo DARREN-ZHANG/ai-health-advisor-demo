@@ -1,11 +1,128 @@
 @import 'tailwindcss';
 
+/*
+ * Valo 设计系统全局变量与基础样式。
+ * 颜色与字体 token 严格对齐 docs/ui/valo/design-manifest.md。
+ * 组件中只允许引用 var(--valo-*)，禁止散落硬编码颜色字面量。
+ */
+
 :root {
-  --background: #0a0a0f;
-  --foreground: #e5e5e5;
+  /* ---------- 背景与表面 ---------- */
+  /** 页面 / Sheet / 卡片主背景 */
+  --valo-canvas: #111118;
+  /** 卡片、底部导航、Sheet 内容面（深紫黑） */
+  --valo-surface: #1a1a26;
+  /** 玻璃态表面：在 surface 基础上叠加半透明 */
+  --valo-glass: rgba(26, 26, 38, 0.72);
+  /** Sheet / Dialog 背后的黑色半透明遮罩 */
+  --valo-scrim: rgba(0, 0, 0, 0.6);
+
+  /* ---------- 文本 ---------- */
+  /** 标题、重要数值、主要操作 */
+  --valo-text-primary: #ffffff;
+  /** 次要标签、时间、禁用态 */
+  --valo-text-secondary: #999999;
+
+  /* ---------- 边框与阴影 ---------- */
+  /** 弱边框，用于卡片与 Sheet 的边缘 */
+  --valo-border: rgba(255, 255, 255, 0.08);
+  /** 卡片阴影：低高度、柔和 */
+  --valo-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
+  /** 悬浮表面阴影：更高、更明显，用于 glass 与弹层 */
+  --valo-shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.5), 0 16px 48px rgba(0, 0, 0, 0.35);
+  /** 焦点环：依赖语义状态色 */
+  --valo-focus-ring: 0 0 0 2px var(--valo-canvas), 0 0 0 4px var(--valo-prime);
+
+  /* ---------- 健康四态语义色（光谱） ---------- */
+  /** Prime Readiness：紫色光谱；无 brief 时的默认态 */
+  --valo-prime: #a78bfa;
+  /** Active Recovery：绿色光谱；good */
+  --valo-active: #1bf697;
+  /** Metabolic Sluggish：橙色光谱；warning */
+  --valo-sluggish: #fb923c;
+  /** Glycogen Depleted：红色光谱；error */
+  --valo-depleted: #f87171;
+
+  /* ---------- 字体 ---------- */
+  /** 正文 / 按钮 / 导航 / 表单：SF Pro + 系统无衬线回退 */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei',
+    sans-serif;
+  /*
+   * Hero 状态标题 / 时间段标题。
+   * 由 next/font/google 在构建期把 DM Serif Display 注入为 --font-dm-serif，
+   * 这里把它放进 serif 栈首位；若 next/font 未加载，则回退到系统衬线。
+   */
+  --font-serif:
+    var(--font-dm-serif, 'DM Serif Display'), 'Times New Roman', Georgia,
+    'Songti SC', serif;
+
+  /* ---------- 旧 token（向后兼容，逐步替换为 valo- 命名空间） ---------- */
+  --background: var(--valo-canvas);
+  --foreground: var(--valo-text-primary);
 }
 
+/* ---------- 基础排版 ---------- */
+
+html,
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--valo-canvas);
+  color: var(--valo-text-primary);
+  font-family: var(--font-sans);
+  /* 避免移动端横向溢出 */
+  overflow-x: hidden;
+}
+
+/* DM Serif Display 仅用于 Hero 状态标题、时间段标题 */
+.font-serif,
+[data-valo-serif='true'] {
+  font-family: var(--font-serif);
+  letter-spacing: 0.5px;
+  font-weight: 400;
+}
+
+/* ---------- 可访问性：焦点环与最小触达区 ---------- */
+
+/* 所有原生可交互元素都展示可见焦点环 */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role='button']:focus-visible,
+[role='link']:focus-visible,
+[role='radio']:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--valo-focus-ring);
+  border-radius: 6px;
+}
+
+/*
+ * 最小 40px 触达区：保证移动端可点性。
+ * 仅对显式标记的元素生效，避免影响装饰性 inline 元素。
+ */
+[data-valo-touch='true'] {
+  min-width: 40px;
+  min-height: 40px;
+}
+
+/* ---------- 禁用态统一 ---------- */
+[disabled],
+[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- 滚动行为：尊重用户动效偏好 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
