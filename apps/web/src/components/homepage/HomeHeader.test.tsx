@@ -72,7 +72,7 @@ describe('HomeHeader', () => {
   it('渲染 Avatar 入口按钮', () => {
     renderWithIntl(<HomeHeader />);
     expect(
-      screen.getByRole('button', { name: '账户切换（即将上线）' }),
+      screen.getByRole('button', { name: '切换账户' }),
     ).toBeInTheDocument();
   });
 
@@ -87,7 +87,7 @@ describe('HomeHeader', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
 
     fireEvent.click(
-      screen.getByRole('button', { name: '账户切换（即将上线）' }),
+      screen.getByRole('button', { name: '切换账户' }),
     );
 
     await waitFor(() => {
@@ -100,7 +100,7 @@ describe('HomeHeader', () => {
     (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
     renderWithIntl(<HomeHeader />);
-    const avatar = screen.getByRole('button', { name: '账户切换（即将上线）' });
+    const avatar = screen.getByRole('button', { name: '切换账户' });
     expect(avatar.getAttribute('aria-expanded')).toBe('false');
 
     fireEvent.click(avatar);
@@ -116,7 +116,7 @@ describe('HomeHeader', () => {
 
     renderWithIntl(<HomeHeader />);
     fireEvent.click(
-      screen.getByRole('button', { name: '账户切换（即将上线）' }),
+      screen.getByRole('button', { name: '切换账户' }),
     );
     expect(useUIStore.getState().toasts).toHaveLength(0);
   });
@@ -125,7 +125,7 @@ describe('HomeHeader', () => {
     const onAvatar = vi.fn();
     renderWithIntl(<HomeHeader onAvatarClick={onAvatar} />);
     fireEvent.click(
-      screen.getByRole('button', { name: '账户切换（即将上线）' }),
+      screen.getByRole('button', { name: '切换账户' }),
     );
     expect(onAvatar).toHaveBeenCalledTimes(1);
     // 自定义回调时不应打开 Sheet
@@ -134,13 +134,13 @@ describe('HomeHeader', () => {
 
   it('Avatar 是 button，带 aria-haspopup=dialog', () => {
     renderWithIntl(<HomeHeader />);
-    const avatar = screen.getByRole('button', { name: '账户切换（即将上线）' });
+    const avatar = screen.getByRole('button', { name: '切换账户' });
     expect(avatar.getAttribute('aria-haspopup')).toBe('dialog');
   });
 
   it('Avatar 满足最小触达：data-valo-touch=true', () => {
     renderWithIntl(<HomeHeader />);
-    const avatar = screen.getByRole('button', { name: '账户切换（即将上线）' });
+    const avatar = screen.getByRole('button', { name: '切换账户' });
     expect(avatar.getAttribute('data-valo-touch')).toBe('true');
   });
 
@@ -151,7 +151,7 @@ describe('HomeHeader', () => {
     const buttons = screen.getAllByRole('button');
     expect(buttons.length).toBe(2);
     expect(
-      screen.getByRole('button', { name: '账户切换（即将上线）' }),
+      screen.getByRole('button', { name: '切换账户' }),
     ).toBeInTheDocument();
   });
 

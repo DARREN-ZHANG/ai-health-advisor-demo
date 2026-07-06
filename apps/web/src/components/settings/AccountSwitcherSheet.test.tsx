@@ -34,6 +34,7 @@ const MESSAGES = {
     legend: '选择一个 Profile',
     loading: '正在加载 Profile...',
     empty: '暂无可用 Profile',
+    error: '加载 Profile 失败',
     switchFailed: '切换 Profile 失败',
   },
 } as const;
@@ -232,18 +233,20 @@ describe('AccountSwitcherSheet', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('加载失败时显示空状态文案', async () => {
+  it('加载失败时显示错误状态文案（区别于空状态）', async () => {
     await mockProfilesFailure();
     await mockActions({});
     renderSheet(<AccountSwitcherSheet open onClose={() => {}} />);
 
     await waitFor(() => {
-      const emptyTexts = screen.getAllByText('暂无可用 Profile');
-      expect(emptyTexts.length).toBeGreaterThanOrEqual(1);
+      const errorTexts = screen.getAllByText('加载 Profile 失败');
+      expect(errorTexts.length).toBeGreaterThanOrEqual(1);
     });
+    // 错误态与空态文案不应混淆
+    expect(screen.queryByText('暂无可用 Profile')).toBeNull();
   });
 
-  it('空列表也显示空状态文案', async () => {
+  it('空列表显示空状态文案（与错误态分开）', async () => {
     await mockProfilesResponse([]);
     await mockActions({});
     renderSheet(<AccountSwitcherSheet open onClose={() => {}} />);
@@ -252,6 +255,7 @@ describe('AccountSwitcherSheet', () => {
       const emptyTexts = screen.getAllByText('暂无可用 Profile');
       expect(emptyTexts.length).toBeGreaterThanOrEqual(1);
     });
+    expect(screen.queryByText('加载 Profile 失败')).toBeNull();
   });
 
   it('每个 radio 标签包含 profile 名称', async () => {

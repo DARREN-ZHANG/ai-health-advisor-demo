@@ -1,17 +1,19 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
 import { AgentTaskType } from '@health-advisor/shared';
 import type { Message } from '@/stores/ai-advisor.store';
 import { MessageBubble } from './MessageBubble';
 
 /**
- * MessageBubble 单元测试（I5.2）。
+ * MessageBubble 单元测试（I5.2 + I7.1）。
  *
  * 覆盖：
  * - data-valo-message-* 锚点齐全。
  * - 仅引用 var(--valo-*)，无散落的 slate-/blue-/red-/yellow- 类名。
  * - 三种角色（user/assistant/system）的视觉分支。
  * - 状态色映射（error/warning/active）。
+ * - 状态文案通过 i18n 翻译（I7.1：advisor.statusLabel.*）。
  * - chartTokens / memoryCandidates 子节点 data 锚点（不渲染图表本身）。
  */
 
@@ -29,9 +31,23 @@ vi.mock('./MemoryCandidateCard', () => ({
   ),
 }));
 
-// next-intl 不被 MessageBubble 直接使用，无需 provider。
+const MESSAGES = {
+  advisor: {
+    statusLabel: {
+      error: 'Serious',
+      warning: 'Concern',
+      good: 'Active',
+    },
+  },
+} as const;
+
+// I7.1 起 MessageBubble 通过 useTranslations 取状态文案，需要 provider。
 function renderBubble(message: Message) {
-  return render(<MessageBubble message={message} />);
+  return render(
+    <NextIntlClientProvider locale="en" messages={MESSAGES}>
+      <MessageBubble message={message} />
+    </NextIntlClientProvider>,
+  );
 }
 
 function baseMessage(overrides: Partial<Message> = {}): Message {

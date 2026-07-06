@@ -126,7 +126,7 @@ function AccountSwitcherForm({ legendId, onClose }: AccountSwitcherFormProps) {
             className="text-sm text-[var(--valo-text-secondary)] py-4 text-center"
             data-valo-state="error"
           >
-            {t('empty')}
+            {t('error')}
           </p>
         ) : !data || data.length === 0 ? (
           <p

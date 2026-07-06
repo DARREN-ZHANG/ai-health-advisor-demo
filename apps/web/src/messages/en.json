@@ -60,9 +60,7 @@
     "sourceLLM": "Smart Health Advisor",
     "manualRefresh": "Refresh",
     "refreshing": "Refreshing...",
-    "openConfig": "Config",
-    "configTitle": "Configuration",
-    "avatarPlaceholder": "Profile switch (coming soon)",
+    "avatarPlaceholder": "Switch Account",
     "now": "Now",
     "microTipsTitle": "Tips",
     "action": {
@@ -259,6 +257,11 @@
       "possibleAlcoholIntake": "I confirm I recently had alcohol. Can you give me some personalized health advice based on my data?",
       "possibleCaffeineIntake": "Yes, I recently had a caffeinated drink. I'd like to understand how this might affect my health.",
       "genericPrompt": "I need some advice about \"{title}\"."
+    },
+    "statusLabel": {
+      "error": "Serious",
+      "warning": "Concern",
+      "good": "Active"
     }
   },
   "demoControl": {
@@ -403,10 +406,6 @@
       "help": "Help",
       "about": "About",
       "logout": "Log out"
-    },
-    "language": {
-      "zh": "简体中文",
-      "en": "English"
     }
   },
   "accountSwitcher": {
@@ -414,6 +413,7 @@
     "legend": "Select a profile",
     "loading": "Loading profiles...",
     "empty": "No profiles available",
+    "error": "Failed to load profiles",
     "switchFailed": "Failed to switch profile"
   },
   "errors": {

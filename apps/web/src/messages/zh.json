@@ -60,9 +60,7 @@
     "sourceLLM": "智能健康顾问",
     "manualRefresh": "手动刷新",
     "refreshing": "正在刷新...",
-    "openConfig": "配置",
-    "configTitle": "配置面板",
-    "avatarPlaceholder": "账户切换（即将上线）",
+    "avatarPlaceholder": "切换账户",
     "now": "现在",
     "microTipsTitle": "提示",
     "action": {
@@ -259,6 +257,11 @@
       "possibleAlcoholIntake": "我确认最近喝了酒，能根据我的健康数据给我一些针对性的建议吗？",
       "possibleCaffeineIntake": "是的，我最近喝了含咖啡因的饮品，想了解一下这对我的健康有什么影响。",
       "genericPrompt": "关于「{title}」，我需要一些建议。"
+    },
+    "statusLabel": {
+      "error": "严重",
+      "warning": "关注",
+      "good": "活跃"
     }
   },
   "demoControl": {
@@ -403,10 +406,6 @@
       "help": "帮助",
       "about": "关于",
       "logout": "退出登录"
-    },
-    "language": {
-      "zh": "简体中文",
-      "en": "English"
     }
   },
   "accountSwitcher": {
@@ -414,6 +413,7 @@
     "legend": "选择一个 Profile",
     "loading": "正在加载 Profile...",
     "empty": "暂无可用 Profile",
+    "error": "加载 Profile 失败",
     "switchFailed": "切换 Profile 失败"
   },
   "errors": {

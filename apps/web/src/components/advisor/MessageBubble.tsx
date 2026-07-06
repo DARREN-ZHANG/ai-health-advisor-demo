@@ -1,6 +1,7 @@
 'use client';
 
 import { m } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 import type { Message } from '@/stores/ai-advisor.store';
 
 import { ChartTokenRenderer } from './ChartTokenRenderer';
@@ -27,6 +28,7 @@ interface MessageBubbleProps {
  *   `data-valo-message-charts` / `data-valo-message-memory`。
  */
 export function MessageBubble({ message }: MessageBubbleProps) {
+  const t = useTranslations('advisor.statusLabel');
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
   const isSystem = message.role === 'system';
@@ -59,11 +61,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       ? 'AI Advisor'
       : message.source;
 
-  const statusLabel = message.statusColor === 'error'
-    ? 'Serious'
-    : message.statusColor === 'warning'
-      ? 'Concern'
-      : message.statusColor;
+  const statusLabel = message.statusColor
+    ? t(message.statusColor)
+    : message.statusColor;
 
   // 状态色：error → depleted；warning → sluggish；其余（active/good）→ active。
   const statusColorVar =

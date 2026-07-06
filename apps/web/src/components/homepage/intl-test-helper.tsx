@@ -18,7 +18,7 @@ const ZH_MESSAGES = {
     close: '关闭',
   },
   homepage: {
-    avatarPlaceholder: '账户切换（即将上线）',
+    avatarPlaceholder: '切换账户',
     realtimeBrief: '实时简报',
     briefPreparing: '准备中…',
     briefNetworkError: '网络错误',
@@ -76,6 +76,7 @@ const ZH_MESSAGES = {
     legend: '选择一个 Profile',
     loading: '正在加载 Profile...',
     empty: '暂无可用 Profile',
+    error: '加载 Profile 失败',
     switchFailed: '切换 Profile 失败',
   },
 } as const;
