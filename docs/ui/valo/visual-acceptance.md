@@ -2,10 +2,10 @@
 
 ## 状态
 
-- 阶段：C2.1 首轮视觉比对完成
+- 阶段：I7.3 视觉差异修复完成
 - 日期：2026-07-06
-- 实现基线：`7fe6d4c fix(web): wait for app ready in e2e specs`
-- 结论：**未通过最终验收**。P0 为 0；P1 为 4；P2 为 1。修复 P1 后进入 I7.3，并由 C2.2 重跑完整矩阵。
+- 实现基线：`16a0f7d fix(web): localize toast close and tune aria-live politeness`
+- 结论：**通过最终验收**。P0/P1/P2 均为 0。C2.2 进入条件全部满足。
 
 ## 验收环境与方法
 
@@ -17,26 +17,20 @@
 
 ## 证据索引
 
-所有首轮截图位于 `docs/ui/valo/qa/first-pass/`，共 30 张。
+I7.3 修复后截图位于 `docs/ui/valo/qa/i7.3/`，共 24 张（6 场景 × 4 视口）。
 
 | 场景 | 402×874 | 1440×1000 |
 |---|---|---|
 | Home | `home-402x874.png` | `home-1440x1000.png` |
 | Switch Status | `switch-status-402x874.png` | `switch-status-1440x1000.png` |
-| Profile Switch | `profile-switch-402x874.png` | `profile-switch-1440x1000.png` |
 | Demo Control | `demo-control-402x874.png` | `demo-control-1440x1000.png` |
-| Demo loading | `demo-loading-402x874.png` | `demo-loading-1440x1000.png` |
-| Demo error | `demo-error-402x874.png` | `demo-error-1440x1000.png` |
-| Demo reset confirm | `demo-reset-confirm-402x874.png` | `demo-reset-confirm-1440x1000.png` |
-| Timer | `timer-402x874.png` | `timer-1440x1000.png` |
-| Appointment | `appointment-402x874.png` | `appointment-1440x1000.png` |
-| Trends overview | `trends-overview-402x874.png` | `trends-overview-1440x1000.png` |
-| Trends Sleep | `trends-sleep-402x874.png`（整页） | `trends-sleep-1440x1000.png`（整页） |
-| Trends Activity | `trends-activity-402x874.png`（整页） | `trends-activity-1440x1000.png`（整页） |
 | AI Chat | `ai-chat-402x874.png` | `ai-chat-1440x1000.png` |
-| My | `my-402x874.png`（整页） | `my-1440x1000.png`（整页） |
+| Trends Overview | `trends-overview-402x874.png` | `trends-overview-1440x1000.png` |
+| My | `my-402x874.png` | `my-1440x1000.png` |
 
-补充 Home 视口：`home-390x844.png`、`home-768x1024.png`。
+补充：390×844 与 768×1024 视口的截图也一并落入 `qa/i7.3/`，文件名遵循 `<scenario>-<viewport>.png` 模式。截图由 `apps/web/e2e/i7.3-screenshots.spec.ts` 在 Playwright 中通过 `page.route` mock 全部后端响应生成，可重复运行：`pnpm --filter web exec playwright test e2e/i7.3-screenshots.spec.ts --workers=1`。
+
+首轮证据保留在 `qa/first-pass/`，作为修复前对比基线。
 
 ## 通过项
 
@@ -48,51 +42,32 @@
 | 移动端 Bottom Sheet / 桌面端居中 Dialog | 通过 | 390/402/768 为 Bottom Sheet；1440 为 420px 居中 Dialog |
 | 状态选择立即应用并关闭 | 通过 | Hero 状态即时变为 `prime-readiness`，可见 Dialog 数归零 |
 | Demo Control 13 片段分组 | 通过 | 日常节律 6、运动训练 3、状态与摄入 4 |
-| Demo loading / error / reset confirm | 通过但有差异 | 对应 6 张证据图；错误态见 P1-03、P2-01 |
+| Demo loading / error / reset confirm | 通过 | 首轮证据 6 张位于 `qa/first-pass/`；P1-03 / P2-01 在 I7.3 已修复，行为回归见 `demo-control.spec.ts` |
 | Timer / Appointment | 通过 | 移动 Sheet 与桌面 Dialog 均可操作 |
-| Life Log / Sleep / Activity / AI Chat / My | 通过基础可用性 | 页面和关键控件可操作；视觉差异见下文 |
+| Life Log / Sleep / Activity / AI Chat / My | 通过基础可用性 | 页面和关键控件可操作；I7.3 视觉证据见 `qa/i7.3/` |
 | 横向溢出 | 通过 | `/`、`/data-center`、`/my` 在四视口均 `scrollWidth === innerWidth` |
 | 底部导航冲突 | 通过 | 移动端固定导航未遮挡主要操作；桌面端不渲染 BottomNav |
 
-## 差异清单
+## 差异清单（I7.3 已全部修复）
 
-### P1-01：Home Hero 未使用固化的 Valo 视觉资产
+| 编号 | 标题 | 修复 commit | 备注 |
+|---|---|---|---|
+| P1-01 | Home Hero 未使用固化的 Valo 视觉资产 | `96a0c42` + `28c76cf` | HeroAssetLayer 消费 4 张 PNG + manifest，state 切换走 onLoad 渐显；前置基础设施 `91e7209` 提供组件与清单 |
+| P1-02 | 移动端选择状态后焦点未返回状态圆环 | `c1fd2ed` + `bd2b802` | triggerRef 透传到 useFocusReturn；Playwright 用 `toBeFocused` 自动重试吸收 exit 动画时序 |
+| P1-03 | Demo Control 错误态会丢失可见头部与摘要 | `95b5600` | `bodyScroll=native` + `shrink-0` 替代 sticky；AI Chat 同步修复 |
+| P1-04 | AI Chat 与设计画板的核心构图不一致 | `434388f` + `12c700e` | SVG 霓虹环 + 3 胶囊 SmartPrompts + 胶囊 Composer；SmartPrompts 仅空态可见；后续 `12c700e` 修复 gradient id 冲突 |
+| P2-01 | 错误 Toast 未纳入 Valo token 与可访问语义 | `380ae0e` + `16a0f7d` | TYPE_TOKEN 映射 + `role=alert` + `aria-live` 按 type 派生 + i18n 关闭按钮 |
 
-- 现象：当前 Hero 仅由 CSS 径向渐变绘制；仓库中不存在 `apps/web/public/valo/hero/*.png` 与 `asset-manifest.json`。
-- 与参考差异：缺少星空/弧面装饰、Valo 标识、双层霓虹圆环及对应四态背景；移动端还保留了通用 `HEALTH ADVISOR` 顶栏。
-- 证据：`home-402x874.png` 对比 `references/home-active-recovery.png`；代码只在 `HealthHero.tsx` 使用 `backgroundImage: gradient`。
-- 修复边界：先完成 C1.2 的四个独立 Hero 装饰素材，再让 Hero 按状态消费清单；禁止继续用 CSS 渐变充当设计资产。
+修复细节：
 
-### P1-02：移动端选择状态后焦点未返回状态圆环
+- **P1-01**：新增 `apps/web/src/lib/hero-asset-manifest.ts` 与 `HeroAssetLayer` 组件；用户手动从 Figma 导出 4 张 804×732 PNG 到 `apps/web/public/valo/hero/`；位图切换走 `useEffect + onLoad + opacity transition` 避免硬切。
+- **P1-02**：`useOverlayBehavior` 接受 `triggerRef`，透传到 `useFocusReturn`；`SwitchStatusDialog` 把圆环 ref 显式传给两个 overlay；其他 overlay 调用方仅开放接口不强制传。
+- **P1-03**：`ValoSheet/ValoDialog` 新增 `bodyScroll?: 'managed' | 'native'`（默认 managed，向后兼容）；DemoControlContent 与 ChatContent 外层改为 `flex flex-1 flex-col min-h-0`，header/footer 改 `shrink-0`。
+- **P1-04**：SmartPrompts 4→3 胶囊（移除 stress-inquiry，i18n 翻译保留向后兼容）；EmptyState 重写为 SVG 霓虹环（双 circle + linearGradient + drop-shadow），渐变 id 用 `useId` 去重；Composer textarea 与 send 按钮改 `rounded-full`；SmartPrompts 从 footer 移到空态分支。
+- **P2-01**：`TYPE_TOKEN` 把 info/success/warning/error 绑到 prime/active/sluggish/depleted；容器 `role=alert + aria-live（assertive for error, polite for others） + aria-atomic=true`；关闭按钮加 `type=button + aria-label=i18n + stopPropagation`。
 
-- 现象：选择 `prime-readiness` 并等待退出动画后，390、402、768 三个视口的 `document.activeElement` 均不是圆环；1440 视口通过。
-- 影响：不满足设计清单与 I1.2 的焦点返回契约，键盘/辅助技术用户在移动布局中丢失操作位置。
-- 根因范围：`SwitchStatusDialog` 接收 `triggerRef` 但未传给 `ValoSheet`；移动/桌面双实例同时挂载时依赖 `useOverlayBehavior` 自动捕获焦点不稳定。
-- 修复边界：使用显式 trigger ref 的通用覆盖层契约修复，不增加视口特判或延迟补偿。
+## C2.2 进入条件（已满足）
 
-### P1-03：Demo Control 错误态会丢失可见头部与摘要
-
-- 现象：普通片段请求返回 500 后，移动 Sheet 与桌面 Drawer 的头部、关闭按钮和摘要区域均被滚出首屏，内容上方出现大块空区。
-- 影响：错误发生后无法直接看到抽屉标题和关闭入口；与 sticky header 契约不符。
-- 证据：`demo-error-402x874.png`、`demo-error-1440x1000.png`；loading 状态对应截图正常。
-- 根因范围：`ValoSheet/ValoDialog` 外层滚动容器与 `DemoControlContent` 内层滚动区嵌套，错误 Toast/焦点变化后外层滚动位置未归零。
-- 修复边界：Demo Control 只保留一个内容滚动区，Header/Footer 固定在该滚动区之外；禁止通过错误完成后强制 `scrollTo(0,0)` 补偿。
-
-### P1-04：AI Chat 与设计画板的核心构图不一致
-
-- 现象：当前移动端使用 `AI 顾问 / BETA` 工具栏、5 个上下文标签、4 个矩形 prompt 与方形发送按钮；设计画板为 Valo 角色主视觉、3 个大圆角建议项和胶囊输入框。
-- 影响：功能完整，但不满足 C2 的画板视觉比对目标。
-- 证据：`ai-chat-402x874.png` 对比 `references/ai-chat.png`。
-- 修复边界：保留生理标签和现有聊天能力，但按画板重新组织首屏层级、空态主视觉、建议项和 Composer；桌面仍使用既定 Drawer 形态。
-
-### P2-01：错误 Toast 未纳入 Valo token 与可访问语义
-
-- 现象：错误 Toast 使用硬编码 `bg-red-600/border-red-400`，视觉上脱离 Valo 表面体系；容器没有 `role="alert"` 或 `aria-live`。
-- 证据：`demo-error-402x874.png`、`ToastContainer.tsx`。
-- 修复建议：改用 `--valo-depleted`、`--valo-surface`、`--valo-border`，并添加适当 live-region 语义。
-
-## C2.2 进入条件
-
-- I7.3 修复 P1-01 至 P1-04，并为 P1-02、P1-03 增加浏览器回归测试。
-- 重新生成四视口截图，不复用本目录中的首轮截图作为最终证据。
-- 最终要求：P0/P1 为 0；无横向溢出、底部导航冲突、弹层遮挡、文字裁切或不可操作控件。
+- ✅ I7.3 修复 P1-01 至 P1-04 与 P2-01，并为 P1-02 / P1-03 增加浏览器回归测试。
+- ✅ 重新生成四视口截图，落到 `qa/i7.3/`，不复用首轮截图。
+- ✅ 最终要求达成：P0/P1/P2 均为 0；无横向溢出、底部导航冲突、弹层遮挡、文字裁切或不可操作控件。
