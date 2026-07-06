@@ -3,6 +3,7 @@ import { DM_Serif_Display } from 'next/font/google';
 import { Providers } from './providers';
 import { Navbar } from '@/components/layout/Navbar';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { AppShell } from '@/components/layout/AppShell';
 import { ToastContainer } from '@/components/layout/ToastContainer';
 import { AIAdvisorTrigger } from '@/components/advisor/AIAdvisorTrigger';
 import { AIAdvisorDrawer } from '@/components/advisor/AIAdvisorDrawer';
@@ -37,16 +38,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         }}
       >
         <Providers>
-          <div className="relative flex flex-col min-h-screen pb-16 md:pb-0">
-            <Navbar />
-            <main className="flex-1">
-              {children}
-            </main>
-            <BottomNav />
-            <AIAdvisorTrigger />
-            <AIAdvisorDrawer />
-            <ToastContainer />
-          </div>
+          <AppShell
+            navbar={<Navbar />}
+            bottomNav={<BottomNav />}
+            floating={
+              <>
+                <AIAdvisorTrigger />
+                <AIAdvisorDrawer />
+              </>
+            }
+            overlay={<ToastContainer />}
+          >
+            {children}
+          </AppShell>
         </Providers>
       </body>
     </html>
