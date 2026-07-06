@@ -5,6 +5,14 @@
  * 便于下游组件（如 I3.1 HealthHero）与工具函数复用。
  *
  * 详见 `docs/ui/valo/design-manifest.md`。
+ *
+ * ## `labelKey` 命名契约（稳定，请勿破坏）
+ *
+ * 每个 `HealthStateMetadata.labelKey` 形如 `health.state.<state-slug>`，
+ * 其中 `<state-slug>` 与 `HealthVisualState` 字面量一一对应。该格式是
+ * i18n 翻译表的稳定 key，I7.1（双语 / i18n）在补齐翻译时必须沿用此
+ * 命名，不得改名或加前缀。下游任何引用都应以 `labelKey` 为准，禁止
+ * 自行拼接字符串重新构造。
  */
 
 /** 健康视觉四态，严格收敛为这四个值 */
@@ -66,11 +74,16 @@ export function isHealthVisualState(value: unknown): value is HealthVisualState 
   );
 }
 
-/** 取某状态的元数据；非法状态直接抛错以提前暴露上游 bug */
-export function getHealthStateMeta(state: HealthVisualState): HealthStateMetadata {
-  const meta = HEALTH_STATE_METADATA[state];
-  if (!meta) {
+/**
+ * 取某状态的元数据。
+ *
+ * 接受任意 `string`（典型来源：JSON payload、URL query、外部 API），
+ * 内部用 `isHealthVisualState` 做运行时校验，非法值直接抛错以暴露上游 bug。
+ * 这让本函数成为真正的运行时守卫，对来自边界的非类型化输入同样安全。
+ */
+export function getHealthStateMeta(state: string): HealthStateMetadata {
+  if (!isHealthVisualState(state)) {
     throw new Error(`Unknown HealthVisualState: ${state}`);
   }
-  return meta;
+  return HEALTH_STATE_METADATA[state];
 }

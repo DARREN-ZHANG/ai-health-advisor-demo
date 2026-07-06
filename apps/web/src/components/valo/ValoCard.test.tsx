@@ -69,4 +69,25 @@ describe('ValoCard', () => {
     expect(el.getAttribute('aria-label')).toBe('状态卡');
     expect(el.getAttribute('aria-describedby')).toBe('tip');
   });
+
+  it('as 多态在运行期正确切换元素并透传 rest 属性', () => {
+    // 弱多态设计：元素特定属性（href 等）不在编译期类型里，但运行期必须
+    // 通过 rest 透传正确渲染。这里以 @ts-expect-error 标注并显式断言契约，
+    // 防止后续重构悄悄破坏 as 的 rest 转发。
+    // @ts-expect-error href 不在弱多态 ValoCardProps 的编译期类型中
+    const { container } = render(<ValoCard as="a" href="/foo">链接卡片</ValoCard>);
+    const el = container.firstElementChild as HTMLElement;
+    expect(el.tagName).toBe('A');
+    expect(el.getAttribute('href')).toBe('/foo');
+  });
+
+  it('children 为 undefined 时仍渲染带样式的空表面容器', () => {
+    const { container } = render(<ValoCard />);
+    const el = container.firstElementChild as HTMLElement;
+    expect(el).not.toBeNull();
+    // 默认表面样式仍在，调用方负责空状态文案
+    expect(el.className).toContain('rounded-2xl');
+    expect(el.className).toContain('bg-[var(--valo-surface)]');
+    expect(el.children).toHaveLength(0);
+  });
 });

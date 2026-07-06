@@ -11,7 +11,8 @@ import './globals.css';
 /**
  * DM Serif Display：Hero 状态标题、时间段标题专用。
  * 通过 next/font 在构建期自托管，避免运行期外部请求与 CLS。
- * 变量名 --font-serif 与 globals.css 中 --font-serif 栈首字面对齐。
+ * 变量名 --font-dm-serif 注入到 globals.css 中 --valo-font-serif 的栈首，
+ * 作为 Valo 设计 token 的字体回退链顶端。
  */
 const dmSerif = DM_Serif_Display({
   weight: '400',

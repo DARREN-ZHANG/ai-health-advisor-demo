@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   HEALTH_VISUAL_STATES,
   HEALTH_STATE_METADATA,
-  type HealthVisualState,
   isHealthVisualState,
   getHealthStateMeta,
 } from './valo-theme';
@@ -77,7 +76,8 @@ describe('getHealthStateMeta', () => {
   });
 
   it('对非法状态抛出错误', () => {
-    expect(() => getHealthStateMeta('bogus' as HealthVisualState)).toThrowError(
+    // getHealthStateMeta 接收 string 而非 HealthVisualState，运行期校验非法输入
+    expect(() => getHealthStateMeta('bogus')).toThrowError(
       /Unknown HealthVisualState/,
     );
   });
