@@ -45,26 +45,27 @@ describe('AIAdvisorTrigger', () => {
     expect(btn.getAttribute('data-valo-touch')).toBe('true');
   });
 
-  it('按钮为 56px 圆形（w-14 h-14 rounded-full）', () => {
+  it('按钮为 64px 圆形（h-16 w-16 rounded-full）', () => {
     renderWithIntl(<AIAdvisorTrigger />);
     const btn = screen.getByRole('button');
-    expect(btn.className).toContain('w-14');
-    expect(btn.className).toContain('h-14');
+    expect(btn.className).toContain('w-16');
+    expect(btn.className).toContain('h-16');
     expect(btn.className).toContain('rounded-full');
   });
 
-  it('外层定位 fixed，避免与 BottomNav 重叠：移动端 bottom-24，桌面端 md:bottom-8', () => {
+  it('外层定位 fixed 到 Valo app 画布右侧，而不是 viewport 右下角', () => {
     renderWithIntl(<AIAdvisorTrigger />);
     const wrapper = document.querySelector(
       '[data-valo-advisor-trigger="true"]',
     ) as HTMLElement | null;
     expect(wrapper).not.toBeNull();
     expect(wrapper?.className).toContain('fixed');
-    expect(wrapper?.className).toContain('bottom-24');
-    expect(wrapper?.className).toContain('md:bottom-8');
-    // z-40：低于 BottomNav 的 z-50（导航栏）与 Drawer 遮罩的 z-[80]，
-    // 保证 Trigger 不会盖住 BottomNav 也不会浮在 Drawer 之上。
+    expect(wrapper?.className).toContain('bottom-[25px]');
     expect(wrapper?.className).toContain('z-40');
+    const style = wrapper?.getAttribute('style') ?? '';
+    expect(style).toContain('right: max(16px');
+    expect(style).toContain('100vw - 430px');
+    expect(style).toContain('36px');
   });
 
   it('主操作背景引用 --valo-prime（不再使用 bg-blue-600 等散落颜色）', () => {
@@ -78,14 +79,10 @@ describe('AIAdvisorTrigger', () => {
     expect(btn.className).not.toContain('shadow-blue');
   });
 
-  it('通知小点引用 --valo-active（绿色），不再使用 bg-red-500', () => {
+  it('渲染 Figma 风格聊天模式 glyph，不再使用绿色在线点', () => {
     renderWithIntl(<AIAdvisorTrigger />);
     const btn = screen.getByRole('button');
-    const dot = btn.querySelector('span');
-    expect(dot).not.toBeNull();
-    const style = dot?.getAttribute('style') ?? '';
-    expect(style).toContain('var(--valo-active)');
-    // 旧 red-500 类不应再出现。
-    expect(dot?.className ?? '').not.toContain('bg-red-500');
+    expect(btn.querySelector('[data-valo-chat-mode-glyph="true"]')).not.toBeNull();
+    expect(btn.querySelector('span')).toBeNull();
   });
 });

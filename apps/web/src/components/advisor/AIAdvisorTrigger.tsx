@@ -2,7 +2,6 @@
 
 import { m } from 'framer-motion';
 import { useUIStore } from '@/stores/ui.store';
-import { ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/outline';
 import { useTranslations } from 'next-intl';
 
 /**
@@ -10,11 +9,9 @@ import { useTranslations } from 'next-intl';
  *
  * 设计要点（I5.1）：
  * - 仅使用 `var(--valo-*)` token，无散落的硬编码颜色字面量。
- * - 主操作背景 `--valo-prime`；通知小点使用 `--valo-active`（绿色光谱，
- *   暗示"AI 在线/可对话"，与 BottomNav 当前的 blue-500 区分开）。
- * - 移动端 `bottom-24 right-4`：BottomNav 高 64px（`bottom-0` + `h-16`），
- *   Trigger 距底 96px，安全避开导航栏。桌面端 `md:bottom-8`，不影响布局。
- * - 56px 触摸目标（`w-14 h-14`），`data-valo-touch="true"` 触发 40px 最小保证。
+ * - 入口固定在 Valo 430px app 画布右侧，而不是整个 viewport 右下角。
+ * - 视觉使用本地 SVG 复刻 Figma 的紫色聊天球体与双光点素材。
+ * - 64px 触摸目标，`data-valo-touch="true"` 触发 40px 最小保证。
  * - Drawer 打开时整体隐藏（保留旧契约）。
  */
 export function AIAdvisorTrigger() {
@@ -26,40 +23,61 @@ export function AIAdvisorTrigger() {
 
   return (
     <div
-      className="fixed bottom-24 right-4 z-40 md:bottom-8"
+      className="fixed bottom-[25px] z-40"
+      style={{
+        right: 'max(16px, calc((100vw - 430px) / 2 + 36px))',
+      }}
       data-valo-advisor-trigger="true"
     >
       <m.button
         type="button"
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
+        whileHover={{ scale: 1.06 }}
+        whileTap={{ scale: 0.94 }}
         onClick={() => toggleAdvisorDrawer(true)}
         aria-label={t('openAIAdvisor')}
         data-valo-touch="true"
-        className="relative w-14 h-14 rounded-full flex items-center justify-center transition-opacity hover:opacity-90 focus:outline-none focus-visible:shadow-[var(--valo-focus-ring)]"
+        className="relative flex h-16 w-16 items-center justify-center rounded-full
+                   transition-opacity hover:opacity-95 focus:outline-none
+                   focus-visible:shadow-[var(--valo-focus-ring)]"
         style={{
-          backgroundColor: 'var(--valo-prime)',
+          background:
+            'radial-gradient(circle at 36% 28%, rgba(255,255,255,0.28), transparent 24%), radial-gradient(circle at 61% 64%, var(--valo-prime) 0%, #7c3aed 44%, #43208f 78%, #271248 100%)',
           color: 'var(--valo-canvas)',
-          boxShadow: 'var(--valo-shadow-elevated)',
+          boxShadow:
+            '0 0 26px rgba(167, 139, 250, 0.52), 0 12px 34px rgba(0, 0, 0, 0.5)',
         }}
       >
-        <ChatBubbleOvalLeftEllipsisIcon className="w-7 h-7" />
-        {/*
-          通知小点：暗示 AI 在线、可对话。绿色 `--valo-active` 与
-          prime 紫色按钮形成强对比，避免再使用旧的红色（被解读为"错误"）。
-        */}
-        <m.span
-          className="absolute -top-1 -right-1 w-4 h-4 rounded-full border-2"
-          style={{
-            backgroundColor: 'var(--valo-active)',
-            borderColor: 'var(--valo-canvas)',
-          }}
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 1, type: 'spring' }}
-          aria-hidden="true"
-        />
+        <ChatModeGlyph />
       </m.button>
     </div>
+  );
+}
+
+function ChatModeGlyph() {
+  return (
+    <svg
+      width="44"
+      height="44"
+      viewBox="0 0 44 44"
+      fill="none"
+      aria-hidden="true"
+      data-valo-chat-mode-glyph="true"
+    >
+      <filter id="valo-chat-glow" x="3" y="4" width="38" height="36" colorInterpolationFilters="sRGB">
+        <feGaussianBlur stdDeviation="3.5" />
+      </filter>
+      <g filter="url(#valo-chat-glow)" opacity="0.85">
+        <ellipse cx="15" cy="21" rx="7" ry="11" fill="var(--valo-accent-cool)" />
+        <ellipse cx="29" cy="21" rx="7" ry="11" fill="var(--valo-prime)" />
+      </g>
+      <ellipse cx="15" cy="21" rx="5.6" ry="9.2" fill="rgba(210, 234, 255, 0.92)" />
+      <ellipse cx="29" cy="21" rx="5.6" ry="9.2" fill="rgba(226, 214, 255, 0.88)" />
+      <path
+        d="M22 28.5C24.9 28.5 27.2 27.7 29.1 26.3"
+        stroke="rgba(255, 255, 255, 0.42)"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

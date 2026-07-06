@@ -40,12 +40,12 @@ describe('AppShell', () => {
     expect(main?.className).toContain('flex-1');
   });
 
-  it('根容器有 min-h-screen 与底部 padding（移动 16 / 桌面 0）', () => {
+  it('根容器有 min-h-screen 与底部浮动导航预留 padding', () => {
     const { container } = render(<AppShell>内容</AppShell>);
     const root = container.firstElementChild as HTMLElement;
     expect(root.className).toContain('min-h-screen');
-    expect(root.className).toContain('pb-16');
-    expect(root.className).toContain('md:pb-0');
+    expect(root.className).toContain('pb-28');
+    expect(root.className).not.toContain('md:pb-0');
   });
 
   it('追加自定义 className', () => {

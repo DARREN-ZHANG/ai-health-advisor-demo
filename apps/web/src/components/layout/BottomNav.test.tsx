@@ -96,12 +96,18 @@ describe('BottomNav', () => {
     expect(homeLink?.className).toContain('text-[var(--valo-text-secondary)]');
   });
 
-  it('导航根容器使用 token 化背景与边框，无硬编码 slate-* / blue-*', () => {
+  it('导航根容器使用 Figma 风格胶囊定位与 token 化边框', () => {
     renderWithIntl(<BottomNav />);
     const nav = document.querySelector('[data-valo-bottomnav="true"]') as HTMLElement;
     const style = nav.getAttribute('style') ?? '';
-    expect(style).toContain('var(--valo-surface)');
+    expect(style).toContain('left: max(18px');
+    expect(style).toContain('50% - 178px');
     expect(style).toContain('var(--valo-border)');
+    expect(nav.className).toContain('fixed');
+    expect(nav.className).toContain('bottom-6');
+    expect(nav.className).toContain('w-[276px]');
+    expect(nav.className).toContain('rounded-[34px]');
+    expect(nav.className).not.toContain('md:hidden');
     // safe-area 通过 globals.css 的 .valo-bottomnav-safe 钩子注入
     // （env() 内联值会被 React 过滤，改走 CSS 文件）
     expect(nav.className).toContain('valo-bottomnav-safe');
@@ -110,12 +116,13 @@ describe('BottomNav', () => {
     expect(html).not.toMatch(/bg-slate-|text-blue-|bg-blue-/);
   });
 
-  it('激活项底部出现 prime 色小圆点', () => {
+  it('激活项使用 Figma 风格 rounded pill，而不是底部小圆点', () => {
     renderWithIntl(<BottomNav />);
     const homeLink = screen.getByText('首页').closest('a');
+    expect(homeLink?.className).toContain('rounded-[28px]');
+    expect(homeLink?.className).toContain('bg-[rgba(31,30,39,0.92)]');
     const dot = homeLink?.querySelector('span[aria-hidden="true"]');
-    expect(dot).not.toBeNull();
-    expect(dot?.className).toContain('bg-[var(--valo-prime)]');
+    expect(dot).toBeNull();
   });
 
   it('切换到 /data-center 时激活态从 home 切到 trends', () => {
