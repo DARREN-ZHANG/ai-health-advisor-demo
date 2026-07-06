@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { ActionOption } from '@health-advisor/shared';
 import { useRefetchBrief } from '@/hooks/use-ai-query';
 import { useGodModeActions } from '@/hooks/use-god-mode-actions';
@@ -26,6 +27,7 @@ export function useActionInteractions(profileId: string | undefined) {
   const { showToast } = useUIStore();
   const refetchBrief = useRefetchBrief(profileId);
   const { appendMicroEvent, isAppendingMicroEvent } = useGodModeActions();
+  const t = useTranslations('homepage.action');
 
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [selectedActionIds, setSelectedActionIds] = useState<Set<string>>(
@@ -54,16 +56,17 @@ export function useActionInteractions(profileId: string | undefined) {
           advanceClock: true,
         });
         setSelectedActionIds((prev) => new Set(prev).add(action.id));
-        showToast('已记录，正在更新实时简报', 'success');
+        showToast(t('toastRecorded'), 'success');
         await refetchBrief.mutateAsync();
       } catch (error) {
-        const message = error instanceof Error ? error.message : '微行动记录失败';
+        const message =
+          error instanceof Error ? error.message : t('toastFailed');
         showToast(message, 'error');
       } finally {
         setPendingActionId(null);
       }
     },
-    [appendMicroEvent, refetchBrief, showToast],
+    [appendMicroEvent, refetchBrief, showToast, t],
   );
 
   /** Yes 按钮：根据 action.interaction 决定立即提交或打开 Timer */
@@ -91,11 +94,11 @@ export function useActionInteractions(profileId: string | undefined) {
       // 非 micro_event / 非 calendar（传感器不可识别的动作）→ 仅记录选择
       setSelectedActionIds((prev) => new Set(prev).add(action.id));
       showToast(
-        `${action.title}：已记录。由于该行为无法通过智能戒指验证，实时简报不会更新。`,
+        t('toastUnverifiable', { title: action.title }),
         'success',
       );
     },
-    [submitMicroEventNow, showToast],
+    [submitMicroEventNow, showToast, t],
   );
 
   /** Not Now 按钮：仅收起，不记录 */
@@ -124,8 +127,8 @@ export function useActionInteractions(profileId: string | undefined) {
     const action = appointmentAction;
     setCalendarActionIds((prev) => new Set(prev).add(action.id));
     setAppointmentAction(null);
-    showToast('已添加进日程', 'success');
-  }, [appointmentAction, showToast]);
+    showToast(t('toastCalendarAdded'), 'success');
+  }, [appointmentAction, showToast, t]);
 
   /** 关闭 Appointment sheet */
   const handleAppointmentClose = useCallback(() => {

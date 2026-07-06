@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
 import { useActionInteractions } from './use-action-interactions';
 import { useUIStore } from '@/stores/ui.store';
@@ -13,6 +14,19 @@ vi.mock('@/lib/api-client', () => ({
   },
 }));
 
+// use-action-interactions 内部使用 useTranslations('homepage.action')，
+// 渲染时需要 NextIntlClientProvider 提供 namespace 子集。
+const TEST_MESSAGES = {
+  homepage: {
+    action: {
+      toastRecorded: '已记录，正在更新实时简报',
+      toastFailed: '微行动记录失败',
+      toastUnverifiable: '{title}：已记录。由于该行为无法通过智能戒指验证，实时简报不会更新。',
+      toastCalendarAdded: '已添加进日程',
+    },
+  },
+} as const;
+
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -22,7 +36,11 @@ function createWrapper() {
   });
   function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <NextIntlClientProvider locale="zh" messages={TEST_MESSAGES}>
+          {children}
+        </NextIntlClientProvider>
+      </QueryClientProvider>
     );
   }
   return Wrapper;

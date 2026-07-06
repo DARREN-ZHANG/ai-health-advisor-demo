@@ -100,11 +100,14 @@ export default function HomePage() {
     (error ? t('briefNetworkError') : t('briefPreparing'));
   const actions = data?.actions ?? [];
 
-  // 已记录/已加入日历的 action 不再渲染为可交互卡片
+  // 已记录/已加入日历/正在 Timer 或 Appointment 中 的 action 不再渲染为可交互卡片，
+  // 避免用户在浮层打开期间重复点击 Yes。
   const visibleActions = actions.filter(
     (a) =>
       !interactions.selectedActionIds.has(a.id) &&
-      !interactions.calendarActionIds.has(a.id),
+      !interactions.calendarActionIds.has(a.id) &&
+      a.id !== interactions.timerAction?.id &&
+      a.id !== interactions.appointmentAction?.id,
   );
 
   // 当前 Timer 的总秒数

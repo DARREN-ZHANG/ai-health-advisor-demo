@@ -69,10 +69,13 @@
       "yes": "Yes",
       "notNow": "Not Now",
       "recorded": "Recorded",
-      "dismissed": "Dismissed"
+      "dismissed": "Dismissed",
+      "toastRecorded": "Recorded. Updating brief...",
+      "toastFailed": "Failed to record micro event",
+      "toastUnverifiable": "{title}: recorded. The ring can't verify this action, so the brief won't update.",
+      "toastCalendarAdded": "Added to calendar"
     },
     "timer": {
-      "title": "Action Timer",
       "pause": "Pause",
       "resume": "Resume",
       "stop": "Stop",

@@ -69,10 +69,13 @@
       "yes": "确认",
       "notNow": "稍后",
       "recorded": "已记录",
-      "dismissed": "已忽略"
+      "dismissed": "已忽略",
+      "toastRecorded": "已记录，正在更新实时简报",
+      "toastFailed": "微行动记录失败",
+      "toastUnverifiable": "{title}：已记录。由于该行为无法通过智能戒指验证，实时简报不会更新。",
+      "toastCalendarAdded": "已添加进日程"
     },
     "timer": {
-      "title": "行动计时",
       "pause": "暂停",
       "resume": "继续",
       "stop": "取消",
