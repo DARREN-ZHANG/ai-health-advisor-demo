@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { gotoAndWait, reloadAndWait } from './_app-ready';
 
 /**
  * Valo UI 关键路径 E2E（I7.2）。
@@ -184,7 +185,7 @@ test.describe('Valo UI 关键路径', () => {
   });
 
   test('首页移动端：Hero / HomeHeader / 底部导航渲染', async ({ page }) => {
-    await page.goto('/');
+    await gotoAndWait(page, '/');
     // HomeHeader
     await expect(page.locator('[data-valo-header="home"]')).toBeVisible();
     // Hero ring
@@ -204,7 +205,7 @@ test.describe('Valo UI 关键路径', () => {
   test('Switch Status：点击 Hero → 弹窗 → 选中 → Hero 状态变化', async ({
     page,
   }) => {
-    await page.goto('/');
+    await gotoAndWait(page, '/');
 
     // 初始 state：mock morning-brief 返回 statusColor='good'，
     // mapApiStatusToVisualState('good', hasBrief=true) → 'active-recovery'
@@ -233,7 +234,7 @@ test.describe('Valo UI 关键路径', () => {
   });
 
   test('Avatar 打开 AccountSwitcherSheet 并切换 Profile', async ({ page }) => {
-    await page.goto('/');
+    await gotoAndWait(page, '/');
 
     // 点击 Avatar
     await page.locator(visible('[data-valo-avatar="true"]')).click();
@@ -267,7 +268,7 @@ test.describe('Valo UI 关键路径', () => {
   });
 
   test('Trends 页面渲染并切换 tab', async ({ page }) => {
-    await page.goto('/data-center');
+    await gotoAndWait(page, '/data-center');
 
     // 趋势页 controls 钩子存在
     await expect(page.locator('[data-valo-trends-controls=""]')).toBeVisible();
@@ -288,7 +289,7 @@ test.describe('Valo UI 关键路径', () => {
   test('My 页面渲染：当前 profile 头像 + 禁用项 aria-disabled', async ({
     page,
   }) => {
-    await page.goto('/my');
+    await gotoAndWait(page, '/my');
 
     await expect(page.locator('[data-valo-my="root"]')).toBeVisible();
     // 当前 profile 名称（mock 后取 profile-a.name=用户 A）
@@ -302,7 +303,7 @@ test.describe('Valo UI 关键路径', () => {
   });
 
   test('Life Log：快捷加 1 杯 → 列表出现 entry', async ({ page }) => {
-    await page.goto('/');
+    await gotoAndWait(page, '/');
 
     // Life Log 面板可见
     await expect(
@@ -322,7 +323,7 @@ test.describe('Valo UI 关键路径', () => {
   });
 
   test('语言切换 (zh → en)：BottomNav nav 文案变化', async ({ page }) => {
-    await page.goto('/');
+    await gotoAndWait(page, '/');
 
     // 默认中文：底部导航 "trends" 锚点的文案为 "趋势"
     await expect(
@@ -331,7 +332,7 @@ test.describe('Valo UI 关键路径', () => {
 
     // 通过 localStorage 切换语言（与 LanguageSwitcher 同样的 reload-based 模式）
     await page.evaluate(() => window.localStorage.setItem('lang', 'en'));
-    await page.reload();
+    await reloadAndWait(page);
 
     // 切换后：trends 文案为 "Trends"
     await expect(
@@ -344,7 +345,7 @@ test.describe('Valo UI 关键路径', () => {
     await page.addInitScript(() => {
       window.localStorage.setItem('lang', 'en');
     });
-    await page.goto('/');
+    await gotoAndWait(page, '/');
 
     // Hero ring 按钮的 aria-label 在 en 下是 "Tap to switch status"
     const ring = page.locator(visible('[data-valo-ring="true"]'));
@@ -387,7 +388,7 @@ test.describe('Valo UI 关键路径', () => {
       }),
     );
 
-    await page.goto('/');
+    await gotoAndWait(page, '/');
 
     // 通过 h3 title 锚定卡片（ActionCard.title 在 h3 内渲染）
     const cardTitle = page.getByRole('heading', {
@@ -443,7 +444,7 @@ test.describe('Valo UI 关键路径', () => {
       }),
     );
 
-    await page.goto('/');
+    await gotoAndWait(page, '/');
 
     const cardTitle = page.getByRole('heading', {
       level: 3,

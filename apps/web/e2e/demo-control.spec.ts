@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { gotoAndWait } from './_app-ready';
 
 /**
  * Demo Control（Timeline Control）E2E（I7.2）。
@@ -150,7 +151,9 @@ test.describe('Demo Control', () => {
 
   test.beforeEach(async ({ page }) => {
     await mockDemoControlApi(page);
-    await page.goto('/');
+    // 等待 Providers 完成客户端 i18n 加载（loading.tsx 骨架退场，BottomNav
+    // 与 trigger 出现）。详见 _app-ready.ts。
+    await gotoAndWait(page, '/');
   });
 
   test('Trigger 在 God Mode 启用时可见', async ({ page }) => {

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { gotoAndWait, reloadAndWait } from './_app-ready';
 
 /**
  * AI Advisor E2E —— Valo 视觉 + 稳定 data 锚点（I5.2）。
@@ -85,7 +86,9 @@ async function mockAdvisorApi(
 test.describe('AI Advisor E2E', () => {
   test.beforeEach(async ({ page }) => {
     await mockAdvisorApi(page);
-    await page.goto('/');
+    // 等待 Providers 完成客户端 i18n 加载（loading.tsx 骨架退场，BottomNav
+    // 与 trigger 出现）。详见 _app-ready.ts。
+    await gotoAndWait(page, '/');
   });
 
   // Drawer 在移动端 (block lg:hidden) 与桌面端 (hidden lg:block) 两层 DOM
@@ -128,7 +131,7 @@ test.describe('AI Advisor E2E', () => {
     page,
   }) => {
     await mockAdvisorApi(page, { chatDelayMs: 800 });
-    await page.reload();
+    await reloadAndWait(page);
 
     await openDrawer(page);
     await page
