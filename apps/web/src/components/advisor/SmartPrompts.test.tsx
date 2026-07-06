@@ -10,14 +10,14 @@ function renderWithIntl(node: React.ReactNode) {
 describe('SmartPrompts', () => {
   afterEach(() => cleanup());
 
-  it('渲染 4 条推荐问题', () => {
+  it('渲染 3 条推荐问题', () => {
     renderWithIntl(<SmartPrompts onSelect={vi.fn()} />);
     const container = document.querySelector(
       '[data-valo-smart-prompts="true"]',
     );
     expect(container).not.toBeNull();
     const buttons = container?.querySelectorAll('button');
-    expect(buttons?.length).toBe(4);
+    expect(buttons?.length).toBe(3);
   });
 
   it('每条 chip 是 <button>，并提供 aria-label 描述', () => {
@@ -26,13 +26,20 @@ describe('SmartPrompts', () => {
       '分析我昨晚的睡眠质量',
       '我最近的 HRV 趋势如何？',
       '给我的运动计划提点建议',
-      '为什么我最近感觉压力很大？',
     ];
     labels.forEach((label) => {
       expect(
         screen.getByRole('button', { name: label }),
       ).toBeInTheDocument();
     });
+  });
+
+  it('chip 形态为胶囊（rounded-full）', () => {
+    renderWithIntl(<SmartPrompts onSelect={vi.fn()} />);
+    const chip = screen.getByRole('button', {
+      name: '分析我昨晚的睡眠质量',
+    });
+    expect(chip.className).toContain('rounded-full');
   });
 
   it('点击触发 onSelect，传入对应 SmartPromptOption', () => {

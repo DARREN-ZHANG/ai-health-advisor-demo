@@ -19,7 +19,6 @@ import { PhysiologicalTags } from './PhysiologicalTags';
 import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 import {
   PaperAirplaneIcon,
-  SparklesIcon,
   TrashIcon,
   EllipsisVerticalIcon,
   XMarkIcon,
@@ -323,7 +322,10 @@ function ChatContent({
           }
         >
           {!hasMessages ? (
-            <EmptyState />
+            <>
+              <EmptyState />
+              <SmartPrompts onSelect={onSendMessage} />
+            </>
           ) : (
             messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
           )}
@@ -337,7 +339,6 @@ function ChatContent({
             'bg-[var(--valo-surface)] px-4 py-3'
           }
         >
-          <SmartPrompts onSelect={onSendMessage} />
           <div className="relative flex items-end gap-2">
             <textarea
               rows={1}
@@ -347,7 +348,7 @@ function ChatContent({
               placeholder={t('composerPlaceholder')}
               data-valo-advisor-composer="true"
               className={
-                'flex-1 min-h-[44px] max-h-32 resize-none rounded-xl px-4 py-2.5 text-sm ' +
+                'flex-1 min-h-[44px] max-h-32 resize-none rounded-full px-5 py-2.5 text-sm ' +
                 'border border-[var(--valo-border)] bg-[var(--valo-canvas)] ' +
                 'text-[var(--valo-text-primary)] placeholder:text-[var(--valo-text-secondary)] ' +
                 'transition-all focus:outline-none focus-visible:shadow-[var(--valo-focus-ring)]'
@@ -367,7 +368,7 @@ function ChatContent({
               data-valo-touch="true"
               data-valo-advisor-send="true"
               className={
-                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-opacity ' +
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-opacity ' +
                 'disabled:opacity-40 hover:opacity-90 focus:outline-none ' +
                 'focus-visible:shadow-[var(--valo-focus-ring)]'
               }
@@ -386,28 +387,54 @@ function ChatContent({
 }
 
 /**
- * Empty State —— Valo 品牌欢迎语 + 推荐问题入口。
+ * Empty State —— Valo 品牌空态：环形霓虹主视觉 + 欢迎文案。
  *
- * 仅在 `messages.length === 0` 时渲染。推荐问题来自 SmartPrompts；
- * 此处仅展示标题/副标题与"试试这些问题："小标题。
+ * 主视觉用纯 SVG 实现（绿→蓝→紫→粉渐变环 + drop-shadow 发光晕染），
+ * 中央镂空保留页面背景，与 design-manifest.md AI Chat 画板对齐。
+ * 推荐问题（SmartPrompts）由 ChatContent 在空态时一并渲染。
  */
 function EmptyState() {
   const t = useTranslations('advisor');
   return (
     <div
-      className="flex flex-col items-center justify-center gap-4 px-6 py-10 text-center"
+      className="flex flex-col items-center justify-center gap-6 px-6 py-10 text-center"
       data-valo-empty-state="true"
     >
-      <span
-        className="flex h-12 w-12 items-center justify-center rounded-full"
-        style={{
-          backgroundColor: 'var(--valo-canvas)',
-          color: 'var(--valo-prime)',
-        }}
+      {/* 环形霓虹主视觉：纯 SVG + 渐变 + drop-shadow */}
+      <svg
+        viewBox="0 0 200 200"
+        width={200}
+        height={200}
         aria-hidden="true"
+        data-valo-empty-hero="true"
+        className="drop-shadow-[0_0_24px_rgba(167,139,250,0.45)]"
       >
-        <SparklesIcon className="h-6 w-6" />
-      </span>
+        <defs>
+          <linearGradient id="valo-empty-ring" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="var(--valo-active)" />
+            <stop offset="35%" stopColor="#60a5fa" />
+            <stop offset="70%" stopColor="var(--valo-prime)" />
+            <stop offset="100%" stopColor="#f472b6" />
+          </linearGradient>
+        </defs>
+        <circle
+          cx="100"
+          cy="100"
+          r="80"
+          fill="none"
+          stroke="url(#valo-empty-ring)"
+          strokeWidth="6"
+        />
+        <circle
+          cx="100"
+          cy="100"
+          r="64"
+          fill="none"
+          stroke="url(#valo-empty-ring)"
+          strokeWidth="2"
+          opacity="0.6"
+        />
+      </svg>
       <div className="space-y-1">
         <p
           className="text-base font-semibold text-[var(--valo-text-primary)]"

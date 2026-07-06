@@ -179,7 +179,7 @@ describe('AIAdvisorDrawer', () => {
     ).not.toBeNull();
   });
 
-  it('empty state 渲染 4 条 SmartPrompts 推荐问题', () => {
+  it('empty state 渲染 3 条 SmartPrompts 推荐问题（P1-04）', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
@@ -189,6 +189,54 @@ describe('AIAdvisorDrawer', () => {
     expect(
       within(mobile).getByRole('button', { name: '我最近的 HRV 趋势如何？' }),
     ).toBeInTheDocument();
+    expect(
+      within(mobile).getByRole('button', { name: '给我的运动计划提点建议' }),
+    ).toBeInTheDocument();
+    // stress-inquiry 不再渲染
+    expect(
+      within(mobile).queryByRole('button', { name: '为什么我最近感觉压力很大？' }),
+    ).toBeNull();
+  });
+
+  it('empty state 渲染环形霓虹主视觉（data-valo-empty-hero）', () => {
+    useUIStore.setState({ isAdvisorDrawerOpen: true });
+    renderWithIntl(<AIAdvisorDrawer />);
+    const mobile = getMobileContainer();
+    expect(
+      mobile.querySelector('[data-valo-empty-hero="true"]'),
+    ).not.toBeNull();
+  });
+
+  it('composer textarea 形态为胶囊（rounded-full）', () => {
+    useUIStore.setState({ isAdvisorDrawerOpen: true });
+    renderWithIntl(<AIAdvisorDrawer />);
+    const mobile = getMobileContainer();
+    const textarea = within(mobile).getByPlaceholderText(
+      '输入你的问题...',
+    );
+    expect(textarea.className).toContain('rounded-full');
+  });
+
+  it('send 按钮形态为圆形（rounded-full）', () => {
+    useUIStore.setState({ isAdvisorDrawerOpen: true });
+    renderWithIntl(<AIAdvisorDrawer />);
+    const mobile = getMobileContainer();
+    const sendBtn = within(mobile).getByRole('button', { name: '发送' });
+    expect(sendBtn.className).toContain('rounded-full');
+  });
+
+  it('有消息后 SmartPrompts 不再渲染', () => {
+    useUIStore.setState({ isAdvisorDrawerOpen: true });
+    useAIAdvisorStore.setState({
+      messages: [
+        { id: 'm1', role: 'user', content: 'hi', timestamp: 1 },
+      ],
+    });
+    renderWithIntl(<AIAdvisorDrawer />);
+    const mobile = getMobileContainer();
+    expect(
+      within(mobile).queryByRole('button', { name: '分析我昨晚的睡眠质量' }),
+    ).toBeNull();
   });
 
   it('composer 引用 --valo-prime 作为发送按钮背景', () => {

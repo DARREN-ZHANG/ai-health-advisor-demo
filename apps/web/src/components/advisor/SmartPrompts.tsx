@@ -16,19 +16,19 @@ const PROMPT_KEYS = [
   { id: 'sleep-analysis', textKey: 'sleepAnalysis' as const },
   { id: 'hrv-trends', textKey: 'hrvTrends' as const },
   { id: 'exercise-advice', textKey: 'exerciseAdvice' as const },
-  { id: 'stress-inquiry', textKey: 'stressInquiry' as const },
 ] as const;
 
 /**
- * SmartPrompts —— 推荐问题芯片。
+ * SmartPrompts —— 推荐问题胶囊芯片。
  *
- * 设计要点（I5.1）：
+ * 设计要点（I7.3 / P1-04）：
+ * - 3 条胶囊形建议（与 design-manifest.md AI Chat 画板对齐），
+ *   移除 stress-inquiry，保留 sleep / hrv / exercise 三个核心场景。
  * - 仅引用 `var(--valo-*)` token，无 blue-/slate- 散落类名。
  * - 静态态：`--valo-surface` + 弱边框 `--valo-border`，与背景同一光谱。
- * - hover/focus：边框切换到 `--valo-prime`，文字保持高对比；
- *   通过 inline style + CSS variable 让 `:hover` 也能改边框色。
- * - `<button>` 提供原生可访问语义；触屏 40px 最小目标由 `data-valo-touch`
- *   全局兜底；此处保留紧凑 padding 以适配多条同时显示。
+ * - hover/focus：边框切换到 `--valo-prime`，文字保持高对比。
+ * - `<button>` 提供原生可访问语义；触屏 44px 最小目标由 `data-valo-touch`
+ *   全局兜底；胶囊 `rounded-full` 形态由 `text-sm` + `px-4 py-2.5` 撑开。
  */
 export function SmartPrompts({ onSelect }: SmartPromptsProps) {
   const t = useTranslations('advisor.smartPrompts');
@@ -56,9 +56,9 @@ export function SmartPrompts({ onSelect }: SmartPromptsProps) {
           data-valo-touch="true"
           data-valo-prompt-id={prompt.id}
           aria-label={prompt.text}
-          // 仅引用 Valo token：静态弱边框 → hover 切到 prime；文字 secondary → hover 切到 primary。
+          // 仅引用 Valo token：胶囊 rounded-full + 弱边框 → hover 切到 prime；文字 secondary → hover 切到 primary。
           className={
-            'text-left text-xs rounded-xl border px-3 py-2 transition-colors ' +
+            'text-left text-sm rounded-full border px-4 py-2.5 transition-colors ' +
             'shadow-[var(--valo-shadow-card)] ' +
             'border-[var(--valo-border)] bg-[var(--valo-surface)] ' +
             'text-[var(--valo-text-secondary)] ' +
