@@ -4,6 +4,7 @@ import { useUIStore } from '@/stores/ui.store';
 import type { Toast } from '@/stores/ui.store';
 import { m, AnimatePresence } from 'framer-motion';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useTranslations } from 'next-intl';
 
 /**
  * Toast 类型 → Valo 语义 token 映射。
@@ -18,6 +19,7 @@ const TYPE_TOKEN: Readonly<Record<Toast['type'], string>> = {
 };
 
 export function ToastContainer() {
+  const t = useTranslations('common');
   const { toasts, removeToast } = useUIStore();
 
   return (
@@ -25,11 +27,13 @@ export function ToastContainer() {
       <AnimatePresence>
         {toasts.map((toast) => {
           const token = TYPE_TOKEN[toast.type];
+          // error 必须立即打断 SR；其余 type 走 polite 等空闲再朗读（W3C/MDN 建议）
+          const ariaLive = toast.type === 'error' ? 'assertive' : 'polite';
           return (
             <m.div
               key={toast.id}
               role="alert"
-              aria-live="assertive"
+              aria-live={ariaLive}
               aria-atomic="true"
               initial={{ opacity: 0, y: -20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -50,7 +54,7 @@ export function ToastContainer() {
               <span className="flex-1">{toast.message}</span>
               <button
                 type="button"
-                aria-label="关闭"
+                aria-label={t('close')}
                 onClick={(e) => {
                   e.stopPropagation();
                   removeToast(toast.id);
