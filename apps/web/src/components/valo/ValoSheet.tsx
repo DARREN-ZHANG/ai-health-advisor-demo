@@ -62,6 +62,8 @@ export interface ValoSheetProps {
   closeOnEscape?: boolean;
   /** 打开后聚焦的初始元素 */
   initialFocusRef?: RefObject<HTMLElement | null>;
+  /** 显式触发器 ref；关闭后焦点归还此元素（不传则回退到打开瞬间的 activeElement） */
+  triggerRef?: RefObject<HTMLElement | null>;
   /** 追加 className */
   className?: string;
 }
@@ -78,6 +80,7 @@ export function ValoSheet({
   closeOnScrimClick = true,
   closeOnEscape = true,
   initialFocusRef,
+  triggerRef,
   className = '',
 }: ValoSheetProps) {
   const generatedId = useId();
@@ -99,6 +102,7 @@ export function ValoSheet({
     closeOnScrimClick,
     closeOnEscape,
     initialFocusRef,
+    triggerRef,
   });
 
   const isFullscreen = variant === 'full-screen';

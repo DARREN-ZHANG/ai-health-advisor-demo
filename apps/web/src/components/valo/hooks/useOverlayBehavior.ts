@@ -27,6 +27,11 @@ export interface OverlayBehaviorOptions {
   closeOnScrimClick?: boolean;
   closeOnEscape?: boolean;
   initialFocusRef?: RefObject<HTMLElement | null>;
+  /**
+   * 显式触发器 ref。关闭时焦点会归还此元素。
+   * 不传则由 useFocusReturn 回退到打开瞬间的 document.activeElement。
+   */
+  triggerRef?: RefObject<HTMLElement | null>;
 }
 
 export interface OverlayBehaviorResult {
@@ -41,6 +46,7 @@ export function useOverlayBehavior({
   closeOnScrimClick = true,
   closeOnEscape = true,
   initialFocusRef,
+  triggerRef,
 }: OverlayBehaviorOptions): OverlayBehaviorResult {
   useScrollLock(open);
   useFocusTrap({
@@ -48,7 +54,7 @@ export function useOverlayBehavior({
     containerRef,
     onEscape: closeOnEscape ? onClose : undefined,
   });
-  useFocusReturn({ open });
+  useFocusReturn({ open, triggerRef });
 
   // 打开后把焦点移到 initialFocusRef 或容器自身。
   // 关键：使用独立的 effect，仅在 `open` 变为 true 时触发一次，

@@ -21,9 +21,7 @@ import type { HealthVisualState } from '@/lib/valo-theme';
  * - 颜色样本：小圆点用状态对应的 CSS 变量着色。
  * - 焦点管理 / 焦点返回 / Escape / scrim 关闭全部交给 ValoSheet/ValoDialog
  *   内部的 `useOverlayBehavior`，本组件不重复实现。
- *
- * `triggerRef` 仅作为契约保留：当前 ValoSheet/ValoDialog 的 hook 已经处理
- * 焦点返回，本组件不需要主动操作 ref；测试可以忽略。
+ *   `triggerRef` 显式传入以驱动焦点归还（移动端关闭后焦点回到圆环）。
  */
 export interface SwitchStatusDialogProps {
   /** 是否打开 */
@@ -34,7 +32,10 @@ export interface SwitchStatusDialogProps {
   current: HealthVisualState;
   /** 选择新状态：立即应用 + 关闭 */
   onSelect: (state: HealthVisualState) => void;
-  /** 用于焦点返回的触发器 ref（圆环按钮）；当前由 overlay hook 自动处理 */
+  /**
+   * 用于焦点返回的触发器 ref（圆环按钮）。透传给 ValoSheet/ValoDialog →
+   * useOverlayBehavior → useFocusReturn，确保移动端关闭弹窗后焦点回到圆环。
+   */
   triggerRef?: RefObject<HTMLButtonElement | null>;
   /**
    * 弹窗根元素的 DOM id，供 HealthHero 的 aria-controls 关联。
@@ -48,6 +49,7 @@ export function SwitchStatusDialog({
   onClose,
   current,
   onSelect,
+  triggerRef,
   dialogId = 'switch-status-dialog',
 }: SwitchStatusDialogProps) {
   const t = useTranslations('health.switchStatus');
@@ -77,6 +79,7 @@ export function SwitchStatusDialog({
           onClose={onClose}
           title={title}
           ariaLabel={title}
+          triggerRef={triggerRef}
         >
           <div id={dialogId} className="px-4 py-4">
             {form}
@@ -91,6 +94,7 @@ export function SwitchStatusDialog({
           title={title}
           width="sm"
           ariaLabel={title}
+          triggerRef={triggerRef}
         >
           <div id={dialogId} className="px-5 py-4">
             {form}

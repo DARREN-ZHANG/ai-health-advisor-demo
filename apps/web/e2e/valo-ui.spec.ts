@@ -233,6 +233,31 @@ test.describe('Valo UI 关键路径', () => {
     ).toHaveCount(0);
   });
 
+  test('Switch Status 关闭后焦点回到状态圆环（P1-02）', async ({ page }) => {
+    await gotoAndWait(page, '/');
+
+    const ring = page.locator(visible('[data-valo-ring="true"]'));
+    await ring.click();
+
+    // 等待 SwitchStatusDialog 出现
+    await expect(
+      page.locator(visible('[data-valo-option="glycogen-depleted"]')),
+    ).toBeVisible();
+
+    // 选中状态 → 弹窗关闭
+    await page.locator(visible('[data-valo-option="glycogen-depleted"]')).click();
+    await expect(
+      page.locator(visible('[data-valo-option="glycogen-depleted"]')),
+    ).toHaveCount(0);
+
+    // 焦点应已归还状态圆环
+    const focused = await page.evaluate(() => {
+      const el = document.activeElement;
+      return el?.getAttribute('data-valo-ring') ?? null;
+    });
+    expect(focused).toBe('true');
+  });
+
   test('Avatar 打开 AccountSwitcherSheet 并切换 Profile', async ({ page }) => {
     await gotoAndWait(page, '/');
 

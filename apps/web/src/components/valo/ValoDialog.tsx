@@ -56,6 +56,8 @@ export interface ValoDialogProps {
   closeOnScrimClick?: boolean;
   closeOnEscape?: boolean;
   initialFocusRef?: RefObject<HTMLElement | null>;
+  /** 显式触发器 ref；关闭后焦点归还此元素（不传则回退到打开瞬间的 activeElement） */
+  triggerRef?: RefObject<HTMLElement | null>;
   className?: string;
 }
 
@@ -71,6 +73,7 @@ export function ValoDialog({
   closeOnScrimClick = true,
   closeOnEscape = true,
   initialFocusRef,
+  triggerRef,
   className = '',
 }: ValoDialogProps) {
   const generatedId = useId();
@@ -91,6 +94,7 @@ export function ValoDialog({
     closeOnScrimClick,
     closeOnEscape,
     initialFocusRef,
+    triggerRef,
   });
 
   const resolvedWidth =
