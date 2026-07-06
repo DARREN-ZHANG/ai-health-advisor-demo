@@ -96,6 +96,34 @@
       "body": "Wind-down routine ready. Reduce screen brightness."
     }
   },
+  "lifeLog": {
+    "title": "Life Log",
+    "sessionOnlyBadge": "Session only",
+    "category": {
+      "caffeine": "Caffeine",
+      "alcohol": "Alcohol",
+      "hydration": "Hydration"
+    },
+    "unit": {
+      "cup": "cup"
+    },
+    "quickAdd": "+1 cup",
+    "customAdd": "Custom add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "cups": "Cups",
+    "time": "Time",
+    "note": "Note",
+    "totalToday": "Today: {cups} cups ({amount}{unit})",
+    "empty": "No entries yet",
+    "notePlaceholder": "Optional note",
+    "sheetTitleAdd": "Add Entry",
+    "sheetTitleEdit": "Edit Entry",
+    "cupsLabel": "Cups",
+    "cupsStep": "0.5"
+  },
   "health": {
     "state": {
       "prime-readiness": "Prime Readiness",

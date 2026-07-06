@@ -11,6 +11,7 @@ import { ActionTimerSheet } from '@/components/homepage/ActionTimerSheet';
 import { AppointmentSheet } from '@/components/homepage/AppointmentSheet';
 import { ValoCard } from '@/components/valo/ValoCard';
 import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
+import { LifeLogPanel } from '@/components/life-log/LifeLogPanel';
 import { useProfileStore } from '@/stores/profile.store';
 import {
   useHealthStatusStore,
@@ -222,6 +223,13 @@ export default function HomePage() {
             </div>
           </ValoCard>
         </Section>
+
+        {/*
+          Life Log（profile-scoped，仅当前会话）—— I3.3
+          数据为内存原型，不持久化；刷新页面即清空。挂载位置：Afternoon/Night 之后，
+          符合 design-manifest.md "下方生命记录区"的版式约定。
+        */}
+        <LifeLogPanel />
 
         <div className="h-20" />
       </div>

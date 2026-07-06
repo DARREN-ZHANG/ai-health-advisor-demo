@@ -96,6 +96,34 @@
       "body": "已就绪放松流程，建议降低屏幕亮度。"
     }
   },
+  "lifeLog": {
+    "title": "生活记录",
+    "sessionOnlyBadge": "仅当前会话",
+    "category": {
+      "caffeine": "咖啡因",
+      "alcohol": "酒精",
+      "hydration": "饮水"
+    },
+    "unit": {
+      "cup": "杯"
+    },
+    "quickAdd": "+1 杯",
+    "customAdd": "自定义",
+    "edit": "编辑",
+    "delete": "删除",
+    "save": "保存",
+    "cancel": "取消",
+    "cups": "杯数",
+    "time": "时间",
+    "note": "备注",
+    "totalToday": "今日: {cups} 杯 ({amount}{unit})",
+    "empty": "暂无记录",
+    "notePlaceholder": "可选备注",
+    "sheetTitleAdd": "新增记录",
+    "sheetTitleEdit": "编辑记录",
+    "cupsLabel": "杯数",
+    "cupsStep": "0.5"
+  },
   "health": {
     "state": {
       "prime-readiness": "最佳准备",
