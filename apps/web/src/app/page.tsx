@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Container, Section, Button, Drawer } from '@health-advisor/ui';
-import { Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { useEffect } from 'react';
+import { Container, Section, Button } from '@health-advisor/ui';
 import { MorningBriefCard } from '@/components/homepage/MorningBriefCard';
-import { ConfigArea } from '@/components/homepage/ConfigArea';
 import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
 import { useProfileStore } from '@/stores/profile.store';
 import { useMorningBrief, useRefetchBrief } from '@/hooks/use-ai-query';
@@ -19,7 +17,6 @@ export default function HomePage() {
   const { data, isLoading, error, isFetching } = useMorningBrief(currentProfileId);
   const refetchBrief = useRefetchBrief(currentProfileId);
   const t = useTranslations('homepage');
-  const [isConfigDrawerOpen, setIsConfigDrawerOpen] = useState(false);
 
   const actionInteractions = useActionInteractions(currentProfileId);
   const briefIsLoading = isLoading || isFetching || refetchBrief.isPending;
@@ -52,72 +49,42 @@ export default function HomePage() {
 
   return (
     <Container className="py-6">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* 左侧 Config Area - 仅桌面端显示 */}
-        <aside className="hidden lg:block lg:col-span-5 xl:col-span-4">
-          <div className="lg:sticky lg:top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto pr-2 scrollbar-hide">
-            <ConfigArea disabled={briefIsLoading} />
+      <div className="space-y-8">
+        {/* 顶部标题栏 */}
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-100">AI Health Advisor</h1>
+            <p className="text-slate-400 text-sm">
+              {describeBriefSource(data?.source, t)}
+            </p>
           </div>
-        </aside>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => refetchBrief.mutate()}
+              disabled={briefIsLoading}
+              className="text-xs text-slate-500 h-auto py-1 px-2"
+            >
+              {refetchBrief.isPending ? t('refreshing') : t('manualRefresh')}
+            </Button>
+          </div>
+        </header>
 
-        {/* 右侧主内容区 */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-8">
-          {/* 顶部标题栏 */}
-          <header className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-100">AI Health Advisor</h1>
-              <p className="text-slate-400 text-sm">
-                {describeBriefSource(data?.source, t)}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* 移动端 Config 抽屉触发按钮 */}
-              <Button
-                variant="ghost"
-                onClick={() => setIsConfigDrawerOpen(true)}
-                className="md:hidden text-slate-400 hover:text-slate-200 hover:bg-slate-800 p-2"
-                aria-label={t('openConfig')}
-              >
-                <Cog6ToothIcon className="w-5 h-5" />
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => refetchBrief.mutate()}
-                disabled={briefIsLoading}
-                className="text-xs text-slate-500 h-auto py-1 px-2"
-              >
-                {refetchBrief.isPending ? t('refreshing') : t('manualRefresh')}
-              </Button>
-            </div>
-          </header>
+        {/* Active Sensing 灵动监测 */}
+        <ActiveSensingBanner />
 
-          {/* Active Sensing 灵动监测 */}
-          <ActiveSensingBanner />
+        {/* 晨报部分 */}
+        <Section title={t('realtimeBrief')} className="space-y-4">
+          <MorningBriefCard
+            {...briefData}
+            isLoading={briefIsLoading}
+          />
+        </Section>
 
-          {/* 晨报部分 */}
-          <Section title={t('realtimeBrief')} className="space-y-4">
-            <MorningBriefCard
-              {...briefData}
-              isLoading={briefIsLoading}
-            />
-          </Section>
+        {/* 趋势数据已迁移至数据分析页 */}
 
-          {/* 趋势数据已迁移至数据分析页 */}
-
-          <div className="h-20" />
-        </div>
+        <div className="h-20" />
       </div>
-
-      {/* 移动端 Config 底部抽屉 */}
-      <Drawer
-        open={isConfigDrawerOpen}
-        onClose={() => setIsConfigDrawerOpen(false)}
-        side="bottom"
-        size="lg"
-        title={t('configTitle')}
-      >
-        <ConfigArea disabled={briefIsLoading} />
-      </Drawer>
     </Container>
   );
 }
