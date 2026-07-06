@@ -189,7 +189,15 @@
     "physTagDay": "Today",
     "physTagWeek": "This Week",
     "physTagMonth": "This Month",
-    "physTagYear": "This Year"
+    "physTagYear": "This Year",
+    "pageName": "Trends",
+    "dateLabel": "Today",
+    "reflection": {
+      "title": "Reflection",
+      "loading": "Loading reflection...",
+      "empty": "No reflection available",
+      "tipsTitle": "Suggested Actions"
+    }
   },
   "advisor": {
     "title": "AI Health Advisor",

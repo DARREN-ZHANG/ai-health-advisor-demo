@@ -189,7 +189,15 @@
     "physTagDay": "今日",
     "physTagWeek": "本周",
     "physTagMonth": "本月",
-    "physTagYear": "今年"
+    "physTagYear": "今年",
+    "pageName": "趋势",
+    "dateLabel": "今天",
+    "reflection": {
+      "title": "洞察",
+      "loading": "正在生成洞察...",
+      "empty": "暂无洞察",
+      "tipsTitle": "建议动作"
+    }
   },
   "advisor": {
     "title": "AI Health Advisor",

@@ -1,30 +1,29 @@
 'use client';
 
-import { Container, Section } from '@health-advisor/ui';
+import { Container } from '@health-advisor/ui';
 import { ChartRoot } from '@health-advisor/charts';
 import { DataCenterControls } from '@/components/data-center/DataCenterControls';
 import { ChartContainer } from '@/components/data-center/ChartContainer';
 import { OverviewGrid } from '@/components/data-center/OverviewGrid';
 import { DeviceStatusBar } from '@/components/data-center/DeviceStatusBar';
+import { ReflectionSection } from '@/components/data-center/ReflectionSection';
+import { ValoCard } from '@/components/valo/ValoCard';
 import { useDataCenterStore } from '@/stores/data-center.store';
 import { useProfileStore } from '@/stores/profile.store';
 import { useDataCenterQuery, useChartDataByTokenQuery } from '@/hooks/use-data-query';
 import { useDeviceSyncQuery } from '@/hooks/use-device-sync';
 import { useDataChartOption, createCompactChartOption } from '@/hooks/use-data-chart-option';
-import { useViewSummary } from '@/hooks/use-ai-query';
 import { useMemo } from 'react';
 import {
   CHART_TOKEN_META,
   ChartTokenId,
   localize,
   DEFAULT_LOCALE,
-  type AgentResponseEnvelope,
   type DataCenterResponse,
   type DataTab,
   type StressTimelineResponse,
 } from '@health-advisor/shared';
 import type { StandardTimeSeries } from '@health-advisor/charts';
-import { SparklesIcon } from '@heroicons/react/24/outline';
 import { useTranslations } from 'next-intl';
 
 /** tab 到翻译键的映射 */
@@ -119,12 +118,11 @@ export default function DataCenterPage() {
 
   const isAnyLoading = isLoading || isFetching;
 
-  // 获取 AI 总结（随 activeTab + timeframe 切换自动重新请求）
-  const {
-    data: summaryData,
-    isLoading: isSummaryLoading,
-    isFetching: isSummaryFetching,
-  } = useViewSummary(currentProfileId, activeTab, timeframe);
+  // ReflectionSection 内部自行调用 useViewSummary；这里不再重复请求。
+  const reflectionPageContext = useMemo(
+    () => ({ page: 'data-center' as const, tab: activeTab, timeframe }),
+    [activeTab, timeframe],
+  );
 
   const isChartEmpty = !chartData || (
     !isOverview && activeTab === 'stress'
@@ -148,34 +146,40 @@ export default function DataCenterPage() {
   return (
     <Container className="py-6 space-y-6 relative pb-24">
       <header>
-        <h1 className="text-2xl font-bold text-slate-100">{t('pageTitle')}</h1>
-        <p className="text-slate-400 text-sm">{getSubtitle(timeframe, t)}</p>
+        {/* 页面名称改为 Trends，URL 维持 /data-center */}
+        <h1 className="text-2xl font-bold text-[var(--valo-text-primary)]">
+          {t('pageName')}
+        </h1>
+        <p className="text-sm text-[var(--valo-text-secondary)]">
+          {getSubtitle(timeframe, t)}
+        </p>
       </header>
 
-      {/* AI 总结置顶 */}
-      <AISummarySection
-        summaryData={summaryData}
-        isLoading={isSummaryLoading || isSummaryFetching}
-        t={t}
-      />
+      {/* 控制卡：日期 + 指标 chips + 时间窗 */}
+      <ValoCard>
+        <DataCenterControls />
+      </ValoCard>
 
-      {/* 控制区域：Tab 切换与时间窗 */}
-      <DataCenterControls />
+      {/* Reflection：AI 洞察卡，内部自管请求状态 */}
+      <ReflectionSection
+        profileId={currentProfileId}
+        pageContext={reflectionPageContext}
+      />
 
       {/* 概览 Tab：6 指标网格 */}
       {isOverview && (
-        <Section>
+        <ValoCard as="section">
           <OverviewGrid
             trends={trends}
             onTrendClick={(id) => setActiveTab(id as DataTab)}
             showChange={timeframe === 'day'}
           />
-        </Section>
+        </ValoCard>
       )}
 
       {/* 详情 Tab：日级别显示 24h 均值，周/月显示图表 */}
       {!isOverview && (
-        <Section className="space-y-4">
+        <ValoCard as="section" className="space-y-4">
           <ChartContainer
             title={t(TAB_TITLE_KEYS[activeTab] || 'dataMetric')}
             isLoading={isAnyLoading}
@@ -197,7 +201,7 @@ export default function DataCenterPage() {
               : chartOption && <ChartRoot option={chartOption} height={350} />
             }
           </ChartContainer>
-        </Section>
+        </ValoCard>
       )}
 
       {/* 底部状态栏 */}
@@ -207,68 +211,6 @@ export default function DataCenterPage() {
         error={isDeviceError}
       />
     </Container>
-  );
-}
-
-/* ────────────────────────────────────────────────────────────── */
-/*  AI 总结组件                                                  */
-/* ────────────────────────────────────────────────────────────── */
-
-function AISummarySection({
-  summaryData,
-  isLoading,
-  t,
-}: {
-  summaryData: AgentResponseEnvelope | null | undefined;
-  isLoading: boolean;
-  t: (key: string) => string;
-}) {
-  if (isLoading) {
-    return (
-      <div className="space-y-3 animate-pulse">
-        <div className="h-4 bg-slate-800 rounded w-3/4" />
-        <div className="h-4 bg-slate-800 rounded w-full" />
-        <div className="h-4 bg-slate-800 rounded w-5/6" />
-      </div>
-    );
-  }
-
-  if (!summaryData) {
-    return null;
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="relative rounded-xl border border-blue-500/10 bg-gradient-to-r from-blue-500/5 via-slate-900/50 to-emerald-500/5 p-5">
-        <div className="absolute left-0 top-4 bottom-4 w-0.5 bg-gradient-to-b from-blue-500 to-emerald-500 rounded-full" />
-        <div className="pl-4 space-y-4">
-          <p className="text-slate-200 leading-relaxed text-sm whitespace-pre-wrap font-medium">
-            {summaryData.summary}
-          </p>
-
-          {summaryData.microTips && summaryData.microTips.length > 0 && (
-            <div className="space-y-2 pt-2">
-              <div className="flex items-center gap-1.5">
-                <SparklesIcon className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                  {t('suggestedActions')}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 gap-2">
-                {summaryData.microTips.map((tip, i) => (
-                  <div
-                    key={i}
-                    className="flex items-start gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-emerald-400"
-                  >
-                    <span className="text-xs font-medium">{tip}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -288,10 +230,10 @@ function DailyAverageDisplay({
   return (
     <div className="h-full w-full flex items-center justify-center">
       <div className="text-center space-y-3">
-        <p className="text-6xl font-bold text-slate-100 tabular-nums">
+        <p className="text-6xl font-bold text-[var(--valo-text-primary)] tabular-nums">
           {value}
         </p>
-        <p className="text-slate-400 text-sm">
+        <p className="text-sm text-[var(--valo-text-secondary)]">
           {unit} · {label}
         </p>
       </div>
