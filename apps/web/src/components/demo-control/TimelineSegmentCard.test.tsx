@@ -95,4 +95,40 @@ describe('TimelineSegmentCard', () => {
     const helpButton = screen.getByRole('button', { name: '帮助' });
     expect(helpButton).toBeDisabled();
   });
+
+  it('点击帮助按钮展开 tooltip，再按 Escape 关闭', () => {
+    renderWithIntl(<TimelineSegmentCard segment={WALK_SEGMENT} />);
+    const helpButton = screen.getByRole('button', { name: '帮助' });
+    fireEvent.click(helpButton);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    // 模拟键盘 Escape：listener 挂在 document 上。
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('tooltip')).toBeNull();
+  });
+
+  it('tooltip 打开后，点击卡片外部会关闭', () => {
+    renderWithIntl(
+      <div>
+        {/* 外部节点，模拟页面其它区域 */}
+        <span data-testid="outside">其它内容</span>
+        <TimelineSegmentCard segment={WALK_SEGMENT} />
+      </div>,
+    );
+    const helpButton = screen.getByRole('button', { name: '帮助' });
+    fireEvent.click(helpButton);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    // pointerdown 在卡片外部元素上触发。
+    fireEvent.pointerDown(screen.getByTestId('outside'));
+    expect(screen.queryByRole('tooltip')).toBeNull();
+  });
+
+  it('tooltip 打开后，点击卡片内部（含帮助按钮自身）不会因 outside 处理关闭', () => {
+    renderWithIntl(<TimelineSegmentCard segment={WALK_SEGMENT} />);
+    const helpButton = screen.getByRole('button', { name: '帮助' });
+    fireEvent.click(helpButton);
+    // 卡片主体按钮也属于 containerRef 内部。
+    const cardButton = screen.getByText('散步').closest('button') as HTMLElement;
+    fireEvent.pointerDown(cardButton);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+  });
 });

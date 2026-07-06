@@ -48,7 +48,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             bottomNav={<BottomNav />}
             floating={
               <>
-                {/* TEMP（I2.2）：Demo Control 临时浮动入口；I6.1 会迁移到 HomeHeader */}
+                {/* TEMP（I2.2）：Demo Control 临时浮动入口；I6.1 会迁移到 HomeHeader。
+                    位置选 left-4 top-4（左上角），与 AIAdvisorTrigger（右下角
+                    `fixed bottom-24 right-6` / `md:bottom-8`）在不同象限，
+                    不会与触发器或抽屉面板视觉冲突。 */}
                 <div className="fixed left-4 top-4 z-40">
                   <DemoControlTrigger />
                 </div>

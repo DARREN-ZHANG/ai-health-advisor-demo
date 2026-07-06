@@ -4,6 +4,7 @@ import { useId, useState } from 'react';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { useTranslations } from 'next-intl';
 import { EVENT_TYPE_DISPLAY } from './timeline-segments';
+import { formatTimeRange } from './format-time';
 
 /**
  * 事件入参的最小契约，与 shared 的 RecognizedEvent 兼容；
@@ -28,7 +29,8 @@ export interface RecentEventsDisclosureProps {
  *
  * - 头部按钮带 chevron 图标，展开时旋转 180°。
  * - 列表为 `<ul>`，每项渲染图标 + 文案 + 时间区间。
- * - 事件类型来自 EVENT_TYPE_DISPLAY，缺失时回退到 type 字面量。
+ * - 事件类型文案优先取 EVENT_TYPE_DISPLAY 的 labelKey 走 next-intl 翻译；
+ *   labelKey 缺失（未知事件）时回退到 type 字面量。
  * - 空列表：头部按钮被禁用，文案替换为「暂无近期事件」。
  * - 仅引用 `--valo-*` token。
  */
@@ -93,10 +95,12 @@ interface EventRowProps {
 }
 
 function EventRow({ event }: EventRowProps) {
+  const tSeg = useTranslations('godMode.segments');
   const display = EVENT_TYPE_DISPLAY[event.type];
   const icon = display?.icon ?? '•';
-  const label = event.type;
-  const timeRange = `${formatTime(event.start)}–${formatTime(event.end)}`;
+  // 优先用 labelKey 翻译为本地化文案；缺失时回退到 type 字面量。
+  const label = display ? safeSegLabel(tSeg, display.labelKey, event.type) : event.type;
+  const timeRange = formatTimeRange(event.start, event.end);
   return (
     <li className="flex items-center gap-2">
       <span aria-hidden="true" className="shrink-0">
@@ -108,10 +112,19 @@ function EventRow({ event }: EventRowProps) {
   );
 }
 
-/** HH:MM */
-function formatTime(iso: string): string {
-  if (!iso) return '--:--';
-  // 直接 slice，与 i18n 无关；兼容 YYYY-MM-DDTHH:mm 与带秒的 ISO 字符串。
-  const timePart = iso.includes('T') ? iso.split('T')[1] : iso;
-  return (timePart ?? '').slice(0, 5) || '--:--';
+/**
+ * 安全翻译 next-intl 的 segment label：缺失 key 时 next-intl 会抛错或回显 key，
+ * 这里捕获两种情况并回退到原始 type 字面量，保证列表始终有可读文案。
+ */
+function safeSegLabel(
+  t: (key: string) => string,
+  key: string,
+  fallback: string,
+): string {
+  try {
+    const text = t(key);
+    return text === key ? fallback : text;
+  } catch {
+    return fallback;
+  }
 }

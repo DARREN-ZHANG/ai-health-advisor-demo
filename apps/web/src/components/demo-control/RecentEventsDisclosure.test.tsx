@@ -81,6 +81,17 @@ describe('RecentEventsDisclosure', () => {
     expect(screen.getByText('🚶')).toBeInTheDocument();
   });
 
+  it('已知事件类型走 labelKey 翻译：walk → 散步，possible_caffeine_intake → 咖啡因', () => {
+    renderWithIntl(
+      <RecentEventsDisclosure events={SAMPLE_EVENTS} initiallyOpen />,
+    );
+    expect(screen.getByText('散步')).toBeInTheDocument();
+    expect(screen.getByText('咖啡因')).toBeInTheDocument();
+    // 不应再出现 type 字面量作为可见 label。
+    expect(screen.queryByText('walk')).toBeNull();
+    expect(screen.queryByText('possible_caffeine_intake')).toBeNull();
+  });
+
   it('事件类型未知时回退到 type 字面量', () => {
     renderWithIntl(
       <RecentEventsDisclosure

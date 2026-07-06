@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { DemoControlTrigger } from './DemoControlTrigger';
+import { DemoControlDrawer } from './DemoControlDrawer';
 import { DemoControlIntlProvider } from './intl-test-helper';
 import { useGodModeStore } from '@/stores/god-mode.store';
 
@@ -77,5 +78,25 @@ describe('DemoControlTrigger', () => {
     expect(svg).not.toBeNull();
     // 不含 animate-spin（脉冲点用 animate-ping，区别于 loading 旋转）
     expect(container.querySelector('.animate-spin')).toBeNull();
+  });
+
+  it('aria-controls 指向的 id 在抽屉打开后真实存在于 DOM（集成校验）', () => {
+    // 同屏渲染触发器与抽屉，模拟真实挂载。
+    renderWithIntl(
+      <>
+        <DemoControlTrigger />
+        <DemoControlDrawer />
+      </>,
+    );
+    const trigger = screen.getByRole('button');
+    const controlsId = trigger.getAttribute('aria-controls');
+    expect(controlsId).toBe('demo-control-drawer');
+    // 关闭态：抽屉未挂载，id 不应存在。
+    expect(document.querySelector('#demo-control-drawer')).toBeNull();
+    // 打开抽屉：受控元素应被锚定，且就是抽屉内的内容容器。
+    fireEvent.click(trigger);
+    const target = document.querySelector('#demo-control-drawer');
+    expect(target).not.toBeNull();
+    expect((target as HTMLElement).textContent ?? '').toContain('Demo 控制台');
   });
 });

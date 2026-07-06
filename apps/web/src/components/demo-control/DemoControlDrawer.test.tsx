@@ -166,20 +166,16 @@ describe('DemoControlDrawer', () => {
   });
 
   it('pendingAction=advance 时 +1h 按钮被禁用并显示旋转图标', () => {
-    useGodModeStore.setState({ isOpen: true });
-    renderWithIntl(
-      <DemoControlDrawer {...SAMPLE_PROPS} pendingAction="advance" />,
-    );
+    useGodModeStore.setState({ isOpen: true, pendingAction: 'advance' });
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} />);
     const mobile = getMobileContainer();
     expect(within(mobile).getByRole('button', { name: '+1h' })).toBeDisabled();
     expect(mobile.querySelector('.animate-spin')).not.toBeNull();
   });
 
   it('pendingAction=reset 时重置按钮被禁用', () => {
-    useGodModeStore.setState({ isOpen: true });
-    renderWithIntl(
-      <DemoControlDrawer {...SAMPLE_PROPS} pendingAction="reset" />,
-    );
+    useGodModeStore.setState({ isOpen: true, pendingAction: 'reset' });
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} />);
     const mobile = getMobileContainer();
     expect(within(mobile).getByRole('button', { name: '重置' })).toBeDisabled();
   });
@@ -209,11 +205,20 @@ describe('DemoControlDrawer', () => {
   });
 
   it('pendingSegmentType 命中某片段时该卡片显示 loading 旋转图标', () => {
-    useGodModeStore.setState({ isOpen: true });
-    renderWithIntl(
-      <DemoControlDrawer {...SAMPLE_PROPS} pendingSegmentType="walk" />,
-    );
+    useGodModeStore.setState({ isOpen: true, pendingSegmentType: 'walk' });
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} />);
     const mobile = getMobileContainer();
     expect(mobile.querySelector('.animate-spin')).not.toBeNull();
+  });
+
+  it('挂载后存在 id="demo-control-drawer" 元素，供 trigger 的 aria-controls 锚定', () => {
+    useGodModeStore.setState({ isOpen: true });
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} />);
+    // 移动端与桌面端各渲染一份内容；只要存在至少一个匹配元素即可。
+    const matches = document.querySelectorAll('#demo-control-drawer');
+    expect(matches.length).toBeGreaterThan(0);
+    // 该元素应当包含抽屉的标题，证明它是受控 UI 的一部分。
+    const first = matches[0] as HTMLElement;
+    expect(first.textContent ?? '').toContain('Demo 控制台');
   });
 });

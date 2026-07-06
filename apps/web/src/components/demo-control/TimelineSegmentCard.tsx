@@ -1,7 +1,9 @@
 'use client';
 
 import {
+  useEffect,
   useId,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -47,6 +49,8 @@ export function TimelineSegmentCard({
   const tDemo = useTranslations('demoControl');
   const helpId = useId();
   const [helpOpen, setHelpOpen] = useState(false);
+  // 容器 ref：用于判定点击是否发生在卡片外部（包含帮助按钮 + tooltip）。
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const helpText = safeTranslate(tHelp, segment.helpKey);
   const label = safeTranslate(t, segment.labelKey) ?? segment.labelKey;
@@ -62,8 +66,29 @@ export function TimelineSegmentCard({
     setHelpOpen((prev) => !prev);
   };
 
+  // 点击/聚焦打开后，监听 Escape 与外部点击自动关闭。
+  // 触屏是该组件的主要场景，否则点击打开后会永久停留。
+  useEffect(() => {
+    if (!helpOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setHelpOpen(false);
+    };
+    const onPointerDown = (e: PointerEvent) => {
+      const root = containerRef.current;
+      if (root && !root.contains(e.target as Node)) {
+        setHelpOpen(false);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [helpOpen]);
+
   return (
-    <div className="relative flex items-stretch gap-1">
+    <div ref={containerRef} className="relative flex items-stretch gap-1">
       <button
         type="button"
         onClick={onClick}

@@ -9,7 +9,9 @@ import { useGodModeStore } from '@/stores/god-mode.store';
  *
  * - 仅在 `useGodModeStore.isEnabled === true` 时渲染。
  * - 紫色（--valo-prime）脉冲点提示当前可被点击。
- * - 双语 tooltip 通过原生 `title` 属性提供；i18n 文案随 locale 切换。
+ * - 可访问名通过 `aria-label` 提供，i18n 文案随 locale 切换。
+ *   刻意不再使用原生 `title`：部分 SR/浏览器组合下 `title` 与 `aria-label`
+ *   会同时被朗读，造成名称重复。
  * - 点击调用 `toggleOpen()` 打开抽屉。
  * - 可访问性：`aria-haspopup='dialog'`、`aria-expanded`、`aria-controls`。
  *
@@ -29,7 +31,6 @@ export function DemoControlTrigger() {
     <button
       type="button"
       onClick={() => toggleOpen()}
-      title={t('openTrigger')}
       aria-label={t('openTrigger')}
       aria-haspopup="dialog"
       aria-expanded={isOpen}
