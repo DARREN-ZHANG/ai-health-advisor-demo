@@ -58,6 +58,13 @@ export interface ValoDialogProps {
   initialFocusRef?: RefObject<HTMLElement | null>;
   /** 显式触发器 ref；关闭后焦点归还此元素（不传则回退到打开瞬间的 activeElement） */
   triggerRef?: RefObject<HTMLElement | null>;
+  /**
+   * 内容滚动模式：
+   * - 'managed'（默认）：overlay 提供 `<div className="flex-1 overflow-y-auto">{children}</div>`
+   * - 'native'：overlay 直接渲染 children，调用方自管 header/footer + 滚动区。
+   *   用于消除双层滚动嵌套（P1-03）。
+   */
+  bodyScroll?: 'managed' | 'native';
   className?: string;
 }
 
@@ -74,6 +81,7 @@ export function ValoDialog({
   closeOnEscape = true,
   initialFocusRef,
   triggerRef,
+  bodyScroll = 'managed',
   className = '',
 }: ValoDialogProps) {
   const generatedId = useId();
@@ -154,7 +162,11 @@ export function ValoDialog({
             {title ? (
               <DialogHeader title={title} titleId={titleId} onClose={onClose} />
             ) : null}
-            <div className="flex-1 overflow-y-auto">{children}</div>
+            {bodyScroll === 'managed' ? (
+              <div className="flex-1 overflow-y-auto">{children}</div>
+            ) : (
+              children
+            )}
           </m.div>
         </m.div>
       ) : null}

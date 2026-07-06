@@ -166,4 +166,16 @@ describe('ValoSheet', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog.className).toContain('bg-[var(--valo-surface)]');
   });
+
+  it('bodyScroll="native" 时不渲染内置 overflow-y-auto 容器', () => {
+    render(
+      <ValoSheet open onClose={() => {}} ariaLabel="测试" bodyScroll="native">
+        <div data-test-children>自定义滚动</div>
+      </ValoSheet>,
+    );
+    const dialog = screen.getByRole('dialog');
+    // 直接子元素是 children 本身，不再包一层 overflow-y-auto div
+    const directChild = dialog.querySelector('[data-test-children]');
+    expect(directChild?.parentElement).toBe(dialog);
+  });
 });

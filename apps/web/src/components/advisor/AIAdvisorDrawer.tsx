@@ -198,6 +198,7 @@ export function AIAdvisorDrawer() {
           open={isAdvisorDrawerOpen}
           onClose={handleClose}
           variant="full-screen"
+          bodyScroll="native"
           ariaLabel={t('title')}
         >
           {sharedContent}
@@ -212,6 +213,7 @@ export function AIAdvisorDrawer() {
           onClose={handleClose}
           variant="drawer"
           width={480}
+          bodyScroll="native"
           ariaLabel={t('title')}
         >
           {sharedContent}
@@ -262,11 +264,11 @@ function ChatContent({
       className="contents"
       data-valo-chat-content="true"
     >
-      <div className="flex h-full flex-col">
+      <div className="flex flex-1 flex-col min-h-0">
         {/* ---------- Header ---------- */}
         <header
           className={
-            'sticky top-0 z-10 flex items-center justify-between gap-3 border-b ' +
+            'shrink-0 z-10 flex items-center justify-between gap-3 border-b ' +
             'border-[var(--valo-border)] bg-[var(--valo-surface)] px-4 py-3'
           }
         >
@@ -331,7 +333,7 @@ function ChatContent({
         {/* ---------- Composer ---------- */}
         <footer
           className={
-            'sticky bottom-0 z-10 space-y-3 border-t border-[var(--valo-border)] ' +
+            'shrink-0 z-10 space-y-3 border-t border-[var(--valo-border)] ' +
             'bg-[var(--valo-surface)] px-4 py-3'
           }
         >

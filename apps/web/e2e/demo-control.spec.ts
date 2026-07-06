@@ -306,6 +306,53 @@ test.describe('Demo Control', () => {
     expect(body.segmentType).toBe('sleep');
   });
 
+  test('segment 请求 500 后 Drawer 头部仍可见（P1-03）', async ({ page }) => {
+    // 覆盖 timeline-append 返回 500
+    await page.unroute('**/god-mode/timeline-append');
+    await page.route('**/god-mode/timeline-append', (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: false,
+          data: null,
+          error: 'internal',
+          meta: { timestamp: new Date().toISOString() },
+        }),
+      }),
+    );
+
+    await openDrawer(page);
+
+    // 触发 sleep 卡片
+    const dailyGroup = page.locator(visible('[data-valo-group="daily-rhythm"]'));
+    const sleepCard = dailyGroup.locator(
+      'button[data-valo-touch="true"]:not([aria-label])',
+      { hasText: '😴' },
+    );
+    await sleepCard.click();
+
+    // P1-03 的核心契约是"错误态后 header 与 close 按钮仍可见"。
+    // Toast role="alert" 在 Task 6 才会加，这里只断言契约本身。
+    // 用 data-valo-clock 出现表示 drawer 内容已渲染。
+    await expect(
+      page.locator(visible('[data-valo-clock="true"]')),
+    ).toBeVisible();
+
+    // Header 标题仍可见（zh"Demo 控制台" / en"Demo Control"）
+    await expect(
+      page
+        .locator('[role="dialog"]:visible h2')
+        .filter({ hasText: /Demo 控制台|Demo Control/ }),
+    ).toBeVisible();
+    // 关闭按钮仍可见
+    await expect(
+      page.locator(
+        '[role="dialog"]:visible button[aria-label="关闭"], [role="dialog"]:visible button[aria-label="Close"]',
+      ),
+    ).toBeVisible();
+  });
+
   test('关闭按钮：抽屉可被关闭', async ({ page }) => {
     await openDrawer(page);
 

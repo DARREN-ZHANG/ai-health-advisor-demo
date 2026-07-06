@@ -64,6 +64,13 @@ export interface ValoSheetProps {
   initialFocusRef?: RefObject<HTMLElement | null>;
   /** 显式触发器 ref；关闭后焦点归还此元素（不传则回退到打开瞬间的 activeElement） */
   triggerRef?: RefObject<HTMLElement | null>;
+  /**
+   * 内容滚动模式：
+   * - 'managed'（默认）：overlay 提供 `<div className="flex-1 overflow-y-auto">{children}</div>`
+   * - 'native'：overlay 直接渲染 children，调用方自管 header/footer + 滚动区。
+   *   用于消除双层滚动嵌套（P1-03）。
+   */
+  bodyScroll?: 'managed' | 'native';
   /** 追加 className */
   className?: string;
 }
@@ -81,6 +88,7 @@ export function ValoSheet({
   closeOnEscape = true,
   initialFocusRef,
   triggerRef,
+  bodyScroll = 'managed',
   className = '',
 }: ValoSheetProps) {
   const generatedId = useId();
@@ -166,18 +174,22 @@ export function ValoSheet({
             {title ? (
               <SheetHeader title={title} titleId={titleId} onClose={onClose} />
             ) : null}
-            <div
-              className="flex-1 overflow-y-auto"
-              style={
-                isFullscreen
-                  ? undefined
-                  : height
-                    ? { maxHeight: typeof height === 'number' ? `${height}px` : height }
-                    : undefined
-              }
-            >
-              {children}
-            </div>
+            {bodyScroll === 'managed' ? (
+              <div
+                className="flex-1 overflow-y-auto"
+                style={
+                  isFullscreen
+                    ? undefined
+                    : height
+                      ? { maxHeight: typeof height === 'number' ? `${height}px` : height }
+                      : undefined
+                }
+              >
+                {children}
+              </div>
+            ) : (
+              children
+            )}
           </m.div>
         </m.div>
       ) : null}

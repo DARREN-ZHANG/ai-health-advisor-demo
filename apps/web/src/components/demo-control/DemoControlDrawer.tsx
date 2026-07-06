@@ -139,6 +139,7 @@ export function DemoControlDrawer({
           onClose={() => toggleOpen(false)}
           variant="bottom-sheet"
           height="92dvh"
+          bodyScroll="native"
           ariaLabel="Demo Control"
         >
           {sharedContent}
@@ -150,6 +151,7 @@ export function DemoControlDrawer({
           onClose={() => toggleOpen(false)}
           variant="drawer"
           width={480}
+          bodyScroll="native"
           ariaLabel="Demo Control"
         >
           {sharedContent}
@@ -211,11 +213,11 @@ function DemoControlContent({
     // 注意：两个 viewport 各有一份同 id 元素属于合法 DOM（aria-controls
     // 不要求全局唯一），实际生产中视口互斥，不会同时可见。
     <div id="demo-control-drawer" className="contents">
-      <div className="flex h-full flex-col">
-        {/* ---------- Header（sticky 顶部） ---------- */}
+      <div className="flex flex-1 flex-col min-h-0">
+        {/* ---------- Header（固定在内容滚动区之外） ---------- */}
         <header
           className={
-            'sticky top-0 z-10 flex items-center justify-between gap-3 border-b ' +
+            'shrink-0 flex items-center justify-between gap-3 border-b ' +
             'border-[var(--valo-border)] bg-[var(--valo-surface)] px-4 py-3'
           }
         >
@@ -239,7 +241,7 @@ function DemoControlContent({
           </button>
         </header>
 
-        {/* ---------- 内容滚动区 ---------- */}
+        {/* ---------- 内容滚动区（唯一 overflow-y-auto） ---------- */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           <SummaryArea events={events} currentDemoTime={currentDemoTime} />
           {TIMELINE_SEGMENT_GROUPS.map((group) => (
@@ -253,10 +255,10 @@ function DemoControlContent({
           ))}
         </div>
 
-        {/* ---------- Footer（sticky 底部） ---------- */}
+        {/* ---------- Footer（固定在内容滚动区之外） ---------- */}
         <footer
           className={
-            'sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t ' +
+            'shrink-0 flex items-center justify-end gap-2 border-t ' +
             'border-[var(--valo-border)] bg-[var(--valo-surface)] px-4 py-3'
           }
         >

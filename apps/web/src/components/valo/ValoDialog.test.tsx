@@ -142,4 +142,16 @@ describe('ValoDialog', () => {
     expect(dialog.className).toContain('bg-[var(--valo-surface)]');
     expect(dialog.className).toContain('border-[var(--valo-border)]');
   });
+
+  it('bodyScroll="native" 时不渲染内置 overflow-y-auto 容器', () => {
+    render(
+      <ValoDialog open onClose={() => {}} ariaLabel="测试" bodyScroll="native">
+        <div data-test-children>自定义滚动</div>
+      </ValoDialog>,
+    );
+    const dialog = screen.getByRole('dialog');
+    // 直接子元素是 children 本身，不再包一层 overflow-y-auto div
+    const directChild = dialog.querySelector('[data-test-children]');
+    expect(directChild?.parentElement).toBe(dialog);
+  });
 });
