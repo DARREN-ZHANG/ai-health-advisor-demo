@@ -192,6 +192,32 @@
     "physTagYear": "This Year",
     "pageName": "Trends",
     "dateLabel": "Today",
+    "sleepDetail": {
+      "durationTitle": "Sleep Duration",
+      "durationUnit": "h",
+      "durationMinute": "m",
+      "completionLabel": "of goal",
+      "completionNoGoal": "Goal not set",
+      "stagesTitle": "Sleep Stages",
+      "stageDeep": "Deep",
+      "stageLight": "Light",
+      "stageRem": "REM",
+      "stageAwake": "Awake",
+      "efficiencyTitle": "Efficiency",
+      "efficiencyUnit": "%",
+      "scoreTitle": "Score",
+      "noData": "—"
+    },
+    "activityDetail": {
+      "stepsLabel": "Steps",
+      "distanceLabel": "Distance",
+      "distanceUnit": "km",
+      "caloriesLabel": "Calories",
+      "caloriesUnit": "kcal",
+      "activeMinutesLabel": "Active",
+      "activeMinutesUnit": "min",
+      "noData": "—"
+    },
     "reflection": {
       "title": "Reflection",
       "loading": "Loading reflection...",

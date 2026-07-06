@@ -116,6 +116,45 @@ describe('Data Routes', () => {
       });
       expect(response.statusCode).toBe(400);
     });
+
+    test('activity tab 包含 distanceKm 指标', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/profiles/profile-a/data?tab=activity&timeframe=week',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.success).toBe(true);
+      expect(body.data.tab).toBe('activity');
+      // metadata.metrics 显式声明包含 distanceKm
+      expect(body.data.metadata.metrics).toContain('activity.distanceKm');
+      // 至少有一个采样点带 distanceKm 数值
+      const hasDistance = body.data.timeline.some(
+        (point: { values: Record<string, number | null> }) =>
+          point.values['activity.distanceKm'] != null,
+      );
+      expect(hasDistance).toBe(true);
+    });
+
+    test('activity tab 的 distanceKm 取自底层 daily record', async () => {
+      // 取最后一日的原始记录，比对接口返回值，确保未篡改 / 未生成
+      const response = await app.inject({
+        method: 'GET',
+        url: '/profiles/profile-a/data?tab=activity&timeframe=week',
+      });
+      const body = response.json();
+      const records = app.runtime.getRawProfile('profile-a').records;
+      const lastDate = body.data.timeline.at(-1).date;
+      const raw = records.find((r: { date: string; activity?: { distanceKm?: number } }) => r.date === lastDate);
+
+      // 沙箱数据中 distanceKm 已落盘；缺失时也允许接口返回 null（不伪造）
+      if (raw?.activity?.distanceKm != null) {
+        expect(body.data.timeline.at(-1).values['activity.distanceKm']).toBe(raw.activity.distanceKm);
+      } else {
+        expect(body.data.timeline.at(-1).values['activity.distanceKm']).toBeNull();
+      }
+    });
   });
 
   describe('GET /profiles/:profileId/chart-data', () => {

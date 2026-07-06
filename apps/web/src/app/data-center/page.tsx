@@ -7,6 +7,8 @@ import { ChartContainer } from '@/components/data-center/ChartContainer';
 import { OverviewGrid } from '@/components/data-center/OverviewGrid';
 import { DeviceStatusBar } from '@/components/data-center/DeviceStatusBar';
 import { ReflectionSection } from '@/components/data-center/ReflectionSection';
+import { SleepDetailView } from '@/components/data-center/SleepDetailView';
+import { ActivityDetailView } from '@/components/data-center/ActivityDetailView';
 import { ValoCard } from '@/components/valo/ValoCard';
 import { useDataCenterStore } from '@/stores/data-center.store';
 import { useProfileStore } from '@/stores/profile.store';
@@ -71,7 +73,7 @@ const TREND_TOKEN_IDS = TREND_TOKEN_CONFIGS.map((c) => c.tokenId);
 
 export default function DataCenterPage() {
   const { activeTab, timeframe, setActiveTab } = useDataCenterStore();
-  const { currentProfileId } = useProfileStore();
+  const { currentProfileId, currentProfile } = useProfileStore();
   const isOverview = activeTab === 'overview';
   const t = useTranslations('dataCenter');
 
@@ -175,6 +177,14 @@ export default function DataCenterPage() {
             showChange={timeframe === 'day'}
           />
         </ValoCard>
+      )}
+
+      {/* 详情 Tab：sleep / activity 在图表上方插入今日快照详情卡 */}
+      {!isOverview && activeTab === 'sleep' && (
+        <SleepDetailView data={chartData as DataCenterResponse | null} profile={currentProfile} />
+      )}
+      {!isOverview && activeTab === 'activity' && (
+        <ActivityDetailView data={chartData as DataCenterResponse | null} />
       )}
 
       {/* 详情 Tab：日级别显示 24h 均值，周/月显示图表 */}

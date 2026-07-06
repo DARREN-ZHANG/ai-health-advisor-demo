@@ -6,9 +6,9 @@ import type { RuntimeRegistry } from '../../runtime/registry.js';
 // tab → 需要提取的 metrics
 const TAB_METRICS: Partial<Record<DataTab, string[]>> = {
   hrv: ['hrv'],
-  sleep: ['sleep.totalMinutes', 'sleep.score', 'sleep.stages.deep', 'sleep.stages.rem', 'sleep.stages.light'],
+  sleep: ['sleep.totalMinutes', 'sleep.score', 'sleep.stages.deep', 'sleep.stages.rem', 'sleep.stages.light', 'sleep.stages.awake'],
   'resting-hr': ['hr'],
-  activity: ['activity.steps', 'activity.calories', 'activity.activeMinutes'],
+  activity: ['activity.steps', 'activity.calories', 'activity.activeMinutes', 'activity.distanceKm'],
   spo2: ['spo2'],
   // stress tab: 主读 stress.load（含 override），同时携带底层指标供推导 fallback
   stress: ['stress.load', 'hr', 'sleep.totalMinutes', 'sleep.stages.deep', 'activity.steps'],
