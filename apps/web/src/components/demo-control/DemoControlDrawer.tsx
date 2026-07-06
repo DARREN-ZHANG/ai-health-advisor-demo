@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { ValoSheet } from '@/components/valo/ValoSheet';
@@ -19,6 +20,7 @@ import {
   RecentEventsDisclosure,
   type RecentEventEntry,
 } from './RecentEventsDisclosure';
+import { TimelineResetDialog } from './TimelineResetDialog';
 import { formatClock } from './format-time';
 
 /**
@@ -33,7 +35,12 @@ export interface DemoControlDrawerProps {
   onSegmentClick?: (segment: TimelineSegmentConfig) => void;
   /** 点击 +1h */
   onAdvanceHour?: () => void;
-  /** 点击重置 */
+  /**
+   * 点击重置（确认后）。
+   *
+   * 注意：抽屉内部会先弹出 `TimelineResetDialog`，用户确认后才会调用
+   * 该回调。I2.3 调用方应传入 `useDemoControlActions().onReset`。
+   */
   onReset?: () => void;
   /**
    * 近期事件来源；默认从 god-mode store 的 pending 状态推断为空数组。
@@ -146,6 +153,30 @@ function DemoControlContent({
   const isAdvancePending = pendingAction === 'advance';
   const isResetPending = pendingAction === 'reset';
 
+  // 同一时间只允许一个 timeline 变更请求：
+  // 任一 segment / advance / reset 进行中时，所有卡片与底部按钮全部禁用。
+  // 卡片自身的 loading（spinner）仍只显示在 pendingSegmentType 命中的那张。
+  const isAnyPending = pendingSegmentType !== null || pendingAction !== null;
+
+  // 重置确认弹窗的开关由本组件内部托管（Style A）；
+  // 用户在 footer 点击“重置”只打开弹窗，真正调用 onReset 由弹窗确认按钮触发。
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+
+  const openResetDialog = () => {
+    if (isAnyPending) return;
+    setIsResetDialogOpen(true);
+  };
+
+  const closeResetDialog = () => setIsResetDialogOpen(false);
+
+  const handleResetConfirm = () => {
+    // 关闭弹窗 + 触发真正的 mutation。
+    // 注意：mutation 是异步的；这里不 await，让 pendingAction 状态驱动按钮
+    // 的 disabled/spinner。如果调用方同步 throw 也不会影响 UI。
+    setIsResetDialogOpen(false);
+    onReset?.();
+  };
+
   return (
     // id="demo-control-drawer" 用于 DemoControlTrigger 的 aria-controls 锚点。
     // 包裹元素本身是普通块容器，不影响 ValoSheet/ValoDialog 内部布局；
@@ -191,6 +222,7 @@ function DemoControlContent({
               group={group}
               onSegmentClick={onSegmentClick}
               pendingSegmentType={pendingSegmentType}
+              disabled={isAnyPending}
             />
           ))}
         </div>
@@ -205,7 +237,7 @@ function DemoControlContent({
           <button
             type="button"
             onClick={onAdvanceHour}
-            disabled={isAdvancePending}
+            disabled={isAnyPending}
             data-valo-touch="true"
             className={
               'inline-flex items-center gap-1 rounded-xl px-4 py-2 text-sm font-semibold ' +
@@ -221,8 +253,8 @@ function DemoControlContent({
           </button>
           <button
             type="button"
-            onClick={onReset}
-            disabled={isResetPending}
+            onClick={openResetDialog}
+            disabled={isAnyPending}
             data-valo-touch="true"
             className={
               'inline-flex items-center gap-1 rounded-xl border border-[var(--valo-border)] ' +
@@ -237,6 +269,20 @@ function DemoControlContent({
           </button>
         </footer>
       </div>
+
+      {/*
+        重置确认弹窗：单例挂载在内容容器下；移动端 / 桌面端两份内容各会
+        渲染一份，但 ValoConfirmDialog 内部基于 ValoDialog 控制 open，
+        关闭时不渲染任何 DOM。同时由于两侧 isOpen 互斥（Tailwind 断点），
+        实际可见的弹窗也只会有一份。open 状态由本组件持有，因此两个视口
+        同步开合，符合“一个用户操作 = 一个确认弹窗”的契约。
+      */}
+      <TimelineResetDialog
+        open={isResetDialogOpen}
+        onClose={closeResetDialog}
+        onConfirm={handleResetConfirm}
+        loading={isResetPending}
+      />
     </div>
   );
 }
@@ -307,12 +353,15 @@ interface SegmentGroupSectionProps {
   group: TimelineSegmentGroup;
   onSegmentClick?: (segment: TimelineSegmentConfig) => void;
   pendingSegmentType: TimelineSegmentType | null;
+  /** 任一 timeline 变更进行中时禁用所有卡片 */
+  disabled?: boolean;
 }
 
 function SegmentGroupSection({
   group,
   onSegmentClick,
   pendingSegmentType,
+  disabled = false,
 }: SegmentGroupSectionProps) {
   const t = useTranslations('demoControl');
   const segments = TIMELINE_SEGMENTS_BY_GROUP[group];
@@ -333,7 +382,10 @@ function SegmentGroupSection({
             key={segment.type}
             segment={segment}
             onClick={onSegmentClick ? () => onSegmentClick(segment) : undefined}
+            // loading 仅在 pendingSegmentType 命中的卡片显示 spinner；
+            // disabled 适用于所有卡片（任一 mutation 进行中）。
             loading={pendingSegmentType === segment.type}
+            disabled={disabled}
           />
         ))}
       </div>

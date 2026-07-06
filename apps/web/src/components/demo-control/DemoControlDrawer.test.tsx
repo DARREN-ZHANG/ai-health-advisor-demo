@@ -154,7 +154,21 @@ describe('DemoControlDrawer', () => {
     expect(onAdvanceHour).toHaveBeenCalledTimes(1);
   });
 
-  it('点击重置触发 onReset', () => {
+  it('点击重置按钮不直接触发 onReset，而是打开确认弹窗（I2.3 流程）', () => {
+    useGodModeStore.setState({ isOpen: true });
+    const onReset = vi.fn();
+    renderWithIntl(
+      <DemoControlDrawer {...SAMPLE_PROPS} onReset={onReset} />,
+    );
+    const mobile = getMobileContainer();
+    // 移动端 footer 的“重置”按钮只是打开 dialog
+    fireEvent.click(within(mobile).getByRole('button', { name: '重置' }));
+    expect(onReset).not.toHaveBeenCalled();
+    // 确认弹窗应当被打开（标题/描述可见）
+    expect(screen.getByText('重置时间轴？')).toBeInTheDocument();
+  });
+
+  it('在重置确认弹窗中点击“重置”才真正调用 onReset（I2.3）', () => {
     useGodModeStore.setState({ isOpen: true });
     const onReset = vi.fn();
     renderWithIntl(
@@ -162,7 +176,29 @@ describe('DemoControlDrawer', () => {
     );
     const mobile = getMobileContainer();
     fireEvent.click(within(mobile).getByRole('button', { name: '重置' }));
+    // 弹窗内的“重置”按钮：通过弹窗根容器 scope，避免与 footer 按钮冲突
+    const dialog = screen.getByText('重置时间轴？').closest('[role="dialog"]');
+    expect(dialog).not.toBeNull();
+    fireEvent.click(
+      within(dialog as HTMLElement).getByRole('button', { name: '重置' }),
+    );
     expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  it('在重置确认弹窗中点击“取消”关闭弹窗且不调用 onReset', () => {
+    useGodModeStore.setState({ isOpen: true });
+    const onReset = vi.fn();
+    renderWithIntl(
+      <DemoControlDrawer {...SAMPLE_PROPS} onReset={onReset} />,
+    );
+    const mobile = getMobileContainer();
+    fireEvent.click(within(mobile).getByRole('button', { name: '重置' }));
+    const dialog = screen.getByText('重置时间轴？').closest('[role="dialog"]');
+    fireEvent.click(
+      within(dialog as HTMLElement).getByRole('button', { name: '取消' }),
+    );
+    expect(onReset).not.toHaveBeenCalled();
+    expect(screen.queryByText('重置时间轴？')).toBeNull();
   });
 
   it('pendingAction=advance 时 +1h 按钮被禁用并显示旋转图标', () => {
@@ -220,5 +256,81 @@ describe('DemoControlDrawer', () => {
     // 该元素应当包含抽屉的标题，证明它是受控 UI 的一部分。
     const first = matches[0] as HTMLElement;
     expect(first.textContent ?? '').toContain('Demo 控制台');
+  });
+
+  // ============ I2.3 新增：disable-when-pending 契约 ============
+
+  it('pendingSegmentType 命中某片段时：所有卡片均禁用，仅当前卡片显示 spinner', () => {
+    useGodModeStore.setState({ isOpen: true, pendingSegmentType: 'walk' });
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} />);
+    const mobile = getMobileContainer();
+    // walk 卡片显示 spinner
+    expect(mobile.querySelector('.animate-spin')).not.toBeNull();
+    // 所有片段的卡片主体按钮均被 disabled
+    const dailyGroup = mobile.querySelector('[data-valo-group="daily-rhythm"]');
+    const mainButtons = dailyGroup?.querySelectorAll('button[data-valo-touch="true"]');
+    if (!mainButtons) throw new Error('未找到日常节律分组按钮');
+    // 6 张卡片 * 2 个按钮（主体 + 帮助）= 12 个按钮，均应 disabled
+    mainButtons.forEach((btn) => {
+      expect((btn as HTMLButtonElement).disabled).toBe(true);
+    });
+    // 同时底部 +1h 与重置按钮也应被禁用（任一 pending 全禁用）
+    expect(within(mobile).getByRole('button', { name: '+1h' })).toBeDisabled();
+    expect(within(mobile).getByRole('button', { name: '重置' })).toBeDisabled();
+  });
+
+  it('pendingAction=advance 时：所有片段卡片、+1h、重置均禁用', () => {
+    useGodModeStore.setState({ isOpen: true, pendingAction: 'advance' });
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} />);
+    const mobile = getMobileContainer();
+    // 任一 pending 都触发全禁用
+    expect(within(mobile).getByRole('button', { name: '+1h' })).toBeDisabled();
+    expect(within(mobile).getByRole('button', { name: '重置' })).toBeDisabled();
+    // 第一张卡片（meal_intake）的主体按钮应禁用
+    const firstCard = mobile.querySelector(
+      '[data-valo-group="daily-rhythm"] button[data-valo-touch="true"]',
+    ) as HTMLButtonElement | null;
+    expect(firstCard?.disabled).toBe(true);
+  });
+
+  it('无 pending 时：所有片段卡片、+1h、重置均可点击', () => {
+    useGodModeStore.setState({ isOpen: true });
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} />);
+    const mobile = getMobileContainer();
+    expect(within(mobile).getByRole('button', { name: '+1h' })).not.toBeDisabled();
+    expect(
+      within(mobile).getByRole('button', { name: '重置' }),
+    ).not.toBeDisabled();
+    const firstCard = mobile.querySelector(
+      '[data-valo-group="daily-rhythm"] button[data-valo-touch="true"]',
+    ) as HTMLButtonElement | null;
+    expect(firstCard?.disabled).toBe(false);
+  });
+
+  it('pending 进行中时点击重置按钮不会打开确认弹窗', () => {
+    useGodModeStore.setState({ isOpen: true, pendingAction: 'advance' });
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} />);
+    const mobile = getMobileContainer();
+    // 重置按钮已被禁用
+    const resetBtn = within(mobile).getByRole('button', { name: '重置' });
+    expect(resetBtn).toBeDisabled();
+    // 强制触发（即便 UI 上禁用）也不应打开弹窗
+    fireEvent.click(resetBtn);
+    expect(screen.queryByText('重置时间轴？')).toBeNull();
+  });
+
+  it('重置确认弹窗使用 danger tone（确认按钮引用 --valo-depleted）', () => {
+    useGodModeStore.setState({ isOpen: true });
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} />);
+    const mobile = getMobileContainer();
+    fireEvent.click(within(mobile).getByRole('button', { name: '重置' }));
+    const dialog = screen.getByText('重置时间轴？').closest('[role="dialog"]');
+    // 弹窗内有两个按钮：取消 + 重置。重置按钮应当引用 depleted token
+    const confirmBtn = within(dialog as HTMLElement).getByRole('button', {
+      name: '重置',
+    });
+    expect(confirmBtn.getAttribute('style') ?? '').toContain(
+      'var(--valo-depleted)',
+    );
   });
 });

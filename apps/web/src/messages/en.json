@@ -161,7 +161,15 @@
     "groupSportTraining": "Sport Training",
     "groupStateIntake": "State & Intake",
     "segmentCount": "{count, plural, one {# segment} other {# segments}}",
-    "help": "Help"
+    "help": "Help",
+    "operationFailed": "Operation failed",
+    "advanceFailed": "Failed to advance clock",
+    "resetFailed": "Failed to reset timeline",
+    "resetSucceeded": "Timeline reset",
+    "resetConfirmTitle": "Reset Timeline?",
+    "resetConfirmDescription": "This will clear all demo timeline data for the current profile.",
+    "resetConfirmAction": "Reset",
+    "resetConfirmCancel": "Cancel"
   },
   "godMode": {
     "title": "God Mode",

@@ -27,6 +27,14 @@ const ZH_MESSAGES = {
     groupStateIntake: '状态与摄入',
     segmentCount: '{count, plural, other {# 个片段}}',
     help: '帮助',
+    operationFailed: '操作失败',
+    advanceFailed: '推进时钟失败',
+    resetFailed: '重置时间轴失败',
+    resetSucceeded: '时间轴已重置',
+    resetConfirmTitle: '重置时间轴？',
+    resetConfirmDescription: '将清空当前 Profile 的全部演示时间轴数据。',
+    resetConfirmAction: '重置',
+    resetConfirmCancel: '取消',
   },
   godMode: {
     segments: {
