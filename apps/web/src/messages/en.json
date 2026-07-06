@@ -61,6 +61,7 @@
     "manualRefresh": "Refresh",
     "refreshing": "Refreshing...",
     "avatarPlaceholder": "Switch Account",
+    "readinessScore": "Readiness score {score}",
     "now": "Now",
     "microTipsTitle": "Tips",
     "action": {
@@ -97,6 +98,7 @@
   "lifeLog": {
     "title": "Life Log",
     "sessionOnlyBadge": "Session only",
+    "description": "This will help us better understand you and provide accurate guidance suggestions.",
     "category": {
       "caffeine": "Caffeine",
       "alcohol": "Alcohol",

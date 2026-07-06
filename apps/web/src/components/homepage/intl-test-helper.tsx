@@ -24,6 +24,7 @@ const ZH_MESSAGES = {
     briefNetworkError: '网络错误',
     manualRefresh: '刷新',
     refreshing: '刷新中…',
+    readinessScore: '健康分 {score}',
     sourceLLM: '智能健康顾问',
     sourceFallback: '离线受限模式',
     now: '现在',

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ValoCard } from '@/components/valo/ValoCard';
 import type { ActionOption } from '@health-advisor/shared';
 
 /**
@@ -57,7 +56,7 @@ export function ActionCard({
 
   if (collapsed) {
     return (
-      <ValoCard as="li" className="py-2">
+      <li className="rounded-lg bg-[var(--valo-surface)] px-4 py-3">
         <p
           className="text-sm text-[var(--valo-text-secondary)] truncate"
           aria-live="polite"
@@ -68,39 +67,52 @@ export function ActionCard({
           {' — '}
           {outcome === 'recorded' ? t('recorded') : t('dismissed')}
         </p>
-      </ValoCard>
+      </li>
     );
   }
 
   return (
-    <ValoCard as="li" className="space-y-3">
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
+    <li className="flex min-h-[244px] flex-col justify-between rounded-lg bg-[var(--valo-surface)] p-4 shadow-[var(--valo-shadow-card)]">
+      <div className="space-y-5 text-center">
+        <div className="space-y-2">
           {action.emoji ? (
-            <span aria-hidden="true" className="text-base">
+            <span aria-hidden="true" className="block text-2xl leading-none">
               {action.emoji}
             </span>
           ) : null}
-          <h3 className="text-sm font-semibold text-[var(--valo-text-primary)]">
+          <h3 className="text-base font-semibold text-[var(--valo-text-primary)]">
             {action.title}
           </h3>
         </div>
         {action.description ? (
-          <p className="text-xs text-[var(--valo-text-secondary)] leading-relaxed">
+          <p className="text-left text-[15px] leading-6 text-[color-mix(in_srgb,var(--valo-text-primary)_82%,transparent)]">
             {action.description}
           </p>
         ) : null}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="mt-5 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          onClick={handleNotNow}
+          disabled={pending}
+          data-valo-touch="true"
+          className="rounded-full px-3 py-2 text-sm font-medium
+                     text-[var(--valo-text-secondary)]
+                     hover:text-[var(--valo-text-primary)] transition-colors
+                     focus-visible:outline-none focus-visible:[box-shadow:var(--valo-focus-ring)]
+                     disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {t('notNow')}
+        </button>
         <button
           type="button"
           onClick={handleYes}
           disabled={pending}
           data-valo-touch="true"
           aria-busy={pending}
-          className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold
-                     bg-[var(--valo-prime)] text-[var(--valo-canvas)]
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--valo-text-primary)] px-3 text-sm font-semibold
+                     text-[var(--valo-canvas)]
                      hover:opacity-90 transition-opacity
                      focus-visible:outline-none focus-visible:[box-shadow:var(--valo-focus-ring)]
                      disabled:opacity-60 disabled:cursor-not-allowed"
@@ -113,22 +125,7 @@ export function ActionCard({
           ) : null}
           {t('yes')}
         </button>
-        <button
-          type="button"
-          onClick={handleNotNow}
-          disabled={pending}
-          data-valo-touch="true"
-          className="rounded-full px-4 py-2 text-sm font-semibold
-                     border border-[var(--valo-border)]
-                     text-[var(--valo-text-secondary)]
-                     hover:text-[var(--valo-text-primary)] hover:border-[var(--valo-text-secondary)]
-                     transition-colors
-                     focus-visible:outline-none focus-visible:[box-shadow:var(--valo-focus-ring)]
-                     disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {t('notNow')}
-        </button>
       </div>
-    </ValoCard>
+    </li>
   );
 }

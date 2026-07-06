@@ -15,6 +15,7 @@ const ZH_MESSAGES = {
   lifeLog: {
     title: '生活记录',
     sessionOnlyBadge: '仅当前会话',
+    description: '这会帮助我们更好理解你，并提供更准确的指导建议。',
     category: {
       caffeine: '咖啡因',
       alcohol: '酒精',

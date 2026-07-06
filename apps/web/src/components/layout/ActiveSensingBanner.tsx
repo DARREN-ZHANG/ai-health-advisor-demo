@@ -7,7 +7,7 @@ import { useUIStore } from '@/stores/ui.store';
 import { useAIAdvisorStore } from '@/stores/ai-advisor.store';
 import { useGodModeActions } from '@/hooks/use-god-mode-actions';
 import type { ActiveSensingBanner as ActiveSensingBannerPayload } from '@/stores/active-sensing.store';
-import { XMarkIcon, CpuChipIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslations } from 'next-intl';
 
 /** 事件类型到翻译键的映射 */
@@ -117,56 +117,57 @@ export function ActiveSensingBanner() {
           exit={{ opacity: 0, height: 0 }}
           className="overflow-hidden"
         >
-          <div className="bg-blue-600 rounded-2xl shadow-xl overflow-hidden border border-blue-400/30">
-            <div className="p-4 flex flex-col gap-2">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <CpuChipIcon className="w-5 h-5 text-blue-100" />
-                  <span className="text-xs font-bold text-blue-100 uppercase tracking-widest">AI Proactive Insight</span>
-                </div>
-                <button onClick={hideBanner} className="text-blue-200 hover:text-white transition-colors p-1">
-                  <XMarkIcon className="w-5 h-5" />
-                </button>
+          <div className="rounded-full bg-[linear-gradient(135deg,var(--valo-accent-warm),var(--valo-prime))] p-2 shadow-[0_12px_28px_color-mix(in_srgb,var(--valo-prime)_34%,transparent)]">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--valo-canvas)_78%,transparent)] text-xl">
+                🏃
               </div>
 
-              <div>
-                <h4 className="text-sm font-bold text-white">{banner.title}</h4>
-                <p className="text-xs text-blue-100 mt-1 leading-relaxed">
+              <button
+                type="button"
+                onClick={isProbabilistic ? handleGoToChat : handleConfirm}
+                className="min-w-0 flex-1 text-left focus-visible:outline-none"
+              >
+                <h4 className="truncate text-sm font-semibold text-white">{banner.title}</h4>
+                <p className="truncate text-xs text-white/85">
                   {banner.content}
                 </p>
-              </div>
+              </button>
 
-              <div className="flex justify-end gap-2 mt-2">
+              <div className="flex shrink-0 items-center gap-2">
                 {isProbabilistic ? (
                   <>
                     <button
+                      type="button"
                       onClick={handleConfirmNo}
                       disabled={isConfirming}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-500/30 text-white hover:bg-blue-500/50 transition-colors disabled:opacity-50"
+                      aria-label={tCommon('no')}
+                      className="grid h-8 w-8 place-items-center rounded-full border border-white/75 text-white transition-colors hover:bg-white/15 disabled:opacity-50"
                     >
-                      {tCommon('no')}
+                      <XMarkIcon className="h-5 w-5" />
                     </button>
                     <button
+                      type="button"
                       onClick={handleConfirmYes}
                       disabled={isConfirming}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-blue-600 hover:bg-blue-50 transition-colors shadow-sm disabled:opacity-50"
+                      aria-label={tCommon('yes')}
+                      className="grid h-8 w-8 place-items-center rounded-full bg-white text-[var(--valo-prime)] transition-opacity hover:opacity-90 disabled:opacity-50"
                     >
-                      {isConfirming ? tCommon('processing') : tCommon('yes')}
-                    </button>
-                    <button
-                      onClick={handleGoToChat}
-                      disabled={isConfirming}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-500/30 text-white hover:bg-blue-500/50 transition-colors disabled:opacity-50"
-                    >
-                      {tCommon('goToChat')}
+                      {isConfirming ? (
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : (
+                        <CheckIcon className="h-5 w-5" />
+                      )}
                     </button>
                   </>
                 ) : (
                   <button
+                    type="button"
                     onClick={handleConfirm}
-                    className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-blue-600 hover:bg-blue-50 transition-colors shadow-sm"
+                    className="grid h-8 w-8 place-items-center rounded-full bg-white text-[var(--valo-prime)] transition-opacity hover:opacity-90"
+                    aria-label={tCommon('viewDetailAndChat')}
                   >
-                    {tCommon('viewDetailAndChat')}
+                    <CheckIcon className="h-5 w-5" />
                   </button>
                 )}
               </div>

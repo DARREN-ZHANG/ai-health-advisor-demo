@@ -4,7 +4,7 @@ import { forwardRef, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { HEALTH_STATE_METADATA } from '@/lib/valo-theme';
 import type { HealthVisualState } from '@/lib/valo-theme';
-import { HeroAssetLayer } from './HeroAssetLayer';
+import { HeroGlowCanvas } from './HeroGlowCanvas';
 
 /**
  * HealthHero —— 首页 Hero 区，承载"四态健康状态环"。
@@ -55,13 +55,11 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
 
     return (
       <section
-        className="relative flex flex-col items-center gap-4 px-4 py-6"
+        className="relative -mx-4 flex min-h-[360px] flex-col items-center justify-center overflow-hidden px-4 pb-10 pt-20 md:mx-0 md:rounded-none"
         data-valo-hero="true"
         data-valo-state={state}
       >
-        {/* Hero 装饰位图：四态 PNG 由 HeroAssetLayer 按 state 消费。
-            绝对定位铺满 section，pointer-events: none 不阻挡圆环点击。 */}
-        <HeroAssetLayer state={state} />
+        <HeroGlowCanvas state={state} />
 
         {/*
          * 整个圆环就是 button 本身：
@@ -85,8 +83,8 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
           data-valo-touch="true"
           data-valo-ring="true"
           className={
-            'relative z-10 inline-flex h-56 w-56 items-center justify-center rounded-full ' +
-            'border border-[var(--valo-border)] bg-[var(--valo-surface)] ' +
+            'relative z-10 inline-flex h-[190px] w-[190px] items-center justify-center rounded-full ' +
+            'bg-transparent ' +
             'outline-none transition-all duration-500 ease-out ' +
             'focus-visible:shadow-[var(--valo-focus-ring)] ' +
             'hover:scale-[1.02] active:scale-[0.99]'
@@ -95,11 +93,7 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
             // 状态色作为内嵌变量，供 box-shadow 共用
             // @ts-expect-error -- CSS custom property in style object
             '--valo-state-color': meta.cssVar,
-            // 外圈柔光 + 内圈描边形成"环 + 光晕"。
-            // 用 color-mix 派生半透明色，避免在 var(--valo-*) 引用上拼接
-            // hex alpha（拼接对 CSS 变量无效）。color-mix 在 Safari 16.4+、
-            // Chrome 111+、Firefox 113+ 普遍支持。
-            boxShadow: `0 0 0 2px ${meta.cssVar}, 0 0 48px 4px color-mix(in srgb, ${meta.cssVar} 22%, transparent), inset 0 0 32px 4px color-mix(in srgb, ${meta.cssVar} 12%, transparent)`,
+            boxShadow: `0 0 54px 10px color-mix(in srgb, ${meta.cssVar} 12%, transparent)`,
           }}
         >
           {/* 圆心状态名：纯文字，pointer-events:none 不阻断点击 */}
@@ -108,13 +102,10 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
             data-valo-state-label="true"
           >
             <span
-              className="text-2xl font-semibold text-[var(--valo-text-primary)]"
+              className="max-w-[8ch] text-center text-[28px] leading-[1.05] text-[var(--valo-text-primary)]"
               style={{ fontFamily: 'var(--valo-font-serif)' }}
             >
               {stateLabel}
-            </span>
-            <span className="text-xs text-[var(--valo-text-secondary)]">
-              {ringLabel}
             </span>
           </span>
         </button>

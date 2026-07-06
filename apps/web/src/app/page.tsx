@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Container, Section, Button } from '@health-advisor/ui';
+import { Container } from '@health-advisor/ui';
 import { HomeHeader } from '@/components/homepage/HomeHeader';
 import { HealthHero } from '@/components/homepage/HealthHero';
 import { SwitchStatusDialog } from '@/components/homepage/SwitchStatusDialog';
@@ -9,7 +9,6 @@ import { BriefTimeline } from '@/components/homepage/BriefTimeline';
 import { ActionCard } from '@/components/homepage/ActionCard';
 import { ActionTimerSheet } from '@/components/homepage/ActionTimerSheet';
 import { AppointmentSheet } from '@/components/homepage/AppointmentSheet';
-import { ValoCard } from '@/components/valo/ValoCard';
 import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
 import { LifeLogPanel } from '@/components/life-log/LifeLogPanel';
 import { useProfileStore } from '@/stores/profile.store';
@@ -124,8 +123,8 @@ export default function HomePage() {
       : 0;
 
   return (
-    <Container className="py-6">
-      <div className="space-y-6">
+    <Container className="max-w-[430px] overflow-hidden pb-8 pt-0 md:max-w-[430px]">
+      <div>
         <HomeHeader />
 
         <HealthHero
@@ -144,32 +143,9 @@ export default function HomePage() {
           triggerRef={ringRef}
         />
 
-        {/* 顶部标题栏：保留刷新按钮 */}
-        <header className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--valo-text-primary)]">
-              {t('realtimeBrief')}
-            </h1>
-            <p className="text-sm text-[var(--valo-text-secondary)]">
-              {describeBriefSource(data?.source, t)}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => refetchBrief.mutate()}
-              disabled={briefIsLoading}
-              className="text-xs h-auto py-1 px-2"
-            >
-              {refetchBrief.isPending ? t('refreshing') : t('manualRefresh')}
-            </Button>
-          </div>
-        </header>
+        <div className="space-y-8">
+          <ActiveSensingBanner />
 
-        <ActiveSensingBanner />
-
-        {/* Now 简报 */}
-        <Section title={t('realtimeBrief')} className="space-y-4">
           <BriefTimeline
             summary={summary}
             microTips={data?.microTips}
@@ -177,7 +153,7 @@ export default function HomePage() {
           />
 
           {visibleActions.length > 0 ? (
-            <ul className="space-y-3 list-none p-0 m-0">
+            <ul className="grid grid-cols-2 gap-3 list-none p-0 m-0 pl-8">
               {visibleActions.map((action: ActionOption) => (
                 <ActionCard
                   key={action.id}
@@ -189,47 +165,23 @@ export default function HomePage() {
               ))}
             </ul>
           ) : null}
-        </Section>
 
-        {/* 下午/晚间：Figma 静态双语示例，非 Agent 输出 */}
-        <Section title={t('afternoon.title')} className="space-y-4">
-          <ValoCard as="section" aria-label={t('afternoon.title')}>
-            <div className="space-y-1">
-              <h2 className="text-base font-semibold text-[var(--valo-text-primary)]">
-                {t('afternoon.title')}
-              </h2>
-              <p className="text-sm text-[var(--valo-text-secondary)] leading-relaxed">
-                {t('afternoon.body')}
-              </p>
-              <p className="text-[10px] uppercase tracking-widest text-[var(--valo-text-secondary)] mt-2">
-                Static example
-              </p>
-            </div>
-          </ValoCard>
-        </Section>
+          {/* 下午/晚间：Figma 静态双语示例，非 Agent 输出 */}
+          <StaticTimelineBlock title={t('afternoon.title')} time="15:00PM">
+            {t('afternoon.body')}
+          </StaticTimelineBlock>
 
-        <Section title={t('night.title')} className="space-y-4">
-          <ValoCard as="section" aria-label={t('night.title')}>
-            <div className="space-y-1">
-              <h2 className="text-base font-semibold text-[var(--valo-text-primary)]">
-                {t('night.title')}
-              </h2>
-              <p className="text-sm text-[var(--valo-text-secondary)] leading-relaxed">
-                {t('night.body')}
-              </p>
-              <p className="text-[10px] uppercase tracking-widest text-[var(--valo-text-secondary)] mt-2">
-                Static example
-              </p>
-            </div>
-          </ValoCard>
-        </Section>
+          <StaticTimelineBlock title={t('night.title')} time="22:45PM">
+            {t('night.body')}
+          </StaticTimelineBlock>
 
-        {/*
-          Life Log（profile-scoped，仅当前会话）—— I3.3
-          数据为内存原型，不持久化；刷新页面即清空。挂载位置：Afternoon/Night 之后，
-          符合 design-manifest.md "下方生命记录区"的版式约定。
-        */}
-        <LifeLogPanel />
+          {/*
+            Life Log（profile-scoped，仅当前会话）—— I3.3
+            数据为内存原型，不持久化；刷新页面即清空。挂载位置：Afternoon/Night 之后，
+            符合 design-manifest.md "下方生命记录区"的版式约定。
+          */}
+          <LifeLogPanel />
+        </div>
 
         <div className="h-20" />
       </div>
@@ -259,12 +211,34 @@ export default function HomePage() {
   );
 }
 
-function describeBriefSource(
-  source: string | undefined,
-  t: (key: string) => string,
-) {
-  if (source === 'fallback') {
-    return t('sourceFallback');
-  }
-  return t('sourceLLM');
+function StaticTimelineBlock({
+  title,
+  time,
+  children,
+}: {
+  title: string;
+  time: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="relative pl-8">
+      <span
+        aria-hidden="true"
+        className="absolute left-[7px] top-5 h-[calc(100%+36px)] w-px bg-[color-mix(in_srgb,var(--valo-prime)_45%,transparent)]"
+      />
+      <span
+        aria-hidden="true"
+        className="absolute left-0 top-1 h-4 w-4 rounded-full bg-[var(--valo-prime)] shadow-[0_0_10px_var(--valo-prime)]"
+      />
+      <h2
+        className="text-[22px] leading-none text-[var(--valo-text-primary)]"
+        data-valo-serif="true"
+      >
+        {title} - {time}
+      </h2>
+      <p className="mt-4 text-[17px] leading-7 text-[color-mix(in_srgb,var(--valo-text-primary)_82%,transparent)]">
+        {children}
+      </p>
+    </section>
+  );
 }

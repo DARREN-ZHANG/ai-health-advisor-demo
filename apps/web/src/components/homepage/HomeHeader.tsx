@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
 import { DemoControlTrigger } from '@/components/demo-control/DemoControlTrigger';
 import { AccountSwitcherSheet } from '@/components/settings/AccountSwitcherSheet';
+import { useProfileStore } from '@/stores/profile.store';
 
 /**
  * HomeHeader —— 首页顶部栏。
@@ -30,6 +31,7 @@ export interface HomeHeaderProps {
 
 export function HomeHeader({ onAvatarClick }: HomeHeaderProps) {
   const t = useTranslations('homepage');
+  const profile = useProfileStore((s) => s.currentProfile);
   const [isAccountSheetOpen, setIsAccountSheetOpen] = useState(false);
   const avatarRef = useRef<HTMLButtonElement>(null);
 
@@ -46,17 +48,41 @@ export function HomeHeader({ onAvatarClick }: HomeHeaderProps) {
   return (
     <>
       <header
-        className="flex items-center gap-2 px-4 pt-4"
+        className="relative z-20 -mx-4 flex h-[116px] items-start justify-between px-6 pt-14"
         data-valo-header="home"
       >
-        <AvatarButton
-          ref={avatarRef}
-          onClick={handleAvatarClick}
-          label={avatarLabel}
-          expanded={isAccountSheetOpen}
-        />
-        {/* Demo Control 触发器自管可见性（God Mode 关时返回 null） */}
-        <DemoControlTrigger />
+        <StatusBar />
+
+        <div className="flex items-center gap-3">
+          <AvatarButton
+            ref={avatarRef}
+            onClick={handleAvatarClick}
+            label={avatarLabel}
+            expanded={isAccountSheetOpen}
+            avatar={profile?.avatar}
+          />
+          {/* Demo Control 触发器自管可见性（God Mode 关时返回 null） */}
+          <DemoControlTrigger />
+        </div>
+
+        <div
+          aria-label="Valo"
+          className="pointer-events-none absolute left-1/2 top-[66px] -translate-x-1/2"
+        >
+          <ValoMark />
+        </div>
+
+        <div
+          aria-label={t('readinessScore', { score: 80 })}
+          className="relative grid h-[44px] w-[44px] place-items-center rounded-full border-2 border-[var(--valo-text-primary)] text-sm font-semibold text-[var(--valo-text-primary)] shadow-[0_0_16px_color-mix(in_srgb,var(--valo-active)_42%,transparent)]"
+          data-valo-readiness-score="true"
+        >
+          <span
+            aria-hidden="true"
+            className="absolute -top-1 right-2 h-2.5 w-2.5 rounded-full bg-[var(--valo-active)]"
+          />
+          80
+        </div>
       </header>
 
       <AccountSwitcherSheet
@@ -72,10 +98,11 @@ interface AvatarButtonProps {
   onClick: () => void;
   label: string;
   expanded: boolean;
+  avatar?: string;
 }
 
 const AvatarButton = forwardRef<HTMLButtonElement, AvatarButtonProps>(
-  function AvatarButton({ onClick, label, expanded }, ref) {
+  function AvatarButton({ onClick, label, expanded, avatar }, ref) {
     return (
       <button
         ref={ref}
@@ -87,14 +114,74 @@ const AvatarButton = forwardRef<HTMLButtonElement, AvatarButtonProps>(
         data-valo-touch="true"
         data-valo-avatar="true"
         className={
-          'inline-flex h-10 w-10 items-center justify-center rounded-full ' +
+          'inline-flex h-10 w-10 overflow-hidden items-center justify-center rounded-full ' +
           'border border-[var(--valo-border)] bg-[var(--valo-surface)] ' +
           'text-[var(--valo-text-secondary)] transition-colors ' +
           'hover:text-[var(--valo-text-primary)] hover:bg-[var(--valo-border)]'
         }
       >
-        <UserCircleIcon className="h-6 w-6" />
+        {avatar ? (
+          <img
+            src={avatar}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <UserCircleIcon className="h-6 w-6" />
+        )}
       </button>
     );
   },
 );
+
+function StatusBar() {
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute left-0 right-0 top-0 flex h-10 items-center justify-between px-8 text-sm font-semibold text-[var(--valo-text-primary)]"
+      data-valo-status-bar="true"
+    >
+      <span>10:01</span>
+      <div className="flex items-center gap-2">
+        <span className="flex h-4 items-end gap-0.5">
+          <span className="h-1.5 w-1 rounded-sm bg-current" />
+          <span className="h-2.5 w-1 rounded-sm bg-current" />
+          <span className="h-3.5 w-1 rounded-sm bg-current" />
+          <span className="h-4 w-1 rounded-sm bg-current" />
+        </span>
+        <span className="relative h-4 w-5 overflow-hidden">
+          <span className="absolute left-1/2 top-2 h-5 w-5 -translate-x-1/2 rounded-full border-2 border-current" />
+          <span className="absolute left-1/2 top-3 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-current" />
+          <span className="absolute bottom-0 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-current" />
+        </span>
+        <span className="relative h-3.5 w-7 rounded-sm border border-current">
+          <span className="absolute -right-1 top-1/2 h-1.5 w-0.5 -translate-y-1/2 rounded-r-sm bg-current" />
+          <span className="absolute inset-y-0.5 left-0.5 right-1 rounded-[1px] bg-current" />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ValoMark() {
+  return (
+    <svg
+      width="112"
+      height="20"
+      viewBox="0 0 112 20"
+      role="img"
+      aria-hidden="true"
+      className="text-[var(--valo-text-primary)]"
+    >
+      <path
+        d="M2 4L22 16L42 4M45 16L59 5L73 16M76 4L92 16L110 4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

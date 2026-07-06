@@ -122,7 +122,7 @@ describe('HealthHero', () => {
     expect(section?.getAttribute('data-valo-state')).toBe('glycogen-depleted');
   });
 
-  it('四态穷举：圆环不写 backgroundImage（由 HeroAssetLayer 承载视觉）', () => {
+  it('四态穷举：圆环不写 backgroundImage（由 Canvas 动态绘制视觉）', () => {
     for (const state of HEALTH_VISUAL_STATES) {
       cleanup();
       renderWithIntl(
@@ -135,24 +135,23 @@ describe('HealthHero', () => {
     }
   });
 
-  it('渲染 HeroAssetLayer，data-valo-hero-asset 反映当前状态', () => {
+  it('渲染 HeroGlowCanvas，data-valo-hero-canvas 反映当前状态', () => {
     renderWithIntl(
       <HealthHero state="active-recovery" onOpenSwitchStatus={() => {}} />,
     );
-    const asset = document.querySelector('[data-valo-hero-asset="active-recovery"]');
-    expect(asset).not.toBeNull();
+    const canvas = document.querySelector('[data-valo-hero-canvas="active-recovery"]');
+    expect(canvas).not.toBeNull();
+    expect(canvas?.tagName).toBe('CANVAS');
   });
 
-  it('四态穷举：HeroAssetLayer 切换对应 src', () => {
+  it('四态穷举：HeroGlowCanvas 切换对应 state，不渲染静态 img', () => {
     for (const state of HEALTH_VISUAL_STATES) {
       cleanup();
       renderWithIntl(
         <HealthHero state={state} onOpenSwitchStatus={() => {}} />,
       );
-      const img = document.querySelector('[data-valo-hero-asset] img') as HTMLImageElement | null;
-      expect(img).not.toBeNull();
-      const expectedSrc = `/valo/hero/${state}.png`;
-      expect(img?.getAttribute('src')).toBe(expectedSrc);
+      expect(document.querySelector(`[data-valo-hero-canvas="${state}"]`)).not.toBeNull();
+      expect(document.querySelector('[data-valo-hero-canvas] img')).toBeNull();
     }
   });
 

@@ -50,21 +50,19 @@ export function LifeLogCategorySection({
   return (
     <section
       data-valo-life-log-section={type}
-      className="rounded-2xl border border-[var(--valo-border)]
-                 bg-[var(--valo-surface)] p-4
-                 shadow-[var(--valo-shadow-card)]"
+      className="rounded-lg bg-[var(--valo-surface)] px-3.5 py-3 shadow-[var(--valo-shadow-card)]"
     >
-      <header className="flex items-center justify-between gap-2">
-        <div className="flex items-baseline gap-2">
-          <span aria-hidden="true" className="text-xl leading-none">
+      <header className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span aria-hidden="true" className="text-base leading-none">
             {config.icon}
           </span>
-          <h3 className="text-sm font-semibold text-[var(--valo-text-primary)]">
+          <h3 className="truncate text-base font-semibold text-[var(--valo-text-primary)]">
             {t(`category.${type}`)}
           </h3>
         </div>
         <span
-          className="text-xs font-semibold tabular-nums"
+          className="shrink-0 text-sm tabular-nums text-[var(--valo-text-secondary)]"
           style={{ color: `var(${config.accentToken})` }}
           aria-label={t('totalToday', {
             cups: totalCups,
@@ -86,7 +84,7 @@ export function LifeLogCategorySection({
           onClick={() => onQuickAdd(type)}
           data-valo-touch="true"
           data-valo-life-log-quick-add=""
-          className="flex-1 rounded-full px-3 py-2 text-xs font-semibold
+          className="flex-1 rounded-md px-3 py-2 text-xs font-semibold
                      text-[var(--valo-canvas)]
                      transition-opacity hover:opacity-90
                      focus-visible:outline-none
@@ -100,7 +98,7 @@ export function LifeLogCategorySection({
           onClick={() => onCustomAdd(type)}
           data-valo-touch="true"
           data-valo-life-log-custom-add=""
-          className="rounded-full px-3 py-2 text-xs font-semibold
+          className="rounded-md px-3 py-2 text-xs font-semibold
                      border border-[var(--valo-border)]
                      text-[var(--valo-text-primary)]
                      hover:border-[var(--valo-text-secondary)] transition-colors
@@ -124,7 +122,7 @@ export function LifeLogCategorySection({
         </ul>
       ) : (
         <p
-          className="mt-3 text-xs text-[var(--valo-text-secondary)] italic"
+          className="mt-2 text-xs text-[var(--valo-text-secondary)] italic"
           data-valo-life-log-empty=""
         >
           {t('empty')}

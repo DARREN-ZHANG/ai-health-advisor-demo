@@ -22,10 +22,13 @@ const NAV_KEYS = [
 export function Navbar() {
   const pathname = usePathname();
   const t = useTranslations('nav');
+  const isHome = pathname === '/';
+
   return (
     <nav
       data-valo-navbar="true"
-      className="sticky top-0 z-50 backdrop-blur-md border-b"
+      aria-hidden={isHome ? 'true' : undefined}
+      className={`${isHome ? 'hidden' : 'sticky'} top-0 z-50 backdrop-blur-md border-b`}
       style={{
         backgroundColor: 'var(--valo-glass)',
         borderColor: 'var(--valo-border)',
