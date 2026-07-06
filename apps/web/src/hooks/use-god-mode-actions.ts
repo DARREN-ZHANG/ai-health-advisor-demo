@@ -105,6 +105,9 @@ export function useGodModeActions() {
 
   /**
    * GM-TL3: 推进时钟
+   *
+   * Spec step 6 要求：onSuccess 同步失效 homepage、dataCenter、godMode 三类查询，
+   * 与 appendTimeline / resetTimeline / appendMicroEvent 保持一致。
    */
   const advanceClockMutation = useMutation({
     mutationFn: async (minutes: number) => {
@@ -113,6 +116,8 @@ export function useGodModeActions() {
     onSuccess: (state) => {
       setProfileId(state.currentProfileId);
       syncActiveSensingBanner(state.activeSensing);
+      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
     },
   });

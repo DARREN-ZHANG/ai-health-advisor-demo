@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within, act, waitFor } from '@testing-library/react';
 import {
   DemoControlDrawer,
   type DemoControlDrawerProps,
@@ -168,9 +168,16 @@ describe('DemoControlDrawer', () => {
     expect(screen.getByText('重置时间轴？')).toBeInTheDocument();
   });
 
-  it('在重置确认弹窗中点击“重置”才真正调用 onReset（I2.3）', () => {
+  it('在重置确认弹窗中点击“重置”才真正调用 onReset（I2.3，异步 await）', async () => {
     useGodModeStore.setState({ isOpen: true });
-    const onReset = vi.fn();
+    // 异步 onReset：模拟 mutation 返回前弹窗应保持打开。
+    let resolveMutation: () => void = () => {};
+    const onReset = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveMutation = resolve;
+        }),
+    );
     renderWithIntl(
       <DemoControlDrawer {...SAMPLE_PROPS} onReset={onReset} />,
     );
@@ -179,9 +186,46 @@ describe('DemoControlDrawer', () => {
     // 弹窗内的“重置”按钮：通过弹窗根容器 scope，避免与 footer 按钮冲突
     const dialog = screen.getByText('重置时间轴？').closest('[role="dialog"]');
     expect(dialog).not.toBeNull();
-    fireEvent.click(
-      within(dialog as HTMLElement).getByRole('button', { name: '重置' }),
+    await act(async () => {
+      fireEvent.click(
+        within(dialog as HTMLElement).getByRole('button', { name: '重置' }),
+      );
+      // 让微任务跑一轮，让 await onReset 进入 pending
+      await Promise.resolve();
+    });
+    // mutation 已被调用
+    expect(onReset).toHaveBeenCalledTimes(1);
+    // mutation 未 resolve 前弹窗保持打开（loading 态对用户可见）
+    expect(screen.getByText('重置时间轴？')).toBeInTheDocument();
+
+    // resolve mutation → 弹窗在 finally 中关闭
+    await act(async () => {
+      resolveMutation();
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(screen.queryByText('重置时间轴？')).toBeNull();
+    });
+  });
+
+  it('onReset 失败时弹窗也会通过 finally 关闭（toast 由 hook 处理）', async () => {
+    useGodModeStore.setState({ isOpen: true });
+    const onReset = vi.fn().mockRejectedValue(new Error('boom'));
+    renderWithIntl(
+      <DemoControlDrawer {...SAMPLE_PROPS} onReset={onReset} />,
     );
+    const mobile = getMobileContainer();
+    fireEvent.click(within(mobile).getByRole('button', { name: '重置' }));
+    const dialog = screen.getByText('重置时间轴？').closest('[role="dialog"]');
+    await act(async () => {
+      fireEvent.click(
+        within(dialog as HTMLElement).getByRole('button', { name: '重置' }),
+      );
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(screen.queryByText('重置时间轴？')).toBeNull();
+    });
     expect(onReset).toHaveBeenCalledTimes(1);
   });
 
@@ -332,5 +376,40 @@ describe('DemoControlDrawer', () => {
     expect(confirmBtn.getAttribute('style') ?? '').toContain(
       'var(--valo-depleted)',
     );
+  });
+
+  // ============ I2.3 修复：单实例弹窗 + loading 态 ============
+
+  it('重置确认弹窗在双视口下只有单个实例（消除 dual-render 重复）', () => {
+    useGodModeStore.setState({ isOpen: true });
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} />);
+    const mobile = getMobileContainer();
+    // 打开重置确认弹窗前：移动端 sheet + 桌面端 drawer 两个 role=dialog。
+    expect(screen.getAllByRole('dialog').length).toBeGreaterThanOrEqual(2);
+    fireEvent.click(within(mobile).getByRole('button', { name: '重置' }));
+    // 打开后：sheet + drawer 两个外层 + 1 个 reset 弹窗 = 3 个。
+    // 关键点是 reset 弹窗本身只渲染一次（旧版会渲染 2 次 → 总数 4）。
+    const resetDialogs = document.querySelectorAll('[role="dialog"]');
+    // 仅断言 reset 弹窗文案“重置时间轴？”只出现一次（单实例契约）。
+    const resetTitleNodes = Array.from(resetDialogs).filter((d) =>
+      (d as HTMLElement).textContent?.includes('重置时间轴？'),
+    );
+    expect(resetTitleNodes).toHaveLength(1);
+  });
+
+  it('pendingAction=reset 时重置确认弹窗的确认按钮处于 loading/disabled 态', () => {
+    useGodModeStore.setState({ isOpen: true });
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} />);
+    const mobile = getMobileContainer();
+    // 先打开弹窗，再模拟 mutation 进行中（pendingAction 由 hook 写入 store）。
+    fireEvent.click(within(mobile).getByRole('button', { name: '重置' }));
+    act(() => {
+      useGodModeStore.setState({ pendingAction: 'reset' });
+    });
+    const dialog = screen.getByText('重置时间轴？').closest('[role="dialog"]');
+    const confirmBtn = within(dialog as HTMLElement).getByRole('button', {
+      name: '重置',
+    });
+    expect(confirmBtn).toBeDisabled();
   });
 });

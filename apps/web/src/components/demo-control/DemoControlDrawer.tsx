@@ -77,6 +77,38 @@ export function DemoControlDrawer({
   const isEnabled = useGodModeStore((s) => s.isEnabled);
   const isOpen = useGodModeStore((s) => s.isOpen);
   const toggleOpen = useGodModeStore((s) => s.toggleOpen);
+  // pendingAction 直接读 store：用于驱动 TimelineResetDialog 的 loading 态。
+  // 抽屉层只读不写（写入由 useDemoControlActions 负责）。
+  const pendingAction = useGodModeStore((s) => s.pendingAction);
+  const isResetPending = pendingAction === 'reset';
+  const isAnyPending =
+    useGodModeStore((s) => s.pendingSegmentType) !== null || pendingAction !== null;
+
+  // 重置确认弹窗的开关状态上提到抽屉层（单一数据源）。
+  // 这样移动端 / 桌面端两份 DemoControlContent 实例不会各自维护一个
+  // useState，避免出现"两个独立弹窗"的隐性双渲染。
+  // 同时让 onConfirm 异步 await mutation：弹窗在 mutation 进行期间保持
+  // 打开，确认按钮显示 loading，最终在 finally 中关闭。
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+
+  const openResetDialog = () => {
+    if (isAnyPending) return;
+    setIsResetDialogOpen(true);
+  };
+
+  const closeResetDialog = () => setIsResetDialogOpen(false);
+
+  const handleConfirmReset = async () => {
+    // pendingAction='reset' 由 useDemoControlActions 内部 setPendingAction 写入，
+    // 弹窗保持打开以显示 loading 态。
+    try {
+      await onReset?.();
+    } catch {
+      // toast 已由 useDemoControlActions 统一处理，此处吞掉避免未捕获 promise。
+    } finally {
+      setIsResetDialogOpen(false);
+    }
+  };
 
   if (!isEnabled || !isOpen) return null;
 
@@ -84,10 +116,10 @@ export function DemoControlDrawer({
     <DemoControlContent
       onSegmentClick={onSegmentClick}
       onAdvanceHour={onAdvanceHour}
-      onReset={onReset}
       events={events}
       currentDemoTime={currentDemoTime}
       onClose={() => toggleOpen(false)}
+      onOpenResetDialog={openResetDialog}
     />
   );
 
@@ -123,6 +155,18 @@ export function DemoControlDrawer({
           {sharedContent}
         </ValoDialog>
       </div>
+      {/*
+        重置确认弹窗：单例挂载在抽屉层（不在 DemoControlContent 内），
+        消除双视口各自渲染一份导致的重复 dialog 问题。loading 由抽屉
+        订阅的 pendingAction 驱动；onConfirm 走异步 handleConfirmReset，
+        弹窗在 mutation 进行期间保持打开。
+      */}
+      <TimelineResetDialog
+        open={isResetDialogOpen}
+        onClose={closeResetDialog}
+        onConfirm={handleConfirmReset}
+        loading={isResetPending}
+      />
     </>
   );
 }
@@ -130,19 +174,20 @@ export function DemoControlDrawer({
 interface DemoControlContentProps {
   onSegmentClick?: (segment: TimelineSegmentConfig) => void;
   onAdvanceHour?: () => void;
-  onReset?: () => void;
   events: ReadonlyArray<RecentEventEntry>;
   currentDemoTime: string | null;
   onClose: () => void;
+  /** 底部“重置”按钮被点击：仅打开由父级持有的确认弹窗 */
+  onOpenResetDialog: () => void;
 }
 
 function DemoControlContent({
   onSegmentClick,
   onAdvanceHour,
-  onReset,
   events,
   currentDemoTime,
   onClose,
+  onOpenResetDialog,
 }: DemoControlContentProps) {
   const t = useTranslations('demoControl');
   // pending 状态直接读 store，避免调用方再 prop drill。
@@ -157,25 +202,6 @@ function DemoControlContent({
   // 任一 segment / advance / reset 进行中时，所有卡片与底部按钮全部禁用。
   // 卡片自身的 loading（spinner）仍只显示在 pendingSegmentType 命中的那张。
   const isAnyPending = pendingSegmentType !== null || pendingAction !== null;
-
-  // 重置确认弹窗的开关由本组件内部托管（Style A）；
-  // 用户在 footer 点击“重置”只打开弹窗，真正调用 onReset 由弹窗确认按钮触发。
-  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
-
-  const openResetDialog = () => {
-    if (isAnyPending) return;
-    setIsResetDialogOpen(true);
-  };
-
-  const closeResetDialog = () => setIsResetDialogOpen(false);
-
-  const handleResetConfirm = () => {
-    // 关闭弹窗 + 触发真正的 mutation。
-    // 注意：mutation 是异步的；这里不 await，让 pendingAction 状态驱动按钮
-    // 的 disabled/spinner。如果调用方同步 throw 也不会影响 UI。
-    setIsResetDialogOpen(false);
-    onReset?.();
-  };
 
   return (
     // id="demo-control-drawer" 用于 DemoControlTrigger 的 aria-controls 锚点。
@@ -253,7 +279,7 @@ function DemoControlContent({
           </button>
           <button
             type="button"
-            onClick={openResetDialog}
+            onClick={onOpenResetDialog}
             disabled={isAnyPending}
             data-valo-touch="true"
             className={
@@ -269,20 +295,6 @@ function DemoControlContent({
           </button>
         </footer>
       </div>
-
-      {/*
-        重置确认弹窗：单例挂载在内容容器下；移动端 / 桌面端两份内容各会
-        渲染一份，但 ValoConfirmDialog 内部基于 ValoDialog 控制 open，
-        关闭时不渲染任何 DOM。同时由于两侧 isOpen 互斥（Tailwind 断点），
-        实际可见的弹窗也只会有一份。open 状态由本组件持有，因此两个视口
-        同步开合，符合“一个用户操作 = 一个确认弹窗”的契约。
-      */}
-      <TimelineResetDialog
-        open={isResetDialogOpen}
-        onClose={closeResetDialog}
-        onConfirm={handleResetConfirm}
-        loading={isResetPending}
-      />
     </div>
   );
 }
