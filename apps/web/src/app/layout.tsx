@@ -7,6 +7,11 @@ import { AppShell } from '@/components/layout/AppShell';
 import { ToastContainer } from '@/components/layout/ToastContainer';
 import { AIAdvisorTrigger } from '@/components/advisor/AIAdvisorTrigger';
 import { AIAdvisorDrawer } from '@/components/advisor/AIAdvisorDrawer';
+// TEMP（I2.2）：Demo Control 入口与抽屉临时挂载到 layout，
+// 用于在 God Mode 启用时手动验证抽屉开合。I6.1 会按设计把入口
+// 移到 HomeHeader 的 Avatar 旁，并移除这里的临时挂载点。
+import { DemoControlTrigger } from '@/components/demo-control/DemoControlTrigger';
+import { DemoControlDrawer } from '@/components/demo-control/DemoControlDrawer';
 import './globals.css';
 
 /**
@@ -43,6 +48,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             bottomNav={<BottomNav />}
             floating={
               <>
+                {/* TEMP（I2.2）：Demo Control 临时浮动入口；I6.1 会迁移到 HomeHeader */}
+                <div className="fixed left-4 top-4 z-40">
+                  <DemoControlTrigger />
+                </div>
+                <DemoControlDrawer />
                 <AIAdvisorTrigger />
                 <AIAdvisorDrawer />
               </>

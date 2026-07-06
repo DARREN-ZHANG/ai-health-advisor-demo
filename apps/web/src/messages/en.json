@@ -146,6 +146,23 @@
       "genericPrompt": "I need some advice about \"{title}\"."
     }
   },
+  "demoControl": {
+    "title": "Demo Control",
+    "live": "LIVE",
+    "close": "Close",
+    "openTrigger": "Open Demo Control",
+    "currentTime": "Current Time",
+    "events": "Events",
+    "recentEvents": "Recent Events",
+    "noRecentEvents": "No recent events",
+    "advanceOneHour": "+1h",
+    "reset": "Reset",
+    "groupDailyRhythm": "Daily Rhythm",
+    "groupSportTraining": "Sport Training",
+    "groupStateIntake": "State & Intake",
+    "segmentCount": "{count, plural, one {# segment} other {# segments}}",
+    "help": "Help"
+  },
   "godMode": {
     "title": "God Mode",
     "admin": "ADMIN",

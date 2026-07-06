@@ -146,6 +146,23 @@
       "genericPrompt": "关于「{title}」，我需要一些建议。"
     }
   },
+  "demoControl": {
+    "title": "Demo 控制台",
+    "live": "LIVE",
+    "close": "关闭",
+    "openTrigger": "打开 Demo 控制",
+    "currentTime": "当前时间",
+    "events": "事件",
+    "recentEvents": "近期事件",
+    "noRecentEvents": "暂无近期事件",
+    "advanceOneHour": "+1h",
+    "reset": "重置",
+    "groupDailyRhythm": "日常节律",
+    "groupSportTraining": "运动训练",
+    "groupStateIntake": "状态与摄入",
+    "segmentCount": "{count, plural, other {# 个片段}}",
+    "help": "帮助"
+  },
   "godMode": {
     "title": "God Mode",
     "admin": "ADMIN",
