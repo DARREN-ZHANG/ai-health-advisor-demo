@@ -2,10 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Container, Section, Button } from '@health-advisor/ui';
-import { MorningBriefCard } from '@/components/homepage/MorningBriefCard';
 import { HomeHeader } from '@/components/homepage/HomeHeader';
 import { HealthHero } from '@/components/homepage/HealthHero';
 import { SwitchStatusDialog } from '@/components/homepage/SwitchStatusDialog';
+import { BriefTimeline } from '@/components/homepage/BriefTimeline';
+import { ActionCard } from '@/components/homepage/ActionCard';
+import { ActionTimerSheet } from '@/components/homepage/ActionTimerSheet';
+import { AppointmentSheet } from '@/components/homepage/AppointmentSheet';
+import { ValoCard } from '@/components/valo/ValoCard';
 import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
 import { useProfileStore } from '@/stores/profile.store';
 import {
@@ -16,21 +20,25 @@ import { mapApiStatusToVisualState } from '@/lib/health-visual-state';
 import { useMorningBrief, useRefetchBrief } from '@/hooks/use-ai-query';
 import { useActionInteractions } from '@/hooks/use-action-interactions';
 import { useUIStore } from '@/stores/ui.store';
-import type { StatusColor } from '@health-advisor/ui';
 import { useTranslations } from 'next-intl';
+import type { ActionOption } from '@health-advisor/shared';
 
 /**
- * 首页：四态 Hero + Switch Status + 简报。
+ * 首页：四态 Hero + Switch Status + 简报 / Action 卡 / Timer。
  *
- * I3.1：接入 HealthHero / HomeHeader / SwitchStatusDialog 与
- * `useHealthStatusStore`。状态流：
+ * 状态流：
  *  1. useMorningBrief 提供 `statusColor` + `dataUpdatedAt`；
  *  2. mapApiStatusToVisualState 把 API 状态映射为四态视觉；
- *  3. useEffect 把"自动状态 + dataUpdatedAt"写入 store（新简报清除 manualOverride）；
- *  4. Hero 从 store 选取当前生效状态并渲染；
- *  5. 用户点击 Hero → SwitchStatusDialog → setManualOverride 立即生效。
+ *  3. useEffect 把"自动状态 + dataUpdatedAt"写入 store；
+ *  4. Hero 从 store 选取当前生效状态；
+ *  5. 用户点击 Hero → SwitchStatusDialog → setManualOverride。
  *
- * 简报与 ActionCard 区域由 I3.2 重构；本任务保留 MorningBriefCard 现状。
+ * 简报区（I3.2）：
+ *  - BriefTimeline 渲染 summary + microTips（非交互）
+ *  - ActionCard 渲染 Yes / Not Now（collapse after interact）
+ *  - micro_event 带 durationMinutes 打开 ActionTimerSheet
+ *  - calendar 互动打开 AppointmentSheet（仅记录，不调用外部日历）
+ *  - 下午/晚间为 Figma 静态双语示例文案，不归属 Agent 输出。
  */
 export default function HomePage() {
   const { currentProfileId } = useProfileStore();
@@ -40,7 +48,7 @@ export default function HomePage() {
   const refetchBrief = useRefetchBrief(currentProfileId);
   const t = useTranslations('homepage');
 
-  const actionInteractions = useActionInteractions(currentProfileId);
+  const interactions = useActionInteractions(currentProfileId);
   const briefIsLoading = isLoading || isFetching || refetchBrief.isPending;
 
   // —— Hero 状态管理 ——
@@ -53,8 +61,6 @@ export default function HomePage() {
 
   useEffect(() => {
     if (data) {
-      // dataUpdatedAt 是 TanStack Query 标准 ms 时间戳；store 内部比较它是否
-      // 变化来决定是否清空 manualOverride。新简报到达 → 清空；同周期刷新 → 保留。
       setAutoState(visualState, dataUpdatedAt);
     }
   }, [visualState, dataUpdatedAt, data, setAutoState]);
@@ -68,45 +74,56 @@ export default function HomePage() {
   const handleSelectStatus = (state: typeof activeState) => {
     setManualOverride(state);
     setIsSwitchStatusOpen(false);
-    // 焦点返回圆环：useOverlayBehavior 通常已处理，这里兜底确保集成稳定
     ringRef.current?.focus();
   };
 
   // —— 简报错误处理 ——
-
   useEffect(() => {
     if (error) {
-      const isTimeout = error instanceof Error && 'code' in error && (error as { code: string }).code === 'TIMEOUT';
+      const isTimeout =
+        error instanceof Error &&
+        'code' in error &&
+        (error as { code: string }).code === 'TIMEOUT';
       if (!isTimeout) {
         showToast(
-          t('briefFetchFailed', { error: error instanceof Error ? error.message : t('unknownError') }),
-          'error'
+          t('briefFetchFailed', {
+            error: error instanceof Error ? error.message : t('unknownError'),
+          }),
+          'error',
         );
       }
     }
   }, [error, showToast, t]);
 
-  const briefData = {
-    status: mapApiStatusToUi(data?.statusColor, data?.meta.finishReason),
-    title: t('realtimeBrief'),
-    summary: data?.summary || (error ? t('briefNetworkError') : t('briefPreparing')),
-    actions: data?.actions ?? [],
-    actionsSectionTitle: data?.actionsSectionTitle,
-    onActionSelect: actionInteractions.selectAction,
-    onAddCalendarAction: actionInteractions.addCalendarAction,
-    pendingActionId: actionInteractions.pendingActionId,
-    selectedActionIds: actionInteractions.selectedActionIds,
-    calendarActionIds: actionInteractions.calendarActionIds,
-    actionsDisabled: actionInteractions.isBusy,
-  };
+  const summary =
+    data?.summary ||
+    (error ? t('briefNetworkError') : t('briefPreparing'));
+  const actions = data?.actions ?? [];
+
+  // 已记录/已加入日历的 action 不再渲染为可交互卡片
+  const visibleActions = actions.filter(
+    (a) =>
+      !interactions.selectedActionIds.has(a.id) &&
+      !interactions.calendarActionIds.has(a.id),
+  );
+
+  // 当前 Timer 的总秒数
+  const timerDurationSeconds =
+    interactions.timerAction?.interaction?.kind === 'micro_event'
+      ? Math.max(
+          1,
+          Math.round(
+            (interactions.timerAction.interaction.microEvent.durationMinutes ??
+              0) * 60,
+          ),
+        )
+      : 0;
 
   return (
     <Container className="py-6">
       <div className="space-y-6">
-        {/* HomeHeader：Avatar（占位） + DemoControlTrigger（God Mode 启用时） */}
         <HomeHeader />
 
-        {/* 四态 Hero：圆环是 Switch Status 的唯一入口 */}
         <HealthHero
           ref={ringRef}
           state={activeState}
@@ -115,7 +132,6 @@ export default function HomePage() {
           switchStatusDialogId="switch-status-dialog"
         />
 
-        {/* Switch Status 弹窗：移动端 Sheet + 桌面端 Dialog */}
         <SwitchStatusDialog
           open={isSwitchStatusOpen}
           onClose={handleCloseSwitchStatus}
@@ -124,11 +140,13 @@ export default function HomePage() {
           triggerRef={ringRef}
         />
 
-        {/* 顶部标题栏：保留刷新按钮（I3.2 会重构） */}
+        {/* 顶部标题栏：保留刷新按钮 */}
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-100">AI Health Advisor</h1>
-            <p className="text-slate-400 text-sm">
+            <h1 className="text-2xl font-bold text-[var(--valo-text-primary)]">
+              {t('realtimeBrief')}
+            </h1>
+            <p className="text-sm text-[var(--valo-text-secondary)]">
               {describeBriefSource(data?.source, t)}
             </p>
           </div>
@@ -137,56 +155,105 @@ export default function HomePage() {
               variant="ghost"
               onClick={() => refetchBrief.mutate()}
               disabled={briefIsLoading}
-              className="text-xs text-slate-500 h-auto py-1 px-2"
+              className="text-xs h-auto py-1 px-2"
             >
               {refetchBrief.isPending ? t('refreshing') : t('manualRefresh')}
             </Button>
           </div>
         </header>
 
-        {/* Active Sensing 灵动监测 */}
         <ActiveSensingBanner />
 
-        {/* 晨报部分 */}
+        {/* Now 简报 */}
         <Section title={t('realtimeBrief')} className="space-y-4">
-          <MorningBriefCard
-            {...briefData}
-            isLoading={briefIsLoading}
+          <BriefTimeline
+            summary={summary}
+            microTips={data?.microTips}
+            isLoading={briefIsLoading && !data}
           />
+
+          {visibleActions.length > 0 ? (
+            <ul className="space-y-3 list-none p-0 m-0">
+              {visibleActions.map((action: ActionOption) => (
+                <ActionCard
+                  key={action.id}
+                  action={action}
+                  onYes={interactions.handleYes}
+                  onNotNow={interactions.handleNotNow}
+                  pending={interactions.pendingActionId === action.id}
+                />
+              ))}
+            </ul>
+          ) : null}
         </Section>
 
-        {/* 趋势数据已迁移至数据分析页 */}
+        {/* 下午/晚间：Figma 静态双语示例，非 Agent 输出 */}
+        <Section title={t('afternoon.title')} className="space-y-4">
+          <ValoCard as="section" aria-label={t('afternoon.title')}>
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold text-[var(--valo-text-primary)]">
+                {t('afternoon.title')}
+              </h2>
+              <p className="text-sm text-[var(--valo-text-secondary)] leading-relaxed">
+                {t('afternoon.body')}
+              </p>
+              <p className="text-[10px] uppercase tracking-widest text-[var(--valo-text-secondary)] mt-2">
+                Static example
+              </p>
+            </div>
+          </ValoCard>
+        </Section>
+
+        <Section title={t('night.title')} className="space-y-4">
+          <ValoCard as="section" aria-label={t('night.title')}>
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold text-[var(--valo-text-primary)]">
+                {t('night.title')}
+              </h2>
+              <p className="text-sm text-[var(--valo-text-secondary)] leading-relaxed">
+                {t('night.body')}
+              </p>
+              <p className="text-[10px] uppercase tracking-widest text-[var(--valo-text-secondary)] mt-2">
+                Static example
+              </p>
+            </div>
+          </ValoCard>
+        </Section>
 
         <div className="h-20" />
       </div>
+
+      {/* Timer 浮层（micro_event 带 duration） */}
+      {interactions.timerAction ? (
+        <ActionTimerSheet
+          open={!!interactions.timerAction}
+          durationSeconds={timerDurationSeconds}
+          title={interactions.timerAction.title}
+          onComplete={interactions.handleTimerComplete}
+          onStop={interactions.handleTimerStop}
+        />
+      ) : null}
+
+      {/* Appointment 浮层（calendar 行动） */}
+      {interactions.appointmentAction ? (
+        <AppointmentSheet
+          open={!!interactions.appointmentAction}
+          title={t('appointment.title')}
+          description={interactions.appointmentAction.description}
+          onClose={interactions.handleAppointmentClose}
+          onConfirm={interactions.handleAppointmentConfirm}
+        />
+      ) : null}
     </Container>
   );
 }
 
-function describeBriefSource(source: string | undefined, t: (key: string) => string) {
+function describeBriefSource(
+  source: string | undefined,
+  t: (key: string) => string,
+) {
   if (source === 'fallback') {
     return t('sourceFallback');
   }
-
-  if (source === 'llm') {
-    return t('sourceLLM');
-  }
-
   return t('sourceLLM');
-}
-
-/**
- * 将 API 返回的 AgentStatusColor 映射为 UI 组件期望的 StatusColor。
- * API 使用 'error' 表示红色状态，UI 使用 'alert'。
- */
-function mapApiStatusToUi(
-  apiStatus?: string,
-  finishReason?: string,
-): StatusColor {
-  if (apiStatus === 'error') return 'alert';
-  if (apiStatus === 'warning') return 'warning';
-  if (apiStatus === 'good') return 'good';
-  // fallback 时显示警告色
-  if (finishReason === 'fallback') return 'warning';
-  return 'good';
 }

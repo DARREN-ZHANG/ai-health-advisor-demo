@@ -62,7 +62,36 @@
     "refreshing": "Refreshing...",
     "openConfig": "Config",
     "configTitle": "Configuration",
-    "avatarPlaceholder": "Profile switch (coming soon)"
+    "avatarPlaceholder": "Profile switch (coming soon)",
+    "now": "Now",
+    "microTipsTitle": "Tips",
+    "action": {
+      "yes": "Yes",
+      "notNow": "Not Now",
+      "recorded": "Recorded",
+      "dismissed": "Dismissed"
+    },
+    "timer": {
+      "title": "Action Timer",
+      "pause": "Pause",
+      "resume": "Resume",
+      "stop": "Stop",
+      "completeNow": "Complete Now"
+    },
+    "appointment": {
+      "title": "Add to Calendar",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "disclaimer": "Demo only — won't open your calendar app"
+    },
+    "afternoon": {
+      "title": "Afternoon",
+      "body": "Light meal planned, gentle stretch recommended."
+    },
+    "night": {
+      "title": "Night",
+      "body": "Wind-down routine ready. Reduce screen brightness."
+    }
   },
   "health": {
     "state": {

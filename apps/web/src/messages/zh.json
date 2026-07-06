@@ -62,7 +62,36 @@
     "refreshing": "正在刷新...",
     "openConfig": "配置",
     "configTitle": "配置面板",
-    "avatarPlaceholder": "账户切换（即将上线）"
+    "avatarPlaceholder": "账户切换（即将上线）",
+    "now": "现在",
+    "microTipsTitle": "提示",
+    "action": {
+      "yes": "确认",
+      "notNow": "稍后",
+      "recorded": "已记录",
+      "dismissed": "已忽略"
+    },
+    "timer": {
+      "title": "行动计时",
+      "pause": "暂停",
+      "resume": "继续",
+      "stop": "取消",
+      "completeNow": "立即完成"
+    },
+    "appointment": {
+      "title": "添加到日历",
+      "confirm": "确认",
+      "cancel": "取消",
+      "disclaimer": "演示功能 — 不会打开日历应用"
+    },
+    "afternoon": {
+      "title": "下午",
+      "body": "已安排轻食与舒缓拉伸。"
+    },
+    "night": {
+      "title": "晚间",
+      "body": "已就绪放松流程，建议降低屏幕亮度。"
+    }
   },
   "health": {
     "state": {
