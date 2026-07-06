@@ -1,0 +1,91 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { AIAdvisorTrigger } from './AIAdvisorTrigger';
+import { AdvisorIntlProvider } from './intl-test-helper';
+import { useUIStore } from '@/stores/ui.store';
+
+function renderWithIntl(node: React.ReactNode) {
+  return render(<AdvisorIntlProvider>{node}</AdvisorIntlProvider>);
+}
+
+describe('AIAdvisorTrigger', () => {
+  beforeEach(() => {
+    useUIStore.setState({ isAdvisorDrawerOpen: false });
+  });
+
+  afterEach(() => {
+    cleanup();
+    useUIStore.setState({ isAdvisorDrawerOpen: false });
+  });
+
+  it('drawer 关闭时渲染入口按钮', () => {
+    renderWithIntl(<AIAdvisorTrigger />);
+    expect(
+      screen.getByRole('button', { name: '打开 AI 顾问' }),
+    ).toBeInTheDocument();
+  });
+
+  it('drawer 打开时不渲染（避免与遮罩叠加）', () => {
+    useUIStore.setState({ isAdvisorDrawerOpen: true });
+    renderWithIntl(<AIAdvisorTrigger />);
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('点击触发 toggleAdvisorDrawer(true)', () => {
+    const toggleSpy = vi.spyOn(useUIStore.getState(), 'toggleAdvisorDrawer');
+    renderWithIntl(<AIAdvisorTrigger />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(toggleSpy).toHaveBeenCalledWith(true);
+    toggleSpy.mockRestore();
+  });
+
+  it('携带 data-valo-touch="true" 以获得 40px 最小触摸目标保证', () => {
+    renderWithIntl(<AIAdvisorTrigger />);
+    const btn = screen.getByRole('button');
+    expect(btn.getAttribute('data-valo-touch')).toBe('true');
+  });
+
+  it('按钮为 56px 圆形（w-14 h-14 rounded-full）', () => {
+    renderWithIntl(<AIAdvisorTrigger />);
+    const btn = screen.getByRole('button');
+    expect(btn.className).toContain('w-14');
+    expect(btn.className).toContain('h-14');
+    expect(btn.className).toContain('rounded-full');
+  });
+
+  it('外层定位 fixed，避免与 BottomNav 重叠：移动端 bottom-24，桌面端 md:bottom-8', () => {
+    renderWithIntl(<AIAdvisorTrigger />);
+    const wrapper = document.querySelector(
+      '[data-valo-advisor-trigger="true"]',
+    ) as HTMLElement | null;
+    expect(wrapper).not.toBeNull();
+    expect(wrapper?.className).toContain('fixed');
+    expect(wrapper?.className).toContain('bottom-24');
+    expect(wrapper?.className).toContain('md:bottom-8');
+    // z-40：低于 BottomNav 的 z-50（导航栏）与 Drawer 遮罩的 z-[80]，
+    // 保证 Trigger 不会盖住 BottomNav 也不会浮在 Drawer 之上。
+    expect(wrapper?.className).toContain('z-40');
+  });
+
+  it('主操作背景引用 --valo-prime（不再使用 bg-blue-600 等散落颜色）', () => {
+    renderWithIntl(<AIAdvisorTrigger />);
+    const btn = screen.getByRole('button');
+    const style = btn.getAttribute('style') ?? '';
+    expect(style).toContain('var(--valo-prime)');
+    // 旧实现使用 bg-blue-600 / shadow-blue-500/40 等散落类，重构后必须消失。
+    expect(btn.className).not.toContain('bg-blue-600');
+    expect(btn.className).not.toContain('bg-blue-500');
+    expect(btn.className).not.toContain('shadow-blue');
+  });
+
+  it('通知小点引用 --valo-active（绿色），不再使用 bg-red-500', () => {
+    renderWithIntl(<AIAdvisorTrigger />);
+    const btn = screen.getByRole('button');
+    const dot = btn.querySelector('span');
+    expect(dot).not.toBeNull();
+    const style = dot?.getAttribute('style') ?? '';
+    expect(style).toContain('var(--valo-active)');
+    // 旧 red-500 类不应再出现。
+    expect(dot?.className ?? '').not.toContain('bg-red-500');
+  });
+});

@@ -19,6 +19,17 @@ const PROMPT_KEYS = [
   { id: 'stress-inquiry', textKey: 'stressInquiry' as const },
 ] as const;
 
+/**
+ * SmartPrompts —— 推荐问题芯片。
+ *
+ * 设计要点（I5.1）：
+ * - 仅引用 `var(--valo-*)` token，无 blue-/slate- 散落类名。
+ * - 静态态：`--valo-surface` + 弱边框 `--valo-border`，与背景同一光谱。
+ * - hover/focus：边框切换到 `--valo-prime`，文字保持高对比；
+ *   通过 inline style + CSS variable 让 `:hover` 也能改边框色。
+ * - `<button>` 提供原生可访问语义；触屏 40px 最小目标由 `data-valo-touch`
+ *   全局兜底；此处保留紧凑 padding 以适配多条同时显示。
+ */
 export function SmartPrompts({ onSelect }: SmartPromptsProps) {
   const t = useTranslations('advisor.smartPrompts');
 
@@ -28,17 +39,31 @@ export function SmartPrompts({ onSelect }: SmartPromptsProps) {
   }));
 
   return (
-    <div className="flex flex-wrap gap-2 py-2">
+    <div
+      className="flex flex-wrap gap-2 py-2"
+      data-valo-smart-prompts="true"
+    >
       {prompts.map((prompt, index) => (
         <m.button
           key={prompt.id}
+          type="button"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.2, delay: index * 0.05 }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => onSelect(prompt)}
-          className="text-left px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700/50 text-xs text-slate-300 hover:border-blue-500/50 hover:text-blue-400 hover:bg-blue-500/5 transition-all shadow-sm active:bg-blue-500/10"
+          data-valo-touch="true"
+          data-valo-prompt-id={prompt.id}
+          aria-label={prompt.text}
+          // 仅引用 Valo token：静态弱边框 → hover 切到 prime；文字 secondary → hover 切到 primary。
+          className={
+            'text-left text-xs rounded-xl border px-3 py-2 transition-colors ' +
+            'shadow-[var(--valo-shadow-card)] ' +
+            'border-[var(--valo-border)] bg-[var(--valo-surface)] ' +
+            'text-[var(--valo-text-secondary)] ' +
+            'hover:border-[var(--valo-prime)] hover:text-[var(--valo-text-primary)]'
+          }
         >
           {prompt.text}
         </m.button>
