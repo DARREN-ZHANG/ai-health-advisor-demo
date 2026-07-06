@@ -68,6 +68,16 @@ const ZH_MESSAGES = {
   demoControl: {
     openTrigger: '打开 Demo 控制',
   },
+  // I6.1：HomeHeader 挂载 AccountSwitcherSheet，即使 open=false 时
+  // 内部 useTranslations 也会无条件执行；提供最小可用 namespace 防止
+  // MISSING_MESSAGE 警告。
+  accountSwitcher: {
+    title: '切换账户',
+    legend: '选择一个 Profile',
+    loading: '正在加载 Profile...',
+    empty: '暂无可用 Profile',
+    switchFailed: '切换 Profile 失败',
+  },
 } as const;
 
 export function HomepageIntlProvider({ children }: { children: ReactNode }) {

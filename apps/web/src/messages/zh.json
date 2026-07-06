@@ -389,6 +389,33 @@
       "applying": "应用中..."
     }
   },
+  "my": {
+    "title": "我的",
+    "currentProfileLabel": "当前 Profile",
+    "disabledHint": "演示版本暂不开放",
+    "openAccountSwitcher": "切换账户",
+    "openLanguageSwitcher": "切换语言",
+    "section": {
+      "account": "账户",
+      "language": "语言",
+      "settings": "设置",
+      "notifications": "通知",
+      "help": "帮助",
+      "about": "关于",
+      "logout": "退出登录"
+    },
+    "language": {
+      "zh": "简体中文",
+      "en": "English"
+    }
+  },
+  "accountSwitcher": {
+    "title": "切换账户",
+    "legend": "选择一个 Profile",
+    "loading": "正在加载 Profile...",
+    "empty": "暂无可用 Profile",
+    "switchFailed": "切换 Profile 失败"
+  },
   "errors": {
     "generic": "发生错误，请稍后重试",
     "network": "网络错误，请检查连接",

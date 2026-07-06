@@ -1,12 +1,58 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HomeHeader } from './HomeHeader';
 import { HomepageIntlProvider } from './intl-test-helper';
 import { useGodModeStore } from '@/stores/god-mode.store';
 import { useUIStore } from '@/stores/ui.store';
 
+/**
+ * HomeHeader 测试。
+ *
+ * I6.1 起，Avatar 不再弹"即将上线"toast，而是打开 `<AccountSwitcherSheet>`。
+ * 测试用 QueryClientProvider + HomepageIntlProvider 包装，并对 `@/lib/api-client`
+ * 与 `@/hooks/use-god-mode-actions` 进行 mock。
+ *
+ * AccountSwitcherSheet 自身的开关 / radio / 切换流程由它自己的测试文件覆盖；
+ * 这里只验证 Avatar → Sheet 的接线。
+ */
+
+vi.mock('@/lib/api-client', () => ({
+  apiClient: {
+    get: vi.fn(),
+    post: vi.fn(),
+  },
+}));
+
+vi.mock('@/hooks/use-god-mode-actions', () => ({
+  useGodModeActions: vi.fn(() => ({
+    switchProfile: vi.fn(),
+    isSwitchingProfile: false,
+    injectEvent: vi.fn(),
+    isInjectingEvent: false,
+    appendTimeline: vi.fn(),
+    isAppendingTimeline: false,
+    advanceClock: vi.fn(),
+    isAdvancingClock: false,
+    resetTimeline: vi.fn(),
+    isResettingTimeline: false,
+    appendMicroEvent: vi.fn(),
+    isAppendingMicroEvent: false,
+  })),
+}));
+
 function renderWithIntl(node: React.ReactNode) {
-  return render(<HomepageIntlProvider>{node}</HomepageIntlProvider>);
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0, staleTime: 0 },
+      mutations: { retry: false },
+    },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <HomepageIntlProvider>{node}</HomepageIntlProvider>
+    </QueryClientProvider>,
+  );
 }
 
 describe('HomeHeader', () => {
@@ -19,59 +65,83 @@ describe('HomeHeader', () => {
 
   afterEach(() => {
     cleanup();
+    vi.clearAllMocks();
     useGodModeStore.setState({ isEnabled: false, isOpen: false });
   });
 
-  it('渲染 Avatar 占位按钮', () => {
+  it('渲染 Avatar 入口按钮', () => {
     renderWithIntl(<HomeHeader />);
     expect(
       screen.getByRole('button', { name: '账户切换（即将上线）' }),
     ).toBeInTheDocument();
   });
 
-  it('Avatar 点击触发"即将上线" toast（不打开任何弹窗）', () => {
+  it('Avatar 点击打开 AccountSwitcherSheet（弹出 dialog）', async () => {
+    const { apiClient } = await import('@/lib/api-client');
+    (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { profileId: 'profile-a', name: 'Account A', age: 30, gender: 'male', recordCount: 1 },
+    ]);
+
+    renderWithIntl(<HomeHeader />);
+    // 默认未开
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '账户切换（即将上线）' }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('dialog').length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it('Avatar 打开 Sheet 时 aria-expanded 切到 true', async () => {
+    const { apiClient } = await import('@/lib/api-client');
+    (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+    renderWithIntl(<HomeHeader />);
+    const avatar = screen.getByRole('button', { name: '账户切换（即将上线）' });
+    expect(avatar.getAttribute('aria-expanded')).toBe('false');
+
+    fireEvent.click(avatar);
+
+    await waitFor(() => {
+      expect(avatar.getAttribute('aria-expanded')).toBe('true');
+    });
+  });
+
+  it('Avatar 点击不再触发占位 toast（行为已替换为打开 Sheet）', async () => {
+    const { apiClient } = await import('@/lib/api-client');
+    (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
     renderWithIntl(<HomeHeader />);
     fireEvent.click(
       screen.getByRole('button', { name: '账户切换（即将上线）' }),
     );
-    const toasts = useUIStore.getState().toasts;
-    expect(toasts).toHaveLength(1);
-    const first = toasts[0];
-    expect(first).toBeDefined();
-    expect(first?.message).toBe('账户切换（即将上线）');
-    expect(first?.type).toBe('info');
+    expect(useUIStore.getState().toasts).toHaveLength(0);
   });
 
-  it('onAvatarClick 覆盖默认 toast 行为', () => {
+  it('onAvatarClick 覆盖默认 Sheet 行为', () => {
     const onAvatar = vi.fn();
     renderWithIntl(<HomeHeader onAvatarClick={onAvatar} />);
     fireEvent.click(
       screen.getByRole('button', { name: '账户切换（即将上线）' }),
     );
     expect(onAvatar).toHaveBeenCalledTimes(1);
-    // 自定义回调时不应弹默认 toast
-    expect(useUIStore.getState().toasts).toHaveLength(0);
+    // 自定义回调时不应打开 Sheet
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('Avatar 是 button，带 aria-haspopup=dialog / aria-expanded=false', () => {
+  it('Avatar 是 button，带 aria-haspopup=dialog', () => {
     renderWithIntl(<HomeHeader />);
     const avatar = screen.getByRole('button', { name: '账户切换（即将上线）' });
     expect(avatar.getAttribute('aria-haspopup')).toBe('dialog');
-    expect(avatar.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('Avatar 满足最小触达：data-valo-touch=true', () => {
     renderWithIntl(<HomeHeader />);
     const avatar = screen.getByRole('button', { name: '账户切换（即将上线）' });
     expect(avatar.getAttribute('data-valo-touch')).toBe('true');
-  });
-
-  it('Avatar 不打开 Switch Status（断言：页面没有第二个状态切换入口）', () => {
-    renderWithIntl(<HomeHeader />);
-    // HomeHeader 内只有 Avatar 一个按钮（DemoControlTrigger 在 God Mode 关时不渲染）
-    expect(screen.getAllByRole('button')).toHaveLength(1);
-    // 没有任何 dialog 出现
-    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('God Mode 启用时渲染 DemoControlTrigger', () => {

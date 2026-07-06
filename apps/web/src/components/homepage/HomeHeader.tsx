@@ -1,79 +1,100 @@
 'use client';
 
+import { forwardRef, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
 import { DemoControlTrigger } from '@/components/demo-control/DemoControlTrigger';
-import { useUIStore } from '@/stores/ui.store';
+import { AccountSwitcherSheet } from '@/components/settings/AccountSwitcherSheet';
 
 /**
  * HomeHeader —— 首页顶部栏。
  *
  * 布局（参见 docs/ui/valo/design-manifest.md）：
- * - 左：Avatar（profile switcher 入口）。I3.1 阶段 Avatar 是占位按钮：
- *   点击只弹"即将上线"toast，不打开 Switch Status 也不打开 Profile Switch。
- *   I6.1 会按设计接入真正的 Profile Switch 弹窗。
+ * - 左：Avatar（profile switcher 入口）。点击打开 `<AccountSwitcherSheet>`。
  * - 紧邻 Avatar：Demo Control 触发器（仅 God Mode 启用时渲染）。
- *   I2.2/I2.3 之前 trigger 临时挂在 layout.tsx 浮层；本任务把它迁回
- *   HomeHeader，符合设计稿"入口在 Avatar 旁"的位置约定。
  *
  * Hero（HealthHero）由父页面渲染，放在 HomeHeader 下方；本组件不直接
  * 持有 Hero，便于 I3.2 在 Hero 与下方内容之间插入更多模块。
+ *
+ * I6.1 之前 Avatar 是占位 toast；本任务接入真正的 Profile Switch Sheet。
  */
 export interface HomeHeaderProps {
-  /** Avatar 点击的扩展点；I6.1 接入 Profile Switch 后会替换默认行为 */
+  /**
+   * Avatar 点击的扩展点。
+   *
+   * 默认行为是打开 AccountSwitcherSheet；如果父组件需要自定义
+   * （例如 demo / 测试），传入此 prop 会跳过默认 Sheet。
+   */
   onAvatarClick?: () => void;
 }
 
 export function HomeHeader({ onAvatarClick }: HomeHeaderProps) {
   const t = useTranslations('homepage');
-  const { showToast } = useUIStore();
+  const [isAccountSheetOpen, setIsAccountSheetOpen] = useState(false);
+  const avatarRef = useRef<HTMLButtonElement>(null);
 
   const handleAvatarClick = () => {
     if (onAvatarClick) {
       onAvatarClick();
       return;
     }
-    // 占位行为：明确告知"Profile Switch 即将上线"，不打开任何弹窗。
-    // 刻意不耦合 SwitchStatusDialog——Switch Status 唯一入口是 Hero 圆环。
-    showToast(t('avatarPlaceholder'), 'info');
+    setIsAccountSheetOpen(true);
   };
 
+  const avatarLabel = t('avatarPlaceholder');
+
   return (
-    <header
-      className="flex items-center gap-2 px-4 pt-4"
-      data-valo-header="home"
-    >
-      <AvatarButton onClick={handleAvatarClick} label={t('avatarPlaceholder')} />
-      {/* Demo Control 触发器自管可见性（God Mode 关时返回 null） */}
-      <DemoControlTrigger />
-    </header>
+    <>
+      <header
+        className="flex items-center gap-2 px-4 pt-4"
+        data-valo-header="home"
+      >
+        <AvatarButton
+          ref={avatarRef}
+          onClick={handleAvatarClick}
+          label={avatarLabel}
+          expanded={isAccountSheetOpen}
+        />
+        {/* Demo Control 触发器自管可见性（God Mode 关时返回 null） */}
+        <DemoControlTrigger />
+      </header>
+
+      <AccountSwitcherSheet
+        open={isAccountSheetOpen}
+        onClose={() => setIsAccountSheetOpen(false)}
+        triggerRef={avatarRef}
+      />
+    </>
   );
 }
 
 interface AvatarButtonProps {
   onClick: () => void;
   label: string;
+  expanded: boolean;
 }
 
-function AvatarButton({ onClick, label }: AvatarButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      aria-haspopup="dialog"
-      // 占位阶段不真正展开任何弹窗，expanded 恒为 false
-      aria-expanded={false}
-      data-valo-touch="true"
-      data-valo-avatar="true"
-      className={
-        'inline-flex h-10 w-10 items-center justify-center rounded-full ' +
-        'border border-[var(--valo-border)] bg-[var(--valo-surface)] ' +
-        'text-[var(--valo-text-secondary)] transition-colors ' +
-        'hover:text-[var(--valo-text-primary)] hover:bg-[var(--valo-border)]'
-      }
-    >
-      <UserCircleIcon className="h-6 w-6" />
-    </button>
-  );
-}
+const AvatarButton = forwardRef<HTMLButtonElement, AvatarButtonProps>(
+  function AvatarButton({ onClick, label, expanded }, ref) {
+    return (
+      <button
+        ref={ref}
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        aria-haspopup="dialog"
+        aria-expanded={expanded}
+        data-valo-touch="true"
+        data-valo-avatar="true"
+        className={
+          'inline-flex h-10 w-10 items-center justify-center rounded-full ' +
+          'border border-[var(--valo-border)] bg-[var(--valo-surface)] ' +
+          'text-[var(--valo-text-secondary)] transition-colors ' +
+          'hover:text-[var(--valo-text-primary)] hover:bg-[var(--valo-border)]'
+        }
+      >
+        <UserCircleIcon className="h-6 w-6" />
+      </button>
+    );
+  },
+);

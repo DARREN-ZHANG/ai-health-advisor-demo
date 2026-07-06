@@ -389,6 +389,33 @@
       "applying": "Applying..."
     }
   },
+  "my": {
+    "title": "My",
+    "currentProfileLabel": "Current profile",
+    "disabledHint": "Not available in demo",
+    "openAccountSwitcher": "Switch account",
+    "openLanguageSwitcher": "Switch language",
+    "section": {
+      "account": "Account",
+      "language": "Language",
+      "settings": "Settings",
+      "notifications": "Notifications",
+      "help": "Help",
+      "about": "About",
+      "logout": "Log out"
+    },
+    "language": {
+      "zh": "简体中文",
+      "en": "English"
+    }
+  },
+  "accountSwitcher": {
+    "title": "Switch Account",
+    "legend": "Select a profile",
+    "loading": "Loading profiles...",
+    "empty": "No profiles available",
+    "switchFailed": "Failed to switch profile"
+  },
   "errors": {
     "generic": "An error occurred, please try again later",
     "network": "Network error, please check your connection",
