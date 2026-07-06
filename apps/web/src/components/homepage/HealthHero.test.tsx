@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { HealthHero } from './HealthHero';
 import { HomepageIntlProvider } from './intl-test-helper';
-import { HEALTH_STATE_GRADIENTS } from '@/lib/health-visual-state';
 import { HEALTH_STATE_METADATA, HEALTH_VISUAL_STATES } from '@/lib/valo-theme';
 import type { HealthVisualState } from '@/lib/valo-theme';
 
@@ -123,17 +122,37 @@ describe('HealthHero', () => {
     expect(section?.getAttribute('data-valo-state')).toBe('glycogen-depleted');
   });
 
-  it('四态穷举：圆环 backgroundImage 引用对应状态的 CSS 变量', () => {
+  it('四态穷举：圆环不写 backgroundImage（由 HeroAssetLayer 承载视觉）', () => {
     for (const state of HEALTH_VISUAL_STATES) {
       cleanup();
       renderWithIntl(
         <HealthHero state={state} onOpenSwitchStatus={() => {}} />,
       );
       const ring = screen.getByRole('button');
-      const bg = ring.getAttribute('style') ?? '';
-      const expectedGradient = HEALTH_STATE_GRADIENTS[state];
-      // 渐变字符串完整出现在 inline style 上
-      expect(bg).toContain(expectedGradient);
+      const style = ring.getAttribute('style') ?? '';
+      expect(style).not.toContain('background-image');
+      expect(style).not.toContain('radial-gradient');
+    }
+  });
+
+  it('渲染 HeroAssetLayer，data-valo-hero-asset 反映当前状态', () => {
+    renderWithIntl(
+      <HealthHero state="active-recovery" onOpenSwitchStatus={() => {}} />,
+    );
+    const asset = document.querySelector('[data-valo-hero-asset="active-recovery"]');
+    expect(asset).not.toBeNull();
+  });
+
+  it('四态穷举：HeroAssetLayer 切换对应 src', () => {
+    for (const state of HEALTH_VISUAL_STATES) {
+      cleanup();
+      renderWithIntl(
+        <HealthHero state={state} onOpenSwitchStatus={() => {}} />,
+      );
+      const img = document.querySelector('[data-valo-hero-asset] img') as HTMLImageElement | null;
+      expect(img).not.toBeNull();
+      const expectedSrc = `/valo/hero/${state}.png`;
+      expect(img?.getAttribute('src')).toBe(expectedSrc);
     }
   });
 

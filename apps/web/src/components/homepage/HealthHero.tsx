@@ -4,7 +4,7 @@ import { forwardRef, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { HEALTH_STATE_METADATA } from '@/lib/valo-theme';
 import type { HealthVisualState } from '@/lib/valo-theme';
-import { HEALTH_STATE_GRADIENTS } from '@/lib/health-visual-state';
+import { HeroAssetLayer } from './HeroAssetLayer';
 
 /**
  * HealthHero —— 首页 Hero 区，承载"四态健康状态环"。
@@ -49,25 +49,29 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
   ) {
     const t = useTranslations('health');
     const meta = HEALTH_STATE_METADATA[state];
-    const gradient = HEALTH_STATE_GRADIENTS[state];
     const stateLabel = t(`state.${state}` as const);
     const ringLabel = t('switchStatus.ringLabel');
 
     return (
       <section
-        className="flex flex-col items-center gap-4 px-4 py-6"
+        className="relative flex flex-col items-center gap-4 px-4 py-6"
         data-valo-hero="true"
         data-valo-state={state}
       >
+        {/* Hero 装饰位图：四态 PNG 由 HeroAssetLayer 按 state 消费。
+            绝对定位铺满 section，pointer-events: none 不阻挡圆环点击。 */}
+        <HeroAssetLayer state={state} />
+
         {/*
          * 整个圆环就是 button 本身：
-         * - 外层圆形 button 通过 padding 给出尺寸，背景渐变 + 双层 box-shadow
-         *   形成"环 + 内圈光晕"的视觉。
+         * - 外层圆形 button 通过 padding 给出尺寸，box-shadow 形成"环 + 内圈光晕"。
+         *   视觉位图改由 HeroAssetLayer 承载，button 不再写 backgroundImage 渐变。
          * - 内层 div 是圆心文字与可访问名锚点，pointer-events:none 防止
          *   文字层吞点击事件。
          * - aria-label 由 i18n 提供，确保双语 SR 朗读正确。
          * - box-shadow 用 var(--valo-state-color) 内嵌变量：父级通过 style
          *   注入该状态对应颜色，圆环高光随之改变。
+         * - relative z-10 确保圆环位于 HeroAssetLayer 之上可被点击。
          */}
         <button
           ref={ref}
@@ -80,17 +84,16 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
           data-valo-touch="true"
           data-valo-ring="true"
           className={
-            'relative inline-flex h-56 w-56 items-center justify-center rounded-full ' +
+            'relative z-10 inline-flex h-56 w-56 items-center justify-center rounded-full ' +
             'border border-[var(--valo-border)] bg-[var(--valo-surface)] ' +
             'outline-none transition-all duration-500 ease-out ' +
             'focus-visible:shadow-[var(--valo-focus-ring)] ' +
             'hover:scale-[1.02] active:scale-[0.99]'
           }
           style={{
-            // 状态色作为内嵌变量，供 box-shadow 与渐变共用
+            // 状态色作为内嵌变量，供 box-shadow 共用
             // @ts-expect-error -- CSS custom property in style object
             '--valo-state-color': meta.cssVar,
-            backgroundImage: gradient,
             // 外圈柔光 + 内圈描边形成"环 + 光晕"。
             // 用 color-mix 派生半透明色，避免在 var(--valo-*) 引用上拼接
             // hex alpha（拼接对 CSS 变量无效）。color-mix 在 Safari 16.4+、
@@ -115,7 +118,7 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
           </span>
         </button>
         {children ? (
-          <div className="text-center" data-valo-hero-children="true">
+          <div className="relative z-10 text-center" data-valo-hero-children="true">
             {children}
           </div>
         ) : null}

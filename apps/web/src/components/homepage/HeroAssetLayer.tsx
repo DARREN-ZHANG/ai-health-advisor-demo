@@ -25,7 +25,7 @@ export function HeroAssetLayer({ state, className = '' }: HeroAssetLayerProps) {
   return (
     <div
       aria-hidden="true"
-      className={`absolute inset-0 pointer-events-none ${className}`}
+      className={`absolute inset-0 pointer-events-none ${className}`.trim()}
       data-valo-hero-asset={state}
     >
       <img
