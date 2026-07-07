@@ -2,10 +2,8 @@
 
 import { forwardRef, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { UserCircleIcon } from '@heroicons/react/24/outline';
 import { DemoControlTrigger } from '@/components/demo-control/DemoControlTrigger';
 import { AccountSwitcherSheet } from '@/components/settings/AccountSwitcherSheet';
-import { useProfileStore } from '@/stores/profile.store';
 
 /**
  * HomeHeader —— 首页顶部栏。
@@ -31,7 +29,6 @@ export interface HomeHeaderProps {
 
 export function HomeHeader({ onAvatarClick }: HomeHeaderProps) {
   const t = useTranslations('homepage');
-  const profile = useProfileStore((s) => s.currentProfile);
   const [isAccountSheetOpen, setIsAccountSheetOpen] = useState(false);
   const avatarRef = useRef<HTMLButtonElement>(null);
 
@@ -48,7 +45,7 @@ export function HomeHeader({ onAvatarClick }: HomeHeaderProps) {
   return (
     <>
       <header
-        className="relative z-20 -mx-4 flex h-[116px] items-start justify-between px-6 pt-14"
+        className="relative z-20 -mx-4 flex h-[128px] items-start justify-between px-[22px] pt-[68px]"
         data-valo-header="home"
       >
         <StatusBar />
@@ -59,7 +56,6 @@ export function HomeHeader({ onAvatarClick }: HomeHeaderProps) {
             onClick={handleAvatarClick}
             label={avatarLabel}
             expanded={isAccountSheetOpen}
-            avatar={profile?.avatar}
           />
           {/* Demo Control 触发器自管可见性（God Mode 关时返回 null） */}
           <DemoControlTrigger />
@@ -67,19 +63,19 @@ export function HomeHeader({ onAvatarClick }: HomeHeaderProps) {
 
         <div
           aria-label="Valo"
-          className="pointer-events-none absolute left-1/2 top-[66px] -translate-x-1/2"
+          className="pointer-events-none absolute left-1/2 top-[80px] -translate-x-1/2"
         >
           <ValoMark />
         </div>
 
         <div
           aria-label={t('readinessScore', { score: 80 })}
-          className="relative grid h-[44px] w-[44px] place-items-center rounded-full border-2 border-[var(--valo-text-primary)] text-sm font-semibold text-[var(--valo-text-primary)] shadow-[0_0_16px_color-mix(in_srgb,var(--valo-active)_42%,transparent)]"
+          className="relative grid h-[44px] w-[44px] place-items-center rounded-full border-2 border-[var(--valo-text-primary)] text-sm font-semibold leading-none text-[var(--valo-text-primary)] shadow-[0_0_16px_color-mix(in_srgb,var(--valo-active)_42%,transparent)]"
           data-valo-readiness-score="true"
         >
           <span
             aria-hidden="true"
-            className="absolute -top-1 right-2 h-2.5 w-2.5 rounded-full bg-[var(--valo-active)]"
+            className="absolute -top-1 left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[var(--valo-active)]"
           />
           80
         </div>
@@ -98,11 +94,10 @@ interface AvatarButtonProps {
   onClick: () => void;
   label: string;
   expanded: boolean;
-  avatar?: string;
 }
 
 const AvatarButton = forwardRef<HTMLButtonElement, AvatarButtonProps>(
-  function AvatarButton({ onClick, label, expanded, avatar }, ref) {
+  function AvatarButton({ onClick, label, expanded }, ref) {
     return (
       <button
         ref={ref}
@@ -115,21 +110,16 @@ const AvatarButton = forwardRef<HTMLButtonElement, AvatarButtonProps>(
         data-valo-avatar="true"
         className={
           'inline-flex h-10 w-10 overflow-hidden items-center justify-center rounded-full ' +
-          'border border-[var(--valo-border)] bg-[var(--valo-surface)] ' +
-          'text-[var(--valo-text-secondary)] transition-colors ' +
-          'hover:text-[var(--valo-text-primary)] hover:bg-[var(--valo-border)]'
+          'border border-white/20 bg-[var(--valo-surface)] transition-colors ' +
+          'hover:border-white/40'
         }
       >
-        {avatar ? (
-          <img
-            src={avatar}
-            alt=""
-            aria-hidden="true"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <UserCircleIcon className="h-6 w-6" />
-        )}
+        <img
+          src="/valo/images/avatar-1.png"
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover"
+        />
       </button>
     );
   },
@@ -139,7 +129,7 @@ function StatusBar() {
   return (
     <div
       aria-hidden="true"
-      className="absolute left-0 right-0 top-0 flex h-10 items-center justify-between px-8 text-sm font-semibold text-[var(--valo-text-primary)]"
+      className="absolute left-0 right-0 top-[18px] flex h-6 items-center justify-between px-[31px] text-sm font-semibold leading-none text-[var(--valo-text-primary)]"
       data-valo-status-bar="true"
     >
       <span>10:01</span>
@@ -166,22 +156,11 @@ function StatusBar() {
 
 function ValoMark() {
   return (
-    <svg
-      width="112"
-      height="20"
-      viewBox="0 0 112 20"
-      role="img"
+    <img
+      src="/valo/images/valo-logo.png"
+      alt=""
       aria-hidden="true"
-      className="text-[var(--valo-text-primary)]"
-    >
-      <path
-        d="M2 4L22 16L42 4M45 16L59 5L73 16M76 4L92 16L110 4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+      className="h-[10px] w-[116px] object-contain"
+    />
   );
 }
