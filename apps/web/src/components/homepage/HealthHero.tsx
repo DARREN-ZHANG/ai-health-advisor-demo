@@ -55,7 +55,7 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
 
     return (
       <section
-        className="relative -mx-4 flex min-h-[360px] flex-col items-center justify-center overflow-hidden px-4 pb-10 pt-20 md:mx-0 md:rounded-none"
+        className="relative -mx-4 -mt-[128px] flex min-h-[488px] flex-col items-center justify-center overflow-hidden px-4 pb-10 pt-[208px] md:mx-0 md:rounded-none"
         data-valo-hero="true"
         data-valo-state={state}
       >

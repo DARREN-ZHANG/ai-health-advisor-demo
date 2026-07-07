@@ -34,7 +34,7 @@ export function BottomNav() {
   return (
     <nav
       data-valo-bottomnav="true"
-      className="fixed bottom-6 z-50 w-[276px] rounded-[34px]
+      className="fixed bottom-0 z-50 w-[276px] rounded-[34px]
                  border border-white/10 px-[6px] py-[5px]
                  backdrop-blur-xl valo-bottomnav-safe"
       style={{

@@ -98,23 +98,27 @@ export function HeroGlowCanvas({ state }: HeroGlowCanvasProps) {
       const pulse = media.matches ? 0 : Math.sin(frame * 0.018) * 0.5 + 0.5;
       const horizon = ctx.createRadialGradient(
         width * 0.5,
-        height * 0.92,
-        width * 0.1,
+        height * 0.76,
+        width * 0.08,
         width * 0.5,
-        height * 0.92,
-        width * 0.9,
+        height * 0.76,
+        width * 0.96,
       );
       horizon.addColorStop(0, colorWithAlpha(primeColor, 0.5 + pulse * 0.12));
       horizon.addColorStop(0.42, colorWithAlpha(primeColor, 0.28));
       horizon.addColorStop(1, 'rgba(17,17,24,0)');
       ctx.fillStyle = horizon;
-      ctx.fillRect(0, height * 0.34, width, height * 0.66);
+      ctx.fillRect(0, height * 0.24, width, height * 0.76);
 
       ctx.save();
       ctx.beginPath();
-      ctx.ellipse(width * 0.5, height * 1.06, width * 0.74, height * 0.23, 0, 0, Math.PI * 2);
+      ctx.moveTo(0, height * 0.67);
+      ctx.quadraticCurveTo(width * 0.5, height * 0.88, width, height * 0.67);
+      ctx.lineTo(width, height);
+      ctx.lineTo(0, height);
+      ctx.closePath();
       ctx.fillStyle = '#111118';
-      ctx.shadowBlur = 22;
+      ctx.shadowBlur = 30;
       ctx.shadowColor = colorWithAlpha(primeColor, 0.45);
       ctx.fill();
       ctx.restore();
@@ -128,7 +132,7 @@ export function HeroGlowCanvas({ state }: HeroGlowCanvasProps) {
       }
 
       const cx = width * 0.5;
-      const cy = height * 0.44;
+      const cy = height * 0.672;
       const radius = Math.min(width, height) * 0.255;
       const rotation = media.matches ? -0.4 : frame * 0.006;
 

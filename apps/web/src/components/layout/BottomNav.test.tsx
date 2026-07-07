@@ -104,7 +104,8 @@ describe('BottomNav', () => {
     expect(style).toContain('50% - 178px');
     expect(style).toContain('var(--valo-border)');
     expect(nav.className).toContain('fixed');
-    expect(nav.className).toContain('bottom-6');
+    expect(nav.className).toContain('bottom-0');
+    expect(nav.className).not.toContain('sticky');
     expect(nav.className).toContain('w-[276px]');
     expect(nav.className).toContain('rounded-[34px]');
     expect(nav.className).not.toContain('md:hidden');
