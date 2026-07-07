@@ -44,42 +44,44 @@ export function HomeHeader({ onAvatarClick }: HomeHeaderProps) {
 
   return (
     <>
-      <header
-        className="relative z-20 -mx-4 flex h-[128px] items-start justify-between px-[22px] pt-[68px]"
-        data-valo-header="home"
-      >
+      <div className="relative z-20 -mx-4 h-[128px]" data-valo-header-shell="home">
         <StatusBar />
 
-        <div className="flex items-center gap-3">
-          <AvatarButton
-            ref={avatarRef}
-            onClick={handleAvatarClick}
-            label={avatarLabel}
-            expanded={isAccountSheetOpen}
-          />
-          {/* Demo Control 触发器自管可见性（God Mode 关时返回 null） */}
-          <DemoControlTrigger />
-        </div>
-
-        <div
-          aria-label="Valo"
-          className="pointer-events-none absolute left-1/2 top-[80px] -translate-x-1/2"
+        <header
+          className="absolute left-0 right-0 top-[68px] flex h-10 items-center justify-between bg-transparent px-[22px]"
+          data-valo-header="home"
         >
-          <ValoMark />
-        </div>
+          <div className="flex items-center gap-3">
+            <AvatarButton
+              ref={avatarRef}
+              onClick={handleAvatarClick}
+              label={avatarLabel}
+              expanded={isAccountSheetOpen}
+            />
+            {/* Demo Control 触发器自管可见性（God Mode 关时返回 null） */}
+            <DemoControlTrigger />
+          </div>
 
-        <div
-          aria-label={t('readinessScore', { score: 80 })}
-          className="relative grid h-[44px] w-[44px] place-items-center rounded-full border-2 border-[var(--valo-text-primary)] text-sm font-semibold leading-none text-[var(--valo-text-primary)] shadow-[0_0_16px_color-mix(in_srgb,var(--valo-active)_42%,transparent)]"
-          data-valo-readiness-score="true"
-        >
-          <span
-            aria-hidden="true"
-            className="absolute -top-1 left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[var(--valo-active)]"
-          />
-          80
-        </div>
-      </header>
+          <div
+            aria-label="Valo"
+            className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          >
+            <ValoMark />
+          </div>
+
+          <div
+            aria-label={t('readinessScore', { score: 80 })}
+            className="relative grid h-10 w-10 place-items-center rounded-full border-2 border-[var(--valo-text-primary)] text-sm font-semibold leading-none text-[var(--valo-text-primary)] shadow-[0_0_16px_color-mix(in_srgb,var(--valo-active)_42%,transparent)]"
+            data-valo-readiness-score="true"
+          >
+            <span
+              aria-hidden="true"
+              className="absolute -top-1 left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[var(--valo-active)]"
+            />
+            80
+          </div>
+        </header>
+      </div>
 
       <AccountSwitcherSheet
         open={isAccountSheetOpen}
