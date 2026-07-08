@@ -180,7 +180,7 @@ describe('ReflectionSection', () => {
     expect(screen.queryByText('暂无洞察')).not.toBeInTheDocument();
   });
 
-  it('loaded 且带 microTips 时渲染 Tips 区与标题', () => {
+  it('loaded 且带 microTips 时渲染提示文本', () => {
     mockUseViewSummary.mockReturnValue(
       makeQueryResult({
         data: makeEnvelope({
@@ -191,12 +191,11 @@ describe('ReflectionSection', () => {
       }),
     );
     renderWithIntl(<ReflectionSection {...DEFAULT_PROPS} />);
-    expect(screen.getByText('建议动作')).toBeInTheDocument();
     expect(screen.getByText('多喝水')).toBeInTheDocument();
     expect(screen.getByText('适当拉伸')).toBeInTheDocument();
   });
 
-  it('microTips 为空数组时不渲染 Tips 区', () => {
+  it('microTips 为空数组时不渲染提示文本', () => {
     mockUseViewSummary.mockReturnValue(
       makeQueryResult({
         data: makeEnvelope({ summary: '概览', microTips: [] }),
@@ -204,7 +203,7 @@ describe('ReflectionSection', () => {
       }),
     );
     renderWithIntl(<ReflectionSection {...DEFAULT_PROPS} />);
-    expect(screen.queryByText('建议动作')).not.toBeInTheDocument();
+    expect(screen.queryByText('多喝水')).not.toBeInTheDocument();
   });
 
   it('microTips 项渲染为非交互 li（非按钮）', () => {
@@ -218,7 +217,7 @@ describe('ReflectionSection', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 
-  it('className 透传到 ValoCard 根节点', () => {
+  it('className 透传到 section 根节点', () => {
     mockUseViewSummary.mockReturnValue(makeQueryResult());
     renderWithIntl(
       <ReflectionSection {...DEFAULT_PROPS} className="mt-8 extra-class" />,
@@ -228,8 +227,7 @@ describe('ReflectionSection', () => {
     ) as HTMLElement;
     expect(root.className).toContain('mt-8');
     expect(root.className).toContain('extra-class');
-    // ValoCard 默认样式仍在
-    expect(root.className).toContain('rounded-2xl');
+    expect(root.className).not.toContain('rounded-2xl');
   });
 
   it('profileId 为 undefined 时 hook 仍被调用（调用方控制 enabled）', () => {

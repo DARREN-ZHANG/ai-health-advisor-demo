@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, Skeleton, EmptyState } from '@health-advisor/ui';
+import { Skeleton, EmptyState } from '@health-advisor/ui';
 import { m, AnimatePresence } from 'framer-motion';
 import { useTranslations } from 'next-intl';
 
@@ -22,12 +22,12 @@ export function ChartContainer({
   const t = useTranslations('common');
 
   return (
-    <Card className="flex flex-col gap-4 min-h-[400px]">
+    <section className="flex min-h-[318px] flex-col gap-[18px] px-4 pb-8 pt-[2px]">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-100">{title}</h3>
+        <h3 className="text-[13px] font-semibold leading-[18px] text-white">{title}</h3>
       </div>
 
-      <div className="flex-1 relative min-h-[300px]">
+      <div className="relative min-h-[260px] flex-1">
         <AnimatePresence mode="wait">
           {isLoading ? (
             <m.div
@@ -49,8 +49,8 @@ export function ChartContainer({
               className="absolute inset-0 flex items-center justify-center"
             >
               <div className="text-center space-y-2">
-                <p className="text-red-400 font-medium">{t('loadFailed')}</p>
-                <p className="text-slate-500 text-sm">{error}</p>
+                <p className="font-medium text-[var(--valo-depleted)]">{t('loadFailed')}</p>
+                <p className="text-sm text-white/45">{error}</p>
               </div>
             </m.div>
           ) : isEmpty ? (
@@ -76,6 +76,6 @@ export function ChartContainer({
           )}
         </AnimatePresence>
       </div>
-    </Card>
+    </section>
   );
 }

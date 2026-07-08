@@ -5,15 +5,11 @@ import { ChartRoot } from '@health-advisor/charts';
 import { DataCenterControls } from '@/components/data-center/DataCenterControls';
 import { ChartContainer } from '@/components/data-center/ChartContainer';
 import { OverviewGrid } from '@/components/data-center/OverviewGrid';
-import { DeviceStatusBar } from '@/components/data-center/DeviceStatusBar';
 import { ReflectionSection } from '@/components/data-center/ReflectionSection';
-import { SleepDetailView } from '@/components/data-center/SleepDetailView';
-import { ActivityDetailView } from '@/components/data-center/ActivityDetailView';
 import { ValoCard } from '@/components/valo/ValoCard';
 import { useDataCenterStore } from '@/stores/data-center.store';
 import { useProfileStore } from '@/stores/profile.store';
 import { useDataCenterQuery, useChartDataByTokenQuery } from '@/hooks/use-data-query';
-import { useDeviceSyncQuery } from '@/hooks/use-device-sync';
 import { useDataChartOption, createCompactChartOption } from '@/hooks/use-data-chart-option';
 import { useMemo } from 'react';
 import {
@@ -73,7 +69,7 @@ const TREND_TOKEN_IDS = TREND_TOKEN_CONFIGS.map((c) => c.tokenId);
 
 export default function DataCenterPage() {
   const { activeTab, timeframe, setActiveTab } = useDataCenterStore();
-  const { currentProfileId, currentProfile } = useProfileStore();
+  const { currentProfileId } = useProfileStore();
   const isOverview = activeTab === 'overview';
   const t = useTranslations('dataCenter');
 
@@ -138,31 +134,12 @@ export default function DataCenterPage() {
     return computeDailyAverage(activeTab, chartData);
   }, [timeframe, isOverview, activeTab, chartData]);
 
-  // 设备同步状态
-  const {
-    data: deviceData,
-    isLoading: isDeviceLoading,
-    isError: isDeviceError,
-  } = useDeviceSyncQuery(currentProfileId);
-
   return (
-    <Container className="py-6 space-y-6 relative pb-24">
-      <header>
-        {/* 页面名称改为 Trends，URL 维持 /data-center */}
-        <h1 className="text-2xl font-bold text-[var(--valo-text-primary)]">
-          {t('pageName')}
-        </h1>
-        <p className="text-sm text-[var(--valo-text-secondary)]">
-          {getSubtitle(timeframe, t)}
-        </p>
-      </header>
+    <Container className="relative max-w-[402px] px-0 pb-20 pt-[22px]">
+      <h1 className="sr-only">{t('pageTitle')}</h1>
 
-      {/* 控制卡：日期 + 指标 chips + 时间窗 */}
-      <ValoCard>
-        <DataCenterControls />
-      </ValoCard>
+      <DataCenterControls />
 
-      {/* Reflection：AI 洞察卡，内部自管请求状态 */}
       <ReflectionSection
         profileId={currentProfileId}
         pageContext={reflectionPageContext}
@@ -179,47 +156,29 @@ export default function DataCenterPage() {
         </ValoCard>
       )}
 
-      {/* 详情 Tab：sleep / activity 在图表上方插入今日快照详情卡 */}
-      {!isOverview && activeTab === 'sleep' && (
-        <SleepDetailView data={chartData as DataCenterResponse | null} profile={currentProfile} />
-      )}
-      {!isOverview && activeTab === 'activity' && (
-        <ActivityDetailView data={chartData as DataCenterResponse | null} />
-      )}
-
-      {/* 详情 Tab：日级别显示 24h 均值，周/月显示图表 */}
       {!isOverview && (
-        <ValoCard as="section" className="space-y-4">
-          <ChartContainer
-            title={t(TAB_TITLE_KEYS[activeTab] || 'dataMetric')}
-            isLoading={isAnyLoading}
-            isEmpty={isChartEmpty}
-            error={error ? t('loadFailedRetry') : undefined}
-          >
-            {timeframe === 'day'
-              ? dailyAvg != null && (
-                  <DailyAverageDisplay
-                    value={formatDailyValue(activeTab, dailyAvg)}
-                    unit={
-                      TAB_TOKEN_ID[activeTab as DataTab]
-                        ? localize(CHART_TOKEN_META[TAB_TOKEN_ID[activeTab as DataTab]!].unit, DEFAULT_LOCALE)
-                        : ''
-                    }
-                    label={t('avg24h')}
-                  />
-                )
-              : chartOption && <ChartRoot option={chartOption} height={350} />
-            }
-          </ChartContainer>
-        </ValoCard>
+        <ChartContainer
+          title={t(TAB_TITLE_KEYS[activeTab] || 'dataMetric')}
+          isLoading={isAnyLoading}
+          isEmpty={isChartEmpty}
+          error={error ? t('loadFailedRetry') : undefined}
+        >
+          {timeframe === 'day'
+            ? dailyAvg != null && (
+                <DailyAverageDisplay
+                  value={formatDailyValue(activeTab, dailyAvg)}
+                  unit={
+                    TAB_TOKEN_ID[activeTab as DataTab]
+                      ? localize(CHART_TOKEN_META[TAB_TOKEN_ID[activeTab as DataTab]!].unit, DEFAULT_LOCALE)
+                      : ''
+                  }
+                  label={t('avg24h')}
+                />
+              )
+            : chartOption && <ChartRoot option={chartOption} height={350} />
+          }
+        </ChartContainer>
       )}
-
-      {/* 底部状态栏 */}
-      <DeviceStatusBar
-        deviceData={deviceData}
-        isLoading={isDeviceLoading}
-        error={isDeviceError}
-      />
     </Container>
   );
 }
@@ -291,19 +250,6 @@ function formatDailyValue(tab: string, value: number): string {
 /* ────────────────────────────────────────────────────────────── */
 /*  辅助函数                                                     */
 /* ────────────────────────────────────────────────────────────── */
-
-function getSubtitle(timeframe: string, t: (key: string) => string): string {
-  switch (timeframe) {
-    case 'day':
-      return t('subtitleDay');
-    case 'week':
-      return t('subtitleWeek');
-    case 'month':
-      return t('subtitleMonth');
-    default:
-      return t('subtitleDefault');
-  }
-}
 
 function calculateChange(current: number | null | undefined, previous: number | null | undefined): number | undefined {
   if (current == null || previous == null || previous === 0) return undefined;
