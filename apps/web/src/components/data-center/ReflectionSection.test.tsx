@@ -191,8 +191,9 @@ describe('ReflectionSection', () => {
       }),
     );
     renderWithIntl(<ReflectionSection {...DEFAULT_PROPS} />);
-    expect(screen.getByText('多喝水')).toBeInTheDocument();
-    expect(screen.getByText('适当拉伸')).toBeInTheDocument();
+    // 多条建议被自然语言连接词合并为单段（中文 conjunction：A和B）
+    expect(screen.getByText('多喝水', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('适当拉伸', { exact: false })).toBeInTheDocument();
   });
 
   it('microTips 为空数组时不渲染提示文本', () => {
@@ -206,7 +207,7 @@ describe('ReflectionSection', () => {
     expect(screen.queryByText('多喝水')).not.toBeInTheDocument();
   });
 
-  it('microTips 项渲染为非交互 li（非按钮）', () => {
+  it('建议文本渲染为非交互段落（非按钮）', () => {
     mockUseViewSummary.mockReturnValue(
       makeQueryResult({
         data: makeEnvelope({ summary: 'x', microTips: ['提示一', '提示二'] }),

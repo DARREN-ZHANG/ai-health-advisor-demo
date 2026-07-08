@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useViewSummary } from '@/hooks/use-ai-query';
 import type { DataTab } from '@health-advisor/shared';
 
@@ -26,6 +26,7 @@ export function ReflectionSection({
   className = '',
 }: ReflectionSectionProps) {
   const t = useTranslations('dataCenter');
+  const locale = useLocale();
   const { tab, timeframe } = pageContext;
 
   // hook 始终被调用（Rules of Hooks）；profileId 为空时内部 enabled=false，
@@ -41,6 +42,15 @@ export function ReflectionSection({
   const summary = summaryData?.summary?.trim();
   const microTips = summaryData?.microTips ?? [];
   const hasSummary = !!summary;
+
+  // 将多条建议按当前 locale 自然连接为一句（中文「A、B和C」，英文「A, B, and C」），
+  // 形成与「分析」段并立的「建议」段，避免再以列表形式罗列。
+  const tipsText =
+    microTips.length > 0
+      ? new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' }).format(
+          microTips,
+        )
+      : '';
 
   return (
     <section
@@ -60,7 +70,7 @@ export function ReflectionSection({
           {t('reflection.empty')}
         </p>
       ) : (
-        <ReflectionContent summary={summary!} microTips={microTips} />
+        <ReflectionContent summary={summary!} tipsText={tipsText} />
       )}
     </section>
   );
@@ -82,30 +92,21 @@ function ReflectionSkeleton() {
 
 function ReflectionContent({
   summary,
-  microTips,
+  tipsText,
 }: {
   summary: string;
-  microTips: string[];
+  tipsText: string;
 }) {
   return (
-    <div className="space-y-[18px]">
+    <div className="space-y-[12px]">
       <p className="whitespace-pre-wrap text-[13px] font-normal leading-[19px] text-white/78">
         {summary}
       </p>
 
-      {microTips.length > 0 && (
-        <div className="space-y-[12px]">
-          <ul className="m-0 grid list-none grid-cols-1 gap-[12px] p-0">
-            {microTips.map((tip, idx) => (
-              <li
-                key={idx}
-                className="pl-[11px] text-[13px] leading-[19px] text-white/78"
-              >
-                {tip}
-              </li>
-            ))}
-          </ul>
-        </div>
+      {tipsText && (
+        <p className="whitespace-pre-wrap text-[13px] font-normal leading-[19px] text-white/78">
+          {tipsText}
+        </p>
       )}
     </div>
   );
