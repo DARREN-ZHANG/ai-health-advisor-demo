@@ -75,7 +75,7 @@ export function BottomNav() {
   return (
     <footer
       data-valo-bottomnav="true"
-      className="relative z-30 mx-auto mb-6 mt-8 w-[390px] max-w-[calc(100%-36px)]
+      className="relative z-30 mx-auto mb-6 mt-6 w-[390px] max-w-[calc(100%-36px)]
                  valo-bottomnav-safe"
     >
       <div className="flex h-[70px] items-center gap-5">
