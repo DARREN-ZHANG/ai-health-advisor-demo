@@ -168,13 +168,14 @@ describe('ActionCard', () => {
     expect(onYes).not.toHaveBeenCalled();
   });
 
-  it('按钮带 data-valo-touch="true"', () => {
+  it('确认按钮使用设计稿尺寸与文字大小', () => {
     renderWithIntl(
       <ActionCard action={makeAction()} onYes={() => {}} onNotNow={() => {}} />,
     );
-    expect(
-      screen.getByRole('button', { name: '确认' }).getAttribute('data-valo-touch'),
-    ).toBe('true');
+    const button = screen.getByRole('button', { name: '确认' });
+    expect(button.className).toContain('h-8');
+    expect(button.className).toContain('text-xs');
+    expect(button.className).toContain('leading-4');
   });
 
   it('无 description 时不渲染描述', () => {

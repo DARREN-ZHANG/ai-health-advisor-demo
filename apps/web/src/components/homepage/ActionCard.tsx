@@ -74,7 +74,7 @@ export function ActionCard({
 
   return (
     <li
-      className="flex min-h-[244px] shrink-0 flex-col justify-between rounded-lg bg-[var(--valo-surface)] p-3 shadow-[var(--valo-shadow-card)]"
+      className="flex min-h-[244px] shrink-0 flex-col justify-between rounded-lg bg-[var(--valo-surface)] px-3 py-6 shadow-[var(--valo-shadow-card)]"
       data-valo-action-tip-card=""
       style={{ flexBasis: 'calc((100% - 12px) / 1.8)' }}
     >
@@ -101,7 +101,6 @@ export function ActionCard({
           type="button"
           onClick={handleNotNow}
           disabled={pending}
-          data-valo-touch="true"
           className="rounded-full px-2 py-2 text-xs font-medium leading-4
                      text-[var(--valo-text-secondary)]
                      hover:text-[var(--valo-text-primary)] transition-colors
@@ -114,9 +113,8 @@ export function ActionCard({
           type="button"
           onClick={handleYes}
           disabled={pending}
-          data-valo-touch="true"
           aria-busy={pending}
-          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--valo-text-primary)] px-3 text-sm font-semibold leading-5
+          className="inline-flex h-8 items-center gap-1 rounded-md bg-[var(--valo-text-primary)] px-2.5 text-xs font-semibold leading-4
                      text-[var(--valo-canvas)]
                      hover:opacity-90 transition-opacity
                      focus-visible:outline-none focus-visible:[box-shadow:var(--valo-focus-ring)]
@@ -128,7 +126,7 @@ export function ActionCard({
               className="inline-block w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin"
             />
           ) : (
-            <CheckIcon aria-hidden="true" className="h-4 w-4" />
+            <CheckIcon aria-hidden="true" className="h-3.5 w-3.5" />
           )}
           {t('yes')}
         </button>
