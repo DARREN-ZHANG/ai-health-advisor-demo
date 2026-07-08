@@ -7,6 +7,7 @@ import { HealthHero } from '@/components/homepage/HealthHero';
 import { SwitchStatusDialog } from '@/components/homepage/SwitchStatusDialog';
 import { BriefTimeline } from '@/components/homepage/BriefTimeline';
 import { ActionCard } from '@/components/homepage/ActionCard';
+import { FutureTimelineBlock } from '@/components/homepage/FutureTimelineBlock';
 import { ActionTimerSheet } from '@/components/homepage/ActionTimerSheet';
 import { AppointmentSheet } from '@/components/homepage/AppointmentSheet';
 import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
@@ -99,6 +100,8 @@ export default function HomePage() {
     data?.summary ||
     (error ? t('briefNetworkError') : t('briefPreparing'));
   const actions = data?.actions ?? [];
+  // 未来时间点建议：LLM 基于今日已发生活动推断，缺失时降级为静态 Figma 文案
+  const futureSuggestions = data?.futureSuggestions ?? [];
 
   // 已记录/已加入日历/正在 Timer 或 Appointment 中 的 action 不再渲染为可交互卡片，
   // 避免用户在浮层打开期间重复点击 Yes。
@@ -176,14 +179,28 @@ export default function HomePage() {
               </ul>
             ) : null}
 
-            {/* 下午/晚间：Figma 静态双语示例，非 Agent 输出 */}
-            <StaticTimelineBlock title={t('afternoon.title')} time="15:00PM">
-              {t('afternoon.body')}
-            </StaticTimelineBlock>
+            {/* 下午/晚间：LLM futureSuggestions 优先；缺失时降级到 Figma 静态文案 */}
+            {futureSuggestions.length > 0 ? (
+              futureSuggestions.map((suggestion) => (
+                <FutureTimelineBlock
+                  key={suggestion.action.id}
+                  suggestion={suggestion}
+                  onYes={interactions.handleYes}
+                  onNotNow={interactions.handleNotNow}
+                  pending={interactions.pendingActionId === suggestion.action.id}
+                />
+              ))
+            ) : (
+              <>
+                <StaticTimelineBlock title={t('afternoon.title')} time="15:00PM">
+                  {t('afternoon.body')}
+                </StaticTimelineBlock>
 
-            <StaticTimelineBlock title={t('night.title')} time="22:45PM">
-              {t('night.body')}
-            </StaticTimelineBlock>
+                <StaticTimelineBlock title={t('night.title')} time="22:45PM">
+                  {t('night.body')}
+                </StaticTimelineBlock>
+              </>
+            )}
           </div>
 
           {/*
