@@ -7,7 +7,7 @@ import { type ReactNode } from 'react';
  *
  * 职责（最小必要）：
  * - 用 `--valo-canvas` 作为页面背景容器。
- * - 提供 `relative flex flex-col min-h-screen` 骨架与底部浮动导航预留 padding。
+ * - 提供 `relative flex flex-col min-h-screen` 骨架，让底部导航自然参与文档流。
  * - 透传 `Navbar`、`main`、`BottomNav`、悬浮触发器与 Toast 等。
  *
  * 不负责：
@@ -21,7 +21,7 @@ import { type ReactNode } from 'react';
 export interface AppShellProps {
   /** 顶部导航（Navbar） */
   navbar?: ReactNode;
-  /** 底部导航（BottomNav），固定在 Valo app 画布底部 */
+  /** 底部导航（BottomNav），位于文档流的页面底部 */
   bottomNav?: ReactNode;
   /** 右下角悬浮触发器（AI 入口等） */
   floating?: ReactNode;
@@ -43,7 +43,7 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <div
-      className={`relative flex flex-col min-h-screen pb-28 ${className}`.trim()}
+      className={`relative flex flex-col min-h-screen ${className}`.trim()}
       style={{
         backgroundColor: 'var(--valo-canvas)',
         color: 'var(--valo-text-primary)',

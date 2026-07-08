@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { BottomNav } from './BottomNav';
+import { useUIStore } from '@/stores/ui.store';
 
 /**
  * BottomNav 单元测试。
@@ -11,6 +12,9 @@ import { BottomNav } from './BottomNav';
  */
 
 const ZH_MESSAGES = {
+  common: {
+    openAIAdvisor: '打开 AI 顾问',
+  },
   nav: {
     home: '首页',
     trends: '趋势',
@@ -40,6 +44,7 @@ describe('BottomNav', () => {
   afterEach(() => {
     cleanup();
     setPathname('/');
+    useUIStore.setState({ isAdvisorDrawerOpen: false });
     vi.clearAllMocks();
   });
 
@@ -96,17 +101,17 @@ describe('BottomNav', () => {
     expect(homeLink?.className).toContain('text-[var(--valo-text-secondary)]');
   });
 
-  it('导航根容器使用 Figma 风格胶囊定位与 token 化边框', () => {
+  it('导航根容器位于文档流，使用 Figma 风格胶囊与 token 化边框', () => {
     renderWithIntl(<BottomNav />);
     const nav = document.querySelector('[data-valo-bottomnav="true"]') as HTMLElement;
     const style = nav.getAttribute('style') ?? '';
-    expect(style).toContain('left: max(18px');
-    expect(style).toContain('50% - 178px');
     expect(style).toContain('var(--valo-border)');
-    expect(nav.className).toContain('fixed');
-    expect(nav.className).toContain('bottom-0');
+    expect(nav.tagName).toBe('FOOTER');
+    expect(nav.className).toContain('relative');
+    expect(nav.className).not.toContain('fixed');
     expect(nav.className).not.toContain('sticky');
-    expect(nav.className).toContain('w-[276px]');
+    expect(nav.className).not.toContain('bottom-0');
+    expect(nav.className).toContain('w-[320px]');
     expect(nav.className).toContain('rounded-[34px]');
     expect(nav.className).not.toContain('md:hidden');
     // safe-area 通过 globals.css 的 .valo-bottomnav-safe 钩子注入
@@ -120,10 +125,34 @@ describe('BottomNav', () => {
   it('激活项使用 Figma 风格 rounded pill，而不是底部小圆点', () => {
     renderWithIntl(<BottomNav />);
     const homeLink = screen.getByText('首页').closest('a');
-    expect(homeLink?.className).toContain('rounded-[28px]');
-    expect(homeLink?.className).toContain('bg-[rgba(31,30,39,0.92)]');
+    const activePill = homeLink?.querySelector('[data-valo-nav-pill="active"]');
+    expect(activePill).not.toBeNull();
+    expect(activePill?.className).toContain('rounded-full');
+    expect(activePill?.className).toContain('bg-[rgba(255,255,255,0.08)]');
     const dot = homeLink?.querySelector('span[aria-hidden="true"]');
     expect(dot).toBeNull();
+  });
+
+  it('Advisor Chat 入口使用 chat-entrance 图片并打开抽屉', () => {
+    const toggleSpy = vi.spyOn(useUIStore.getState(), 'toggleAdvisorDrawer');
+    renderWithIntl(<BottomNav />);
+    const button = screen.getByRole('button', { name: '打开 AI 顾问' });
+    const image = button.querySelector('img');
+    expect(button.getAttribute('data-valo-advisor-trigger')).toBe('true');
+    expect(image?.getAttribute('src')).toContain('chat-entrance.png');
+    fireEvent.click(button);
+    expect(toggleSpy).toHaveBeenCalledWith(true);
+    toggleSpy.mockRestore();
+  });
+
+  it('Advisor Chat 入口位于 Navigation 链接右侧', () => {
+    renderWithIntl(<BottomNav />);
+    const nav = document.querySelector('[data-valo-bottomnav="true"] nav');
+    const children = Array.from(nav?.children ?? []);
+    const my = document.querySelector('[data-valo-nav-item="my"]');
+    const chat = document.querySelector('[data-valo-advisor-trigger="true"]');
+    expect(children.indexOf(my as Element)).toBe(2);
+    expect(children.indexOf(chat as Element)).toBe(3);
   });
 
   it('切换到 /data-center 时激活态从 home 切到 trends', () => {

@@ -41,11 +41,11 @@ describe('AppShell', () => {
     expect(main?.className).toContain('min-h-0');
   });
 
-  it('根容器有 min-h-screen 与底部浮动导航预留 padding', () => {
+  it('根容器有 min-h-screen，底部导航由文档流托底', () => {
     const { container } = render(<AppShell>内容</AppShell>);
     const root = container.firstElementChild as HTMLElement;
     expect(root.className).toContain('min-h-screen');
-    expect(root.className).toContain('pb-28');
+    expect(root.className).not.toContain('pb-28');
     expect(root.className).not.toContain('md:pb-0');
   });
 

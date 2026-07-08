@@ -5,7 +5,6 @@ import { Navbar } from '@/components/layout/Navbar';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { AppShell } from '@/components/layout/AppShell';
 import { ToastContainer } from '@/components/layout/ToastContainer';
-import { AIAdvisorTrigger } from '@/components/advisor/AIAdvisorTrigger';
 import { AIAdvisorDrawer } from '@/components/advisor/AIAdvisorDrawer';
 // I3.1：DemoControlTrigger 已迁回 HomeHeader（Avatar 旁，符合设计稿）。
 // 这里仍全局挂载 DemoControlDrawer（通过 MountedDemoControl 包装），
@@ -54,7 +53,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   因此不再 fixed 定位；Drawer 自身会以 fixed 遮罩形式呈现。
                 */}
                 <MountedDemoControl />
-                <AIAdvisorTrigger />
                 <AIAdvisorDrawer />
               </>
             }
