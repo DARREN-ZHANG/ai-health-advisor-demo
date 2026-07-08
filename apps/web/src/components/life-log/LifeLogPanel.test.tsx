@@ -107,29 +107,6 @@ describe('LifeLogPanel', () => {
     expect(screen.getAllByText(/今日: 0 杯 \(0mg\)/).length).toBeGreaterThan(0);
   });
 
-  it('自定义新增：填写 cups 与 note 后保存', () => {
-    renderWithIntl(<LifeLogPanel />);
-    // 点击 caffeine 区块的自定义按钮
-    const customAddButtons = screen.getAllByRole('button', { name: '自定义' });
-    fireEvent.click(customAddButtons[0]!);
-    // 弹出 Sheet/Dialog，找到 cups 输入框（移动端 + 桌面端各一）
-    const cupsInputs = screen.getAllByRole('spinbutton');
-    expect(cupsInputs.length).toBeGreaterThan(0);
-    // 修改 cups 为 2
-    fireEvent.change(cupsInputs[0]!, { target: { value: '2' } });
-    // 找 note textarea 并填写
-    const noteInputs = screen.getAllByPlaceholderText('可选备注');
-    fireEvent.change(noteInputs[0]!, { target: { value: 'morning shot' } });
-    // 保存
-    const saveButtons = screen.getAllByRole('button', { name: '保存' });
-    fireEvent.click(saveButtons[0]!);
-    // 列表中出现 2 杯 · 100mg
-    expect(screen.getByText(/2杯 · 100mg/)).toBeTruthy();
-    expect(screen.getByText('morning shot')).toBeTruthy();
-    // 浮层关闭：保存按钮不再可见
-    expect(screen.queryAllByRole('button', { name: '保存' })).toHaveLength(0);
-  });
-
   it('编辑现有条目：修改 cups 后保存', () => {
     renderWithIntl(<LifeLogPanel />);
     // 先快捷加 1 杯

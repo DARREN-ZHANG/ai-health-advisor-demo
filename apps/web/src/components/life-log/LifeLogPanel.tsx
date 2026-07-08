@@ -28,10 +28,7 @@ const EMPTY_ENTRIES: ReadonlyArray<LifeLogEntry> = [];
  * - 切换 profile 时 React 自动重新订阅，仅显示当前 profile 的条目。
  *
  * 浮层状态：
- * - `addFor` —— 当前打开的"自定义新增"类目（null 表示关闭）。
  * - `editingEntry` —— 当前编辑的 entry（null 表示关闭）。
- *
- * 互斥：add 与 edit 不会同时打开；打开 add 时若在 edit 状态，先关 edit。
  *
  * **不持久化**：刷新页面后 zustand 内存被清空，所有 entries 消失。这是
  * Life Log 作为交互式原型的设计意图，并非 bug。
@@ -52,7 +49,6 @@ export function LifeLogPanel() {
   const deleteEntry = useLifeLogStore((s) => s.deleteEntry);
 
   // 浮层状态
-  const [addFor, setAddFor] = useState<LifeLogCategory | null>(null);
   const [editingEntry, setEditingEntry] = useState<LifeLogEntry | null>(null);
 
   // 按时间倒序排序（最新在前）
@@ -84,31 +80,16 @@ export function LifeLogPanel() {
     });
   }
 
-  function handleOpenCustomAdd(type: LifeLogCategory) {
-    setEditingEntry(null);
-    setAddFor(type);
-  }
-
   function handleOpenEdit(entry: LifeLogEntry) {
-    setAddFor(null);
     setEditingEntry(entry);
   }
 
   function handleClose() {
-    setAddFor(null);
     setEditingEntry(null);
   }
 
   function handleSubmitAdd(values: EntrySheetValues) {
-    if (addFor) {
-      addEntry({
-        profileId,
-        type: addFor,
-        cups: values.cups,
-        timestamp: values.timestamp,
-        note: values.note,
-      });
-    } else if (editingEntry) {
+    if (editingEntry) {
       updateEntry(profileId, editingEntry.id, {
         cups: values.cups,
         timestamp: values.timestamp,
@@ -127,7 +108,7 @@ export function LifeLogPanel() {
       <header className="mb-4 space-y-1">
         <div className="flex items-baseline gap-2">
           <h2
-            className="text-[23px] leading-none text-[var(--valo-text-primary)]"
+            className="text-2xl leading-7 text-[var(--valo-text-primary)]"
             data-valo-serif="true"
           >
             {t('title')}
@@ -139,7 +120,7 @@ export function LifeLogPanel() {
             {t('sessionOnlyBadge')}
           </span>
         </div>
-        <p className="max-w-[31ch] text-[13px] leading-[1.28] text-[var(--valo-text-secondary)]">
+        <p className="max-w-[31ch] text-[13px] leading-4 text-[var(--valo-text-secondary)]">
           {t('description')}
         </p>
       </header>
@@ -151,17 +132,16 @@ export function LifeLogPanel() {
             type={type}
             entries={entriesByType[type]}
             onQuickAdd={handleQuickAdd}
-            onCustomAdd={handleOpenCustomAdd}
             onEdit={handleOpenEdit}
             onDelete={handleDelete}
           />
         ))}
       </div>
 
-      {(addFor || editingEntry) && (
+      {editingEntry && (
         <LifeLogEntrySheet
           open
-          type={(addFor ?? editingEntry?.type) as LifeLogCategory}
+          type={editingEntry.type}
           initialEntry={editingEntry}
           onSubmit={handleSubmitAdd}
           onClose={handleClose}
