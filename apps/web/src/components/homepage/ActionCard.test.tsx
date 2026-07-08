@@ -143,6 +143,17 @@ describe('ActionCard', () => {
     expect(button.querySelector('svg')).not.toBeNull();
   });
 
+  it('移动端行动卡片按约 1.8 张可见设置宽度', () => {
+    renderWithIntl(
+      <ActionCard action={makeAction()} onYes={() => {}} onNotNow={() => {}} />,
+    );
+    const card = document.querySelector('[data-valo-action-tip-card]');
+    expect(card).not.toBeNull();
+    expect((card as HTMLElement).style.flexBasis).toBe(
+      'calc(0.5555555555555556 * (100% - 12px))',
+    );
+  });
+
   it('pending 状态下点击 Yes 不触发回调', () => {
     const onYes = vi.fn();
     renderWithIntl(

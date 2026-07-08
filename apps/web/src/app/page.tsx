@@ -160,7 +160,10 @@ export default function HomePage() {
             />
 
             {visibleActions.length > 0 ? (
-              <ul className="grid grid-cols-2 gap-3 list-none p-0 m-0 pl-8">
+              <ul
+                className="-mt-2 flex gap-3 overflow-x-auto overscroll-x-contain list-none p-0 pb-1 pl-8 pr-8 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                data-valo-action-tips=""
+              >
                 {visibleActions.map((action: ActionOption) => (
                   <ActionCard
                     key={action.id}

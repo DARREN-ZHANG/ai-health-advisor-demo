@@ -73,32 +73,36 @@ export function ActionCard({
   }
 
   return (
-    <li className="flex min-h-[244px] flex-col justify-between rounded-lg bg-[var(--valo-surface)] p-4 shadow-[var(--valo-shadow-card)]">
-      <div className="space-y-5 text-center">
+    <li
+      className="flex min-h-[244px] shrink-0 flex-col justify-between rounded-lg bg-[var(--valo-surface)] p-3 shadow-[var(--valo-shadow-card)]"
+      data-valo-action-tip-card=""
+      style={{ flexBasis: 'calc((100% - 12px) / 1.8)' }}
+    >
+      <div className="space-y-4 text-center">
         <div className="space-y-2">
           {action.emoji ? (
             <span aria-hidden="true" className="block text-2xl leading-none">
               {action.emoji}
             </span>
           ) : null}
-          <h3 className="text-base font-semibold text-[var(--valo-text-primary)]">
+          <h3 className="text-sm font-semibold leading-5 text-[var(--valo-text-primary)]">
             {action.title}
           </h3>
         </div>
         {action.description ? (
-          <p className="text-left text-[15px] leading-6 text-[color-mix(in_srgb,var(--valo-text-primary)_82%,transparent)]">
+          <p className="text-left text-sm leading-5 text-[color-mix(in_srgb,var(--valo-text-primary)_82%,transparent)]">
             {action.description}
           </p>
         ) : null}
       </div>
 
-      <div className="mt-5 flex items-center justify-end gap-3">
+      <div className="mt-4 flex items-center justify-end gap-3">
         <button
           type="button"
           onClick={handleNotNow}
           disabled={pending}
           data-valo-touch="true"
-          className="rounded-full px-3 py-2 text-sm font-medium
+          className="rounded-full px-2 py-2 text-xs font-medium leading-4
                      text-[var(--valo-text-secondary)]
                      hover:text-[var(--valo-text-primary)] transition-colors
                      focus-visible:outline-none focus-visible:[box-shadow:var(--valo-focus-ring)]
@@ -112,7 +116,7 @@ export function ActionCard({
           disabled={pending}
           data-valo-touch="true"
           aria-busy={pending}
-          className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--valo-text-primary)] px-3 text-sm font-semibold
+          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--valo-text-primary)] px-3 text-sm font-semibold leading-5
                      text-[var(--valo-canvas)]
                      hover:opacity-90 transition-opacity
                      focus-visible:outline-none focus-visible:[box-shadow:var(--valo-focus-ring)]

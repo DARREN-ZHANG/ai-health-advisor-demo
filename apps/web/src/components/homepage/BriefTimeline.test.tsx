@@ -20,6 +20,14 @@ describe('BriefTimeline', () => {
     expect(screen.getByText('现在')).toBeInTheDocument();
   });
 
+  it('Now 左侧箭头使用标题行高居中容器', () => {
+    renderWithIntl(<BriefTimeline summary="x" />);
+    const arrow = document.querySelector('[data-valo-now-arrow]');
+    expect(arrow).not.toBeNull();
+    expect(arrow?.className).toContain('h-5');
+    expect(arrow?.className).toContain('leading-5');
+  });
+
   it('渲染 microTips 列表', () => {
     renderWithIntl(
       <BriefTimeline summary="x" microTips={['多喝水', '适当拉伸']} />,

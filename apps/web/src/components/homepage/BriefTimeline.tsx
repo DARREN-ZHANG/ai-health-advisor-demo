@@ -43,7 +43,8 @@ export function BriefTimeline({
     <section aria-label={t('now')} className="relative pl-8" data-valo-brief-timeline="">
       <span
         aria-hidden="true"
-        className="absolute left-0 top-1 text-[26px] leading-none text-[var(--valo-prime)] drop-shadow-[0_0_8px_var(--valo-prime)]"
+        className="absolute left-0 top-0 flex h-5 w-5 items-center justify-center text-[20px] leading-5 text-[var(--valo-prime)] drop-shadow-[0_0_8px_var(--valo-prime)]"
+        data-valo-now-arrow=""
       >
         ➤
       </span>
