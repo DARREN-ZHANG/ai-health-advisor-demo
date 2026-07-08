@@ -108,8 +108,8 @@ export function HeroGlowCanvas({ state }: HeroGlowCanvasProps) {
       const ring = getRingGeometry();
       if (!ring) return;
 
-      const curveEdgeY = Math.min(height, ring.cy + ring.radius * 1.04);
-      const curveControlY = Math.min(height + ring.radius * 0.14, ring.cy + ring.radius * 1.72);
+      const curveEdgeY = Math.min(height, ring.cy + ring.radius * 0.66);
+      const curveControlY = Math.min(height + ring.radius * 0.14, ring.cy + ring.radius * 1.52);
       const starFieldBottom = Math.min(height, (curveEdgeY + curveControlY) / 2);
 
       ctx.clearRect(0, 0, width, height);
@@ -152,6 +152,65 @@ export function HeroGlowCanvas({ state }: HeroGlowCanvasProps) {
           [1, 'rgba(3,6,9,0)'],
         ],
       });
+      ctx.restore();
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ring.cx, ring.cy, ring.radius - 5, 0, Math.PI * 2);
+      ctx.clip();
+
+      const innerHorizonLeft = ring.cx - ring.radius * 1.05;
+      const innerHorizonRight = ring.cx + ring.radius * 1.05;
+      const innerHorizonEdgeY = ring.cy + ring.radius * 0.45;
+      const innerHorizonControlY = ring.cy + ring.radius * 0.82;
+
+      ctx.beginPath();
+      ctx.moveTo(innerHorizonLeft, innerHorizonEdgeY);
+      ctx.quadraticCurveTo(
+        ring.cx,
+        innerHorizonControlY,
+        innerHorizonRight,
+        innerHorizonEdgeY,
+      );
+      ctx.lineTo(innerHorizonRight, ring.cy + ring.radius * 1.18);
+      ctx.lineTo(innerHorizonLeft, ring.cy + ring.radius * 1.18);
+      ctx.closePath();
+      const innerGlow = ctx.createLinearGradient(
+        0,
+        innerHorizonEdgeY,
+        0,
+        ring.cy + ring.radius,
+      );
+      innerGlow.addColorStop(0, colorWithAlpha(primeColor, 0.08));
+      innerGlow.addColorStop(0.5, colorWithAlpha(primeColor, 0.24));
+      innerGlow.addColorStop(1, colorWithAlpha(primeColor, 0.38));
+      ctx.fillStyle = innerGlow;
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = colorWithAlpha(primeColor, 0.3);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(innerHorizonLeft, ring.cy - ring.radius);
+      ctx.lineTo(innerHorizonLeft, innerHorizonEdgeY);
+      ctx.quadraticCurveTo(
+        ring.cx,
+        innerHorizonControlY,
+        innerHorizonRight,
+        innerHorizonEdgeY,
+      );
+      ctx.lineTo(innerHorizonRight, ring.cy - ring.radius);
+      ctx.closePath();
+      const innerSky = ctx.createLinearGradient(
+        0,
+        ring.cy - ring.radius,
+        0,
+        innerHorizonControlY,
+      );
+      innerSky.addColorStop(0, 'rgba(2,2,5,0.82)');
+      innerSky.addColorStop(0.74, 'rgba(2,2,5,0.58)');
+      innerSky.addColorStop(1, 'rgba(2,2,5,0.16)');
+      ctx.fillStyle = innerSky;
+      ctx.fill();
       ctx.restore();
 
       for (const star of stars) {
