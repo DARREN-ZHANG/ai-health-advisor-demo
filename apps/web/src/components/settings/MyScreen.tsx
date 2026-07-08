@@ -26,10 +26,10 @@ export function MyScreen() {
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10"
+        className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-full max-w-[402px] -translate-x-1/2"
         style={{
           background:
-            'radial-gradient(circle at 86% 31%, rgba(71, 74, 155, 0.34) 0, rgba(71, 74, 155, 0.12) 18%, transparent 42%), radial-gradient(circle at 45% 86%, rgba(94, 53, 178, 0.32) 0, rgba(94, 53, 178, 0.14) 22%, transparent 50%), var(--valo-canvas)',
+            'radial-gradient(ellipse 150px 230px at 360px 265px, rgba(86, 80, 171, 0.44) 0, rgba(86, 80, 171, 0.22) 32%, rgba(86, 80, 171, 0.08) 52%, transparent 72%), radial-gradient(ellipse 230px 190px at 150px 610px, rgba(104, 56, 174, 0.44) 0, rgba(104, 56, 174, 0.18) 42%, transparent 74%), var(--valo-canvas)',
         }}
       />
 
