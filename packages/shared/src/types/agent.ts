@@ -48,6 +48,18 @@ export interface ActionOption {
   interaction?: ActionInteraction;
 }
 
+/** 未来时间点建议（解释型：预测 + 行动） */
+export interface FutureSuggestion {
+  /** 建议的时间点，格式 "HH:mm"，必须在 (demoNow, 23:59] 区间 */
+  timePoint: string;
+  /** 预测的生理状态（概率性语言，如 "HRV 预计降到全天最低 ~32ms"） */
+  predictedState: string;
+  /** 推断依据（如 "今天已记录 2 杯咖啡，咖啡因代谢影响"） */
+  rationale: string;
+  /** 行动建议（复用 ActionOption，保留 micro_event/calendar 交互） */
+  action: ActionOption;
+}
+
 export type MemoryCandidateKind =
   | 'allergy'
   | 'medical_constraint'
@@ -75,6 +87,8 @@ export interface AgentResponseEnvelope {
   /** LLM 生成的 actions 区段标题，用于替代前端硬编码文案 */
   actionsSectionTitle?: string;
   memoryCandidates?: MemoryCandidateConfirmation[];
+  /** 当天剩余时间的 1-2 个未来时间点建议（homepage 任务输出） */
+  futureSuggestions?: FutureSuggestion[];
   meta: {
     taskType: AgentTaskType;
     pageContext: PageContext;

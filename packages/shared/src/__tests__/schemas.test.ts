@@ -8,6 +8,7 @@ import {
   DataTabSchema,
   TimeframeSchema,
   PageContextSchema,
+  FutureSuggestionSchema,
 } from '../schemas/agent';
 import { ErrorCodeSchema, ApiResponseSchema } from '../schemas/api';
 import {
@@ -55,7 +56,10 @@ describe('SandboxProfileSchema', () => {
     age: 32,
     gender: 'male' as const,
     avatar: '👨‍💻',
-    tags: [{ zh: '恢复稳定', en: 'Stable Recovery' }, { zh: '睡眠质量优', en: 'Excellent Sleep' }],
+    tags: [
+      { zh: '恢复稳定', en: 'Stable Recovery' },
+      { zh: '睡眠质量优', en: 'Excellent Sleep' },
+    ],
     baseline: { restingHr: 62, hrv: 58, spo2: 98, avgSleepMinutes: 420, avgSteps: 8500 },
   };
 
@@ -327,7 +331,6 @@ describe('GodMode Schemas', () => {
   it('ResetPayloadSchema rejects invalid scope', () => {
     expect(() => ResetPayloadSchema.parse({ scope: 'invalid' })).toThrow();
   });
-
 });
 
 describe('Stress Schemas', () => {
@@ -390,10 +393,17 @@ describe('ErrorCodeSchema', () => {
 describe('ActivitySegmentTypeSchema', () => {
   it('accepts all valid segment types', () => {
     const types = [
-      'meal_intake', 'steady_cardio', 'prolonged_sedentary',
-      'intermittent_exercise', 'walk', 'sleep',
-      'deep_focus', 'anxiety_episode',
-      'alcohol_intake', 'caffeine_intake', 'relaxation',
+      'meal_intake',
+      'steady_cardio',
+      'prolonged_sedentary',
+      'intermittent_exercise',
+      'walk',
+      'sleep',
+      'deep_focus',
+      'anxiety_episode',
+      'alcohol_intake',
+      'caffeine_intake',
+      'relaxation',
       'strength_training',
     ];
     types.forEach((t) => {
@@ -418,7 +428,9 @@ describe('DemoClockSchema', () => {
   });
 
   it('rejects invalid currentTime format', () => {
-    expect(() => DemoClockSchema.parse({ ...validClock, currentTime: '2026-04-21 09:30' })).toThrow();
+    expect(() =>
+      DemoClockSchema.parse({ ...validClock, currentTime: '2026-04-21 09:30' }),
+    ).toThrow();
   });
 
   it('rejects missing required fields', () => {
@@ -468,7 +480,16 @@ describe('ActivitySegmentSchema', () => {
 
 describe('DeviceMetricSchema', () => {
   it('accepts all valid metrics', () => {
-    const metrics = ['heartRate', 'steps', 'spo2', 'motion', 'sleepStage', 'wearState', 'hrvRmssd', 'stressLoad'];
+    const metrics = [
+      'heartRate',
+      'steps',
+      'spo2',
+      'motion',
+      'sleepStage',
+      'wearState',
+      'hrvRmssd',
+      'stressLoad',
+    ];
     metrics.forEach((m) => {
       expect(DeviceMetricSchema.parse(m)).toBe(m);
     });
@@ -574,7 +595,11 @@ describe('SyncSessionSchema', () => {
 
   // 注意：schema 不校验 startedAt <= finishedAt 语义约束，业务层需自行处理
   it('schema 允许 startedAt 晚于 finishedAt（语义无效但 schema 通过）', () => {
-    const session = { ...validSession, startedAt: '2026-04-21T10:00', finishedAt: '2026-04-21T09:00' };
+    const session = {
+      ...validSession,
+      startedAt: '2026-04-21T10:00',
+      finishedAt: '2026-04-21T09:00',
+    };
     expect(() => SyncSessionSchema.parse(session)).not.toThrow();
   });
 });
@@ -582,10 +607,17 @@ describe('SyncSessionSchema', () => {
 describe('RecognizedEventTypeSchema', () => {
   it('accepts same values as ActivitySegmentType', () => {
     const types = [
-      'meal_intake', 'steady_cardio', 'prolonged_sedentary',
-      'intermittent_exercise', 'walk', 'sleep',
-      'deep_focus', 'anxiety_episode',
-      'alcohol_intake', 'caffeine_intake', 'relaxation',
+      'meal_intake',
+      'steady_cardio',
+      'prolonged_sedentary',
+      'intermittent_exercise',
+      'walk',
+      'sleep',
+      'deep_focus',
+      'anxiety_episode',
+      'alcohol_intake',
+      'caffeine_intake',
+      'relaxation',
       'strength_training',
     ];
     types.forEach((t) => {
@@ -594,11 +626,15 @@ describe('RecognizedEventTypeSchema', () => {
   });
 
   it('accepts possible_caffeine_intake', () => {
-    expect(RecognizedEventTypeSchema.parse('possible_caffeine_intake')).toBe('possible_caffeine_intake');
+    expect(RecognizedEventTypeSchema.parse('possible_caffeine_intake')).toBe(
+      'possible_caffeine_intake',
+    );
   });
 
   it('accepts possible_alcohol_intake', () => {
-    expect(RecognizedEventTypeSchema.parse('possible_alcohol_intake')).toBe('possible_alcohol_intake');
+    expect(RecognizedEventTypeSchema.parse('possible_alcohol_intake')).toBe(
+      'possible_alcohol_intake',
+    );
   });
 
   it('rejects invalid recognized event type', () => {
@@ -722,11 +758,15 @@ describe('TimelineAppendPayloadSchema', () => {
 
 describe('SyncTriggerPayloadSchema', () => {
   it('accepts app_open trigger', () => {
-    expect(SyncTriggerPayloadSchema.parse({ trigger: 'app_open' })).toEqual({ trigger: 'app_open' });
+    expect(SyncTriggerPayloadSchema.parse({ trigger: 'app_open' })).toEqual({
+      trigger: 'app_open',
+    });
   });
 
   it('accepts manual_refresh trigger', () => {
-    expect(SyncTriggerPayloadSchema.parse({ trigger: 'manual_refresh' })).toEqual({ trigger: 'manual_refresh' });
+    expect(SyncTriggerPayloadSchema.parse({ trigger: 'manual_refresh' })).toEqual({
+      trigger: 'manual_refresh',
+    });
   });
 
   it('rejects invalid trigger', () => {
@@ -766,10 +806,20 @@ describe('ResetProfileTimelinePayloadSchema', () => {
 describe('MotionPatternSchema', () => {
   it('accepts all 14 valid motion patterns', () => {
     const patterns = [
-      'still_supine', 'still_upright', 'still_with_micro',
-      'periodic_stroll', 'periodic_walk', 'periodic_brisk', 'periodic_run', 'periodic_arm_repeat',
-      'intermittent_reach', 'intermittent_gesture', 'intermittent_burst',
-      'irregular_fidget', 'irregular_restless', 'irregular_sudden',
+      'still_supine',
+      'still_upright',
+      'still_with_micro',
+      'periodic_stroll',
+      'periodic_walk',
+      'periodic_brisk',
+      'periodic_run',
+      'periodic_arm_repeat',
+      'intermittent_reach',
+      'intermittent_gesture',
+      'intermittent_burst',
+      'irregular_fidget',
+      'irregular_restless',
+      'irregular_sudden',
     ];
     patterns.forEach((p) => {
       expect(MotionPatternSchema.parse(p)).toBe(p);
@@ -899,7 +949,11 @@ describe('AgentResponseEnvelopeSchema — actions & microTips optional', () => {
           aiPromise: '我会记录你的选择并用于本次建议上下文',
         },
       ],
-      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+      meta: {
+        taskType: 'homepage_summary',
+        pageContext: validPageContext,
+        finishReason: 'complete',
+      },
     };
     const result = AgentResponseEnvelopeSchema.safeParse(envelope);
     expect(result.success).toBe(true);
@@ -916,7 +970,11 @@ describe('AgentResponseEnvelopeSchema — actions & microTips optional', () => {
       statusColor: 'good',
       chartTokens: [],
       microTips: [],
-      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+      meta: {
+        taskType: 'homepage_summary',
+        pageContext: validPageContext,
+        finishReason: 'complete',
+      },
     };
     const result = AgentResponseEnvelopeSchema.safeParse(envelope);
     expect(result.success).toBe(true);
@@ -931,7 +989,11 @@ describe('AgentResponseEnvelopeSchema — actions & microTips optional', () => {
       source: 'llm',
       statusColor: 'good',
       chartTokens: [],
-      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+      meta: {
+        taskType: 'homepage_summary',
+        pageContext: validPageContext,
+        finishReason: 'complete',
+      },
     };
     const result = AgentResponseEnvelopeSchema.safeParse(envelope);
     expect(result.success).toBe(true);
@@ -954,7 +1016,11 @@ describe('AgentResponseEnvelopeSchema — actions & microTips optional', () => {
       statusColor: 'good',
       chartTokens: [],
       actions,
-      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+      meta: {
+        taskType: 'homepage_summary',
+        pageContext: validPageContext,
+        finishReason: 'complete',
+      },
     };
     const result = AgentResponseEnvelopeSchema.safeParse(envelope);
     expect(result.success).toBe(false);
@@ -967,7 +1033,11 @@ describe('AgentResponseEnvelopeSchema — actions & microTips optional', () => {
       statusColor: 'good',
       chartTokens: [],
       actions: [{ id: 'opt-1', emoji: '🚶' }],
-      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+      meta: {
+        taskType: 'homepage_summary',
+        pageContext: validPageContext,
+        finishReason: 'complete',
+      },
     };
     const result = AgentResponseEnvelopeSchema.safeParse(envelope);
     expect(result.success).toBe(false);
@@ -979,18 +1049,24 @@ describe('AgentResponseEnvelopeSchema — actions & microTips optional', () => {
       source: 'llm',
       statusColor: 'good',
       chartTokens: [],
-      actions: [{
-        id: 'calendar-1',
-        emoji: '☕',
-        title: '延后咖啡',
-        description: '把咖啡安排到 10:30 后',
-        aiPromise: '我会记录你的选择并用于本次建议上下文',
-        interaction: {
-          kind: 'calendar',
-          calendar: { title: '10:30 后再喝咖啡', timingLabel: '今天 10:30', durationMinutes: 15 },
+      actions: [
+        {
+          id: 'calendar-1',
+          emoji: '☕',
+          title: '延后咖啡',
+          description: '把咖啡安排到 10:30 后',
+          aiPromise: '我会记录你的选择并用于本次建议上下文',
+          interaction: {
+            kind: 'calendar',
+            calendar: { title: '10:30 后再喝咖啡', timingLabel: '今天 10:30', durationMinutes: 15 },
+          },
         },
-      }],
-      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+      ],
+      meta: {
+        taskType: 'homepage_summary',
+        pageContext: validPageContext,
+        finishReason: 'complete',
+      },
     };
 
     expect(AgentResponseEnvelopeSchema.safeParse(envelope).success).toBe(true);
@@ -1002,18 +1078,28 @@ describe('AgentResponseEnvelopeSchema — actions & microTips optional', () => {
       source: 'llm',
       statusColor: 'good',
       chartTokens: [],
-      actions: [{
-        id: 'micro-1',
-        emoji: '🫁',
-        title: '做几次深呼吸',
-        description: '现在做 3 分钟缓慢呼吸',
-        aiPromise: '我会记录你的选择并更新实时简报',
-        interaction: {
-          kind: 'micro_event',
-          microEvent: { type: 'micro_deep_breathing', durationMinutes: 3, params: { pattern: 'extended_exhale' } },
+      actions: [
+        {
+          id: 'micro-1',
+          emoji: '🫁',
+          title: '做几次深呼吸',
+          description: '现在做 3 分钟缓慢呼吸',
+          aiPromise: '我会记录你的选择并更新实时简报',
+          interaction: {
+            kind: 'micro_event',
+            microEvent: {
+              type: 'micro_deep_breathing',
+              durationMinutes: 3,
+              params: { pattern: 'extended_exhale' },
+            },
+          },
         },
-      }],
-      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+      ],
+      meta: {
+        taskType: 'homepage_summary',
+        pageContext: validPageContext,
+        finishReason: 'complete',
+      },
     };
 
     expect(AgentResponseEnvelopeSchema.safeParse(envelope).success).toBe(true);
@@ -1025,18 +1111,24 @@ describe('AgentResponseEnvelopeSchema — actions & microTips optional', () => {
       source: 'llm',
       statusColor: 'good',
       chartTokens: [],
-      actions: [{
-        id: 'micro-invalid',
-        emoji: '💧',
-        title: '补水',
-        description: '喝一杯水',
-        aiPromise: '我会记录你的选择并用于本次建议上下文',
-        interaction: {
-          kind: 'micro_event',
-          microEvent: { type: 'micro_hydration_break' },
+      actions: [
+        {
+          id: 'micro-invalid',
+          emoji: '💧',
+          title: '补水',
+          description: '喝一杯水',
+          aiPromise: '我会记录你的选择并用于本次建议上下文',
+          interaction: {
+            kind: 'micro_event',
+            microEvent: { type: 'micro_hydration_break' },
+          },
         },
-      }],
-      meta: { taskType: 'homepage_summary', pageContext: validPageContext, finishReason: 'complete' },
+      ],
+      meta: {
+        taskType: 'homepage_summary',
+        pageContext: validPageContext,
+        finishReason: 'complete',
+      },
     };
 
     expect(AgentResponseEnvelopeSchema.safeParse(envelope).success).toBe(false);
@@ -1056,8 +1148,176 @@ describe('MicroEventAppendPayloadSchema', () => {
   });
 
   it('rejects hydration micro event payload because hydration is not a micro event type', () => {
-    expect(MicroEventAppendPayloadSchema.safeParse({
-      microEventType: 'micro_hydration_break',
-    }).success).toBe(false);
+    expect(
+      MicroEventAppendPayloadSchema.safeParse({
+        microEventType: 'micro_hydration_break',
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('FutureSuggestionSchema', () => {
+  const validSuggestion = {
+    timePoint: '15:30',
+    predictedState: 'HRV 预计降到全天最低 ~32ms',
+    rationale: '今天已记录 2 杯咖啡，咖啡因代谢影响',
+    action: {
+      id: 'future_1',
+      emoji: '🧘',
+      title: '做几分钟正念呼吸',
+      description: '15:00 前做 5 分钟正念呼吸，缓解交感神经负担',
+      aiPromise: '我会记录你的选择并用于本次建议上下文',
+      interaction: {
+        kind: 'micro_event',
+        microEvent: { type: 'micro_deep_breathing', durationMinutes: 5 },
+      },
+    },
+  };
+
+  it('accepts valid future suggestion', () => {
+    expect(FutureSuggestionSchema.safeParse(validSuggestion).success).toBe(true);
+  });
+
+  it('rejects timePoint not in HH:mm format', () => {
+    expect(
+      FutureSuggestionSchema.safeParse({
+        ...validSuggestion,
+        timePoint: '25:00',
+      }).success,
+    ).toBe(false);
+    expect(
+      FutureSuggestionSchema.safeParse({
+        ...validSuggestion,
+        timePoint: '7:30',
+      }).success,
+    ).toBe(false);
+    expect(
+      FutureSuggestionSchema.safeParse({
+        ...validSuggestion,
+        timePoint: '12:60',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts 23:59 as the latest valid timePoint', () => {
+    expect(
+      FutureSuggestionSchema.safeParse({
+        ...validSuggestion,
+        timePoint: '23:59',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects empty predictedState or rationale', () => {
+    expect(
+      FutureSuggestionSchema.safeParse({
+        ...validSuggestion,
+        predictedState: '',
+      }).success,
+    ).toBe(false);
+    expect(
+      FutureSuggestionSchema.safeParse({
+        ...validSuggestion,
+        rationale: '',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects invalid embedded action', () => {
+    expect(
+      FutureSuggestionSchema.safeParse({
+        ...validSuggestion,
+        action: { id: '', emoji: '', title: '', description: '', aiPromise: '' },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('AgentResponseEnvelopeSchema — futureSuggestions', () => {
+  const validPageContext = {
+    profileId: 'test-profile',
+    page: 'home',
+    timeframe: 'week',
+  };
+
+  const baseSuggestion = {
+    timePoint: '21:30',
+    predictedState: '今晚疲劳峰值预计出现在 21:30 前后',
+    rationale: '今天训练负荷较高，且咖啡因摄入晚于 14:00',
+    action: {
+      id: 'future_wind_down',
+      emoji: '🍵',
+      title: '提前准备入睡仪式',
+      description: '21:00 前结束所有屏幕使用，做 10 分钟拉伸',
+      aiPromise: '我会记录你的选择并用于本次建议上下文',
+    },
+  };
+
+  it('accepts envelope with futureSuggestions', () => {
+    const envelope = {
+      summary: '测试摘要',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      futureSuggestions: [baseSuggestion],
+      meta: {
+        taskType: 'homepage_summary',
+        pageContext: validPageContext,
+        finishReason: 'complete',
+      },
+    };
+    const result = AgentResponseEnvelopeSchema.safeParse(envelope);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects futureSuggestions with more than 2 items', () => {
+    const envelope = {
+      summary: '测试摘要',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      futureSuggestions: [
+        { ...baseSuggestion, timePoint: '18:00' },
+        { ...baseSuggestion, timePoint: '20:00' },
+        { ...baseSuggestion, timePoint: '22:00' },
+      ],
+      meta: {
+        taskType: 'homepage_summary',
+        pageContext: validPageContext,
+        finishReason: 'complete',
+      },
+    };
+    expect(AgentResponseEnvelopeSchema.safeParse(envelope).success).toBe(false);
+  });
+
+  it('rejects futureSuggestions with invalid timePoint', () => {
+    const envelope = {
+      summary: '测试摘要',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      futureSuggestions: [{ ...baseSuggestion, timePoint: 'not-a-time' }],
+      meta: {
+        taskType: 'homepage_summary',
+        pageContext: validPageContext,
+        finishReason: 'complete',
+      },
+    };
+    expect(AgentResponseEnvelopeSchema.safeParse(envelope).success).toBe(false);
+  });
+
+  it('treats futureSuggestions as optional', () => {
+    const envelope = {
+      summary: '测试摘要',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      meta: {
+        taskType: 'homepage_summary',
+        pageContext: validPageContext,
+        finishReason: 'complete',
+      },
+    };
+    expect(AgentResponseEnvelopeSchema.safeParse(envelope).success).toBe(true);
   });
 });

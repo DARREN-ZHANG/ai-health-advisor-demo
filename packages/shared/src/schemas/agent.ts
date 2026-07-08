@@ -5,7 +5,15 @@ import { MicroEventParamsSchema, MicroEventTypeSchema } from './micro-event';
 
 export const AgentTaskTypeSchema = z.nativeEnum(AgentTaskType);
 
-export const DataTabSchema = z.enum(['overview', 'hrv', 'sleep', 'resting-hr', 'activity', 'spo2', 'stress']);
+export const DataTabSchema = z.enum([
+  'overview',
+  'hrv',
+  'sleep',
+  'resting-hr',
+  'activity',
+  'spo2',
+  'stress',
+]);
 
 export const TimeframeSchema = z.enum(['day', 'week', 'month', 'year', 'custom']);
 
@@ -29,7 +37,10 @@ export const PageContextSchema = z
       }
       return true;
     },
-    { message: 'customDateRange is required when timeframe is "custom"', path: ['customDateRange'] },
+    {
+      message: 'customDateRange is required when timeframe is "custom"',
+      path: ['customDateRange'],
+    },
   );
 
 export const ActionInteractionSchema = z.discriminatedUnion('kind', [
@@ -60,6 +71,16 @@ export const ActionOptionSchema = z.object({
   interaction: ActionInteractionSchema.optional(),
 });
 
+/** 未来时间点建议 Schema — timePoint 必须是 HH:mm 格式 */
+const HH_MM_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export const FutureSuggestionSchema = z.object({
+  timePoint: z.string().regex(HH_MM_REGEX, 'timePoint must be HH:mm in 00:00-23:59'),
+  predictedState: z.string().min(1),
+  rationale: z.string().min(1),
+  action: ActionOptionSchema,
+});
+
 const MemoryCandidateKindSchema = z.enum([
   'allergy',
   'medical_constraint',
@@ -87,6 +108,7 @@ export const AgentResponseEnvelopeSchema = z.object({
   actions: z.array(ActionOptionSchema).max(3).optional(),
   actionsSectionTitle: z.string().optional(),
   memoryCandidates: z.array(MemoryCandidateConfirmationSchema).optional(),
+  futureSuggestions: z.array(FutureSuggestionSchema).max(2).optional(),
   meta: z.object({
     taskType: AgentTaskTypeSchema,
     pageContext: PageContextSchema,

@@ -35,10 +35,7 @@ export type {
 export { MICRO_EVENT_TYPES } from './types/micro-event';
 export type { MicroEventType, MicroEventParamValue, MicroEventParams } from './types/micro-event';
 
-export type {
-  DataCenterTimelinePoint,
-  DataCenterResponse,
-} from './types/data-center';
+export type { DataCenterTimelinePoint, DataCenterResponse } from './types/data-center';
 
 // Types — chart token
 export { ChartTokenId } from './types/chart-token';
@@ -55,7 +52,17 @@ export {
 
 // Types — agent
 export { AgentTaskType } from './types/agent';
-export type { DataTab, Timeframe, PageContext, AgentResponseEnvelope, ActionOption, ActionInteraction, MemoryCandidateKind, MemoryCandidateConfirmation } from './types/agent';
+export type {
+  DataTab,
+  Timeframe,
+  PageContext,
+  AgentResponseEnvelope,
+  ActionOption,
+  ActionInteraction,
+  MemoryCandidateKind,
+  MemoryCandidateConfirmation,
+  FutureSuggestion,
+} from './types/agent';
 
 // Types — god-mode
 export type {
@@ -145,6 +152,7 @@ export {
   ActionOptionSchema,
   ActionInteractionSchema,
   MemoryCandidateConfirmationSchema,
+  FutureSuggestionSchema,
 } from './schemas/agent';
 
 export { ChartTokenIdSchema, isValidChartTokenId } from './schemas/chart-token';
@@ -164,10 +172,7 @@ export {
 } from './schemas/god-mode';
 
 // Schemas — profile-crud
-export {
-  UpdateProfileRequestSchema,
-  CloneProfileRequestSchema,
-} from './schemas/profile-crud';
+export { UpdateProfileRequestSchema, CloneProfileRequestSchema } from './schemas/profile-crud';
 
 export { ErrorCodeSchema, ApiMetaSchema, ApiErrorSchema, ApiResponseSchema } from './schemas/api';
 
