@@ -7,6 +7,12 @@ interface HeroGlowCanvasProps {
   state: HealthVisualState;
 }
 
+interface RingGeometry {
+  cx: number;
+  cy: number;
+  radius: number;
+}
+
 const RING_STOPS: Record<HealthVisualState, readonly string[]> = {
   'prime-readiness': [
     'var(--valo-active)',
@@ -74,6 +80,19 @@ export function HeroGlowCanvas({ state }: HeroGlowCanvasProps) {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
+    const getRingGeometry = (): RingGeometry | null => {
+      const ring = canvas.parentElement?.querySelector<HTMLElement>('[data-valo-ring="true"]');
+      if (!ring) return null;
+
+      const canvasRect = canvas.getBoundingClientRect();
+      const ringRect = ring.getBoundingClientRect();
+      return {
+        cx: ringRect.left - canvasRect.left + ringRect.width / 2,
+        cy: ringRect.top - canvasRect.top + ringRect.height / 2,
+        radius: Math.min(ringRect.width, ringRect.height) / 2,
+      };
+    };
+
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       canvas.width = Math.max(1, Math.floor(rect.width * dpr));
@@ -86,34 +105,56 @@ export function HeroGlowCanvas({ state }: HeroGlowCanvasProps) {
       const height = canvas.clientHeight;
       if (width <= 0 || height <= 0) return;
 
+      const ring = getRingGeometry();
+      if (!ring) return;
+
+      const starGap = Math.max(16, ring.radius * 0.12);
+      const starFieldBottom = Math.min(height, ring.cy + ring.radius + starGap);
+      const starFieldRatio = starFieldBottom / height;
+      const gradientTop = Math.max(0, ring.cy - ring.radius * 0.08);
+      const gradientHeight = Math.max(1, starFieldBottom - gradientTop);
+
       ctx.clearRect(0, 0, width, height);
+
+      ctx.fillStyle = '#111118';
+      ctx.fillRect(0, 0, width, height);
 
       const bg = ctx.createLinearGradient(0, 0, 0, height);
       bg.addColorStop(0, '#020205');
-      bg.addColorStop(0.56, '#07060d');
+      bg.addColorStop(Math.min(0.86, starFieldRatio * 0.72), '#07060d');
       bg.addColorStop(1, '#111118');
       ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, width, height);
+      ctx.fillRect(0, 0, width, starFieldBottom);
 
       const pulse = media.matches ? 0 : Math.sin(frame * 0.018) * 0.5 + 0.5;
       const horizon = ctx.createRadialGradient(
-        width * 0.5,
-        height * 0.76,
-        width * 0.08,
-        width * 0.5,
-        height * 0.76,
-        width * 0.96,
+        ring.cx,
+        ring.cy + ring.radius * 0.42,
+        ring.radius * 0.2,
+        ring.cx,
+        ring.cy + ring.radius * 0.42,
+        ring.radius * 2.2,
       );
-      horizon.addColorStop(0, colorWithAlpha(primeColor, 0.5 + pulse * 0.12));
-      horizon.addColorStop(0.42, colorWithAlpha(primeColor, 0.28));
+      horizon.addColorStop(0, colorWithAlpha(primeColor, 0.44 + pulse * 0.1));
+      horizon.addColorStop(0.38, colorWithAlpha(primeColor, 0.24));
       horizon.addColorStop(1, 'rgba(17,17,24,0)');
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, gradientTop, width, gradientHeight);
+      ctx.clip();
       ctx.fillStyle = horizon;
-      ctx.fillRect(0, height * 0.24, width, height * 0.76);
+      ctx.fillRect(0, gradientTop, width, gradientHeight);
+      ctx.restore();
 
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(0, height * 0.67);
-      ctx.quadraticCurveTo(width * 0.5, height * 0.88, width, height * 0.67);
+      ctx.moveTo(0, starFieldBottom);
+      ctx.quadraticCurveTo(
+        ring.cx,
+        starFieldBottom + ring.radius * 0.34,
+        width,
+        starFieldBottom,
+      );
       ctx.lineTo(width, height);
       ctx.lineTo(0, height);
       ctx.closePath();
@@ -127,13 +168,10 @@ export function HeroGlowCanvas({ state }: HeroGlowCanvasProps) {
         const alpha = 0.28 + Math.sin(frame * 0.035 + star.phase) * 0.18;
         ctx.fillStyle = `rgba(255,255,255,${media.matches ? 0.36 : alpha})`;
         ctx.beginPath();
-        ctx.arc(star.x * width, star.y * height, star.size, 0, Math.PI * 2);
+        ctx.arc(star.x * width, star.y * starFieldBottom, star.size, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      const cx = width * 0.5;
-      const cy = height * 0.672;
-      const radius = Math.min(width, height) * 0.255;
       const rotation = media.matches ? -0.4 : frame * 0.006;
 
       for (let pass = 0; pass < 3; pass += 1) {
@@ -148,7 +186,7 @@ export function HeroGlowCanvas({ state }: HeroGlowCanvasProps) {
           ctx.strokeStyle = stops[i]!;
           ctx.shadowColor = stops[i]!;
           ctx.beginPath();
-          ctx.arc(cx, cy, radius, start, end);
+          ctx.arc(ring.cx, ring.cy, ring.radius, start, end);
           ctx.stroke();
         }
         ctx.restore();
@@ -166,8 +204,16 @@ export function HeroGlowCanvas({ state }: HeroGlowCanvasProps) {
 
     resize();
     tick();
+    const resizeObserver = new ResizeObserver(() => {
+      resize();
+      draw();
+    });
+    resizeObserver.observe(canvas);
+    const ring = canvas.parentElement?.querySelector<HTMLElement>('[data-valo-ring="true"]');
+    if (ring) resizeObserver.observe(ring);
     window.addEventListener('resize', resize);
     return () => {
+      resizeObserver.disconnect();
       window.removeEventListener('resize', resize);
       window.cancelAnimationFrame(raf);
     };
