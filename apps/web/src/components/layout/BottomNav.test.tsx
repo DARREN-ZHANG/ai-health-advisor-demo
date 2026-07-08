@@ -145,14 +145,17 @@ describe('BottomNav', () => {
     toggleSpy.mockRestore();
   });
 
-  it('Advisor Chat 入口位于 Navigation 链接右侧', () => {
+  it('Advisor Chat 入口位于 Navigation 外部右侧，且高度与 Navigation 一致', () => {
     renderWithIntl(<BottomNav />);
-    const nav = document.querySelector('[data-valo-bottomnav="true"] nav');
-    const children = Array.from(nav?.children ?? []);
-    const my = document.querySelector('[data-valo-nav-item="my"]');
+    const footerRow = document.querySelector('[data-valo-bottomnav="true"] > div');
+    const nav = footerRow?.querySelector('nav');
     const chat = document.querySelector('[data-valo-advisor-trigger="true"]');
-    expect(children.indexOf(my as Element)).toBe(2);
-    expect(children.indexOf(chat as Element)).toBe(3);
+    const children = Array.from(footerRow?.children ?? []);
+    expect(nav?.contains(chat)).toBe(false);
+    expect(children.indexOf(nav as Element)).toBe(0);
+    expect(children.indexOf(chat as Element)).toBe(1);
+    expect(nav?.className).toContain('h-full');
+    expect(chat?.className).toContain('h-[62px]');
   });
 
   it('切换到 /data-center 时激活态从 home 切到 trends', () => {

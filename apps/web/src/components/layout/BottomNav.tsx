@@ -13,7 +13,7 @@ import {
 import { useUIStore } from '@/stores/ui.store';
 
 /**
- * Valo 底部导航信息架构：Home / Trends / Advisor Chat / My。
+ * Valo 底部导航信息架构：Home / Trends / My，右侧独立 Advisor Chat 入口。
  *
  * I6.2 起与桌面端 Navbar 共用同一导航 IA；
  * 主状态色走 var(--valo-*) token；玻璃背景使用 Figma 原稿的半透明深色面。
@@ -85,8 +85,10 @@ export function BottomNav() {
           '0 14px 34px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
       }}
     >
-      <nav aria-label="Primary" className="grid h-[62px] grid-cols-4 items-center gap-1">
-        {navItems.map(renderNavItem)}
+      <div className="flex h-[62px] items-center gap-2">
+        <nav aria-label="Primary" className="grid h-full flex-1 grid-cols-3 items-center gap-1">
+          {navItems.map(renderNavItem)}
+        </nav>
 
         <button
           type="button"
@@ -94,7 +96,7 @@ export function BottomNav() {
           data-valo-advisor-trigger="true"
           data-valo-touch="true"
           onClick={() => toggleAdvisorDrawer(true)}
-          className="relative mx-auto flex h-[58px] w-[58px] items-center justify-center rounded-full
+          className="relative flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-full
                      transition-transform hover:scale-[1.03] focus:outline-none
                      focus-visible:shadow-[var(--valo-focus-ring)] active:scale-95"
           style={{
@@ -105,13 +107,13 @@ export function BottomNav() {
           <Image
             src="/valo/images/chat-entrance.png"
             alt=""
-            width={58}
-            height={58}
-            className="h-[58px] w-[58px] object-contain"
+            width={62}
+            height={62}
+            className="h-[62px] w-[62px] object-contain"
             priority
           />
         </button>
-      </nav>
+      </div>
     </footer>
   );
 }
