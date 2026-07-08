@@ -75,18 +75,21 @@ export function BottomNav() {
   return (
     <footer
       data-valo-bottomnav="true"
-      className="relative z-30 mx-auto mb-6 mt-8 w-[320px] max-w-[calc(100%-36px)]
-                 rounded-[34px] border border-white/10 px-[8px] py-[6px]
-                 backdrop-blur-xl valo-bottomnav-safe"
-      style={{
-        backgroundColor: 'rgba(21, 21, 29, 0.62)',
-        borderColor: 'var(--valo-border)',
-        boxShadow:
-          '0 14px 34px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
-      }}
+      className="relative z-30 mx-auto mb-6 mt-8 w-[390px] max-w-[calc(100%-36px)]
+                 valo-bottomnav-safe"
     >
-      <div className="flex h-[62px] items-center gap-2">
-        <nav aria-label="Primary" className="grid h-full flex-1 grid-cols-3 items-center gap-1">
+      <div className="flex h-[70px] items-center gap-5">
+        <nav
+          aria-label="Primary"
+          className="grid h-full flex-1 grid-cols-3 items-center gap-1 rounded-[35px]
+                     border border-white/10 px-[8px] py-[6px] backdrop-blur-xl"
+          style={{
+            backgroundColor: 'rgba(21, 21, 29, 0.62)',
+            borderColor: 'var(--valo-border)',
+            boxShadow:
+              '0 14px 34px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+          }}
+        >
           {navItems.map(renderNavItem)}
         </nav>
 
@@ -96,7 +99,7 @@ export function BottomNav() {
           data-valo-advisor-trigger="true"
           data-valo-touch="true"
           onClick={() => toggleAdvisorDrawer(true)}
-          className="relative flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-full
+          className="relative flex h-[70px] w-[70px] shrink-0 items-center justify-center rounded-full
                      transition-transform hover:scale-[1.03] focus:outline-none
                      focus-visible:shadow-[var(--valo-focus-ring)] active:scale-95"
           style={{
@@ -107,9 +110,9 @@ export function BottomNav() {
           <Image
             src="/valo/images/chat-entrance.png"
             alt=""
-            width={62}
-            height={62}
-            className="h-[62px] w-[62px] object-contain"
+            width={70}
+            height={70}
+            className="h-[70px] w-[70px] object-contain"
             priority
           />
         </button>

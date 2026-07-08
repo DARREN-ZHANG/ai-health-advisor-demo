@@ -101,22 +101,29 @@ describe('BottomNav', () => {
     expect(homeLink?.className).toContain('text-[var(--valo-text-secondary)]');
   });
 
-  it('导航根容器位于文档流，使用 Figma 风格胶囊与 token 化边框', () => {
+  it('Footer 位于文档流，Navigation 自身使用 Figma 风格胶囊与 token 化边框', () => {
     renderWithIntl(<BottomNav />);
-    const nav = document.querySelector('[data-valo-bottomnav="true"]') as HTMLElement;
-    const style = nav.getAttribute('style') ?? '';
-    expect(style).toContain('var(--valo-border)');
-    expect(nav.tagName).toBe('FOOTER');
-    expect(nav.className).toContain('relative');
-    expect(nav.className).not.toContain('fixed');
-    expect(nav.className).not.toContain('sticky');
-    expect(nav.className).not.toContain('bottom-0');
-    expect(nav.className).toContain('w-[320px]');
-    expect(nav.className).toContain('rounded-[34px]');
-    expect(nav.className).not.toContain('md:hidden');
+    const footer = document.querySelector('[data-valo-bottomnav="true"]') as HTMLElement;
+    const nav = footer.querySelector('nav') as HTMLElement;
+    const footerStyle = footer.getAttribute('style') ?? '';
+    const navStyle = nav.getAttribute('style') ?? '';
+    expect(footer.tagName).toBe('FOOTER');
+    expect(footer.className).toContain('relative');
+    expect(footer.className).not.toContain('fixed');
+    expect(footer.className).not.toContain('sticky');
+    expect(footer.className).not.toContain('bottom-0');
+    expect(footer.className).toContain('w-[390px]');
+    expect(footer.className).not.toContain('rounded-[34px]');
+    expect(footer.className).not.toContain('border');
+    expect(footerStyle).not.toContain('var(--valo-border)');
+    expect(navStyle).toContain('var(--valo-border)');
+    expect(nav.className).toContain('rounded-[35px]');
+    expect(nav.className).toContain('border');
+    expect(nav.className).toContain('backdrop-blur-xl');
+    expect(footer.className).not.toContain('md:hidden');
     // safe-area 通过 globals.css 的 .valo-bottomnav-safe 钩子注入
     // （env() 内联值会被 React 过滤，改走 CSS 文件）
-    expect(nav.className).toContain('valo-bottomnav-safe');
+    expect(footer.className).toContain('valo-bottomnav-safe');
     // 全组件不出现 slate/blue 颜色字面量
     const html = document.body.innerHTML;
     expect(html).not.toMatch(/bg-slate-|text-blue-|bg-blue-/);
@@ -155,7 +162,8 @@ describe('BottomNav', () => {
     expect(children.indexOf(nav as Element)).toBe(0);
     expect(children.indexOf(chat as Element)).toBe(1);
     expect(nav?.className).toContain('h-full');
-    expect(chat?.className).toContain('h-[62px]');
+    expect(footerRow?.className).toContain('h-[70px]');
+    expect(chat?.className).toContain('h-[70px]');
   });
 
   it('切换到 /data-center 时激活态从 home 切到 trends', () => {
