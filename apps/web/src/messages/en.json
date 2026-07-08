@@ -404,18 +404,25 @@
   },
   "my": {
     "title": "My",
-    "currentProfileLabel": "Current profile",
-    "disabledHint": "Not available in demo",
-    "openAccountSwitcher": "Switch account",
-    "openLanguageSwitcher": "Switch language",
-    "section": {
+    "groups": {
+      "general": "General",
+      "app": "App",
+      "resources": "Resources",
+      "legal": "Legal"
+    },
+    "items": {
+      "valoRing": "Valo Ring",
       "account": "Account",
+      "goals": "Goals",
+      "subscription": "Subscription",
       "language": "Language",
-      "settings": "Settings",
       "notifications": "Notifications",
-      "help": "Help",
-      "about": "About",
-      "logout": "Log out"
+      "appearance": "Appearance",
+      "unit": "Unit",
+      "gettingStarted": "Getting Started with Valo",
+      "faq": "FAQ",
+      "termsOfService": "Terms of Service",
+      "privacyPolicy": "Privacy Policy"
     }
   },
   "accountSwitcher": {

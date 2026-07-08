@@ -403,19 +403,26 @@
     }
   },
   "my": {
-    "title": "我的",
-    "currentProfileLabel": "当前 Profile",
-    "disabledHint": "演示版本暂不开放",
-    "openAccountSwitcher": "切换账户",
-    "openLanguageSwitcher": "切换语言",
-    "section": {
-      "account": "账户",
-      "language": "语言",
-      "settings": "设置",
-      "notifications": "通知",
-      "help": "帮助",
-      "about": "关于",
-      "logout": "退出登录"
+    "title": "My",
+    "groups": {
+      "general": "General",
+      "app": "App",
+      "resources": "Resources",
+      "legal": "Legal"
+    },
+    "items": {
+      "valoRing": "Valo Ring",
+      "account": "Account",
+      "goals": "Goals",
+      "subscription": "Subscription",
+      "language": "Language",
+      "notifications": "Notifications",
+      "appearance": "Appearance",
+      "unit": "Unit",
+      "gettingStarted": "Getting Started with Valo",
+      "faq": "FAQ",
+      "termsOfService": "Terms of Service",
+      "privacyPolicy": "Privacy Policy"
     }
   },
   "accountSwitcher": {

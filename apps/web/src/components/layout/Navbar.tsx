@@ -24,7 +24,8 @@ export function Navbar() {
   const t = useTranslations('nav');
   const isHome = pathname === '/';
   const isDataCenter = pathname === '/data-center';
-  const isHidden = isHome || isDataCenter;
+  const isMy = pathname === '/my';
+  const isHidden = isHome || isDataCenter || isMy;
 
   return (
     <nav
