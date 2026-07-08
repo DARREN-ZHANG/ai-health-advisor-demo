@@ -43,24 +43,20 @@ export function BriefTimeline({
     <section aria-label={t('now')} className="relative pl-8" data-valo-brief-timeline="">
       <span
         aria-hidden="true"
-        className="absolute left-[7px] top-5 h-[calc(100%+28px)] w-px bg-[color-mix(in_srgb,var(--valo-prime)_55%,transparent)]"
-      />
-      <span
-        aria-hidden="true"
         className="absolute left-0 top-1 text-[26px] leading-none text-[var(--valo-prime)] drop-shadow-[0_0_8px_var(--valo-prime)]"
       >
         ➤
       </span>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         <h2
-          className="text-[22px] leading-none text-[var(--valo-text-primary)]"
+          className="text-sm font-medium leading-5 text-[var(--valo-text-primary)]"
           data-valo-serif="true"
         >
           {t('now')}
         </h2>
 
-        <p className="whitespace-pre-line text-[17px] leading-7 text-[color-mix(in_srgb,var(--valo-text-primary)_86%,transparent)]">
+        <p className="whitespace-pre-line text-sm leading-5 text-[color-mix(in_srgb,var(--valo-text-primary)_86%,transparent)]">
           {summary}
         </p>
 
@@ -69,11 +65,16 @@ export function BriefTimeline({
             <h3 className="sr-only">
               {t('microTipsTitle')}
             </h3>
-            <ul className="grid gap-3 sm:grid-cols-2">
+            <ul
+              className="flex gap-3 overflow-x-auto overscroll-x-contain pb-1 pr-8 [-ms-overflow-style:none] [scrollbar-width:none] sm:grid sm:grid-cols-2 sm:overflow-visible sm:pr-0 [&::-webkit-scrollbar]:hidden"
+              data-valo-micro-tips=""
+            >
               {tips.map((tip, idx) => (
                 <li
                   key={`${idx}-${tip.slice(0, 12)}`}
-                  className="rounded-lg bg-[color-mix(in_srgb,var(--valo-surface)_86%,black)] p-4 text-sm leading-relaxed text-[color-mix(in_srgb,var(--valo-text-primary)_82%,transparent)] shadow-[var(--valo-shadow-card)]"
+                  className="shrink-0 rounded-lg bg-[color-mix(in_srgb,var(--valo-surface)_86%,black)] p-4 text-sm leading-5 text-[color-mix(in_srgb,var(--valo-text-primary)_82%,transparent)] shadow-[var(--valo-shadow-card)] sm:w-auto sm:shrink"
+                  data-valo-micro-tip-card=""
+                  style={{ flexBasis: 'calc((100% - 12px) / 1.8)' }}
                 >
                   <span
                     aria-hidden="true"

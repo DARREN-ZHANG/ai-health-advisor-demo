@@ -135,6 +135,14 @@ describe('ActionCard', () => {
     expect(screen.getByRole('button', { name: '确认' }).getAttribute('aria-busy')).toBe('true');
   });
 
+  it('非 pending 时确认按钮包含 check icon', () => {
+    renderWithIntl(
+      <ActionCard action={makeAction()} onYes={() => {}} onNotNow={() => {}} />,
+    );
+    const button = screen.getByRole('button', { name: '确认' });
+    expect(button.querySelector('svg')).not.toBeNull();
+  });
+
   it('pending 状态下点击 Yes 不触发回调', () => {
     const onYes = vi.fn();
     renderWithIntl(

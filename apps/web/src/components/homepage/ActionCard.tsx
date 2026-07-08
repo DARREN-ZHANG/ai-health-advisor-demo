@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { CheckIcon } from '@heroicons/react/24/outline';
 import type { ActionOption } from '@health-advisor/shared';
 
 /**
@@ -122,7 +123,9 @@ export function ActionCard({
               aria-hidden="true"
               className="inline-block w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin"
             />
-          ) : null}
+          ) : (
+            <CheckIcon aria-hidden="true" className="h-4 w-4" />
+          )}
           {t('yes')}
         </button>
       </div>

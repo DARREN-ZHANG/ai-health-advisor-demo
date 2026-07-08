@@ -143,37 +143,45 @@ export default function HomePage() {
           triggerRef={ringRef}
         />
 
-        <div className="space-y-8">
+        <div className="mt-10 space-y-8">
           <ActiveSensingBanner />
 
-          <BriefTimeline
-            summary={summary}
-            microTips={data?.microTips}
-            isLoading={briefIsLoading && !data}
-          />
+          <div className="relative space-y-8" data-valo-timeline-stack="">
+            <span
+              aria-hidden="true"
+              className="absolute bottom-0 left-[7px] top-5 w-px bg-[color-mix(in_srgb,var(--valo-prime)_48%,transparent)]"
+              data-valo-timeline-line=""
+            />
 
-          {visibleActions.length > 0 ? (
-            <ul className="grid grid-cols-2 gap-3 list-none p-0 m-0 pl-8">
-              {visibleActions.map((action: ActionOption) => (
-                <ActionCard
-                  key={action.id}
-                  action={action}
-                  onYes={interactions.handleYes}
-                  onNotNow={interactions.handleNotNow}
-                  pending={interactions.pendingActionId === action.id}
-                />
-              ))}
-            </ul>
-          ) : null}
+            <BriefTimeline
+              summary={summary}
+              microTips={data?.microTips}
+              isLoading={briefIsLoading && !data}
+            />
 
-          {/* 下午/晚间：Figma 静态双语示例，非 Agent 输出 */}
-          <StaticTimelineBlock title={t('afternoon.title')} time="15:00PM">
-            {t('afternoon.body')}
-          </StaticTimelineBlock>
+            {visibleActions.length > 0 ? (
+              <ul className="grid grid-cols-2 gap-3 list-none p-0 m-0 pl-8">
+                {visibleActions.map((action: ActionOption) => (
+                  <ActionCard
+                    key={action.id}
+                    action={action}
+                    onYes={interactions.handleYes}
+                    onNotNow={interactions.handleNotNow}
+                    pending={interactions.pendingActionId === action.id}
+                  />
+                ))}
+              </ul>
+            ) : null}
 
-          <StaticTimelineBlock title={t('night.title')} time="22:45PM">
-            {t('night.body')}
-          </StaticTimelineBlock>
+            {/* 下午/晚间：Figma 静态双语示例，非 Agent 输出 */}
+            <StaticTimelineBlock title={t('afternoon.title')} time="15:00PM">
+              {t('afternoon.body')}
+            </StaticTimelineBlock>
+
+            <StaticTimelineBlock title={t('night.title')} time="22:45PM">
+              {t('night.body')}
+            </StaticTimelineBlock>
+          </div>
 
           {/*
             Life Log（profile-scoped，仅当前会话）—— I3.3
@@ -224,19 +232,15 @@ function StaticTimelineBlock({
     <section className="relative pl-8">
       <span
         aria-hidden="true"
-        className="absolute left-[7px] top-5 h-[calc(100%+36px)] w-px bg-[color-mix(in_srgb,var(--valo-prime)_45%,transparent)]"
-      />
-      <span
-        aria-hidden="true"
         className="absolute left-0 top-1 h-4 w-4 rounded-full bg-[var(--valo-prime)] shadow-[0_0_10px_var(--valo-prime)]"
       />
       <h2
-        className="text-[22px] leading-none text-[var(--valo-text-primary)]"
+        className="text-sm font-medium leading-5 text-[var(--valo-text-primary)]"
         data-valo-serif="true"
       >
         {title} - {time}
       </h2>
-      <p className="mt-4 text-[17px] leading-7 text-[color-mix(in_srgb,var(--valo-text-primary)_82%,transparent)]">
+      <p className="mt-3 text-sm leading-5 text-[color-mix(in_srgb,var(--valo-text-primary)_82%,transparent)]">
         {children}
       </p>
     </section>

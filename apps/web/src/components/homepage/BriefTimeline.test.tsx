@@ -46,6 +46,17 @@ describe('BriefTimeline', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 
+  it('microTips 移动端按约 1.8 张卡片可见设置宽度', () => {
+    renderWithIntl(
+      <BriefTimeline summary="x" microTips={['提示一', '提示二']} />,
+    );
+    const card = document.querySelector('[data-valo-micro-tip-card]');
+    expect(card).not.toBeNull();
+    expect((card as HTMLElement).style.flexBasis).toBe(
+      'calc(0.5555555555555556 * (100% - 12px))',
+    );
+  });
+
   it('isLoading=true 渲染骨架而非内容', () => {
     renderWithIntl(
       <BriefTimeline summary="x" microTips={['a']} isLoading />,
