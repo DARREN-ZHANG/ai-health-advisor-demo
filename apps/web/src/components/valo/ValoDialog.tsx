@@ -11,11 +11,7 @@ import {
 import { AnimatePresence, m } from 'framer-motion';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useOverlayBehavior } from './hooks/useOverlayBehavior';
-import {
-  MOTION_CENTERED,
-  MOTION_DRAWER,
-  MOTION_SCRIM,
-} from './motion';
+import { MOTION_CENTERED, MOTION_DRAWER, MOTION_SCRIM } from './motion';
 
 /**
  * ValoDialog —— Valo 设计系统的居中弹窗与右侧 Drawer。
@@ -88,9 +84,7 @@ export function ValoDialog({
   const titleId = ariaLabelledBy ?? (title ? generatedId : undefined);
 
   if (!titleId && !ariaLabel) {
-    throw new Error(
-      'ValoDialog: 必须提供 ariaLabel 或 ariaLabelledBy（或 title）以提供可访问名',
-    );
+    throw new Error('ValoDialog: 必须提供 ariaLabel 或 ariaLabelledBy（或 title）以提供可访问名');
   }
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -105,8 +99,7 @@ export function ValoDialog({
     triggerRef,
   });
 
-  const resolvedWidth =
-    typeof width === 'number' ? `${width}px` : (WIDTH_MAP[width] ?? width);
+  const resolvedWidth = typeof width === 'number' ? `${width}px` : (WIDTH_MAP[width] ?? width);
 
   const isDrawer = variant === 'drawer';
 
@@ -136,14 +129,14 @@ export function ValoDialog({
             {...(isDrawer ? MOTION_DRAWER : MOTION_CENTERED)}
             className={
               isDrawer
-                ? 'absolute top-0 right-0 bottom-0 flex flex-col ' +
+                ? 'absolute top-0 right-0 bottom-0 flex min-h-0 flex-col ' +
                   'bg-[var(--valo-surface)] text-[var(--valo-text-primary)] ' +
                   'border-l border-[var(--valo-border)] ' +
                   'shadow-[var(--valo-shadow-elevated)] outline-none ' +
                   'pt-[env(safe-area-inset-top)] ' +
                   'pb-[env(safe-area-inset-bottom)] ' +
                   className
-                : 'flex flex-col rounded-2xl border border-[var(--valo-border)] ' +
+                : 'flex min-h-0 flex-col rounded-2xl border border-[var(--valo-border)] ' +
                   'bg-[var(--valo-surface)] text-[var(--valo-text-primary)] ' +
                   'shadow-[var(--valo-shadow-elevated)] outline-none ' +
                   'max-h-[90dvh] ' +
@@ -159,11 +152,9 @@ export function ValoDialog({
             }}
             data-valo-touch="true"
           >
-            {title ? (
-              <DialogHeader title={title} titleId={titleId} onClose={onClose} />
-            ) : null}
+            {title ? <DialogHeader title={title} titleId={titleId} onClose={onClose} /> : null}
             {bodyScroll === 'managed' ? (
-              <div className="flex-1 overflow-y-auto">{children}</div>
+              <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
             ) : (
               children
             )}
@@ -183,10 +174,7 @@ interface DialogHeaderProps {
 function DialogHeader({ title, titleId, onClose }: DialogHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-3 px-5 py-4 shrink-0">
-      <h2
-        id={titleId}
-        className="text-lg font-semibold text-[var(--valo-text-primary)]"
-      >
+      <h2 id={titleId} className="text-lg font-semibold text-[var(--valo-text-primary)]">
         {title}
       </h2>
       <button

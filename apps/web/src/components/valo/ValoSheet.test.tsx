@@ -75,12 +75,7 @@ describe('ValoSheet', () => {
   it('closeOnScrimClick=false 时点击遮罩不关闭', () => {
     const onClose = vi.fn();
     const { container } = render(
-      <ValoSheet
-        open
-        onClose={onClose}
-        ariaLabel="测试"
-        closeOnScrimClick={false}
-      >
+      <ValoSheet open onClose={onClose} ariaLabel="测试" closeOnScrimClick={false}>
         <p>内容</p>
       </ValoSheet>,
     );
@@ -103,12 +98,7 @@ describe('ValoSheet', () => {
   it('closeOnEscape=false 时 Escape 不关闭', () => {
     const onClose = vi.fn();
     render(
-      <ValoSheet
-        open
-        onClose={onClose}
-        ariaLabel="测试"
-        closeOnEscape={false}
-      >
+      <ValoSheet open onClose={onClose} ariaLabel="测试" closeOnEscape={false}>
         <p>内容</p>
       </ValoSheet>,
     );
@@ -145,6 +135,18 @@ describe('ValoSheet', () => {
     );
     const dialog = screen.getByRole('dialog');
     expect(dialog.getAttribute('style') ?? '').toContain('92dvh');
+    expect(dialog.className).toContain('min-h-0');
+  });
+
+  it('managed 滚动容器允许在 flex 布局中收缩', () => {
+    render(
+      <ValoSheet open onClose={() => {}} ariaLabel="测试">
+        <div data-test-children>自定义滚动</div>
+      </ValoSheet>,
+    );
+    const dialog = screen.getByRole('dialog');
+    const scroller = dialog.querySelector('.overflow-y-auto');
+    expect(scroller?.className).toContain('min-h-0');
   });
 
   it('引用 scrim token', () => {

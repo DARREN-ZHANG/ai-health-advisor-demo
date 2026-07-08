@@ -50,7 +50,7 @@ export function AppShell({
       }}
     >
       {navbar}
-      <main className="flex-1">{children}</main>
+      <main className="min-h-0 flex-1">{children}</main>
       {bottomNav}
       {floating}
       {overlay}

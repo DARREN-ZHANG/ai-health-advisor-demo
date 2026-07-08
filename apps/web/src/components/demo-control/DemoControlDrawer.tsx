@@ -6,20 +6,10 @@ import { XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { ValoSheet } from '@/components/valo/ValoSheet';
 import { ValoDialog } from '@/components/valo/ValoDialog';
 import { useGodModeStore } from '@/stores/god-mode.store';
-import {
-  TIMELINE_SEGMENT_GROUPS,
-  TIMELINE_SEGMENTS_BY_GROUP,
-} from './timeline-segments';
-import type {
-  TimelineSegmentConfig,
-  TimelineSegmentGroup,
-  TimelineSegmentType,
-} from './types';
+import { TIMELINE_SEGMENT_GROUPS, TIMELINE_SEGMENTS_BY_GROUP } from './timeline-segments';
+import type { TimelineSegmentConfig, TimelineSegmentGroup, TimelineSegmentType } from './types';
 import { TimelineSegmentCard } from './TimelineSegmentCard';
-import {
-  RecentEventsDisclosure,
-  type RecentEventEntry,
-} from './RecentEventsDisclosure';
+import { RecentEventsDisclosure, type RecentEventEntry } from './RecentEventsDisclosure';
 import { TimelineResetDialog } from './TimelineResetDialog';
 import { formatClock } from './format-time';
 
@@ -242,7 +232,7 @@ function DemoControlContent({
         </header>
 
         {/* ---------- 内容滚动区（唯一 overflow-y-auto） ---------- */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-4">
           <SummaryArea events={events} currentDemoTime={currentDemoTime} />
           {TIMELINE_SEGMENT_GROUPS.map((group) => (
             <SegmentGroupSection
@@ -274,9 +264,7 @@ function DemoControlContent({
             }
             style={{ backgroundColor: 'var(--valo-prime)' }}
           >
-            {isAdvancePending ? (
-              <ArrowPathIcon className="h-4 w-4 animate-spin" />
-            ) : null}
+            {isAdvancePending ? <ArrowPathIcon className="h-4 w-4 animate-spin" /> : null}
             {t('advanceOneHour')}
           </button>
           <button
@@ -290,9 +278,7 @@ function DemoControlContent({
               'transition-colors hover:bg-[var(--valo-border)] disabled:opacity-50'
             }
           >
-            {isResetPending ? (
-              <ArrowPathIcon className="h-4 w-4 animate-spin" />
-            ) : null}
+            {isResetPending ? <ArrowPathIcon className="h-4 w-4 animate-spin" /> : null}
             {t('reset')}
           </button>
         </footer>
@@ -334,9 +320,7 @@ function SummaryArea({ events, currentDemoTime }: SummaryAreaProps) {
     >
       <div className="flex items-center gap-4">
         <div className="flex flex-col">
-          <span className="text-xs text-[var(--valo-text-secondary)]">
-            {t('currentTime')}
-          </span>
+          <span className="text-xs text-[var(--valo-text-secondary)]">{t('currentTime')}</span>
           <span
             className="text-2xl font-semibold text-[var(--valo-text-primary)]"
             data-valo-clock="true"
@@ -345,9 +329,7 @@ function SummaryArea({ events, currentDemoTime }: SummaryAreaProps) {
           </span>
         </div>
         <div className="flex flex-col">
-          <span className="text-xs text-[var(--valo-text-secondary)]">
-            {t('events')}
-          </span>
+          <span className="text-xs text-[var(--valo-text-secondary)]">{t('events')}</span>
           <span
             className="text-2xl font-semibold text-[var(--valo-text-primary)]"
             data-valo-event-count="true"
@@ -383,9 +365,7 @@ function SegmentGroupSection({
   return (
     <section data-valo-group={group}>
       <header className="mb-2 flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold text-[var(--valo-text-primary)]">
-          {t(titleKey)}
-        </h3>
+        <h3 className="text-sm font-semibold text-[var(--valo-text-primary)]">{t(titleKey)}</h3>
         <span className="text-xs text-[var(--valo-text-secondary)]">
           {t('segmentCount', { count: segments.length })}
         </span>

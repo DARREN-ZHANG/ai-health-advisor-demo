@@ -93,9 +93,7 @@ vi.mock('next/navigation', () => ({
  * DemoControlDrawer 测试同一约定）。
  */
 function getMobileContainer(): HTMLElement {
-  const container = document.querySelector(
-    '[data-valo-viewport="mobile"]',
-  ) as HTMLElement | null;
+  const container = document.querySelector('[data-valo-viewport="mobile"]') as HTMLElement | null;
   if (!container) {
     throw new Error('移动端视口容器未渲染；可能 isAdvisorDrawerOpen=false');
   }
@@ -154,6 +152,14 @@ describe('AIAdvisorDrawer', () => {
     expect(desktop).not.toBeNull();
   });
 
+  it('消息滚动区允许在抽屉 flex 布局中收缩到底部', () => {
+    useUIStore.setState({ isAdvisorDrawerOpen: true });
+    renderWithIntl(<AIAdvisorDrawer />);
+    const mobile = getMobileContainer();
+    const scroller = mobile.querySelector('.overflow-y-auto');
+    expect(scroller?.className).toContain('min-h-0');
+  });
+
   it('header 显示标题 "AI 顾问" 与 BETA 标签（移动端 viewport）', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     renderWithIntl(<AIAdvisorDrawer />);
@@ -166,17 +172,11 @@ describe('AIAdvisorDrawer', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
-    expect(
-      within(mobile).getByText('你好，我是你的健康顾问'),
-    ).toBeInTheDocument();
-    expect(
-      within(mobile).getByText('有什么健康问题尽管问我'),
-    ).toBeInTheDocument();
+    expect(within(mobile).getByText('你好，我是你的健康顾问')).toBeInTheDocument();
+    expect(within(mobile).getByText('有什么健康问题尽管问我')).toBeInTheDocument();
     expect(within(mobile).getByText('试试这些问题：')).toBeInTheDocument();
     // empty state 容器标识存在
-    expect(
-      mobile.querySelector('[data-valo-empty-state="true"]'),
-    ).not.toBeNull();
+    expect(mobile.querySelector('[data-valo-empty-state="true"]')).not.toBeNull();
   });
 
   it('empty state 渲染 3 条 SmartPrompts 推荐问题（P1-04）', () => {
@@ -193,27 +193,21 @@ describe('AIAdvisorDrawer', () => {
       within(mobile).getByRole('button', { name: '给我的运动计划提点建议' }),
     ).toBeInTheDocument();
     // stress-inquiry 不再渲染
-    expect(
-      within(mobile).queryByRole('button', { name: '为什么我最近感觉压力很大？' }),
-    ).toBeNull();
+    expect(within(mobile).queryByRole('button', { name: '为什么我最近感觉压力很大？' })).toBeNull();
   });
 
   it('empty state 渲染环形霓虹主视觉（data-valo-empty-hero）', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
-    expect(
-      mobile.querySelector('[data-valo-empty-hero="true"]'),
-    ).not.toBeNull();
+    expect(mobile.querySelector('[data-valo-empty-hero="true"]')).not.toBeNull();
   });
 
   it('composer textarea 形态为胶囊（rounded-full）', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
-    const textarea = within(mobile).getByPlaceholderText(
-      '输入你的问题...',
-    );
+    const textarea = within(mobile).getByPlaceholderText('输入你的问题...');
     expect(textarea.className).toContain('rounded-full');
   });
 
@@ -228,15 +222,11 @@ describe('AIAdvisorDrawer', () => {
   it('有消息后 SmartPrompts 不再渲染', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     useAIAdvisorStore.setState({
-      messages: [
-        { id: 'm1', role: 'user', content: 'hi', timestamp: 1 },
-      ],
+      messages: [{ id: 'm1', role: 'user', content: 'hi', timestamp: 1 }],
     });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
-    expect(
-      within(mobile).queryByRole('button', { name: '分析我昨晚的睡眠质量' }),
-    ).toBeNull();
+    expect(within(mobile).queryByRole('button', { name: '分析我昨晚的睡眠质量' })).toBeNull();
   });
 
   it('composer 引用 --valo-prime 作为发送按钮背景', () => {
@@ -251,18 +241,14 @@ describe('AIAdvisorDrawer', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
-    expect(
-      within(mobile).getByRole('button', { name: '发送' }),
-    ).toBeDisabled();
+    expect(within(mobile).getByRole('button', { name: '发送' })).toBeDisabled();
   });
 
   it('输入文字后发送按钮可点击，触发 useAdvisorChat.mutateAsync', async () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
-    const textarea = within(mobile).getByPlaceholderText(
-      '输入你的问题...',
-    ) as HTMLTextAreaElement;
+    const textarea = within(mobile).getByPlaceholderText('输入你的问题...') as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: '我感觉很累' } });
     const sendBtn = within(mobile).getByRole('button', { name: '发送' });
     expect(sendBtn).not.toBeDisabled();
@@ -279,9 +265,7 @@ describe('AIAdvisorDrawer', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
-    fireEvent.click(
-      within(mobile).getByRole('button', { name: '分析我昨晚的睡眠质量' }),
-    );
+    fireEvent.click(within(mobile).getByRole('button', { name: '分析我昨晚的睡眠质量' }));
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledTimes(1);
     });
@@ -306,9 +290,7 @@ describe('AIAdvisorDrawer', () => {
     });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
-    const textarea = within(mobile).getByPlaceholderText(
-      '输入你的问题...',
-    ) as HTMLTextAreaElement;
+    const textarea = within(mobile).getByPlaceholderText('输入你的问题...') as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: '昨晚睡眠如何' } });
     fireEvent.click(within(mobile).getByRole('button', { name: '发送' }));
     // store 应先写入 user 消息，再写入 assistant 消息。
@@ -316,14 +298,10 @@ describe('AIAdvisorDrawer', () => {
       const msgs = useAIAdvisorStore.getState().messages;
       expect(msgs.some((m) => m.role === 'assistant')).toBe(true);
     });
-    const assistantMsg = useAIAdvisorStore
-      .getState()
-      .messages.find((m) => m.role === 'assistant');
+    const assistantMsg = useAIAdvisorStore.getState().messages.find((m) => m.role === 'assistant');
     expect(assistantMsg?.content).toBe('你昨晚深睡偏少，建议睡前放松。');
     // DOM 也应渲染出文本（MessageBubble 的纯文本路径）。
-    expect(
-      within(mobile).getByText('你昨晚深睡偏少，建议睡前放松。'),
-    ).toBeInTheDocument();
+    expect(within(mobile).getByText('你昨晚深睡偏少，建议睡前放松。')).toBeInTheDocument();
   });
 
   it('请求失败时渲染 system 错误消息', async () => {
@@ -335,9 +313,7 @@ describe('AIAdvisorDrawer', () => {
     fireEvent.change(textarea, { target: { value: 'hi' } });
     fireEvent.click(within(mobile).getByRole('button', { name: '发送' }));
     await waitFor(() => {
-      expect(
-        within(mobile).getByText('发送失败: network down'),
-      ).toBeInTheDocument();
+      expect(within(mobile).getByText('发送失败: network down')).toBeInTheDocument();
     });
   });
 
@@ -356,9 +332,7 @@ describe('AIAdvisorDrawer', () => {
     });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
-    fireEvent.click(
-      within(mobile).getByRole('button', { name: '更多选项' }),
-    );
+    fireEvent.click(within(mobile).getByRole('button', { name: '更多选项' }));
     fireEvent.click(within(mobile).getByText('清空对话'));
     expect(mockClearSessionId).toHaveBeenCalledTimes(1);
     // store 已被清空
@@ -368,30 +342,22 @@ describe('AIAdvisorDrawer', () => {
   it('消息列表存在时不再渲染 empty state', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     useAIAdvisorStore.setState({
-      messages: [
-        { id: 'm1', role: 'user', content: 'hi', timestamp: 1 },
-      ],
+      messages: [{ id: 'm1', role: 'user', content: 'hi', timestamp: 1 }],
     });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
-    expect(
-      within(mobile).queryByText('你好，我是你的健康顾问'),
-    ).toBeNull();
+    expect(within(mobile).queryByText('你好，我是你的健康顾问')).toBeNull();
   });
 
   it('isLoading=true 时渲染"打字指示器"（三个跳动小点）', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     useAIAdvisorStore.setState({
-      messages: [
-        { id: 'm1', role: 'user', content: 'hi', timestamp: 1 },
-      ],
+      messages: [{ id: 'm1', role: 'user', content: 'hi', timestamp: 1 }],
       isLoading: true,
     });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
-    expect(
-      mobile.querySelector('[data-valo-loading="true"]'),
-    ).not.toBeNull();
+    expect(mobile.querySelector('[data-valo-loading="true"]')).not.toBeNull();
   });
 
   it('header 关闭按钮调用 toggleAdvisorDrawer(false)', () => {

@@ -126,8 +126,7 @@ export function AIAdvisorDrawer() {
           pageContext,
           userMessage: text,
           smartPromptId,
-          visibleChartIds:
-            pageContext.page === 'data-center' ? [activeTab] : undefined,
+          visibleChartIds: pageContext.page === 'data-center' ? [activeTab] : undefined,
         });
 
         // 5. 添加助手回答（包括后端返回的 fallback 内容）
@@ -142,8 +141,7 @@ export function AIAdvisorDrawer() {
           meta: response.meta,
         });
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : t('networkError');
+        const errorMessage = error instanceof Error ? error.message : t('networkError');
         addMessage({
           role: 'system',
           content: t('sendFailedDetail', { error: errorMessage }),
@@ -258,11 +256,7 @@ function ChatContent({
   const hasMessages = messages.length > 0;
 
   return (
-    <div
-      id="ai-advisor-drawer"
-      className="contents"
-      data-valo-chat-content="true"
-    >
+    <div id="ai-advisor-drawer" className="contents" data-valo-chat-content="true">
       <div className="flex flex-1 flex-col min-h-0">
         {/* ---------- Header ---------- */}
         <header
@@ -318,7 +312,7 @@ function ChatContent({
         <div
           ref={scrollRef}
           className={
-            'flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar scroll-smooth'
+            'min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar scroll-smooth'
           }
         >
           {!hasMessages ? (
@@ -445,9 +439,7 @@ function EmptyState() {
         >
           {t('welcomeTitle')}
         </p>
-        <p className="text-sm text-[var(--valo-text-secondary)]">
-          {t('welcomeSubtitle')}
-        </p>
+        <p className="text-sm text-[var(--valo-text-secondary)]">{t('welcomeSubtitle')}</p>
       </div>
       <p className="mt-2 self-start text-xs font-semibold uppercase tracking-wide text-[var(--valo-text-secondary)]">
         {t('suggestionsTitle')}
@@ -465,7 +457,11 @@ function EmptyState() {
 function LoadingBubble({ isTimeoutHint }: { isTimeoutHint: boolean }) {
   const t = useTranslations('advisor');
   return (
-    <div className="flex justify-start my-3 px-1" data-valo-loading="true" data-valo-advisor-loading="true">
+    <div
+      className="flex justify-start my-3 px-1"
+      data-valo-loading="true"
+      data-valo-advisor-loading="true"
+    >
       <div
         className={
           'flex items-center gap-1 rounded-2xl rounded-tl-none border px-4 py-2 ' +
@@ -480,10 +476,7 @@ function LoadingBubble({ isTimeoutHint }: { isTimeoutHint: boolean }) {
           />
         ))}
         {isTimeoutHint && (
-          <span
-            className="ml-2 text-[10px]"
-            style={{ color: 'var(--valo-sluggish)' }}
-          >
+          <span className="ml-2 text-[10px]" style={{ color: 'var(--valo-sluggish)' }}>
             {t('analyzing')}
           </span>
         )}
@@ -527,11 +520,7 @@ function MoreMenu({
       <AnimatePresence>
         {open && (
           <>
-            <div
-              className="fixed inset-0 z-10"
-              onClick={() => setOpen(false)}
-              aria-hidden="true"
-            />
+            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
             <m.div
               initial={{ opacity: 0, scale: 0.95, y: -10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

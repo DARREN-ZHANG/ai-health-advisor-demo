@@ -11,11 +11,7 @@ import {
 import { AnimatePresence, m } from 'framer-motion';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useOverlayBehavior } from './hooks/useOverlayBehavior';
-import {
-  MOTION_BOTTOM_SHEET,
-  MOTION_FULL_SCREEN,
-  MOTION_SCRIM,
-} from './motion';
+import { MOTION_BOTTOM_SHEET, MOTION_FULL_SCREEN, MOTION_SCRIM } from './motion';
 
 /**
  * ValoSheet —— Valo 设计系统的移动端优先遮罩层。
@@ -96,9 +92,7 @@ export function ValoSheet({
 
   // 必须提供可访问名：ariaLabel 或 ariaLabelledBy 至少一个
   if (!titleId && !ariaLabel) {
-    throw new Error(
-      'ValoSheet: 必须提供 ariaLabel 或 ariaLabelledBy（或 title）以提供可访问名',
-    );
+    throw new Error('ValoSheet: 必须提供 ariaLabel 或 ariaLabelledBy（或 title）以提供可访问名');
   }
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -137,10 +131,10 @@ export function ValoSheet({
             {...(isFullscreen ? MOTION_FULL_SCREEN : MOTION_BOTTOM_SHEET)}
             className={
               isFullscreen
-                ? 'absolute inset-0 flex flex-col bg-[var(--valo-surface)] ' +
+                ? 'absolute inset-0 flex min-h-0 flex-col bg-[var(--valo-surface)] ' +
                   'text-[var(--valo-text-primary)] outline-none ' +
                   className
-                : 'absolute bottom-0 left-0 right-0 flex flex-col ' +
+                : 'absolute bottom-0 left-0 right-0 flex min-h-0 flex-col ' +
                   'rounded-t-2xl border-t border-[var(--valo-border)] ' +
                   'bg-[var(--valo-surface)] text-[var(--valo-text-primary)] ' +
                   'shadow-[var(--valo-shadow-elevated)] outline-none ' +
@@ -152,7 +146,10 @@ export function ValoSheet({
               isFullscreen
                 ? undefined
                 : height
-                  ? { maxHeight: typeof height === 'number' ? `${height}px` : height }
+                  ? {
+                      height: typeof height === 'number' ? `${height}px` : height,
+                      maxHeight: typeof height === 'number' ? `${height}px` : height,
+                    }
                   : undefined
             }
             onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
@@ -171,12 +168,10 @@ export function ValoSheet({
                 <span className="block w-10 h-1 rounded-full bg-[var(--valo-border)]" />
               </div>
             )}
-            {title ? (
-              <SheetHeader title={title} titleId={titleId} onClose={onClose} />
-            ) : null}
+            {title ? <SheetHeader title={title} titleId={titleId} onClose={onClose} /> : null}
             {bodyScroll === 'managed' ? (
               <div
-                className="flex-1 overflow-y-auto"
+                className="min-h-0 flex-1 overflow-y-auto"
                 style={
                   isFullscreen
                     ? undefined
@@ -206,10 +201,7 @@ interface SheetHeaderProps {
 function SheetHeader({ title, titleId, onClose }: SheetHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3 shrink-0">
-      <h2
-        id={titleId}
-        className="text-base font-semibold text-[var(--valo-text-primary)]"
-      >
+      <h2 id={titleId} className="text-base font-semibold text-[var(--valo-text-primary)]">
         {title}
       </h2>
       <button

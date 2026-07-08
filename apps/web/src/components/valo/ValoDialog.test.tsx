@@ -119,6 +119,7 @@ describe('ValoDialog', () => {
     const dialog = screen.getByRole('dialog');
     // drawer 锚定右侧，不会有居中圆角卡片的 max-h
     expect(dialog.className).not.toContain('rounded-2xl');
+    expect(dialog.className).toContain('min-h-0');
   });
 
   it('未提供 ariaLabel/ariaLabelledBy/title 时抛错', () => {
@@ -153,5 +154,16 @@ describe('ValoDialog', () => {
     // 直接子元素是 children 本身，不再包一层 overflow-y-auto div
     const directChild = dialog.querySelector('[data-test-children]');
     expect(directChild?.parentElement).toBe(dialog);
+  });
+
+  it('managed 滚动容器允许在 flex 布局中收缩', () => {
+    render(
+      <ValoDialog open onClose={() => {}} ariaLabel="测试">
+        <div data-test-children>自定义滚动</div>
+      </ValoDialog>,
+    );
+    const dialog = screen.getByRole('dialog');
+    const scroller = dialog.querySelector('.overflow-y-auto');
+    expect(scroller?.className).toContain('min-h-0');
   });
 });

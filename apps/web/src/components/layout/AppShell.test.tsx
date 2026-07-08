@@ -38,6 +38,7 @@ describe('AppShell', () => {
     const main = container.querySelector('main');
     expect(main).not.toBeNull();
     expect(main?.className).toContain('flex-1');
+    expect(main?.className).toContain('min-h-0');
   });
 
   it('根容器有 min-h-screen 与底部浮动导航预留 padding', () => {
@@ -49,9 +50,7 @@ describe('AppShell', () => {
   });
 
   it('追加自定义 className', () => {
-    const { container } = render(
-      <AppShell className="custom-class">内容</AppShell>,
-    );
+    const { container } = render(<AppShell className="custom-class">内容</AppShell>);
     const root = container.firstElementChild as HTMLElement;
     expect(root.className).toContain('custom-class');
   });

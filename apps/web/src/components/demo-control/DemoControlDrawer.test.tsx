@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, within, act, waitFor } from '@testing-library/react';
-import {
-  DemoControlDrawer,
-  type DemoControlDrawerProps,
-} from './DemoControlDrawer';
+import { DemoControlDrawer, type DemoControlDrawerProps } from './DemoControlDrawer';
 import { DemoControlIntlProvider } from './intl-test-helper';
 import { useGodModeStore } from '@/stores/god-mode.store';
 import type { TimelineSegmentConfig } from './types';
@@ -35,9 +32,7 @@ const SAMPLE_PROPS: DemoControlDrawerProps = {
  * 上，避免重复元素引起的查询歧义。`getMobileContainer` 是这一约定的入口。
  */
 function getMobileContainer(): HTMLElement {
-  const container = document.querySelector(
-    '[data-valo-viewport="mobile"]',
-  ) as HTMLElement | null;
+  const container = document.querySelector('[data-valo-viewport="mobile"]') as HTMLElement | null;
   if (!container) {
     throw new Error('移动端视口容器未渲染；可能 isEnabled / isOpen 为 false');
   }
@@ -93,6 +88,14 @@ describe('DemoControlDrawer', () => {
     expect(desktop).not.toBeNull();
   });
 
+  it('内容滚动区允许在抽屉 flex 布局中收缩到底部', () => {
+    useGodModeStore.setState({ isOpen: true });
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} />);
+    const mobile = getMobileContainer();
+    const scroller = mobile.querySelector('.overflow-y-auto');
+    expect(scroller?.className).toContain('min-h-0');
+  });
+
   it('header 关闭按钮触发 toggleOpen(false)', () => {
     useGodModeStore.setState({ isOpen: true });
     const toggleSpy = vi.spyOn(useGodModeStore.getState(), 'toggleOpen');
@@ -133,9 +136,7 @@ describe('DemoControlDrawer', () => {
   it('点击 segment 卡片触发 onSegmentClick', () => {
     useGodModeStore.setState({ isOpen: true });
     const onSegmentClick = vi.fn();
-    renderWithIntl(
-      <DemoControlDrawer {...SAMPLE_PROPS} onSegmentClick={onSegmentClick} />,
-    );
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} onSegmentClick={onSegmentClick} />);
     const mobile = getMobileContainer();
     fireEvent.click(within(mobile).getByText('散步'));
     expect(onSegmentClick).toHaveBeenCalledTimes(1);
@@ -146,9 +147,7 @@ describe('DemoControlDrawer', () => {
   it('点击 +1h 触发 onAdvanceHour', () => {
     useGodModeStore.setState({ isOpen: true });
     const onAdvanceHour = vi.fn();
-    renderWithIntl(
-      <DemoControlDrawer {...SAMPLE_PROPS} onAdvanceHour={onAdvanceHour} />,
-    );
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} onAdvanceHour={onAdvanceHour} />);
     const mobile = getMobileContainer();
     fireEvent.click(within(mobile).getByRole('button', { name: '+1h' }));
     expect(onAdvanceHour).toHaveBeenCalledTimes(1);
@@ -157,9 +156,7 @@ describe('DemoControlDrawer', () => {
   it('点击重置按钮不直接触发 onReset，而是打开确认弹窗（I2.3 流程）', () => {
     useGodModeStore.setState({ isOpen: true });
     const onReset = vi.fn();
-    renderWithIntl(
-      <DemoControlDrawer {...SAMPLE_PROPS} onReset={onReset} />,
-    );
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} onReset={onReset} />);
     const mobile = getMobileContainer();
     // 移动端 footer 的“重置”按钮只是打开 dialog
     fireEvent.click(within(mobile).getByRole('button', { name: '重置' }));
@@ -178,18 +175,14 @@ describe('DemoControlDrawer', () => {
           resolveMutation = resolve;
         }),
     );
-    renderWithIntl(
-      <DemoControlDrawer {...SAMPLE_PROPS} onReset={onReset} />,
-    );
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} onReset={onReset} />);
     const mobile = getMobileContainer();
     fireEvent.click(within(mobile).getByRole('button', { name: '重置' }));
     // 弹窗内的“重置”按钮：通过弹窗根容器 scope，避免与 footer 按钮冲突
     const dialog = screen.getByText('重置时间轴？').closest('[role="dialog"]');
     expect(dialog).not.toBeNull();
     await act(async () => {
-      fireEvent.click(
-        within(dialog as HTMLElement).getByRole('button', { name: '重置' }),
-      );
+      fireEvent.click(within(dialog as HTMLElement).getByRole('button', { name: '重置' }));
       // 让微任务跑一轮，让 await onReset 进入 pending
       await Promise.resolve();
     });
@@ -211,16 +204,12 @@ describe('DemoControlDrawer', () => {
   it('onReset 失败时弹窗也会通过 finally 关闭（toast 由 hook 处理）', async () => {
     useGodModeStore.setState({ isOpen: true });
     const onReset = vi.fn().mockRejectedValue(new Error('boom'));
-    renderWithIntl(
-      <DemoControlDrawer {...SAMPLE_PROPS} onReset={onReset} />,
-    );
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} onReset={onReset} />);
     const mobile = getMobileContainer();
     fireEvent.click(within(mobile).getByRole('button', { name: '重置' }));
     const dialog = screen.getByText('重置时间轴？').closest('[role="dialog"]');
     await act(async () => {
-      fireEvent.click(
-        within(dialog as HTMLElement).getByRole('button', { name: '重置' }),
-      );
+      fireEvent.click(within(dialog as HTMLElement).getByRole('button', { name: '重置' }));
       await Promise.resolve();
     });
     await waitFor(() => {
@@ -232,15 +221,11 @@ describe('DemoControlDrawer', () => {
   it('在重置确认弹窗中点击“取消”关闭弹窗且不调用 onReset', () => {
     useGodModeStore.setState({ isOpen: true });
     const onReset = vi.fn();
-    renderWithIntl(
-      <DemoControlDrawer {...SAMPLE_PROPS} onReset={onReset} />,
-    );
+    renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} onReset={onReset} />);
     const mobile = getMobileContainer();
     fireEvent.click(within(mobile).getByRole('button', { name: '重置' }));
     const dialog = screen.getByText('重置时间轴？').closest('[role="dialog"]');
-    fireEvent.click(
-      within(dialog as HTMLElement).getByRole('button', { name: '取消' }),
-    );
+    fireEvent.click(within(dialog as HTMLElement).getByRole('button', { name: '取消' }));
     expect(onReset).not.toHaveBeenCalled();
     expect(screen.queryByText('重置时间轴？')).toBeNull();
   });
@@ -342,9 +327,7 @@ describe('DemoControlDrawer', () => {
     renderWithIntl(<DemoControlDrawer {...SAMPLE_PROPS} />);
     const mobile = getMobileContainer();
     expect(within(mobile).getByRole('button', { name: '+1h' })).not.toBeDisabled();
-    expect(
-      within(mobile).getByRole('button', { name: '重置' }),
-    ).not.toBeDisabled();
+    expect(within(mobile).getByRole('button', { name: '重置' })).not.toBeDisabled();
     const firstCard = mobile.querySelector(
       '[data-valo-group="daily-rhythm"] button[data-valo-touch="true"]',
     ) as HTMLButtonElement | null;
@@ -373,9 +356,7 @@ describe('DemoControlDrawer', () => {
     const confirmBtn = within(dialog as HTMLElement).getByRole('button', {
       name: '重置',
     });
-    expect(confirmBtn.getAttribute('style') ?? '').toContain(
-      'var(--valo-depleted)',
-    );
+    expect(confirmBtn.getAttribute('style') ?? '').toContain('var(--valo-depleted)');
   });
 
   // ============ I2.3 修复：单实例弹窗 + loading 态 ============
