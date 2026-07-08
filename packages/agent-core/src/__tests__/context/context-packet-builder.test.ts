@@ -6,7 +6,22 @@ import type { RuleEvaluationResult } from '../../rules/types';
 import type { DailyRecord } from '@health-advisor/shared';
 
 function makeRecord(date: string, overrides: Partial<DailyRecord> = {}): DailyRecord {
-  return { date, hr: [60, 62], hrv: 58, sleep: { totalMinutes: 420, startTime: '23:00', endTime: '06:00', stages: { deep: 90, light: 180, rem: 120, awake: 30 }, score: 85 }, activity: { steps: 8000, calories: 2200, activeMinutes: 45, distanceKm: 5.5 }, spo2: 98, stress: { load: 30 }, ...overrides };
+  return {
+    date,
+    hr: [60, 62],
+    hrv: 58,
+    sleep: {
+      totalMinutes: 420,
+      startTime: '23:00',
+      endTime: '06:00',
+      stages: { deep: 90, light: 180, rem: 120, awake: 30 },
+      score: 85,
+    },
+    activity: { steps: 8000, calories: 2200, activeMinutes: 45, distanceKm: 5.5 },
+    spo2: 98,
+    stress: { load: 30 },
+    ...overrides,
+  };
 }
 
 function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
@@ -99,7 +114,12 @@ describe('buildTaskContextPacket', () => {
     const ctx = makeContext({
       task: {
         type: AgentTaskType.VIEW_SUMMARY,
-        pageContext: { profileId: 'profile-a', page: 'data-center', dataTab: 'hrv', timeframe: 'week' },
+        pageContext: {
+          profileId: 'profile-a',
+          page: 'data-center',
+          dataTab: 'hrv',
+          timeframe: 'week',
+        },
         tab: 'hrv',
         timeframe: 'week',
       },
@@ -119,7 +139,12 @@ describe('buildTaskContextPacket', () => {
     const ctx = makeContext({
       task: {
         type: AgentTaskType.VIEW_SUMMARY,
-        pageContext: { profileId: 'profile-a', page: 'data-center', dataTab: 'sleep', timeframe: 'week' },
+        pageContext: {
+          profileId: 'profile-a',
+          page: 'data-center',
+          dataTab: 'sleep',
+          timeframe: 'week',
+        },
         tab: 'sleep',
         timeframe: 'week',
       },
@@ -132,7 +157,12 @@ describe('buildTaskContextPacket', () => {
     const ctx = makeContext({
       task: {
         type: AgentTaskType.VIEW_SUMMARY,
-        pageContext: { profileId: 'profile-a', page: 'data-center', dataTab: 'overview', timeframe: 'week' },
+        pageContext: {
+          profileId: 'profile-a',
+          page: 'data-center',
+          dataTab: 'overview',
+          timeframe: 'week',
+        },
         tab: 'overview',
         timeframe: 'week',
       },
@@ -146,7 +176,12 @@ describe('buildTaskContextPacket', () => {
     const ctx = makeContext({
       task: {
         type: AgentTaskType.ADVISOR_CHAT,
-        pageContext: { profileId: 'profile-a', page: 'data-center', dataTab: 'hrv', timeframe: 'week' },
+        pageContext: {
+          profileId: 'profile-a',
+          page: 'data-center',
+          dataTab: 'hrv',
+          timeframe: 'week',
+        },
         tab: 'hrv',
         timeframe: 'week',
         userMessage: '这个图说明什么',
@@ -165,14 +200,20 @@ describe('buildTaskContextPacket', () => {
     const ctx = makeContext({
       task: {
         type: AgentTaskType.ADVISOR_CHAT,
-        pageContext: { profileId: 'profile-a', page: 'data-center', dataTab: 'hrv', timeframe: 'week' },
+        pageContext: {
+          profileId: 'profile-a',
+          page: 'data-center',
+          dataTab: 'hrv',
+          timeframe: 'week',
+        },
         tab: 'hrv',
         timeframe: 'week',
         userMessage: '最近怎么样',
       },
     });
     const packet = buildTaskContextPacket(ctx, emptyRules);
-    const chartFacts = packet.advisorChat?.relevantFacts.filter((f) => f.factType === 'chart') ?? [];
+    const chartFacts =
+      packet.advisorChat?.relevantFacts.filter((f) => f.factType === 'chart') ?? [];
     expect(chartFacts.length).toBeGreaterThan(0);
   });
 
@@ -210,7 +251,12 @@ describe('buildTaskContextPacket', () => {
     const ctx = makeContext({
       task: {
         type: AgentTaskType.ADVISOR_CHAT,
-        pageContext: { profileId: 'profile-a', page: 'data-center', dataTab: 'hrv', timeframe: 'week' },
+        pageContext: {
+          profileId: 'profile-a',
+          page: 'data-center',
+          dataTab: 'hrv',
+          timeframe: 'week',
+        },
         tab: 'hrv',
         timeframe: 'week',
         userMessage: '最近状态如何',
@@ -534,22 +580,64 @@ describe('buildTaskContextPacket', () => {
     const ctx = makeContext({
       demoNow: '2026-04-10T18:35',
       timelineSync: {
-        recognizedEvents: [{
-          recognizedEventId: 're-hiit-1',
-          profileId: 'profile-a',
-          type: 'intermittent_exercise',
-          start: '2026-04-10T17:30',
-          end: '2026-04-10T18:30',
-          confidence: 0.92,
-          evidence: ['心率标准差 35, 交替高低强度'],
-          sourceSegmentId: 'seg-hiit-1',
-        }],
+        recognizedEvents: [
+          {
+            recognizedEventId: 're-hiit-1',
+            profileId: 'profile-a',
+            type: 'intermittent_exercise',
+            start: '2026-04-10T17:30',
+            end: '2026-04-10T18:30',
+            confidence: 0.92,
+            evidence: ['心率标准差 35, 交替高低强度'],
+            sourceSegmentId: 'seg-hiit-1',
+          },
+        ],
         syncedEvents: [
-          { eventId: 'evt-hr-1', profileId: 'profile-a', measuredAt: '2026-04-10T17:30', metric: 'heartRate', value: 118, source: 'sensor', segmentId: 'seg-hiit-1' },
-          { eventId: 'evt-hr-2', profileId: 'profile-a', measuredAt: '2026-04-10T17:45', metric: 'heartRate', value: 172, source: 'sensor', segmentId: 'seg-hiit-1' },
-          { eventId: 'evt-hr-3', profileId: 'profile-a', measuredAt: '2026-04-10T18:30', metric: 'heartRate', value: 92, source: 'sensor', segmentId: 'seg-hiit-1' },
-          { eventId: 'evt-hrv-1', profileId: 'profile-a', measuredAt: '2026-04-10T17:35', metric: 'hrvRmssd', value: 48, source: 'sensor', segmentId: 'seg-hiit-1' },
-          { eventId: 'evt-hrv-2', profileId: 'profile-a', measuredAt: '2026-04-10T18:30', metric: 'hrvRmssd', value: 35, source: 'sensor', segmentId: 'seg-hiit-1' },
+          {
+            eventId: 'evt-hr-1',
+            profileId: 'profile-a',
+            measuredAt: '2026-04-10T17:30',
+            metric: 'heartRate',
+            value: 118,
+            source: 'sensor',
+            segmentId: 'seg-hiit-1',
+          },
+          {
+            eventId: 'evt-hr-2',
+            profileId: 'profile-a',
+            measuredAt: '2026-04-10T17:45',
+            metric: 'heartRate',
+            value: 172,
+            source: 'sensor',
+            segmentId: 'seg-hiit-1',
+          },
+          {
+            eventId: 'evt-hr-3',
+            profileId: 'profile-a',
+            measuredAt: '2026-04-10T18:30',
+            metric: 'heartRate',
+            value: 92,
+            source: 'sensor',
+            segmentId: 'seg-hiit-1',
+          },
+          {
+            eventId: 'evt-hrv-1',
+            profileId: 'profile-a',
+            measuredAt: '2026-04-10T17:35',
+            metric: 'hrvRmssd',
+            value: 48,
+            source: 'sensor',
+            segmentId: 'seg-hiit-1',
+          },
+          {
+            eventId: 'evt-hrv-2',
+            profileId: 'profile-a',
+            measuredAt: '2026-04-10T18:30',
+            metric: 'hrvRmssd',
+            value: 35,
+            source: 'sensor',
+            segmentId: 'seg-hiit-1',
+          },
         ],
         derivedTemporalStates: [],
         syncMetadata: { lastSyncedMeasuredAt: '2026-04-10T18:30', pendingEventCount: 0 },
@@ -580,9 +668,118 @@ describe('buildTaskContextPacket', () => {
     const packet = buildTaskContextPacket(ctx, emptyRules);
     const insight = packet.homepage?.eventInsights[0];
 
-    expect(insight?.eventWindow?.metrics.find((metric) => metric.metric === 'heart_rate')?.max).toBe(172);
+    expect(
+      insight?.eventWindow?.metrics.find((metric) => metric.metric === 'heart_rate')?.max,
+    ).toBe(172);
     expect(insight?.physiology.find((item) => item.metric === 'heart_rate')?.value).toBe(172);
     expect(insight?.physiology.find((item) => item.metric === 'hrv')?.value).toBe(35);
-    expect(insight?.physiology.map((item) => item.interpretation).join('\n')).not.toContain('HRV 状态稳定，可作为恢复背景参考');
+    expect(insight?.physiology.map((item) => item.interpretation).join('\n')).not.toContain(
+      'HRV 状态稳定，可作为恢复背景参考',
+    );
+  });
+});
+
+describe('buildHomepagePacket — todayOccurredActivities（futureSuggestions 独立通道）', () => {
+  function makeTimelineSyncContext(
+    overrides?: Partial<import('../../types/agent-context').TimelineSyncContext>,
+  ) {
+    return {
+      recognizedEvents: [
+        {
+          recognizedEventId: 'ev_1',
+          profileId: 'profile-a',
+          type: 'sleep' as const,
+          start: '2026-04-10T23:00',
+          end: '2026-04-11T07:00',
+          confidence: 0.95,
+          evidence: [],
+        },
+        {
+          recognizedEventId: 'ev_2',
+          profileId: 'profile-a',
+          type: 'caffeine_intake' as const,
+          start: '2026-04-11T08:30',
+          end: '2026-04-11T08:35',
+          confidence: 0.8,
+          evidence: [],
+        },
+        {
+          recognizedEventId: 'ev_3',
+          profileId: 'profile-a',
+          type: 'meal_intake' as const,
+          start: '2026-04-11T12:30',
+          end: '2026-04-11T13:00',
+          confidence: 0.95,
+          evidence: [],
+        },
+        {
+          recognizedEventId: 'ev_4',
+          profileId: 'profile-a',
+          type: 'steady_cardio' as const,
+          start: '2026-04-11T18:00',
+          end: '2026-04-11T18:30',
+          confidence: 0.9,
+          evidence: [],
+        },
+      ],
+      syncedEvents: [],
+      derivedTemporalStates: [],
+      syncMetadata: { lastSyncedMeasuredAt: null, pendingEventCount: 0 },
+      ...overrides,
+    };
+  }
+
+  it('demoNow 缺失时 todayOccurredActivities 为空数组', () => {
+    const ctx = makeContext({ timelineSync: makeTimelineSyncContext() });
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+
+    expect(packet.homepage?.todayOccurredActivities).toEqual([]);
+  });
+
+  it('timelineSync 缺失时 todayOccurredActivities 为空数组', () => {
+    const ctx = makeContext({ demoNow: '2026-04-11T15:00' });
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+
+    expect(packet.homepage?.todayOccurredActivities).toEqual([]);
+  });
+
+  it('demoNow = 15:00 时，过滤掉未结束事件，按开始时间排序', () => {
+    const ctx = makeContext({
+      demoNow: '2026-04-11T15:00',
+      timelineSync: makeTimelineSyncContext(),
+    });
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+    const activities = packet.homepage?.todayOccurredActivities ?? [];
+
+    // 睡眠（end 07:00 <= 15:00）、咖啡因（08:35）、午餐（13:00）应保留
+    // 训练（end 18:30 > 15:00）应被过滤
+    expect(activities).toHaveLength(3);
+    expect(activities.map((a) => a.type)).toEqual(['sleep', 'caffeine_intake', 'meal_intake']);
+    expect(activities[0]?.durationMin).toBe(480); // 8h 睡眠
+    expect(activities[2]?.durationMin).toBe(30); // 30min 午餐
+  });
+
+  it('demoNow = 19:00 时，所有当天事件都应保留', () => {
+    const ctx = makeContext({
+      demoNow: '2026-04-11T19:00',
+      timelineSync: makeTimelineSyncContext(),
+    });
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+    const activities = packet.homepage?.todayOccurredActivities ?? [];
+
+    expect(activities).toHaveLength(4);
+    expect(activities.map((a) => a.type)).toContain('steady_cardio');
+  });
+
+  it('todayOccurredActivities 与 recentEvents 数据完全隔离', () => {
+    // recentEvents 限制最近 2 个事件，todayOccurredActivities 包含全部当天已发生事件
+    const ctx = makeContext({
+      demoNow: '2026-04-11T19:00',
+      timelineSync: makeTimelineSyncContext(),
+    });
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+
+    expect(packet.homepage?.recentEvents).toHaveLength(2);
+    expect(packet.homepage?.todayOccurredActivities).toHaveLength(4);
   });
 });

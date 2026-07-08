@@ -108,7 +108,9 @@ export interface AgentRuntimeObserver {
   /** H-7: plan 验证完成后触发 */
   onPlanVerified?(plan: AnalysisPlan, ctx: { supportedMetrics: string[] }): void;
   /** P1 新增：plan 失败时触发 */
-  onPlanFailed?(reason: 'parse_error' | 'verification_failed' | 'invocation_error' | 'schema_error'): void;
+  onPlanFailed?(
+    reason: 'parse_error' | 'verification_failed' | 'invocation_error' | 'schema_error',
+  ): void;
   /** P1 新增：clarification 响应触发 */
   onClarification?(question: string): void;
   /** P3 新增：sync gate 审核完成后触发 */
@@ -149,7 +151,11 @@ export async function executeAgent(
   const fallbackKey: FallbackLookupKey = {
     profileId: request.profileId,
     pageContext: request.pageContext,
-    tab: request.tab ?? ('dataTab' in request.pageContext ? (request.pageContext as { dataTab?: DataTab }).dataTab : undefined),
+    tab:
+      request.tab ??
+      ('dataTab' in request.pageContext
+        ? (request.pageContext as { dataTab?: DataTab }).dataTab
+        : undefined),
   };
 
   try {
@@ -182,45 +188,53 @@ export async function executeAgent(
     // P1: ADVISOR_CHAT planner 链路
     let analysisPlan: AnalysisPlan | undefined;
     if (request.taskType === AgentTaskType.ADVISOR_CHAT && deps.planBuilder) {
-      const planResult = await buildAnalysisPlanWithRetry(
-        deps.planBuilder,
-        {
-          userMessage: request.userMessage ?? '',
-          pageContext: request.pageContext,
-          basePacket: packet,
-          supportedMetrics: getSupportedMetrics(),
-          availableDateRange: {
-            start: context.dataWindow.start,
-            end: context.dataWindow.end,
-          },
+      const planResult = await buildAnalysisPlanWithRetry(deps.planBuilder, {
+        userMessage: request.userMessage ?? '',
+        pageContext: request.pageContext,
+        basePacket: packet,
+        supportedMetrics: getSupportedMetrics(),
+        availableDateRange: {
+          start: context.dataWindow.start,
+          end: context.dataWindow.end,
         },
-      );
+      });
 
       if (!planResult.success) {
         // Plan 失败：确定失败原因并通知 observer
         // H-14: 优先使用结构化 failureType，向后兼容
-        const reason = planResult.failureType
-          ?? (planResult.parseError ? 'parse_error' : 'verification_failed');
+        const reason =
+          planResult.failureType ?? (planResult.parseError ? 'parse_error' : 'verification_failed');
         tryNotify(() => observer?.onPlanFailed?.(reason));
 
         // 返回安全响应（不绕过 planner 直接回答复杂问题）
         return toClarificationOrSafeResponse(
-          deps.fallbackEngine, request,
-          planResult as { success: false; parseError?: string; verificationResult?: PlanVerificationResult; failureType?: string },
-          fallbackKey, locale,
+          deps.fallbackEngine,
+          request,
+          planResult as {
+            success: false;
+            parseError?: string;
+            verificationResult?: PlanVerificationResult;
+            failureType?: string;
+          },
+          fallbackKey,
+          locale,
         );
       }
 
       analysisPlan = planResult.plan!;
 
       if (analysisPlan.userIntent.needsClarification) {
-        tryNotify(() => observer?.onClarification?.(analysisPlan!.userIntent.clarificationQuestion ?? ''));
+        tryNotify(() =>
+          observer?.onClarification?.(analysisPlan!.userIntent.clarificationQuestion ?? ''),
+        );
         return toClarificationResponse(request, analysisPlan);
       }
 
       tryNotify(() => observer?.onPlanBuilt?.(analysisPlan!));
       // H-7: plan 验证通过后通知 observer
-      tryNotify(() => observer?.onPlanVerified?.(analysisPlan!, { supportedMetrics: getSupportedMetrics() }));
+      tryNotify(() =>
+        observer?.onPlanVerified?.(analysisPlan!, { supportedMetrics: getSupportedMetrics() }),
+      );
     }
 
     // P2: Evidence Resolver + ReAct Loop（仅在 plan 成功后执行）
@@ -252,27 +266,27 @@ export async function executeAgent(
             signal: reactController.signal,
           });
 
-        // 通知 observer 每一步
-        for (const step of reactResult.steps) {
-          tryNotify(() => observer?.onReActStep?.(step));
-        }
+          // 通知 observer 每一步
+          for (const step of reactResult.steps) {
+            tryNotify(() => observer?.onReActStep?.(step));
+          }
 
-        // C-5: 被中断时不追加不完整 evidence，避免错误关联
-        if (!reactAborted) {
-          // H-2: 使用 metric 精确匹配 evidence 和 need
-          resolvedEvidence = [
-            ...(resolvedEvidence ?? []),
-            ...reactResult.collectedEvidence.map((e) => {
-              const matchedNeed = e.metric
-                ? resolutionResult.unresolved.find((n) => n.metric === e.metric)
-                : undefined;
-              return {
-                need: matchedNeed ?? resolutionResult.unresolved[0]!,
-                evidence: e,
-              };
-            }),
-          ];
-        }
+          // C-5: 被中断时不追加不完整 evidence，避免错误关联
+          if (!reactAborted) {
+            // H-2: 使用 metric 精确匹配 evidence 和 need
+            resolvedEvidence = [
+              ...(resolvedEvidence ?? []),
+              ...reactResult.collectedEvidence.map((e) => {
+                const matchedNeed = e.metric
+                  ? resolutionResult.unresolved.find((n) => n.metric === e.metric)
+                  : undefined;
+                return {
+                  need: matchedNeed ?? resolutionResult.unresolved[0]!,
+                  evidence: e,
+                };
+              }),
+            ];
+          }
         } catch (error) {
           // ReAct 异常：检查是否是 abort 导致的
           if (reactController.signal.aborted) {
@@ -310,7 +324,11 @@ export async function executeAgent(
 
     if (request.taskType === AgentTaskType.HOMEPAGE_SUMMARY) {
       const realtimeToolPlan = buildRealtimeBriefToolInvocationPlan(packet, context);
-      const realtimeToolEvidence = await executeRealtimeBriefToolPlan(realtimeToolPlan, packet, context);
+      const realtimeToolEvidence = await executeRealtimeBriefToolPlan(
+        realtimeToolPlan,
+        packet,
+        context,
+      );
       taskPrompt = appendRealtimeBriefToolEvidenceToPrompt(taskPrompt, realtimeToolEvidence);
     }
 
@@ -338,6 +356,7 @@ export async function executeAgent(
       taskType: request.taskType,
       pageContext: request.pageContext,
       defaultStatusColor: toEnvelopeStatusColor(rulesResult.statusColor),
+      demoNow: context.demoNow,
     });
 
     if (!parseResult.success) {
@@ -403,7 +422,12 @@ export async function executeAgent(
       // verifier 异常不得影响主链路，使用安全默认报告
       verificationReport = {
         envelope: result,
-        context: { taskType: context.task.type, missingData: [], visibleCharts: [], ruleInsights: [] },
+        context: {
+          taskType: context.task.type,
+          missingData: [],
+          visibleCharts: [],
+          ruleInsights: [],
+        },
         violations: [],
         summary: { total: 0, passed: 0, failed: 0, hardFailures: 0 },
         verifiedAt: new Date().toISOString(),
@@ -412,107 +436,114 @@ export async function executeAgent(
     tryNotify(() => observer?.onVerified?.(verificationReport));
 
     // P3: 同步审核闸门（仅高风险场景 + syncReviewer 已配置时触发）
-    if (deps.syncReviewer && shouldTriggerSyncGate(analysisPlan, verificationReport, context, request.userMessage)) {
+    if (
+      deps.syncReviewer &&
+      shouldTriggerSyncGate(analysisPlan, verificationReport, context, request.userMessage)
+    ) {
       // H-9: 整个 Sync Gate 流程共享 AbortController，控制总超时预算
       const gateController = new AbortController();
       const gateTimeout = setTimeout(() => gateController.abort(), timeoutMs);
 
       try {
-      const gateResult = await runSyncReflectionGate(
-        {
-          reviewer: deps.syncReviewer,
-          verifierInput,
-          plan: analysisPlan,
-          collectedEvidence: undefined, // P2 evidence 通过 packet 已注入 prompt
-          precomputedVerificationReport: verificationReport, // H-6: 复用已计算的 verifier 结果
-          signal: gateController.signal, // H-9: 传递共享 signal
-        },
-        result,
-      );
-      tryNotify(() => observer?.onSyncGate?.(gateResult));
+        const gateResult = await runSyncReflectionGate(
+          {
+            reviewer: deps.syncReviewer,
+            verifierInput,
+            plan: analysisPlan,
+            collectedEvidence: undefined, // P2 evidence 通过 packet 已注入 prompt
+            precomputedVerificationReport: verificationReport, // H-6: 复用已计算的 verifier 结果
+            signal: gateController.signal, // H-9: 传递共享 signal
+          },
+          result,
+        );
+        tryNotify(() => observer?.onSyncGate?.(gateResult));
 
-      if (!gateResult.approved) {
-        // H-1: 将 rejection 反馈追加到 taskPrompt，让 solver 知道需要修正什么
-        const rejectionFeedback = gateResult.reviewResult?.violations
-          ?.map((v) => `- [${v.severity}] ${v.description} → ${v.requiredChanges}`)
-          ?.join('\n');
-        const regeneratedTaskPrompt = rejectionFeedback
-          ? `${taskPrompt}\n\n## 上次回复被审核拒绝，请修正以下问题：\n${rejectionFeedback}`
-          : taskPrompt;
+        if (!gateResult.approved) {
+          // H-1: 将 rejection 反馈追加到 taskPrompt，让 solver 知道需要修正什么
+          const rejectionFeedback = gateResult.reviewResult?.violations
+            ?.map((v) => `- [${v.severity}] ${v.description} → ${v.requiredChanges}`)
+            ?.join('\n');
+          const regeneratedTaskPrompt = rejectionFeedback
+            ? `${taskPrompt}\n\n## 上次回复被审核拒绝，请修正以下问题：\n${rejectionFeedback}`
+            : taskPrompt;
 
-        // 重生成一次：基于原始 prompt + rejection 反馈重新调用 solver
-        const regeneratedRaw = await deps.agent.invoke({
-          systemPrompt,
-          userPrompt: regeneratedTaskPrompt,
-          signal: gateController.signal, // H-9: 使用共享 signal 控制剩余时间
-        });
-        const regeneratedParsed = parseAgentResponse(regeneratedRaw.content, {
-          taskType: request.taskType,
-          pageContext: request.pageContext,
-          defaultStatusColor: toEnvelopeStatusColor(rulesResult.statusColor),
-        });
+          // 重生成一次：基于原始 prompt + rejection 反馈重新调用 solver
+          const regeneratedRaw = await deps.agent.invoke({
+            systemPrompt,
+            userPrompt: regeneratedTaskPrompt,
+            signal: gateController.signal, // H-9: 使用共享 signal 控制剩余时间
+          });
+          const regeneratedParsed = parseAgentResponse(regeneratedRaw.content, {
+            taskType: request.taskType,
+            pageContext: request.pageContext,
+            defaultStatusColor: toEnvelopeStatusColor(rulesResult.statusColor),
+            demoNow: context.demoNow,
+          });
 
-        // H-1: 跟踪重生成审核结果，用于安全边界 violations
-        let reGateResult: SyncGateResult | undefined;
+          // H-1: 跟踪重生成审核结果，用于安全边界 violations
+          let reGateResult: SyncGateResult | undefined;
 
-        if (regeneratedParsed.success) {
-          const regeneratedTokens = validateChartTokens(
-            regeneratedParsed.envelope.chartTokens,
-            Array.from(allowedTokens),
-          );
-          const regeneratedCleaned = cleanSafetyIssues(
-            regeneratedParsed.envelope.summary,
-            context.dataWindow.missingFields,
-            regeneratedParsed.envelope.microTips,
-          );
-          const regenerated: AgentResponseEnvelope = {
-            ...regeneratedParsed.envelope,
-            chartTokens: regeneratedTokens.valid,
-            summary: regeneratedCleaned.cleaned,
-            microTips: regeneratedCleaned.cleanedTips,
-            meta: { ...regeneratedParsed.envelope.meta, finishReason: 'complete' },
-          };
+          if (regeneratedParsed.success) {
+            const regeneratedTokens = validateChartTokens(
+              regeneratedParsed.envelope.chartTokens,
+              Array.from(allowedTokens),
+            );
+            const regeneratedCleaned = cleanSafetyIssues(
+              regeneratedParsed.envelope.summary,
+              context.dataWindow.missingFields,
+              regeneratedParsed.envelope.microTips,
+            );
+            const regenerated: AgentResponseEnvelope = {
+              ...regeneratedParsed.envelope,
+              chartTokens: regeneratedTokens.valid,
+              summary: regeneratedCleaned.cleaned,
+              microTips: regeneratedCleaned.cleanedTips,
+              meta: { ...regeneratedParsed.envelope.meta, finishReason: 'complete' },
+            };
 
-          // 重生成后再审核一次
-          const reVerifierInput: VerifierInput = {
-            envelope: regenerated, context, rulesResult, packet, parseResult: { success: true },
-          };
-          reGateResult = await runSyncReflectionGate(
-            {
-              reviewer: deps.syncReviewer,
-              verifierInput: reVerifierInput,
-              plan: analysisPlan,
-              signal: gateController.signal, // H-9: 传递共享 signal
-            },
-            regenerated,
-          );
+            // 重生成后再审核一次
+            const reVerifierInput: VerifierInput = {
+              envelope: regenerated,
+              context,
+              rulesResult,
+              packet,
+              parseResult: { success: true },
+            };
+            reGateResult = await runSyncReflectionGate(
+              {
+                reviewer: deps.syncReviewer,
+                verifierInput: reVerifierInput,
+                plan: analysisPlan,
+                signal: gateController.signal, // H-9: 传递共享 signal
+              },
+              regenerated,
+            );
 
-          if (reGateResult!.approved) {
-            // 重生成通过
-            tryNotify(() => observer?.onSyncGate?.(reGateResult!));
-            tryNotify(() => observer?.onParsed?.(regenerated));
-            // C-3: 对重生成的结果补充 verifier observer
-            try {
-              const reVerificationReport = verifyOutput(reVerifierInput);
-              tryNotify(() => observer?.onVerified?.(reVerificationReport));
-            } catch {
-              // verifier 异常不得影响重生成返回
+            if (reGateResult!.approved) {
+              // 重生成通过
+              tryNotify(() => observer?.onSyncGate?.(reGateResult!));
+              tryNotify(() => observer?.onParsed?.(regenerated));
+              // C-3: 对重生成的结果补充 verifier observer
+              try {
+                const reVerificationReport = verifyOutput(reVerifierInput);
+                tryNotify(() => observer?.onVerified?.(reVerificationReport));
+              } catch {
+                // verifier 异常不得影响重生成返回
+              }
+              // 注意：重生成的结果也需要写回 memory
+              writeSessionMemory(deps, request, regenerated.summary);
+              writeAnalyticalMemory(deps, request, context, regenerated.summary, rulesResult);
+              return regenerated;
             }
-            // 注意：重生成的结果也需要写回 memory
-            writeSessionMemory(deps, request, regenerated.summary);
-            writeAnalyticalMemory(deps, request, context, regenerated.summary, rulesResult);
-            return regenerated;
           }
-        }
 
-        // 重生成仍不通过或解析失败：返回安全边界说明
-        // H-1: 优先使用重生成审核的 violations 而非第一次审核结果
-        const effectiveViolations = reGateResult?.reviewResult?.violations
-          ?? gateResult.reviewResult?.violations
-          ?? [];
-        tryNotify(() => observer?.onSafetyBoundary?.(effectiveViolations));
-        return toSafetyBoundaryResponse(request, effectiveViolations);
-      }
+          // 重生成仍不通过或解析失败：返回安全边界说明
+          // H-1: 优先使用重生成审核的 violations 而非第一次审核结果
+          const effectiveViolations =
+            reGateResult?.reviewResult?.violations ?? gateResult.reviewResult?.violations ?? [];
+          tryNotify(() => observer?.onSafetyBoundary?.(effectiveViolations));
+          return toSafetyBoundaryResponse(request, effectiveViolations);
+        }
       } finally {
         clearTimeout(gateTimeout);
       }
@@ -520,29 +551,38 @@ export async function executeAgent(
 
     // P0: 异步 reflection（不阻断，后台执行）
     if (deps.reflectionObserver) {
-      deps.reflectionObserver.observeAsync({
-        envelope: result,
-        report: verificationReport,
-        context: {
-          task: { type: context.task.type, userMessage: context.task.userMessage },
-          dataWindow: { missingFields: context.dataWindow.missingFields },
-          signals: { overallStatus: context.signals.overallStatus, anomalies: context.signals.anomalies },
-        },
-        packet: {
-          evidence: packet.evidence,
-          missingData: packet.missingData,
-          visibleCharts: packet.visibleCharts,
-        },
-        systemPrompt,
-        taskPrompt,
-      }).then((artifact) => {
-        tryNotify(() => observer?.onReflected?.(artifact));
-      }).catch((err) => {
-        // reflection 失败不得影响生产，但至少记录 warning
-        if (typeof console !== 'undefined' && console.warn) {
-          console.warn('[agent-runtime] async reflection failed:', err instanceof Error ? err.message : String(err));
-        }
-      });
+      deps.reflectionObserver
+        .observeAsync({
+          envelope: result,
+          report: verificationReport,
+          context: {
+            task: { type: context.task.type, userMessage: context.task.userMessage },
+            dataWindow: { missingFields: context.dataWindow.missingFields },
+            signals: {
+              overallStatus: context.signals.overallStatus,
+              anomalies: context.signals.anomalies,
+            },
+          },
+          packet: {
+            evidence: packet.evidence,
+            missingData: packet.missingData,
+            visibleCharts: packet.visibleCharts,
+          },
+          systemPrompt,
+          taskPrompt,
+        })
+        .then((artifact) => {
+          tryNotify(() => observer?.onReflected?.(artifact));
+        })
+        .catch((err) => {
+          // reflection 失败不得影响生产，但至少记录 warning
+          if (typeof console !== 'undefined' && console.warn) {
+            console.warn(
+              '[agent-runtime] async reflection failed:',
+              err instanceof Error ? err.message : String(err),
+            );
+          }
+        });
     }
 
     return result;
@@ -613,25 +653,29 @@ function writeAnalyticalMemory(
           (i) => i.mentionPolicy?.summary === 'allowed',
         );
         if (currentInsight && currentInsight.recommendedFocus.length > 0) {
-          const newActions: RecentRecommendedAction[] = currentInsight.recommendedFocus.map((focus, idx) => {
-            const intent = currentInsight.actionIntents[idx];
-            return {
-              category: focus.category,
-              microEventType: intent?.interaction?.kind === 'micro_event'
-                ? intent.interaction.microEvent.type
-                : undefined,
-              title: intent?.title ?? focus.action,
-              timestamp: Date.now(),
-            };
-          });
+          const newActions: RecentRecommendedAction[] = currentInsight.recommendedFocus.map(
+            (focus, idx) => {
+              const intent = currentInsight.actionIntents[idx];
+              return {
+                category: focus.category,
+                microEventType:
+                  intent?.interaction?.kind === 'micro_event'
+                    ? intent.interaction.microEvent.type
+                    : undefined,
+                title: intent?.title ?? focus.action,
+                timestamp: Date.now(),
+              };
+            },
+          );
           deps.analyticalMemory.setHomepageActions(sessionId, profileId, newActions);
         }
       }
       break;
     case AgentTaskType.VIEW_SUMMARY: {
-      const scope = context.task.tab && context.task.timeframe
-        ? `${context.task.tab}:${context.task.timeframe}`
-        : undefined;
+      const scope =
+        context.task.tab && context.task.timeframe
+          ? `${context.task.tab}:${context.task.timeframe}`
+          : undefined;
       if (scope) {
         deps.analyticalMemory.setViewSummary(sessionId, profileId, scope, summary);
       }
@@ -757,11 +801,10 @@ function appendPlanContextToPrompt(
 }
 
 /** required=true 的 WebSearch 搜索不可用时的安全响应 */
-function toRequiredWebSearchUnavailableResponse(
-  request: AgentRequest,
-): AgentResponseEnvelope {
+function toRequiredWebSearchUnavailableResponse(request: AgentRequest): AgentResponseEnvelope {
   return {
-    summary: '当前无法获取外部资料，因此我不能可靠回答这个需要最新外部信息的问题。你可以稍后重试，或改问基于本地健康数据的问题。',
+    summary:
+      '当前无法获取外部资料，因此我不能可靠回答这个需要最新外部信息的问题。你可以稍后重试，或改问基于本地健康数据的问题。',
     source: 'planner',
     statusColor: 'warning',
     chartTokens: [],
@@ -776,10 +819,7 @@ function toRequiredWebSearchUnavailableResponse(
 }
 
 /** 构造 clarification 响应（用户意图不明确时） */
-function toClarificationResponse(
-  request: AgentRequest,
-  plan: AnalysisPlan,
-): AgentResponseEnvelope {
+function toClarificationResponse(request: AgentRequest, plan: AnalysisPlan): AgentResponseEnvelope {
   const question = plan.userIntent.clarificationQuestion ?? '能否更具体地描述您的问题？';
   return {
     summary: `为了更好地帮助您，我需要更多信息：${question}`,
@@ -800,7 +840,12 @@ function toClarificationResponse(
 function toClarificationOrSafeResponse(
   engine: FallbackEngine,
   request: AgentRequest,
-  planResult: { success: false; parseError?: string; verificationResult?: PlanVerificationResult; failureType?: string },
+  planResult: {
+    success: false;
+    parseError?: string;
+    verificationResult?: PlanVerificationResult;
+    failureType?: string;
+  },
   key: FallbackLookupKey,
   locale: Locale,
 ): AgentResponseEnvelope {
@@ -832,7 +877,11 @@ function shouldTriggerSyncGate(
   userMessage: string | undefined,
 ): boolean {
   // 条件 1: plan.riskLevel 为潜在风险或安全边界
-  if (plan?.userIntent.riskLevel === 'safety_boundary' || plan?.userIntent.riskLevel === 'potential_risk') return true;
+  if (
+    plan?.userIntent.riskLevel === 'safety_boundary' ||
+    plan?.userIntent.riskLevel === 'potential_risk'
+  )
+    return true;
   // 条件 2: 用户询问运动准备度、诊断、用药、治疗承诺
   if (userMessage && HIGH_RISK_TOPIC_PATTERNS.some((p) => p.test(userMessage))) return true;
   // 条件 3: 输出状态为严重异常（overallStatus === 'red'）
@@ -840,7 +889,8 @@ function shouldTriggerSyncGate(
   // 条件 4: verifier 出现 hard violation
   if (report.summary.hardFailures > 0) return true;
   // 条件 5: Planner 或 verifier 判断存在缺失数据高风险误导
-  if (plan?.safetyConstraints.includes('disclose_missing_data') && hasMissingDataRisk(context)) return true;
+  if (plan?.safetyConstraints.includes('disclose_missing_data') && hasMissingDataRisk(context))
+    return true;
   return false;
 }
 
@@ -855,9 +905,8 @@ function toSafetyBoundaryResponse(
   request: AgentRequest,
   violations: ReflectionReviewResult['violations'],
 ): AgentResponseEnvelope {
-  const violationSummary = violations.length > 0
-    ? violations.map((v) => v.description).join('；')
-    : '回复未通过安全审核';
+  const violationSummary =
+    violations.length > 0 ? violations.map((v) => v.description).join('；') : '回复未通过安全审核';
 
   return {
     summary: `为了您的安全，建议咨询专业医生获取准确的健康建议。本次回复因安全原因未通过审核：${violationSummary}`,

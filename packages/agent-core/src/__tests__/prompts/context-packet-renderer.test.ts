@@ -174,8 +174,24 @@ describe('renderTaskContextPacket', () => {
         latest24h: {
           date: '2026-04-10',
           metrics: [
-            { metric: 'hrv', value: 58, unit: 'ms', baseline: 60, deltaPctVsBaseline: -3, status: 'normal', evidenceId: 'e1' },
-            { metric: 'sleep_total', value: 420, unit: 'min', baseline: 420, deltaPctVsBaseline: 0, status: 'normal', evidenceId: 'e2' },
+            {
+              metric: 'hrv',
+              value: 58,
+              unit: 'ms',
+              baseline: 60,
+              deltaPctVsBaseline: -3,
+              status: 'normal',
+              evidenceId: 'e1',
+            },
+            {
+              metric: 'sleep_total',
+              value: 420,
+              unit: 'min',
+              baseline: 420,
+              deltaPctVsBaseline: 0,
+              status: 'normal',
+              evidenceId: 'e2',
+            },
           ],
         },
         trend7d: [
@@ -221,8 +237,24 @@ describe('renderTaskContextPacket', () => {
         latest24h: {
           date: '2026-04-10',
           metrics: [
-            { metric: 'hrv', value: 58, unit: 'ms', baseline: 60, deltaPctVsBaseline: -3, status: 'normal', evidenceId: 'e1' },
-            { metric: 'sleep_total', value: 420, unit: 'min', baseline: 420, deltaPctVsBaseline: 0, status: 'normal', evidenceId: 'e2' },
+            {
+              metric: 'hrv',
+              value: 58,
+              unit: 'ms',
+              baseline: 60,
+              deltaPctVsBaseline: -3,
+              status: 'normal',
+              evidenceId: 'e1',
+            },
+            {
+              metric: 'sleep_total',
+              value: 420,
+              unit: 'min',
+              baseline: 420,
+              deltaPctVsBaseline: 0,
+              status: 'normal',
+              evidenceId: 'e2',
+            },
           ],
         },
         trend7d: [
@@ -342,7 +374,13 @@ describe('renderTaskContextPacket', () => {
 
   it('renders advisor chat packet in zh', () => {
     const packet: TaskContextPacket = {
-      task: { type: 'advisor_chat', page: 'data-center', tab: 'hrv', timeframe: 'week', userMessage: '这个图说明什么' },
+      task: {
+        type: 'advisor_chat',
+        page: 'data-center',
+        tab: 'hrv',
+        timeframe: 'week',
+        userMessage: '这个图说明什么',
+      },
       userContext: {
         profileId: 'p1',
         name: 'Test',
@@ -370,12 +408,15 @@ describe('renderTaskContextPacket', () => {
           chartDataSummaries: ['HRV_7DAYS: latest 58ms, avg 59ms, trend stable'],
         },
         relevantFacts: [
-          { label: '当前图表: HRV_7DAYS', factType: 'chart', summary: 'HRV 趋势稳定', evidenceIds: ['e1'] },
+          {
+            label: '当前图表: HRV_7DAYS',
+            factType: 'chart',
+            summary: 'HRV 趋势稳定',
+            evidenceIds: ['e1'],
+          },
         ],
         recentConversation: [],
-        constraints: [
-          { type: 'must_cite_evidence', description: '重要建议必须引用 evidence' },
-        ],
+        constraints: [{ type: 'must_cite_evidence', description: '重要建议必须引用 evidence' }],
       },
     };
 
@@ -390,7 +431,13 @@ describe('renderTaskContextPacket', () => {
 
   it('renders advisor chat packet in en', () => {
     const packet: TaskContextPacket = {
-      task: { type: 'advisor_chat', page: 'data-center', tab: 'hrv', timeframe: 'week', userMessage: 'What does this chart mean' },
+      task: {
+        type: 'advisor_chat',
+        page: 'data-center',
+        tab: 'hrv',
+        timeframe: 'week',
+        userMessage: 'What does this chart mean',
+      },
       userContext: {
         profileId: 'p1',
         name: 'Test',
@@ -418,7 +465,12 @@ describe('renderTaskContextPacket', () => {
           chartDataSummaries: ['HRV_7DAYS: latest 58ms, avg 59ms, trend stable'],
         },
         relevantFacts: [
-          { label: 'Current chart: HRV_7DAYS', factType: 'chart', summary: 'HRV trend stable', evidenceIds: ['e1'] },
+          {
+            label: 'Current chart: HRV_7DAYS',
+            factType: 'chart',
+            summary: 'HRV trend stable',
+            evidenceIds: ['e1'],
+          },
         ],
         recentConversation: [],
         constraints: [
@@ -505,9 +557,33 @@ describe('renderTaskContextPacket', () => {
         latest24h: {
           date: '2026-04-10',
           metrics: [
-            { metric: 'hrv', value: 58, unit: 'ms', baseline: 60, deltaPctVsBaseline: -3, status: 'normal', evidenceId: 'e1' },
-            { metric: 'resting_hr', value: 62, unit: 'bpm', baseline: 60, deltaPctVsBaseline: 3, status: 'normal', evidenceId: 'e2' },
-            { metric: 'spo2', value: 97, unit: '%', baseline: 98, deltaPctVsBaseline: -1, status: 'normal', evidenceId: 'e3' },
+            {
+              metric: 'hrv',
+              value: 58,
+              unit: 'ms',
+              baseline: 60,
+              deltaPctVsBaseline: -3,
+              status: 'normal',
+              evidenceId: 'e1',
+            },
+            {
+              metric: 'resting_hr',
+              value: 62,
+              unit: 'bpm',
+              baseline: 60,
+              deltaPctVsBaseline: 3,
+              status: 'normal',
+              evidenceId: 'e2',
+            },
+            {
+              metric: 'spo2',
+              value: 97,
+              unit: '%',
+              baseline: 98,
+              deltaPctVsBaseline: -1,
+              status: 'normal',
+              evidenceId: 'e3',
+            },
           ],
         },
         trend7d: [
@@ -584,8 +660,24 @@ describe('renderTaskContextPacket', () => {
         latest24h: {
           date: '2026-04-10',
           metrics: [
-            { metric: 'hrv', value: 58, unit: 'ms', baseline: 60, deltaPctVsBaseline: -3, status: 'normal', evidenceId: 'e1' },
-            { metric: 'sleep_total', value: 420, unit: 'min', baseline: 420, deltaPctVsBaseline: 0, status: 'normal', evidenceId: 'e2' },
+            {
+              metric: 'hrv',
+              value: 58,
+              unit: 'ms',
+              baseline: 60,
+              deltaPctVsBaseline: -3,
+              status: 'normal',
+              evidenceId: 'e1',
+            },
+            {
+              metric: 'sleep_total',
+              value: 420,
+              unit: 'min',
+              baseline: 420,
+              deltaPctVsBaseline: 0,
+              status: 'normal',
+              evidenceId: 'e2',
+            },
           ],
         },
         trend7d: [
@@ -642,41 +734,62 @@ describe('renderTaskContextPacket', () => {
         trend7d: [],
         rulesInsights: [],
         suggestedChartTokens: [],
-        eventInsights: [{
-          eventId: 'event_deep_focus_2026-04-21T10:00',
-          eventType: 'work_focus',
-          priority: 'high',
-          timeRelation: '刚结束约 10 min',
-          headline: '连续专注 120 min，身体保持低位移',
-          physiology: [],
-          recoveryContext: [],
-          tension: { level: 'watch', summary: '认知负荷已累积', reason: 'work focus with compressed HRV' },
-          recommendedFocus: [{ category: 'movement_reset', action: '起身轻走', durationMin: 10, rationale: '释放静止负荷' }],
-          actionIntents: [
-            {
-              id: 'a1',
-              emoji: '🫁',
-              title: '做几次深呼吸',
-              description: '现在做 3 分钟缓慢呼吸',
-              aiPromise: '我会记录这个微行动并更新实时简报',
-              productCapability: 'contextual_followup',
-              interaction: {
-                kind: 'micro_event',
-                microEvent: { type: 'micro_deep_breathing', durationMinutes: 3, params: { pattern: 'extended_exhale' } },
+        eventInsights: [
+          {
+            eventId: 'event_deep_focus_2026-04-21T10:00',
+            eventType: 'work_focus',
+            priority: 'high',
+            timeRelation: '刚结束约 10 min',
+            headline: '连续专注 120 min，身体保持低位移',
+            physiology: [],
+            recoveryContext: [],
+            tension: {
+              level: 'watch',
+              summary: '认知负荷已累积',
+              reason: 'work focus with compressed HRV',
+            },
+            recommendedFocus: [
+              {
+                category: 'movement_reset',
+                action: '起身轻走',
+                durationMin: 10,
+                rationale: '释放静止负荷',
               },
+            ],
+            actionIntents: [
+              {
+                id: 'a1',
+                emoji: '🫁',
+                title: '做几次深呼吸',
+                description: '现在做 3 分钟缓慢呼吸',
+                aiPromise: '我会记录这个微行动并更新实时简报',
+                productCapability: 'contextual_followup',
+                interaction: {
+                  kind: 'micro_event',
+                  microEvent: {
+                    type: 'micro_deep_breathing',
+                    durationMinutes: 3,
+                    params: { pattern: 'extended_exhale' },
+                  },
+                },
+              },
+              {
+                id: 'a2',
+                emoji: '💧',
+                title: '先小口补水',
+                description: '喝一杯温水',
+                aiPromise: '我会记录你的选择并用于本次建议上下文',
+                productCapability: 'record_choice',
+              },
+            ],
+            evidenceIds: ['event_deep_focus_2026-04-21T10:00'],
+            mentionPolicy: {
+              summary: 'allowed',
+              actions: 'allowed',
+              reason: 'current_latest_event',
             },
-            {
-              id: 'a2',
-              emoji: '💧',
-              title: '先小口补水',
-              description: '喝一杯温水',
-              aiPromise: '我会记录你的选择并用于本次建议上下文',
-              productCapability: 'record_choice',
-            },
-          ],
-          evidenceIds: ['event_deep_focus_2026-04-21T10:00'],
-          mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' },
-        }],
+          },
+        ],
       },
     };
 
@@ -707,20 +820,63 @@ describe('renderTaskContextPacket', () => {
         trend7d: [],
         rulesInsights: [],
         suggestedChartTokens: [],
-        eventInsights: [{
-          eventId: 'event_deep_focus_2026-04-21T10:00',
-          eventType: 'work_focus',
-          priority: 'high',
-          timeRelation: '刚结束约 10 min',
-          headline: '连续专注 120 min，身体保持低位移',
-          physiology: [{ metric: 'hrv', value: 55, unit: 'ms', qualifier: 'compressed', interpretation: 'HRV 处于压缩状态', evidenceId: 'e-hrv' }],
-          recoveryContext: [{ source: 'latest24h', metric: 'sleep_total', relation: 'supports', summary: '昨晚睡眠支撑上午输出', evidenceId: 'e-sleep' }],
-          tension: { level: 'watch', summary: '认知负荷已累积', reason: 'work focus with compressed HRV' },
-          recommendedFocus: [{ category: 'movement_reset', action: '起身轻走', durationMin: 10, rationale: '释放静止负荷' }],
-          actionIntents: [{ id: 'a1', emoji: '🚶', title: '要不要轻走一下', description: '起身轻走 10 min', aiPromise: '我会记录你的选择并用于本次建议上下文', productCapability: 'record_choice' }],
-          evidenceIds: ['event_deep_focus_2026-04-21T10:00', 'e-hrv', 'e-sleep'],
-          mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' },
-        }],
+        eventInsights: [
+          {
+            eventId: 'event_deep_focus_2026-04-21T10:00',
+            eventType: 'work_focus',
+            priority: 'high',
+            timeRelation: '刚结束约 10 min',
+            headline: '连续专注 120 min，身体保持低位移',
+            physiology: [
+              {
+                metric: 'hrv',
+                value: 55,
+                unit: 'ms',
+                qualifier: 'compressed',
+                interpretation: 'HRV 处于压缩状态',
+                evidenceId: 'e-hrv',
+              },
+            ],
+            recoveryContext: [
+              {
+                source: 'latest24h',
+                metric: 'sleep_total',
+                relation: 'supports',
+                summary: '昨晚睡眠支撑上午输出',
+                evidenceId: 'e-sleep',
+              },
+            ],
+            tension: {
+              level: 'watch',
+              summary: '认知负荷已累积',
+              reason: 'work focus with compressed HRV',
+            },
+            recommendedFocus: [
+              {
+                category: 'movement_reset',
+                action: '起身轻走',
+                durationMin: 10,
+                rationale: '释放静止负荷',
+              },
+            ],
+            actionIntents: [
+              {
+                id: 'a1',
+                emoji: '🚶',
+                title: '要不要轻走一下',
+                description: '起身轻走 10 min',
+                aiPromise: '我会记录你的选择并用于本次建议上下文',
+                productCapability: 'record_choice',
+              },
+            ],
+            evidenceIds: ['event_deep_focus_2026-04-21T10:00', 'e-hrv', 'e-sleep'],
+            mentionPolicy: {
+              summary: 'allowed',
+              actions: 'allowed',
+              reason: 'current_latest_event',
+            },
+          },
+        ],
       },
     };
 
@@ -747,90 +903,150 @@ describe('renderTaskContextPacket', () => {
       evidence: [],
       visibleCharts: [],
       homepage: {
-        recentEvents: [{
-          recognizedEventId: 're-hiit-1',
-          type: 'intermittent_exercise',
-          start: '2026-05-31T17:30',
-          end: '2026-05-31T18:30',
-          durationMin: 60,
-          confidence: 0.92,
-          sourceSegmentId: 'seg-hiit-1',
-          recognitionEvidence: ['心率标准差 35, 交替高低强度'],
-          eventWindow: {
-            source: 'synced_device_samples',
-            coverage: 'complete',
+        recentEvents: [
+          {
             recognizedEventId: 're-hiit-1',
-            sourceSegmentId: 'seg-hiit-1',
+            type: 'intermittent_exercise',
             start: '2026-05-31T17:30',
             end: '2026-05-31T18:30',
             durationMin: 60,
-            sampleCount: 5,
-            evidenceIds: ['event_window_re-hiit-1_heart_rate'],
-            metrics: [{
-              metric: 'heart_rate',
-              unit: 'bpm',
-              sampleCount: 3,
-              startValue: 118,
-              endValue: 92,
-              latest: 92,
-              min: 92,
-              max: 172,
-              average: 134,
-              delta: -26,
-              qualifier: 'elevated',
-              interpretation: '事件窗口心率峰值 172bpm，均值 134bpm，末段 92bpm',
-              evidenceId: 'event_window_re-hiit-1_heart_rate',
-            }],
-          },
-          syncState: { lastSyncedMeasuredAt: '2026-05-31T18:30', pendingEventCount: 0, fromSyncedWindow: true },
-          evidenceIds: ['event_hiit', 'event_window_re-hiit-1_heart_rate'],
-        }],
-        eventInsights: [{
-          eventId: 'event_hiit',
-          eventType: 'hiit_workout',
-          priority: 'high',
-          timeRelation: '刚结束约 5 min',
-          headline: '完成 60 min 训练，身体进入恢复窗口',
-          eventWindow: {
-            source: 'synced_device_samples',
-            coverage: 'complete',
-            recognizedEventId: 're-hiit-1',
+            confidence: 0.92,
             sourceSegmentId: 'seg-hiit-1',
-            start: '2026-05-31T17:30',
-            end: '2026-05-31T18:30',
-            durationMin: 60,
-            sampleCount: 5,
-            evidenceIds: ['event_window_re-hiit-1_heart_rate'],
-            metrics: [{
-              metric: 'heart_rate',
-              unit: 'bpm',
-              sampleCount: 3,
-              startValue: 118,
-              endValue: 92,
-              latest: 92,
-              min: 92,
-              max: 172,
-              average: 134,
-              delta: -26,
-              qualifier: 'elevated',
-              interpretation: '事件窗口心率峰值 172bpm，均值 134bpm，末段 92bpm',
-              evidenceId: 'event_window_re-hiit-1_heart_rate',
-            }],
+            recognitionEvidence: ['心率标准差 35, 交替高低强度'],
+            eventWindow: {
+              source: 'synced_device_samples',
+              coverage: 'complete',
+              recognizedEventId: 're-hiit-1',
+              sourceSegmentId: 'seg-hiit-1',
+              start: '2026-05-31T17:30',
+              end: '2026-05-31T18:30',
+              durationMin: 60,
+              sampleCount: 5,
+              evidenceIds: ['event_window_re-hiit-1_heart_rate'],
+              metrics: [
+                {
+                  metric: 'heart_rate',
+                  unit: 'bpm',
+                  sampleCount: 3,
+                  startValue: 118,
+                  endValue: 92,
+                  latest: 92,
+                  min: 92,
+                  max: 172,
+                  average: 134,
+                  delta: -26,
+                  qualifier: 'elevated',
+                  interpretation: '事件窗口心率峰值 172bpm，均值 134bpm，末段 92bpm',
+                  evidenceId: 'event_window_re-hiit-1_heart_rate',
+                },
+              ],
+            },
+            syncState: {
+              lastSyncedMeasuredAt: '2026-05-31T18:30',
+              pendingEventCount: 0,
+              fromSyncedWindow: true,
+            },
+            evidenceIds: ['event_hiit', 'event_window_re-hiit-1_heart_rate'],
           },
-          physiology: [{ metric: 'heart_rate', value: 172, unit: 'bpm', qualifier: 'elevated', interpretation: '事件窗口心率峰值 172bpm，均值 134bpm，末段 92bpm', evidenceId: 'event_window_re-hiit-1_heart_rate' }],
-          recoveryContext: [],
-          tension: { level: 'watch', summary: '运动事件已经进入恢复窗口，需要降低后续刺激', reason: 'event-window workout recovery markers present' },
-          recommendedFocus: [{ category: 'hydration', action: '小口补水并做轻度走动冷身', durationMin: 10, rationale: '帮助心率平稳回落并支持循环恢复' }],
-          actionIntents: [],
-          evidenceIds: ['event_hiit', 'event_window_re-hiit-1_heart_rate'],
-          mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' },
-        }],
+        ],
+        eventInsights: [
+          {
+            eventId: 'event_hiit',
+            eventType: 'hiit_workout',
+            priority: 'high',
+            timeRelation: '刚结束约 5 min',
+            headline: '完成 60 min 训练，身体进入恢复窗口',
+            eventWindow: {
+              source: 'synced_device_samples',
+              coverage: 'complete',
+              recognizedEventId: 're-hiit-1',
+              sourceSegmentId: 'seg-hiit-1',
+              start: '2026-05-31T17:30',
+              end: '2026-05-31T18:30',
+              durationMin: 60,
+              sampleCount: 5,
+              evidenceIds: ['event_window_re-hiit-1_heart_rate'],
+              metrics: [
+                {
+                  metric: 'heart_rate',
+                  unit: 'bpm',
+                  sampleCount: 3,
+                  startValue: 118,
+                  endValue: 92,
+                  latest: 92,
+                  min: 92,
+                  max: 172,
+                  average: 134,
+                  delta: -26,
+                  qualifier: 'elevated',
+                  interpretation: '事件窗口心率峰值 172bpm，均值 134bpm，末段 92bpm',
+                  evidenceId: 'event_window_re-hiit-1_heart_rate',
+                },
+              ],
+            },
+            physiology: [
+              {
+                metric: 'heart_rate',
+                value: 172,
+                unit: 'bpm',
+                qualifier: 'elevated',
+                interpretation: '事件窗口心率峰值 172bpm，均值 134bpm，末段 92bpm',
+                evidenceId: 'event_window_re-hiit-1_heart_rate',
+              },
+            ],
+            recoveryContext: [],
+            tension: {
+              level: 'watch',
+              summary: '运动事件已经进入恢复窗口，需要降低后续刺激',
+              reason: 'event-window workout recovery markers present',
+            },
+            recommendedFocus: [
+              {
+                category: 'hydration',
+                action: '小口补水并做轻度走动冷身',
+                durationMin: 10,
+                rationale: '帮助心率平稳回落并支持循环恢复',
+              },
+            ],
+            actionIntents: [],
+            evidenceIds: ['event_hiit', 'event_window_re-hiit-1_heart_rate'],
+            mentionPolicy: {
+              summary: 'allowed',
+              actions: 'allowed',
+              reason: 'current_latest_event',
+            },
+          },
+        ],
         latest24h: {
           date: '2026-05-31',
           metrics: [
-            { metric: 'hrv', value: 93, unit: 'ms', baseline: 93, deltaPctVsBaseline: 0, status: 'normal', evidenceId: 'daily_hrv' },
-            { metric: 'resting_hr', value: 48, unit: 'bpm', baseline: 48, deltaPctVsBaseline: 0, status: 'normal', evidenceId: 'daily_hr' },
-            { metric: 'spo2', value: 99, unit: '%', baseline: 99, deltaPctVsBaseline: 0, status: 'normal', evidenceId: 'daily_spo2' },
+            {
+              metric: 'hrv',
+              value: 93,
+              unit: 'ms',
+              baseline: 93,
+              deltaPctVsBaseline: 0,
+              status: 'normal',
+              evidenceId: 'daily_hrv',
+            },
+            {
+              metric: 'resting_hr',
+              value: 48,
+              unit: 'bpm',
+              baseline: 48,
+              deltaPctVsBaseline: 0,
+              status: 'normal',
+              evidenceId: 'daily_hr',
+            },
+            {
+              metric: 'spo2',
+              value: 99,
+              unit: '%',
+              baseline: 99,
+              deltaPctVsBaseline: 0,
+              status: 'normal',
+              evidenceId: 'daily_spo2',
+            },
           ],
         },
         trend7d: [],
@@ -860,57 +1076,110 @@ describe('renderTaskContextPacket', () => {
       dataWindow: { start: '2026-05-26', end: '2026-06-01', recordCount: 7, completenessPct: 100 },
       missingData: [],
       evidence: [
-        { id: 'latest24h_sleep_total_2026-06-01', source: 'daily_records', metric: 'sleep_total', value: 450, unit: 'min', dateRange: { start: '2026-06-01', end: '2026-06-01' }, derivation: 'latest record for sleep_total' },
-        { id: 'event_walk_2026-06-01T12:30', source: 'timeline_sync', metric: 'walk', dateRange: { start: '2026-06-01T12:30', end: '2026-06-01T13:00' }, derivation: 'recognized event from timeline sync, confidence 91%' },
+        {
+          id: 'latest24h_sleep_total_2026-06-01',
+          source: 'daily_records',
+          metric: 'sleep_total',
+          value: 450,
+          unit: 'min',
+          dateRange: { start: '2026-06-01', end: '2026-06-01' },
+          derivation: 'latest record for sleep_total',
+        },
+        {
+          id: 'event_walk_2026-06-01T12:30',
+          source: 'timeline_sync',
+          metric: 'walk',
+          dateRange: { start: '2026-06-01T12:30', end: '2026-06-01T13:00' },
+          derivation: 'recognized event from timeline sync, confidence 91%',
+        },
       ],
       visibleCharts: [],
       homepage: {
-        recentEvents: [{
-          recognizedEventId: 're-walk-1',
-          type: 'walk',
-          start: '2026-06-01T12:30',
-          end: '2026-06-01T13:00',
-          durationMin: 30,
-          confidence: 0.91,
-          sourceSegmentId: 'seg-walk-1',
-          recognitionEvidence: ['步行 30 min'],
-          syncState: { lastSyncedMeasuredAt: '2026-06-01T13:00', pendingEventCount: 0, fromSyncedWindow: true },
-          evidenceIds: ['event_walk_2026-06-01T12:30'],
-        }],
+        recentEvents: [
+          {
+            recognizedEventId: 're-walk-1',
+            type: 'walk',
+            start: '2026-06-01T12:30',
+            end: '2026-06-01T13:00',
+            durationMin: 30,
+            confidence: 0.91,
+            sourceSegmentId: 'seg-walk-1',
+            recognitionEvidence: ['步行 30 min'],
+            syncState: {
+              lastSyncedMeasuredAt: '2026-06-01T13:00',
+              pendingEventCount: 0,
+              fromSyncedWindow: true,
+            },
+            evidenceIds: ['event_walk_2026-06-01T12:30'],
+          },
+        ],
         latest24h: {
           date: '2026-06-01',
           metrics: [
-            { metric: 'sleep_total', value: 450, unit: 'min', baseline: 600, deltaPctVsBaseline: -25, status: 'normal', evidenceId: 'latest24h_sleep_total_2026-06-01' },
-            { metric: 'hrv', value: 93, unit: 'ms', baseline: 95, deltaPctVsBaseline: -2, status: 'normal', evidenceId: 'latest24h_hrv_2026-06-01' },
+            {
+              metric: 'sleep_total',
+              value: 450,
+              unit: 'min',
+              baseline: 600,
+              deltaPctVsBaseline: -25,
+              status: 'normal',
+              evidenceId: 'latest24h_sleep_total_2026-06-01',
+            },
+            {
+              metric: 'hrv',
+              value: 93,
+              unit: 'ms',
+              baseline: 95,
+              deltaPctVsBaseline: -2,
+              status: 'normal',
+              evidenceId: 'latest24h_hrv_2026-06-01',
+            },
           ],
         },
         trend7d: [],
         rulesInsights: [],
         suggestedChartTokens: [],
-        eventInsights: [{
-          eventId: 'event_walk_2026-06-01T12:30',
-          eventType: 'cardio_workout',
-          priority: 'high',
-          timeRelation: '刚结束约 0 min',
-          headline: '完成 30 min 训练，身体进入恢复窗口',
-          physiology: [],
-          recoveryContext: [{
-            source: 'latest24h',
-            metric: 'hrv',
-            relation: 'supports',
-            summary: 'HRV 状态支持当前活动安排',
-            visibility: 'material',
-            reason: 'metric_supports_current_event',
-            evidenceId: 'latest24h_hrv_2026-06-01',
-          }],
-          tension: { level: 'positive', summary: '事件窗口内没有明显冲突信号', reason: 'event-window markers do not indicate elevated tension' },
-          recommendedFocus: [
-            { category: 'hydration', action: '小口补水并做轻度走动冷身', durationMin: 10, rationale: '帮助心率平稳回落并支持循环恢复' },
-          ],
-          actionIntents: [],
-          evidenceIds: ['event_walk_2026-06-01T12:30', 'latest24h_hrv_2026-06-01'],
-          mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' },
-        }],
+        eventInsights: [
+          {
+            eventId: 'event_walk_2026-06-01T12:30',
+            eventType: 'cardio_workout',
+            priority: 'high',
+            timeRelation: '刚结束约 0 min',
+            headline: '完成 30 min 训练，身体进入恢复窗口',
+            physiology: [],
+            recoveryContext: [
+              {
+                source: 'latest24h',
+                metric: 'hrv',
+                relation: 'supports',
+                summary: 'HRV 状态支持当前活动安排',
+                visibility: 'material',
+                reason: 'metric_supports_current_event',
+                evidenceId: 'latest24h_hrv_2026-06-01',
+              },
+            ],
+            tension: {
+              level: 'positive',
+              summary: '事件窗口内没有明显冲突信号',
+              reason: 'event-window markers do not indicate elevated tension',
+            },
+            recommendedFocus: [
+              {
+                category: 'hydration',
+                action: '小口补水并做轻度走动冷身',
+                durationMin: 10,
+                rationale: '帮助心率平稳回落并支持循环恢复',
+              },
+            ],
+            actionIntents: [],
+            evidenceIds: ['event_walk_2026-06-01T12:30', 'latest24h_hrv_2026-06-01'],
+            mentionPolicy: {
+              summary: 'allowed',
+              actions: 'allowed',
+              reason: 'current_latest_event',
+            },
+          },
+        ],
       },
     };
 
@@ -952,7 +1221,11 @@ describe('renderTaskContextPacket', () => {
             confidence: 0.92,
             sourceSegmentId: 'seg-cardio-1',
             recognitionEvidence: ['有氧运动'],
-            syncState: { lastSyncedMeasuredAt: '2026-06-01T13:30', pendingEventCount: 0, fromSyncedWindow: true },
+            syncState: {
+              lastSyncedMeasuredAt: '2026-06-01T13:30',
+              pendingEventCount: 0,
+              fromSyncedWindow: true,
+            },
             evidenceIds: ['event_cardio'],
           },
           {
@@ -964,7 +1237,11 @@ describe('renderTaskContextPacket', () => {
             confidence: 0.9,
             sourceSegmentId: 'seg-sedentary-1',
             recognitionEvidence: ['久坐'],
-            syncState: { lastSyncedMeasuredAt: '2026-06-01T13:30', pendingEventCount: 0, fromSyncedWindow: true },
+            syncState: {
+              lastSyncedMeasuredAt: '2026-06-01T13:30',
+              pendingEventCount: 0,
+              fromSyncedWindow: true,
+            },
             evidenceIds: ['event_sedentary'],
           },
         ],
@@ -984,13 +1261,18 @@ describe('renderTaskContextPacket', () => {
             tension: { level: 'positive', summary: '事件窗口内没有明显冲突信号', reason: 'test' },
             recommendedFocus: [],
             actionIntents: [],
-            mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'current_latest_event' },
+            mentionPolicy: {
+              summary: 'allowed',
+              actions: 'allowed',
+              reason: 'current_latest_event',
+            },
             transitionContext: {
               currentEventId: 'event_cardio',
               priorEventId: 'event_sedentary',
               priorEventType: 'work_sedentary',
               relation: 'post_sedentary_activation',
-              internalFinding: '前一事件提示低活动和静止负荷，当前运动事件可用于判断循环激活和疲劳回落。',
+              internalFinding:
+                '前一事件提示低活动和静止负荷，当前运动事件可用于判断循环激活和疲劳回落。',
               allowedUserFacingAngle: '只表达当前运动让身体从低活跃状态重新被带动。',
               forbiddenMentions: ['久坐', '之前', '上一轮'],
               actionSuppressions: [],
@@ -1005,10 +1287,18 @@ describe('renderTaskContextPacket', () => {
             headline: '连续静止 240 min，循环和体态需要重置',
             physiology: [],
             recoveryContext: [],
-            tension: { level: 'high', summary: '这次工作事件内已经出现神经或静止负荷累积', reason: 'test' },
+            tension: {
+              level: 'high',
+              summary: '这次工作事件内已经出现神经或静止负荷累积',
+              reason: 'test',
+            },
             recommendedFocus: [],
             actionIntents: [],
-            mentionPolicy: { summary: 'forbidden', actions: 'forbidden', reason: 'prior_event_analysis_only' },
+            mentionPolicy: {
+              summary: 'forbidden',
+              actions: 'forbidden',
+              reason: 'prior_event_analysis_only',
+            },
             evidenceIds: ['event_sedentary'],
           },
         ],
@@ -1016,7 +1306,9 @@ describe('renderTaskContextPacket', () => {
     };
 
     const output = renderTaskContextPacket(packet, 'zh', '2026-06-01T13:30');
-    const displayableSection = output.split('## 当前可提及事件')[1]!.split('## 内部分析上下文（禁止显式提及）')[0]!;
+    const displayableSection = output
+      .split('## 当前可提及事件')[1]!
+      .split('## 内部分析上下文（禁止显式提及）')[0]!;
     expect(output).toContain('## 当前可提及事件');
     expect(output).toContain('## 内部分析上下文（禁止显式提及）');
     expect(displayableSection).toContain('cardio_workout');
@@ -1026,5 +1318,109 @@ describe('renderTaskContextPacket', () => {
     expect(output).toContain('只表达当前运动让身体从低活跃状态重新被带动。');
     expect(output).toContain('current displayable event');
     expect(output).not.toContain('prior analysis-only event');
+  });
+});
+
+describe('renderTaskContextPacket — todayOccurredActivities 区段', () => {
+  function makePacketWithTodayOccurred(
+    activities?: import('../../context/context-packet').OccurredActivity[],
+  ): TaskContextPacket {
+    return {
+      task: { type: 'homepage_summary', page: 'home' },
+      userContext: {
+        profileId: 'p1',
+        name: 'Test',
+        age: 30,
+        tags: [],
+        baselines: { restingHR: 60, hrv: 60, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
+      },
+      dataWindow: { start: '2026-07-08', end: '2026-07-08', recordCount: 1, completenessPct: 100 },
+      missingData: [],
+      evidence: [],
+      visibleCharts: [],
+      homepage: {
+        recentEvents: [],
+        latest24h: { date: '2026-07-08', metrics: [] },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+        eventInsights: [],
+        todayOccurredActivities: activities,
+      },
+    };
+  }
+
+  it('todayOccurredActivities 为空时，区段不渲染', () => {
+    const packet = makePacketWithTodayOccurred([]);
+    const output = renderTaskContextPacket(packet, 'zh', '2026-07-08T15:00');
+
+    expect(output).not.toContain('今日已发生活动');
+  });
+
+  it('todayOccurredActivities 缺失时，区段不渲染', () => {
+    const packet = makePacketWithTodayOccurred(undefined);
+    const output = renderTaskContextPacket(packet, 'zh', '2026-07-08T15:00');
+
+    expect(output).not.toContain('今日已发生活动');
+  });
+
+  it('有活动时，区段标题明确标注仅供 futureSuggestions 推断', () => {
+    const packet = makePacketWithTodayOccurred([
+      { type: 'sleep', start: '2026-07-08T23:00', end: '2026-07-08T07:05', durationMin: 485 },
+      {
+        type: 'caffeine_intake',
+        start: '2026-07-08T08:30',
+        end: '2026-07-08T08:35',
+        durationMin: 5,
+      },
+    ]);
+    const output = renderTaskContextPacket(packet, 'zh', '2026-07-08T15:00');
+
+    expect(output).toContain(
+      '## 今日已发生活动（仅供 futureSuggestions 推断，禁止用于 summary 或 actions）',
+    );
+    expect(output).toContain('23:00–07:05 sleep (8.1h)');
+    expect(output).toContain('08:30–08:35 caffeine_intake (5min)');
+  });
+
+  it('英文 locale 同样渲染区段标题与禁用约束', () => {
+    const packet = makePacketWithTodayOccurred([
+      { type: 'meal_intake', start: '2026-07-08T12:30', end: '2026-07-08T13:00', durationMin: 30 },
+    ]);
+    const output = renderTaskContextPacket(packet, 'en', '2026-07-08T15:00');
+
+    expect(output).toContain(
+      "## Today's Occurred Activities (futureSuggestions reasoning only, do not use in summary or actions)",
+    );
+    expect(output).toContain('12:30–13:00 meal_intake (30min)');
+  });
+
+  it('durationMin < 60 时用 min 单位', () => {
+    const packet = makePacketWithTodayOccurred([
+      { type: 'nap', start: '2026-07-08T14:00', end: '2026-07-08T14:20', durationMin: 20 },
+    ]);
+    const output = renderTaskContextPacket(packet, 'zh', '2026-07-08T15:00');
+
+    expect(output).toContain('14:00–14:20 nap (20min)');
+  });
+
+  it('区段不出现在非 homepage 任务中（ advisor chat packet 不含该字段）', () => {
+    const packet: TaskContextPacket = {
+      task: { type: 'advisor_chat', page: 'data' },
+      userContext: {
+        profileId: 'p1',
+        name: 'Test',
+        age: 30,
+        tags: [],
+        baselines: { restingHR: 60, hrv: 60, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
+      },
+      dataWindow: { start: '2026-07-08', end: '2026-07-08', recordCount: 1, completenessPct: 100 },
+      missingData: [],
+      evidence: [],
+      visibleCharts: [],
+    };
+    const output = renderTaskContextPacket(packet, 'zh', '2026-07-08T15:00');
+
+    expect(output).not.toContain('今日已发生活动');
   });
 });

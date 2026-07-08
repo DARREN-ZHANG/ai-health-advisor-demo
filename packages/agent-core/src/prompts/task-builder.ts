@@ -106,6 +106,15 @@ export function buildTaskPrompt(
       '- Drinking water alone (without walking), temperature adjustment alone (without showering), and high-stimulus gaming actions must not be assigned a micro_event interaction; however, combined behaviors like "hydration walk", "warm shower", "cool shower" are allowed',
     ),
   );
+  if (taskType === AgentTaskType.HOMEPAGE_SUMMARY) {
+    sections.push(
+      t(
+        locale,
+        '- futureSuggestions 的 action.id 不得与 actions 中任何 id 重复；timePoint 必须晚于当前模拟时间且 ≤ 23:59；不得在 summary 中提及 futureSuggestions 内容',
+        '- futureSuggestions action ids must not collide with any actions ids; timePoint must be later than the current simulated time and ≤ 23:59; do not mention futureSuggestions content in summary',
+      ),
+    );
+  }
 
   // 使用 TaskContextPacket 渲染（如果可用）
   if (packet) {
@@ -235,6 +244,13 @@ export function buildTaskPrompt(
         locale,
         '  "actionsSectionTitle": "今天可以这样调整"',
         '  "actionsSectionTitle": "A few options for today"',
+      ),
+    );
+    sections.push(
+      t(
+        locale,
+        '  "futureSuggestions": [\n    {\n      "timePoint": "15:30",\n      "predictedState": "下午 HRV 通常会出现一个小低谷，叠加今天咖啡因摄入较晚",\n      "rationale": "今天已记录 2 杯咖啡，最近一杯在 13:00 之后",\n      "action": {\n        "id": "future_break_15",\n        "emoji": "🧘",\n        "title": "到 15:20 做几次正念呼吸",\n        "description": "提前 10 分钟做 3 分钟缓慢呼吸，缓解交感神经负担",\n        "aiPromise": "我会记录你的选择并用于本次建议上下文",\n        "interaction": {\n          "kind": "micro_event",\n          "microEvent": {\n            "type": "micro_deep_breathing",\n            "durationMinutes": 3\n          }\n        }\n      }\n    }\n  ]',
+        '  "futureSuggestions": [\n    {\n      "timePoint": "15:30",\n      "predictedState": "Afternoon HRV usually dips here, compounded by today\'s late caffeine intake",\n      "rationale": "Two caffeine intakes logged today, the latest after 13:00",\n      "action": {\n        "id": "future_break_15",\n        "emoji": "🧘",\n        "title": "Try mindful breathing around 15:20",\n        "description": "Do 3 minutes of slow breathing 10 minutes ahead of the dip",\n        "aiPromise": "I will record your choice and use it in this advice context",\n        "interaction": {\n          "kind": "micro_event",\n          "microEvent": {\n            "type": "micro_deep_breathing",\n            "durationMinutes": 3\n          }\n        }\n      }\n    }\n  ]',
       ),
     );
     sections.push('}');

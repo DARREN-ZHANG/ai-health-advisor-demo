@@ -21,6 +21,7 @@ import type {
   MetricSummary,
   MetricName,
   RuleInsightPacket,
+  OccurredActivity,
 } from './context-packet';
 import type { EvidenceCollector } from './evidence-packet';
 import { createEvidenceCollector } from './evidence-packet';
@@ -163,7 +164,8 @@ function buildDataWindowPacket(context: AgentContext): DataWindowPacket {
       (Array.isArray(r.hr) && r.hr.length > 0)
     );
   });
-  const completenessPct = totalCount > 0 ? Math.round((nonEmptyRecords.length / totalCount) * 100) : 0;
+  const completenessPct =
+    totalCount > 0 ? Math.round((nonEmptyRecords.length / totalCount) * 100) : 0;
 
   return {
     start: context.dataWindow.start,
@@ -236,6 +238,10 @@ function buildHomepagePacket(
 
   const previousActions = context.memory.latestHomepageActions;
 
+  // 今日已发生活动（独立通道）：仅供 futureSuggestions 推断，
+  // 禁止用于 summary/actions。在 demoNow 之前已结束的全部 recognizedEvents。
+  const todayOccurredActivities = buildTodayOccurredActivities(context);
+
   return {
     ...homepageWithoutInsights,
     eventInsights: buildHomepageEventInsights({
@@ -244,7 +250,40 @@ function buildHomepagePacket(
       previousRecommendedActions: previousActions,
     }),
     previousRecommendedActions: previousActions,
+    todayOccurredActivities,
   };
+}
+
+/**
+ * 构造"今日已发生活动"独立通道数据。
+ *
+ * 数据源：context.timelineSync.recognizedEvents 中 end <= demoNow 的部分。
+ * 与 recentEvents（"最近 2 个事件"通道）完全隔离 —— recentEvents 用于 summary/actions，
+ * todayOccurredActivities 用于 futureSuggestions 推断规律，两者互不影响。
+ *
+ * 当 demoNow 缺失（非 demo timeline 场景）时返回空数组，避免泄漏未来事件。
+ */
+function buildTodayOccurredActivities(context: AgentContext): OccurredActivity[] {
+  if (!context.timelineSync || !context.demoNow) return [];
+
+  const demoNowMs = new Date(context.demoNow).getTime();
+  if (Number.isNaN(demoNowMs)) return [];
+
+  return context.timelineSync.recognizedEvents
+    .filter((ev) => {
+      const endMs = new Date(ev.end).getTime();
+      return !Number.isNaN(endMs) && endMs <= demoNowMs;
+    })
+    .map((ev) => ({
+      type: ev.type,
+      start: ev.start,
+      end: ev.end,
+      durationMin: Math.max(
+        0,
+        Math.round((new Date(ev.end).getTime() - new Date(ev.start).getTime()) / 60000),
+      ),
+    }))
+    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 }
 
 function buildRecentEvents(
@@ -496,7 +535,14 @@ function buildViewSummaryPacket(
     }
   } else {
     // overview: generate all core metrics
-    const overviewMetricNames: MetricName[] = ['hrv', 'sleep', 'resting-hr', 'activity', 'spo2', 'stress'];
+    const overviewMetricNames: MetricName[] = [
+      'hrv',
+      'sleep',
+      'resting-hr',
+      'activity',
+      'spo2',
+      'stress',
+    ];
     overviewMetrics = buildMetricSummaries(records, overviewMetricNames, {
       hrv: baselines.hrv,
       sleep: baselines.avgSleepMinutes,
@@ -582,7 +628,10 @@ function buildAdvisorChatPacket(
     { type: 'must_cite_evidence', description: '重要建议必须能回溯到至少一个 evidence fact' },
     { type: 'must_disclose_missing', description: '缺失数据必须按 requiredDisclosure 披露' },
     { type: 'must_not_hallucinate', description: '不得补全或编造 evidence 中缺失的事实' },
-    { type: 'chart_token_only', description: 'chartTokens 只能来自 visibleCharts 或 suggestedChartTokens' },
+    {
+      type: 'chart_token_only',
+      description: 'chartTokens 只能来自 visibleCharts 或 suggestedChartTokens',
+    },
   ];
 
   return {
@@ -607,7 +656,12 @@ function buildRelevantFacts(
   const dateRange = { start: context.dataWindow.start, end: context.dataWindow.end };
 
   // Helper to add fact
-  const add = (label: string, factType: RelevantFactPacket['factType'], summary: string, evidenceIds: string[]) => {
+  const add = (
+    label: string,
+    factType: RelevantFactPacket['factType'],
+    summary: string,
+    evidenceIds: string[],
+  ) => {
     facts.push({ label, factType, summary, evidenceIds });
   };
 
@@ -629,14 +683,27 @@ function buildRelevantFacts(
   };
 
   // 1. Current tab selectedMetric (always include if in Data Center single tab)
-  if (context.task.tab && context.task.tab !== 'overview' && context.task.pageContext.page === 'data-center') {
-    const chart = visibleCharts.find((vc) => vc.metric === context.task.tab || vc.chartToken.includes(context.task.tab!.toUpperCase()));
+  if (
+    context.task.tab &&
+    context.task.tab !== 'overview' &&
+    context.task.pageContext.page === 'data-center'
+  ) {
+    const chart = visibleCharts.find(
+      (vc) =>
+        vc.metric === context.task.tab || vc.chartToken.includes(context.task.tab!.toUpperCase()),
+    );
     if (chart) {
       const s = chart.dataSummary;
       // Ensure chart evidence is registered
       for (const eid of s.evidenceIds) {
         if (!evidence.has(eid)) {
-          evidence.add({ id: eid, source: 'daily_records', metric: s.metric, dateRange, derivation: `visible chart ${chart.chartToken}` });
+          evidence.add({
+            id: eid,
+            source: 'daily_records',
+            metric: s.metric,
+            dateRange,
+            derivation: `visible chart ${chart.chartToken}`,
+          });
         }
       }
       add(
@@ -655,7 +722,12 @@ function buildRelevantFacts(
       const latestDate = latest.date;
       const latestMetrics: { label: string; value?: number; unit: string; key: string }[] = [
         { label: 'HRV', value: latest.hrv, unit: 'ms', key: 'hrv' },
-        { label: '静息心率', value: Array.isArray(latest.hr) && latest.hr.length > 0 ? latest.hr[0] : undefined, unit: 'bpm', key: 'resting-hr' },
+        {
+          label: '静息心率',
+          value: Array.isArray(latest.hr) && latest.hr.length > 0 ? latest.hr[0] : undefined,
+          unit: 'bpm',
+          key: 'resting-hr',
+        },
         { label: '睡眠', value: latest.sleep?.totalMinutes, unit: 'min', key: 'sleep' },
         { label: '步数', value: latest.activity?.steps, unit: 'steps', key: 'activity' },
         { label: '压力', value: latest.stress?.load, unit: 'score', key: 'stress' },
@@ -675,22 +747,25 @@ function buildRelevantFacts(
             { start: latestDate, end: latestDate },
             `latest record for ${m.key} in advisor chat relevant facts`,
           );
-          add(
-            `最新${m.label}`,
-            'metric',
-            `${m.label}: ${m.value}${m.unit}`,
-            [evidenceId],
-          );
+          add(`最新${m.label}`, 'metric', `${m.label}: ${m.value}${m.unit}`, [evidenceId]);
         }
       }
     }
   }
 
   // 3. User asks about week / recent → selected window metric summaries
-  if (intent.timeScope === 'week' || intent.timeScope === 'month' || intent.actionIntent === 'status_summary') {
+  if (
+    intent.timeScope === 'week' ||
+    intent.timeScope === 'month' ||
+    intent.actionIntent === 'status_summary'
+  ) {
     const allMetrics: MetricName[] = ['hrv', 'sleep', 'activity', 'stress', 'spo2', 'resting-hr'];
     for (const metric of allMetrics) {
-      const summary = buildMetricSummary(records, metric, baselines[metric as keyof typeof baselines] as number | undefined);
+      const summary = buildMetricSummary(
+        records,
+        metric,
+        baselines[metric as keyof typeof baselines] as number | undefined,
+      );
       if (summary.latest || summary.average) {
         registerMetricEvidence(summary);
         add(
@@ -707,7 +782,11 @@ function buildRelevantFacts(
   if (intent.actionIntent === 'exercise_readiness') {
     const readinessMetrics: MetricName[] = ['sleep', 'hrv', 'stress', 'activity'];
     for (const metric of readinessMetrics) {
-      const summary = buildMetricSummary(records, metric, baselines[metric as keyof typeof baselines] as number | undefined);
+      const summary = buildMetricSummary(
+        records,
+        metric,
+        baselines[metric as keyof typeof baselines] as number | undefined,
+      );
       if (summary.latest || summary.average) {
         registerMetricEvidence(summary);
         add(
@@ -726,7 +805,13 @@ function buildRelevantFacts(
       const s = vc.dataSummary;
       for (const eid of s.evidenceIds) {
         if (!evidence.has(eid)) {
-          evidence.add({ id: eid, source: 'daily_records', metric: vc.metric, dateRange, derivation: `visible chart ${vc.chartToken}` });
+          evidence.add({
+            id: eid,
+            source: 'daily_records',
+            metric: vc.metric,
+            dateRange,
+            derivation: `visible chart ${vc.chartToken}`,
+          });
         }
       }
       add(
@@ -746,14 +831,15 @@ function buildRelevantFacts(
   for (const metric of missingMetrics) {
     const evidenceId = `missing_${metric}_selectedWindow`;
     if (!evidence.has(evidenceId)) {
-      evidence.addMissing(evidenceId, metric, 'selectedWindow', dateRange, `${metric} missing in selected window`);
+      evidence.addMissing(
+        evidenceId,
+        metric,
+        'selectedWindow',
+        dateRange,
+        `${metric} missing in selected window`,
+      );
     }
-    add(
-      `缺失数据: ${metric}`,
-      'missing-data',
-      `${metric} 数据在当前窗口缺失`,
-      [evidenceId],
-    );
+    add(`缺失数据: ${metric}`, 'missing-data', `${metric} 数据在当前窗口缺失`, [evidenceId]);
   }
 
   // 7. Timeline recognized events（特别是咖啡因概率事件）

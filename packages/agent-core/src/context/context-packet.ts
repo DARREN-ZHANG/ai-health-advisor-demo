@@ -47,7 +47,13 @@ export interface MetricSummary {
 // Evidence
 // ────────────────────────────────────────────
 
-export type EvidenceSource = 'daily_records' | 'timeline_sync' | 'profile' | 'rules' | 'memory' | 'knowledge_base';
+export type EvidenceSource =
+  | 'daily_records'
+  | 'timeline_sync'
+  | 'profile'
+  | 'rules'
+  | 'memory'
+  | 'knowledge_base';
 
 export interface EvidenceFact {
   id: string;
@@ -369,6 +375,28 @@ export interface HomepageContextPacket {
   suggestedChartTokens: ChartTokenId[];
   eventInsights: HomepageEventInsight[];
   previousRecommendedActions?: RecentRecommendedAction[];
+  /**
+   * 今日已发生活动（独立通道）。
+   * 仅用于 futureSuggestions 推断当天剩余时间的预测，
+   * 禁止用于 summary 或 actions（与 recentEvents 的"最近 2 个事件"通道完全隔离）。
+   */
+  todayOccurredActivities?: OccurredActivity[];
+}
+
+/**
+ * 今日已发生活动条目（独立通道）。
+ * 来自 recognizedEvents 中 end <= demoNow 的部分，
+ * 用于 futureSuggestions 推断；禁止进入 summary/actions 上下文。
+ */
+export interface OccurredActivity {
+  /** 活动类型（RecognizedEvent.type，如 sleep、meal_intake、caffeine_intake） */
+  type: string;
+  /** ISO 开始时间 */
+  start: string;
+  /** ISO 结束时间 */
+  end: string;
+  /** 持续分钟数 */
+  durationMin: number;
 }
 
 // ────────────────────────────────────────────
@@ -392,7 +420,13 @@ export interface ViewSummaryContextPacket {
 export interface QuestionIntentPacket {
   metricFocus: string[];
   timeScope: 'today' | 'yesterday' | 'week' | 'month' | 'custom' | 'unknown';
-  actionIntent: 'explain_chart' | 'exercise_readiness' | 'status_summary' | 'ask_why' | 'compare_periods' | 'general';
+  actionIntent:
+    | 'explain_chart'
+    | 'exercise_readiness'
+    | 'status_summary'
+    | 'ask_why'
+    | 'compare_periods'
+    | 'general';
   riskLevel: 'general' | 'potential_risk' | 'safety_boundary';
 }
 
@@ -406,7 +440,15 @@ export interface CurrentPagePacket {
 
 export interface RelevantFactPacket {
   label: string;
-  factType: 'metric' | 'trend' | 'missing-data' | 'chart' | 'event' | 'memory' | 'knowledge' | 'product';
+  factType:
+    | 'metric'
+    | 'trend'
+    | 'missing-data'
+    | 'chart'
+    | 'event'
+    | 'memory'
+    | 'knowledge'
+    | 'product';
   summary: string;
   evidenceIds: string[];
 }
@@ -417,7 +459,11 @@ export interface ConversationPacket {
 }
 
 export interface AdvisorConstraintPacket {
-  type: 'must_cite_evidence' | 'must_disclose_missing' | 'must_not_hallucinate' | 'chart_token_only';
+  type:
+    | 'must_cite_evidence'
+    | 'must_disclose_missing'
+    | 'must_not_hallucinate'
+    | 'chart_token_only';
   description: string;
 }
 

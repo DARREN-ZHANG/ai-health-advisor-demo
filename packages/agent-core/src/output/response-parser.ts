@@ -1,5 +1,11 @@
-import { AgentResponseEnvelopeSchema, ChartTokenId, ActionOptionSchema } from '@health-advisor/shared';
-import type { AgentResponseEnvelope, AgentTaskType, PageContext } from '@health-advisor/shared';
+import {
+  AgentResponseEnvelopeSchema,
+  ChartTokenId,
+  ActionOptionSchema,
+  FutureSuggestionSchema,
+  AgentTaskType,
+} from '@health-advisor/shared';
+import type { AgentResponseEnvelope, PageContext, FutureSuggestion } from '@health-advisor/shared';
 import { ChartTokenIdSchema } from '@health-advisor/shared';
 import { MAX_CHART_TOKENS, MAX_MICRO_TIPS, MAX_ACTIONS } from '../constants/limits';
 
@@ -7,6 +13,8 @@ export interface ParseMeta {
   taskType: AgentTaskType;
   pageContext: PageContext;
   defaultStatusColor?: AgentResponseEnvelope['statusColor'];
+  /** 当前模拟时间（YYYY-MM-DDTHH:mm），用于校验 futureSuggestions 的 timePoint 区间 */
+  demoNow?: string;
 }
 
 export interface ParseSuccess {
@@ -99,7 +107,7 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
       if (!parsedAction.success) {
         // 降级：尝试解析为无 interaction 的基础 action，避免单个非法 interaction 导致整体失败
         const baseParsed = ActionOptionSchema.safeParse({
-          ...((item && typeof item === 'object') ? item : {}),
+          ...(item && typeof item === 'object' ? item : {}),
           interaction: undefined,
         });
         if (baseParsed.success) {
@@ -119,10 +127,7 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
 
   // statusColor 严格类型检查：非字符串值不静默降级，触发 parse 失败走 fallback
   const statusColor = parseStatusColor(obj.statusColor, meta.defaultStatusColor);
-  if (
-    obj.statusColor !== undefined &&
-    obj.statusColor !== statusColor
-  ) {
+  if (obj.statusColor !== undefined && obj.statusColor !== statusColor) {
     return {
       success: false,
       error: `statusColor 类型错误: 期望 'good'|'warning'|'error'，收到 ${JSON.stringify(obj.statusColor)}`,
@@ -140,9 +145,18 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
     };
   }
 
-  const actionsSectionTitle = typeof obj.actionsSectionTitle === 'string' && obj.actionsSectionTitle.length > 0
-    ? obj.actionsSectionTitle
-    : undefined;
+  const actionsSectionTitle =
+    typeof obj.actionsSectionTitle === 'string' && obj.actionsSectionTitle.length > 0
+      ? obj.actionsSectionTitle
+      : undefined;
+
+  // futureSuggestions 校验（仅 homepage 任务）：schema 校验 + 区间过滤 + 数量截断
+  // 校验失败整体丢弃 futureSuggestions，不影响 summary/actions 渲染
+  let futureSuggestions: AgentResponseEnvelope['futureSuggestions'] = undefined;
+  if (meta.taskType === AgentTaskType.HOMEPAGE_SUMMARY && obj.futureSuggestions !== undefined) {
+    const validated = validateFutureSuggestions(obj.futureSuggestions, meta.demoNow);
+    if (validated.length > 0) futureSuggestions = validated;
+  }
 
   const envelope: AgentResponseEnvelope = {
     summary,
@@ -152,6 +166,7 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
     microTips: tips.length > 0 ? tips : undefined,
     actions,
     actionsSectionTitle,
+    futureSuggestions,
     meta: {
       taskType: meta.taskType,
       pageContext: meta.pageContext,
@@ -181,6 +196,45 @@ function parseStatusColor(
   }
 
   return fallback;
+}
+
+/**
+ * 校验 futureSuggestions：
+ * - schema 校验（FutureSuggestionSchema）逐项过滤非法项
+ * - 区间过滤：当 demoNow 提供时，保留 (demoNow, 23:59] 区间内的项
+ * - 数量截断：demoNow < 21:00 → 最多 2 个；demoNow ≥ 21:00 → 最多 1 个
+ *
+ * 当 demoNow 缺失（非 demo timeline 场景）时返回空数组，
+ * 因为没有"当前时间"概念就无法判断"未来"。
+ * 校验失败整体丢弃，不影响 summary/actions 渲染。
+ */
+function validateFutureSuggestions(raw: unknown, demoNow: string | undefined): FutureSuggestion[] {
+  if (!Array.isArray(raw)) return [];
+  if (!demoNow) return [];
+
+  const demoHm = extractHhMm(demoNow);
+  if (!demoHm) return [];
+
+  // 1. schema 校验
+  const schemaValid: FutureSuggestion[] = [];
+  for (const item of raw) {
+    const result = FutureSuggestionSchema.safeParse(item);
+    if (result.success) schemaValid.push(result.data);
+  }
+
+  // 2. 区间过滤 (demoNow, 23:59]
+  const inRange = schemaValid.filter((s) => s.timePoint > demoHm && s.timePoint <= '23:59');
+
+  // 3. 数量截断：21:00 前 2 个，之后 1 个
+  const limit = demoHm < '21:00' ? 2 : 1;
+  return inRange.slice(0, limit);
+}
+
+/** 从 YYYY-MM-DDTHH:mm 提取 HH:mm 字符串，失败返回 null */
+function extractHhMm(iso: string | undefined): string | null {
+  if (!iso || iso.length < 16) return null;
+  const hhmm = iso.slice(11, 16);
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(hhmm) ? hhmm : null;
 }
 
 function extractJson(text: string): string | null {
