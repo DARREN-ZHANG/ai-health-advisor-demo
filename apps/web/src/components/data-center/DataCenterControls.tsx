@@ -8,13 +8,13 @@ import type { DataTab } from '@health-advisor/shared';
 /**
  * DataCenterControls —— Trends 页面顶部日期分页和维度切换。
  */
-const tabKeys: { id: DataTab; labelKey: string }[] = [
-  { id: 'sleep', labelKey: 'sleep' },
-  { id: 'activity', labelKey: 'activity' },
-  { id: 'hrv', labelKey: 'hrv' },
-  { id: 'resting-hr', labelKey: 'restingHr' },
-  { id: 'stress', labelKey: 'stress' },
-  { id: 'spo2', labelKey: 'spo2' },
+const tabKeys: { id: DataTab; labelKey: string; enabled: boolean }[] = [
+  { id: 'sleep', labelKey: 'sleep', enabled: true },
+  { id: 'activity', labelKey: 'activity', enabled: true },
+  { id: 'hrv', labelKey: 'hrv', enabled: false },
+  { id: 'resting-hr', labelKey: 'restingHr', enabled: false },
+  { id: 'stress', labelKey: 'stress', enabled: false },
+  { id: 'spo2', labelKey: 'spo2', enabled: false },
 ];
 
 export function DataCenterControls() {
@@ -67,10 +67,18 @@ export function DataCenterControls() {
                 type="button"
                 role="tab"
                 aria-selected={isActive}
-                onClick={() => setActiveTab(item.id)}
+                aria-disabled={!item.enabled}
+                disabled={!item.enabled}
+                onClick={() => {
+                  if (item.enabled) setActiveTab(item.id);
+                }}
                 className={[
                   'shrink-0 text-[13px] font-semibold leading-[18px] transition-colors',
-                  isActive ? 'text-white' : 'text-white/20 hover:text-white/55',
+                  item.enabled
+                    ? isActive
+                      ? 'text-white'
+                      : 'text-white/20 hover:text-white/55'
+                    : 'cursor-not-allowed text-white/14',
                 ].join(' ')}
               >
                 {item.label}

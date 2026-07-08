@@ -22,7 +22,7 @@ export function ChartContainer({
   const t = useTranslations('common');
 
   return (
-    <section className="flex min-h-[318px] flex-col gap-[18px] px-4 pb-8 pt-[2px]">
+    <section className="flex min-h-[318px] flex-col gap-[18px] px-5 pb-8 pt-[2px]">
       <div className="flex items-center justify-between">
         <h3 className="text-[13px] font-semibold leading-[18px] text-white">{title}</h3>
       </div>

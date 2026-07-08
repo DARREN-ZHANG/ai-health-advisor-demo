@@ -47,7 +47,7 @@ export function ReflectionSection({
       aria-busy={isBusy || undefined}
       aria-label={t('reflection.title')}
       data-valo-trends-reflection=""
-      className={`px-4 pt-[21px] pb-[26px] ${className}`.trim()}
+      className={`px-5 pt-[21px] pb-[26px] ${className}`.trim()}
     >
       <h2 className="mb-[14px] font-serif text-[18px] font-normal leading-[22px] text-white">
         {t('reflection.title')}
