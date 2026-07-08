@@ -27,35 +27,35 @@ export function DataCenterControls() {
     <div className="flex flex-col" data-valo-trends-controls="">
       <nav
         aria-label={t('datePagination')}
-        className="grid h-[58px] grid-cols-[44px_1fr_44px] items-center px-3"
+        className="relative h-[58px] px-5"
       >
         <button
           type="button"
           aria-label={t('previousDate')}
-          className="flex size-11 items-center justify-center text-white/80"
+          className="absolute left-5 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center text-white/80"
         >
-          <ChevronLeftIcon className="size-4" aria-hidden="true" />
+          <ChevronLeftIcon className="size-5" aria-hidden="true" />
         </button>
         <time
           dateTime={formatDateISO()}
-          className="text-center text-[13px] font-semibold leading-[18px] text-white"
+          className="flex h-full items-center justify-center text-center text-[13px] font-semibold leading-[18px] text-white"
         >
           {t('today')}
         </time>
         <button
           type="button"
           aria-label={t('nextDate')}
-          className="flex size-11 items-center justify-center text-white/35"
+          className="absolute right-5 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center text-white/35"
         >
-          <ChevronRightIcon className="size-4" aria-hidden="true" />
+          <ChevronRightIcon className="size-5" aria-hidden="true" />
         </button>
       </nav>
 
-      <div className="relative -mx-4">
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-[var(--valo-canvas)] to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[var(--valo-canvas)] to-transparent" />
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-5 bg-gradient-to-r from-[var(--valo-canvas)] to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-5 bg-gradient-to-l from-[var(--valo-canvas)] to-transparent" />
         <div
-          className="flex h-[46px] items-center gap-[18px] overflow-x-auto px-4 no-scrollbar"
+          className="flex h-[46px] items-center gap-[18px] overflow-x-auto px-5 no-scrollbar"
           role="tablist"
           aria-label={t('dataMetric')}
         >
