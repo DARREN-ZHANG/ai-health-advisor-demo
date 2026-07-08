@@ -2,6 +2,10 @@
 
 import { useEffect, useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import {
+  MinusIcon,
+  PlusIcon,
+} from '@heroicons/react/24/outline';
 import { ValoSheet } from '@/components/valo/ValoSheet';
 import { ValoDialog } from '@/components/valo/ValoDialog';
 import {
@@ -79,8 +83,8 @@ export function LifeLogEntrySheet({
   }, [open, initialEntry]);
 
   const isEdit = !!initialEntry;
-  const titleKey = isEdit ? 'sheetTitleEdit' : 'sheetTitleAdd';
-  const title = `${config.icon} ${t(titleKey)}`;
+  const titleKey = isEdit ? 'sheetTitleEdit' : 'customAdd';
+  const title = isEdit ? `${config.icon} ${t(titleKey)}` : t(titleKey);
 
   function handleSubmit() {
     const safeCups = Math.max(0, Number.isFinite(cups) ? cups : 0);
@@ -97,8 +101,82 @@ export function LifeLogEntrySheet({
     config,
   );
 
-  const body = (
-    <div className="px-5 py-6 space-y-5">
+  const amountUnit = type === 'hydration' ? 'ml' : 'drink';
+  const displayAmount = Number.isInteger(cups) ? cups : cups.toFixed(1);
+  const customAddBody = (
+    <div className="space-y-4 px-3 pb-5 pt-2">
+      <div className="flex items-center justify-center gap-7 py-2">
+        <button
+          type="button"
+          onClick={() => setCups((value) => Math.max(0, value - 0.5))}
+          aria-label={t('decrease')}
+          className="grid h-7 w-7 place-items-center rounded-full bg-white/15
+                     text-[var(--valo-text-primary)] transition-colors
+                     hover:bg-white/20 focus-visible:outline-none
+                     focus-visible:[box-shadow:var(--valo-focus-ring)]"
+        >
+          <MinusIcon className="h-4 w-4" aria-hidden="true" />
+        </button>
+
+        <div className="min-w-[92px] text-center">
+          <div className="text-xl font-semibold leading-6 text-[var(--valo-text-primary)]">
+            {displayAmount} {amountUnit}
+          </div>
+          <div className="mt-0.5 text-xs leading-4 text-[var(--valo-text-secondary)]">
+            ({raw.amount}{raw.unit})
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setCups((value) => value + 0.5)}
+          aria-label={t('increase')}
+          className="grid h-7 w-7 place-items-center rounded-full bg-white/15
+                     text-[var(--valo-text-primary)] transition-colors
+                     hover:bg-white/20 focus-visible:outline-none
+                     focus-visible:[box-shadow:var(--valo-focus-ring)]"
+        >
+          <PlusIcon className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+
+      <label
+        htmlFor="life-log-time"
+        className="flex h-10 items-center justify-between rounded-md
+                   bg-[rgba(62,61,78,0.72)] px-3 text-xs leading-4
+                   text-[var(--valo-text-primary)]"
+      >
+        <span>{t('time')}</span>
+        <input
+          id="life-log-time"
+          type="datetime-local"
+          value={timeLocal}
+          onChange={(e) => setTimeLocal(e.target.value)}
+          data-valo-life-log-time=""
+          className="max-w-[150px] bg-transparent text-right text-xs
+                     text-[var(--valo-text-primary)] [color-scheme:dark]
+                     focus-visible:outline-none"
+        />
+      </label>
+
+      <button
+        type="button"
+        onClick={handleSubmit}
+        data-valo-touch="true"
+        data-valo-life-log-save=""
+        className="h-10 w-full rounded-full bg-[rgba(118,116,145,0.78)]
+                   px-4 text-xs font-semibold leading-4
+                   text-[var(--valo-text-primary)] transition-opacity
+                   hover:opacity-90 focus-visible:outline-none
+                   focus-visible:[box-shadow:var(--valo-focus-ring)]"
+      >
+        {t('add')}
+      </button>
+    </div>
+  );
+
+  const editBody = (
+    <div className="space-y-5 px-5 py-6">
       {/* 类目预览 */}
       <div
         className="rounded-xl border border-[var(--valo-border)] p-3
@@ -196,6 +274,7 @@ export function LifeLogEntrySheet({
       </div>
     </div>
   );
+  const body = isEdit ? editBody : customAddBody;
 
   return (
     <>

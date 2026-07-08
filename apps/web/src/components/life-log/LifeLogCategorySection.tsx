@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { ChevronRightIcon } from '@heroicons/react/24/outline';
 import {
   computeRawAmount,
   LIFE_LOG_CATEGORIES,
@@ -14,11 +15,11 @@ import { LifeLogEntryRow } from './LifeLogEntryRow';
  *
  * 内容：
  * - 类目标题 + 与 Figma 原稿一致的右侧单位摘要。
- * - 单个紧凑 icon CTA：快捷新增（+1 杯）。
+ * - 单个紧凑 icon CTA：打开自定义新增 Sheet。
  * - 该类目下的已有 entries 以紧凑子行展示。
  *
  * 交互：
- * - `onQuickAdd(type)` —— 快捷加 1 杯。
+ * - `onCustomAdd(type)` —— 打开自定义新增 Sheet。
  * - `onEdit(entry)` / `onDelete(entry)` —— 由本组件直接转发。
  *
  * 强调色绑定到类目的 accentToken（四态 CSS 变量），不引入硬编码色值。
@@ -26,7 +27,7 @@ import { LifeLogEntryRow } from './LifeLogEntryRow';
 export interface LifeLogCategorySectionProps {
   type: LifeLogCategory;
   entries: ReadonlyArray<LifeLogEntry>;
-  onQuickAdd: (type: LifeLogCategory) => void;
+  onCustomAdd: (type: LifeLogCategory) => void;
   onEdit: (entry: LifeLogEntry) => void;
   onDelete: (entry: LifeLogEntry) => void;
 }
@@ -34,7 +35,7 @@ export interface LifeLogCategorySectionProps {
 export function LifeLogCategorySection({
   type,
   entries,
-  onQuickAdd,
+  onCustomAdd,
   onEdit,
   onDelete,
 }: LifeLogCategorySectionProps) {
@@ -58,7 +59,7 @@ export function LifeLogCategorySection({
           <span aria-hidden="true" className="text-sm leading-[18px]">
             {config.icon}
           </span>
-          <h3 className="truncate text-[15px] font-semibold leading-[18px] text-[var(--valo-text-primary)]">
+          <h3 className="truncate text-sm font-semibold leading-[18px] text-[var(--valo-text-primary)]">
             {t(`category.${type}`)}
           </h3>
         </div>
@@ -79,8 +80,8 @@ export function LifeLogCategorySection({
           </span>
           <button
             type="button"
-            onClick={() => onQuickAdd(type)}
-            data-valo-life-log-quick-add=""
+            onClick={() => onCustomAdd(type)}
+            data-valo-life-log-custom-add=""
             className="grid h-[22px] w-[22px] place-items-center rounded-[5px]
                        border border-white/15 bg-white/[0.025]
                        text-[13px] leading-none text-[var(--valo-text-secondary)]
@@ -88,8 +89,8 @@ export function LifeLogCategorySection({
                        focus-visible:outline-none
                        focus-visible:[box-shadow:var(--valo-focus-ring)]"
           >
-            <span aria-hidden="true">↗</span>
-            <span className="sr-only">{t('quickAdd')}</span>
+            <ChevronRightIcon className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="sr-only">{t('customAdd')}</span>
           </button>
         </div>
       </header>

@@ -9,6 +9,12 @@ function renderWithIntl(node: React.ReactNode) {
   return render(<LifeLogIntlProvider>{node}</LifeLogIntlProvider>);
 }
 
+function addDefaultEntry(index = 0) {
+  const customAddButtons = screen.getAllByRole('button', { name: '自定义' });
+  fireEvent.click(customAddButtons[index]!);
+  fireEvent.click(screen.getAllByRole('button', { name: '添加' })[0]!);
+}
+
 /**
  * LifeLogPanel 集成测试：profile 隔离 + 增删改查 + 浮层交互。
  *
@@ -53,51 +59,45 @@ describe('LifeLogPanel', () => {
     expect(screen.getByText('饮水')).toBeTruthy();
   });
 
-  it('快捷加 1 杯 caffeine 出现在列表中', () => {
+  it('通过自定义抽屉新增 1 杯 caffeine 出现在列表中', () => {
     renderWithIntl(<LifeLogPanel />);
     // 初始 0 杯
     expect(screen.getByText(/今日: 0 杯 \(0mg\)/)).toBeTruthy();
-    // 直接点击第一个 quick add 按钮（按类目顺序，第一个是 caffeine）
-    const quickAddButtons = screen.getAllByRole('button', { name: '+1 杯' });
-    fireEvent.click(quickAddButtons[0]!);
+    addDefaultEntry(0);
     // 出现 1 杯 · 50mg 行
     expect(screen.getByText(/1杯 · 50mg/)).toBeTruthy();
     // 总和更新
     expect(screen.getByText(/今日: 1 杯 \(50mg\)/)).toBeTruthy();
   });
 
-  it('快捷加多次累计总和', () => {
+  it('自定义新增多次累计总和', () => {
     renderWithIntl(<LifeLogPanel />);
-    const quickAddButtons = screen.getAllByRole('button', { name: '+1 杯' });
     // caffeine = 第一个
-    fireEvent.click(quickAddButtons[0]!);
-    fireEvent.click(quickAddButtons[0]!);
-    fireEvent.click(quickAddButtons[0]!);
+    addDefaultEntry(0);
+    addDefaultEntry(0);
+    addDefaultEntry(0);
     // 3 杯 = 150mg
     expect(screen.getByText(/今日: 3 杯 \(150mg\)/)).toBeTruthy();
   });
 
-  it('hydration 快捷加 1 杯 = 250ml', () => {
+  it('hydration 自定义新增 1 杯 = 250ml', () => {
     renderWithIntl(<LifeLogPanel />);
     // hydration section 的快捷加（按类目顺序：第 3 个）
-    const quickAddButtons = screen.getAllByRole('button', { name: '+1 杯' });
-    fireEvent.click(quickAddButtons[2]!);
+    addDefaultEntry(2);
     expect(screen.getByText(/今日: 1 杯 \(250ml\)/)).toBeTruthy();
     expect(screen.getByText(/1杯 · 250ml/)).toBeTruthy();
   });
 
-  it('alcohol 快捷加 1 杯 = 14g', () => {
+  it('alcohol 自定义新增 1 杯 = 14g', () => {
     renderWithIntl(<LifeLogPanel />);
-    const quickAddButtons = screen.getAllByRole('button', { name: '+1 杯' });
-    fireEvent.click(quickAddButtons[1]!);
+    addDefaultEntry(1);
     expect(screen.getByText(/今日: 1 杯 \(14g\)/)).toBeTruthy();
   });
 
   it('删除按钮从 store 移除条目', () => {
     renderWithIntl(<LifeLogPanel />);
     // 加 1 杯 caffeine
-    const quickAddButtons = screen.getAllByRole('button', { name: '+1 杯' });
-    fireEvent.click(quickAddButtons[0]!);
+    addDefaultEntry(0);
     expect(screen.getByText(/1杯 · 50mg/)).toBeTruthy();
     // 删除
     fireEvent.click(screen.getByRole('button', { name: '删除' }));
@@ -110,8 +110,7 @@ describe('LifeLogPanel', () => {
   it('编辑现有条目：修改 cups 后保存', () => {
     renderWithIntl(<LifeLogPanel />);
     // 先快捷加 1 杯
-    const quickAddButtons = screen.getAllByRole('button', { name: '+1 杯' });
-    fireEvent.click(quickAddButtons[0]!);
+    addDefaultEntry(0);
     expect(screen.getByText(/1杯 · 50mg/)).toBeTruthy();
     // 点击编辑
     fireEvent.click(screen.getByRole('button', { name: '编辑' }));
@@ -128,8 +127,7 @@ describe('LifeLogPanel', () => {
   it('Profile 隔离：profile-a 的条目不出现在 profile-b', () => {
     renderWithIntl(<LifeLogPanel />);
     // 在 profile-a 下加 1 杯 caffeine
-    const quickAddButtons = screen.getAllByRole('button', { name: '+1 杯' });
-    fireEvent.click(quickAddButtons[0]!);
+    addDefaultEntry(0);
     expect(screen.getByText(/1杯 · 50mg/)).toBeTruthy();
     expect(screen.getByText(/今日: 1 杯 \(50mg\)/)).toBeTruthy();
 
@@ -149,8 +147,7 @@ describe('LifeLogPanel', () => {
 
   it('切换 profile 后再切回，原条目仍在', () => {
     renderWithIntl(<LifeLogPanel />);
-    const quickAddButtons = screen.getAllByRole('button', { name: '+1 杯' });
-    fireEvent.click(quickAddButtons[0]!);
+    addDefaultEntry(0);
 
     act(() => {
       useProfileStore.setState({ currentProfileId: 'profile-b' });
@@ -165,8 +162,7 @@ describe('LifeLogPanel', () => {
 
   it('刷新模拟：重新 mount 后无数据（无 persist）', () => {
     const { unmount } = renderWithIntl(<LifeLogPanel />);
-    const quickAddButtons = screen.getAllByRole('button', { name: '+1 杯' });
-    fireEvent.click(quickAddButtons[0]!);
+    addDefaultEntry(0);
     expect(screen.getByText(/1杯 · 50mg/)).toBeTruthy();
 
     // 模拟刷新：清空 store（zustand 内存被新页面会话重置）

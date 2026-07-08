@@ -29,7 +29,7 @@ describe('LifeLogCategorySection', () => {
       <LifeLogCategorySection
         type="caffeine"
         entries={[]}
-        onQuickAdd={() => {}}
+        onCustomAdd={() => {}}
         onEdit={() => {}}
         onDelete={() => {}}
       />,
@@ -49,7 +49,7 @@ describe('LifeLogCategorySection', () => {
       <LifeLogCategorySection
         type="caffeine"
         entries={entries}
-        onQuickAdd={() => {}}
+        onCustomAdd={() => {}}
         onEdit={() => {}}
         onDelete={() => {}}
       />,
@@ -66,7 +66,7 @@ describe('LifeLogCategorySection', () => {
       <LifeLogCategorySection
         type="hydration"
         entries={entries}
-        onQuickAdd={() => {}}
+        onCustomAdd={() => {}}
         onEdit={() => {}}
         onDelete={() => {}}
       />,
@@ -75,34 +75,34 @@ describe('LifeLogCategorySection', () => {
     expect(screen.getByText(/今日: 2 杯 \(500ml\)/)).toBeTruthy();
   });
 
-  it('点击快捷加按钮触发 onQuickAdd', () => {
-    const onQuickAdd = vi.fn();
+  it('点击右侧按钮触发 onCustomAdd', () => {
+    const onCustomAdd = vi.fn();
     renderWithIntl(
       <LifeLogCategorySection
         type="caffeine"
         entries={[]}
-        onQuickAdd={onQuickAdd}
+        onCustomAdd={onCustomAdd}
         onEdit={() => {}}
         onDelete={() => {}}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '+1 杯' }));
-    expect(onQuickAdd).toHaveBeenCalledWith('caffeine');
+    fireEvent.click(screen.getByRole('button', { name: '自定义' }));
+    expect(onCustomAdd).toHaveBeenCalledWith('caffeine');
   });
 
-  it('类目 action 区只渲染一个快捷按钮', () => {
+  it('类目 action 区只渲染一个自定义按钮', () => {
     renderWithIntl(
       <LifeLogCategorySection
         type="alcohol"
         entries={[]}
-        onQuickAdd={() => {}}
+        onCustomAdd={() => {}}
         onEdit={() => {}}
         onDelete={() => {}}
       />,
     );
     expect(screen.getAllByRole('button')).toHaveLength(1);
-    expect(screen.getByRole('button', { name: '+1 杯' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: '自定义' })).toBeNull();
+    expect(screen.getByRole('button', { name: '自定义' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '+1 杯' })).toBeNull();
   });
 
   it('渲染所有传入条目（按时间倒序由父组件保证）', () => {
@@ -115,7 +115,7 @@ describe('LifeLogCategorySection', () => {
       <LifeLogCategorySection
         type="caffeine"
         entries={entries}
-        onQuickAdd={() => {}}
+        onCustomAdd={() => {}}
         onEdit={() => {}}
         onDelete={() => {}}
       />,
@@ -132,7 +132,7 @@ describe('LifeLogCategorySection', () => {
       <LifeLogCategorySection
         type="caffeine"
         entries={[entry]}
-        onQuickAdd={() => {}}
+        onCustomAdd={() => {}}
         onEdit={onEdit}
         onDelete={onDelete}
       />,

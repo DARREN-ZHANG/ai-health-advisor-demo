@@ -25,7 +25,7 @@ function makeEntry(
 describe('LifeLogEntrySheet', () => {
   afterEach(() => cleanup());
 
-  it('新增模式：渲染"新增记录"标题', () => {
+  it('新增模式：渲染"自定义"标题和添加按钮', () => {
     renderWithIntl(
       <LifeLogEntrySheet
         open
@@ -34,7 +34,8 @@ describe('LifeLogEntrySheet', () => {
         onClose={() => {}}
       />,
     );
-    expect(screen.getAllByText(/新增记录/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/自定义/).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: '添加' }).length).toBeGreaterThan(0);
   });
 
   it('编辑模式：渲染"编辑记录"标题并预填字段', () => {
@@ -76,6 +77,21 @@ describe('LifeLogEntrySheet', () => {
     expect(arg.note).toBe('latte');
   });
 
+  it('新增模式点击添加调用 onSubmit', () => {
+    const onSubmit = vi.fn();
+    renderWithIntl(
+      <LifeLogEntrySheet
+        open
+        type="caffeine"
+        onSubmit={onSubmit}
+        onClose={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getAllByRole('button', { name: '添加' })[0]!);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0]![0].cups).toBe(1);
+  });
+
   it('空 note 保存时为 undefined（不传空串）', () => {
     const onSubmit = vi.fn();
     renderWithIntl(
@@ -92,7 +108,7 @@ describe('LifeLogEntrySheet', () => {
     expect(onSubmit.mock.calls[0]![0].note).toBeUndefined();
   });
 
-  it('点击取消调用 onClose 不调用 onSubmit', () => {
+  it('新增模式点击关闭调用 onClose 不调用 onSubmit', () => {
     const onSubmit = vi.fn();
     const onClose = vi.fn();
     renderWithIntl(
@@ -103,8 +119,8 @@ describe('LifeLogEntrySheet', () => {
         onClose={onClose}
       />,
     );
-    const cancelButtons = screen.getAllByRole('button', { name: '取消' });
-    fireEvent.click(cancelButtons[0]!);
+    const closeButtons = screen.getAllByRole('button', { name: '关闭' });
+    fireEvent.click(closeButtons[0]!);
     expect(onClose).toHaveBeenCalled();
     expect(onSubmit).not.toHaveBeenCalled();
   });

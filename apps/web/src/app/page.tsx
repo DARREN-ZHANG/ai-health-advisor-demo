@@ -123,7 +123,7 @@ export default function HomePage() {
       : 0;
 
   return (
-    <Container className="max-w-[430px] overflow-hidden pb-8 pt-0 md:max-w-[430px]">
+    <Container className="max-w-[430px] overflow-x-hidden pb-40 pt-0 md:max-w-[430px]">
       <div>
         <HomeHeader />
 
@@ -194,7 +194,7 @@ export default function HomePage() {
           <LifeLogPanel />
         </div>
 
-        <div className="h-20" />
+        <div className="h-24" />
       </div>
 
       {/* Timer 浮层（micro_event 带 duration） */}
