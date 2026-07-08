@@ -83,7 +83,7 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
           data-valo-touch="true"
           data-valo-ring="true"
           className={
-            'relative z-10 inline-flex h-[190px] w-[190px] items-center justify-center rounded-full ' +
+            'relative z-10 inline-flex h-[210px] w-[210px] items-center justify-center rounded-full ' +
             'bg-transparent ' +
             'outline-none transition-all duration-500 ease-out ' +
             'focus-visible:shadow-[var(--valo-focus-ring)] ' +
