@@ -2,12 +2,12 @@
   "profile": {
     "profileId": "profile-d",
     "name": {
-      "zh": "周社交",
-      "en": "Zhou Shejiao"
+      "zh": "Allison Saris",
+      "en": "Allison Saris"
     },
     "age": 31,
     "gender": "male",
-    "avatar": "avatar-f.png",
+    "avatar": "avatar-4.png",
     "tags": [
       {
         "zh": "有氧运动",

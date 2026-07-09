@@ -40,8 +40,22 @@ const MESSAGES = {
 } as const;
 
 const PROFILES: ProfileSummary[] = [
-  { profileId: 'profile-a', name: 'Account A', age: 30, gender: 'male', recordCount: 10 },
-  { profileId: 'profile-b', name: 'Account B', age: 28, gender: 'female', recordCount: 8 },
+  {
+    profileId: 'profile-a',
+    name: 'Account A',
+    avatar: 'avatar-1.png',
+    age: 30,
+    gender: 'male',
+    recordCount: 10,
+  },
+  {
+    profileId: 'profile-b',
+    name: 'Account B',
+    avatar: 'avatar-2.png',
+    age: 28,
+    gender: 'female',
+    recordCount: 8,
+  },
 ];
 
 function buildWrapper() {
@@ -272,7 +286,7 @@ describe('AccountSwitcherSheet', () => {
     });
   });
 
-  it('每个 profile 选项渲染一个首字母 avatar 占位', async () => {
+  it('每个 profile 选项渲染基础信息中的头像', async () => {
     await mockProfilesResponse(PROFILES);
     await mockActions({});
     renderSheet(<AccountSwitcherSheet open onClose={() => {}} />);
@@ -283,9 +297,8 @@ describe('AccountSwitcherSheet', () => {
       // 每视口各一个，共 2
       expect(aAvatars.length).toBe(2);
       expect(bAvatars.length).toBe(2);
-      // 首字母（英文取大写首字母组合）
-      expect(aAvatars[0]!.textContent).toBe('AA');
-      expect(bAvatars[0]!.textContent).toBe('AB');
+      expect(aAvatars[0]!.getAttribute('src')).toBe('/valo/images/avatar-1.png');
+      expect(bAvatars[0]!.getAttribute('src')).toBe('/valo/images/avatar-2.png');
     });
   });
 });

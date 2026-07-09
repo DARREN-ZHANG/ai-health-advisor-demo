@@ -29,7 +29,7 @@ const SCREENSHOTS_DIR = path.resolve(
 // ---------- 共享 mock 工具（与 valo-ui.spec.ts 保持一致） ----------
 
 const MOCK_PROFILES = [
-  { profileId: 'profile-a', name: '用户 A', age: 30, gender: 'male', recordCount: 12 },
+  { profileId: 'profile-a', name: '用户 A', avatar: 'avatar-1.png', age: 30, gender: 'male', recordCount: 12 },
 ];
 
 /** 包装为 ApiResponse 信封。 */

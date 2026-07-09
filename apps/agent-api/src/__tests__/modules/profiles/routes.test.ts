@@ -59,7 +59,7 @@ describe('Profile Routes', () => {
       const body = response.json();
       expect(body.success).toBe(true);
       expect(body.data.profile.profileId).toBe('profile-a');
-      expect(body.data.profile.name.zh).toBe('林巅峰');
+      expect(body.data.profile.name.zh).toBe('Cristofer Schleifer');
       expect(Array.isArray(body.data.records)).toBe(true);
       expect(body.data.records.length).toBeGreaterThan(0);
     });

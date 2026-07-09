@@ -2,12 +2,12 @@
   "profile": {
     "profileId": "profile-b",
     "name": {
-      "zh": "赵沉睡",
-      "en": "Zhao Chenshui"
+      "zh": "Craig Geidt",
+      "en": "Craig Geidt"
     },
     "age": 42,
     "gender": "male",
-    "avatar": "avatar-d.png",
+    "avatar": "avatar-2.png",
     "tags": [
       {
         "zh": "偏胖",

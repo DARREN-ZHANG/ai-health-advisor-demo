@@ -12,8 +12,8 @@ vi.mock('@/lib/api-client', () => ({
 }));
 
 const PROFILES: ProfileSummary[] = [
-  { profileId: 'profile-a', name: 'Account A', age: 30, gender: 'male', recordCount: 10 },
-  { profileId: 'profile-b', name: 'Account B', age: 28, gender: 'female', recordCount: 8 },
+  { profileId: 'profile-a', name: 'Account A', avatar: 'avatar-1.png', age: 30, gender: 'male', recordCount: 10 },
+  { profileId: 'profile-b', name: 'Account B', avatar: 'avatar-2.png', age: 28, gender: 'female', recordCount: 8 },
 ];
 
 function createWrapper() {

@@ -4,6 +4,7 @@ import { forwardRef, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DemoControlTrigger } from '@/components/demo-control/DemoControlTrigger';
 import { AccountSwitcherSheet } from '@/components/settings/AccountSwitcherSheet';
+import { useProfileStore } from '@/stores/profile.store';
 
 /**
  * HomeHeader —— 首页顶部栏。
@@ -31,6 +32,7 @@ export function HomeHeader({ onAvatarClick }: HomeHeaderProps) {
   const t = useTranslations('homepage');
   const [isAccountSheetOpen, setIsAccountSheetOpen] = useState(false);
   const avatarRef = useRef<HTMLButtonElement>(null);
+  const currentProfile = useProfileStore((state) => state.currentProfile);
 
   const handleAvatarClick = () => {
     if (onAvatarClick) {
@@ -57,6 +59,7 @@ export function HomeHeader({ onAvatarClick }: HomeHeaderProps) {
               onClick={handleAvatarClick}
               label={avatarLabel}
               expanded={isAccountSheetOpen}
+              avatar={currentProfile?.avatar ?? 'avatar-1.png'}
             />
             {/* Demo Control 触发器自管可见性（God Mode 关时返回 null） */}
             <DemoControlTrigger />
@@ -96,10 +99,11 @@ interface AvatarButtonProps {
   onClick: () => void;
   label: string;
   expanded: boolean;
+  avatar: string;
 }
 
 const AvatarButton = forwardRef<HTMLButtonElement, AvatarButtonProps>(
-  function AvatarButton({ onClick, label, expanded }, ref) {
+  function AvatarButton({ onClick, label, expanded, avatar }, ref) {
     return (
       <button
         ref={ref}
@@ -117,7 +121,7 @@ const AvatarButton = forwardRef<HTMLButtonElement, AvatarButtonProps>(
         }
       >
         <img
-          src="/valo/images/avatar-1.png"
+          src={`/valo/images/${avatar}`}
           alt=""
           aria-hidden="true"
           className="h-full w-full object-cover"

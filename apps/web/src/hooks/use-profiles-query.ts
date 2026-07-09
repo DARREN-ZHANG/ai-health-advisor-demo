@@ -15,6 +15,7 @@ import { queryKeys } from '@/lib/query-keys';
 export interface ProfileSummary {
   profileId: string;
   name: string;
+  avatar: string;
   age: number;
   gender: string;
   recordCount: number;

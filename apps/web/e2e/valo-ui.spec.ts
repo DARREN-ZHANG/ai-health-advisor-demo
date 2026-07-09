@@ -23,8 +23,8 @@ import { gotoAndWait, reloadAndWait } from './_app-ready';
 // ---------- 共享 mock 工具 ----------
 
 const MOCK_PROFILES = [
-  { profileId: 'profile-a', name: '用户 A', age: 30, gender: 'male', recordCount: 12 },
-  { profileId: 'profile-b', name: 'User B', age: 28, gender: 'female', recordCount: 9 },
+  { profileId: 'profile-a', name: '用户 A', avatar: 'avatar-1.png', age: 30, gender: 'male', recordCount: 12 },
+  { profileId: 'profile-b', name: 'User B', avatar: 'avatar-2.png', age: 28, gender: 'female', recordCount: 9 },
 ];
 
 /** 包装为 ApiResponse 信封。 */

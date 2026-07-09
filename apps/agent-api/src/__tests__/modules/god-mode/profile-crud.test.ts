@@ -253,7 +253,7 @@ describe('Profile CRUD Routes', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.success).toBe(true);
-      expect(body.data.profile.name.zh).toBe('林巅峰');
+      expect(body.data.profile.name.zh).toBe('Cristofer Schleifer');
       expect(body.data.regenerated).toBe(true);
     });
 

@@ -20,7 +20,7 @@ import type { ProfileSummary } from '@/hooks/use-profiles-query';
  *   键盘交互完全交给浏览器。
  * - 选择任意 radio 立即调用 `switchProfile(id)`；成功则关闭弹窗，失败弹 toast。
  *   不放 Timeline / Status 切换条目 —— 那些有自己的入口。
- * - 头像用首字母圆圈占位（演示版本，无远程 avatar URL）。
+ * - 头像和姓名来自 Profile 基础信息。
  *
  * 焦点管理 / 焦点返回 / Escape / scrim 关闭由 ValoSheet/ValoDialog 内部的
  * `useOverlayBehavior` 处理，`triggerRef` 仅作契约保留。
@@ -54,7 +54,7 @@ export function AccountSwitcherSheet({
           title={title}
           ariaLabel={title}
         >
-          <div className="px-4 py-4" data-valo-account-switcher="mobile">
+          <div className="px-5 pb-6 pt-3" data-valo-account-switcher="mobile">
             <AccountSwitcherForm legendId={legendId} onClose={onClose} />
           </div>
         </ValoSheet>
@@ -68,7 +68,7 @@ export function AccountSwitcherSheet({
           width="sm"
           ariaLabel={title}
         >
-          <div className="px-5 py-4" data-valo-account-switcher="desktop">
+          <div className="px-6 pb-6 pt-3" data-valo-account-switcher="desktop">
             <AccountSwitcherForm legendId={legendId} onClose={onClose} />
           </div>
         </ValoDialog>
@@ -136,7 +136,7 @@ function AccountSwitcherForm({ legendId, onClose }: AccountSwitcherFormProps) {
             {t('empty')}
           </p>
         ) : (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-0.5">
             {data.map((profile) => (
               <ProfileRadioOption
                 key={profile.profileId}
@@ -165,19 +165,14 @@ function ProfileRadioOption({
 }: ProfileRadioOptionProps) {
   const reactId = useId();
   const inputId = `${reactId}-${profile.profileId}`;
-  const initials = getInitials(profile.name);
-
   return (
     <label
       htmlFor={inputId}
       data-valo-option={profile.profileId}
       data-valo-checked={checked ? 'true' : 'false'}
       className={
-        'flex items-center gap-3 rounded-xl border px-3 py-3 cursor-pointer ' +
-        'transition-colors select-none ' +
-        (checked
-          ? 'border-[var(--valo-border)] bg-[var(--valo-border)] '
-          : 'border-[var(--valo-border)] bg-transparent hover:bg-[var(--valo-border)]')
+        'flex min-h-10 items-center gap-2.5 rounded-lg px-1.5 py-1.5 cursor-pointer ' +
+        'transition-colors select-none hover:bg-white/[0.04]'
       }
     >
       <input
@@ -189,40 +184,38 @@ function ProfileRadioOption({
         onChange={() => onSelect(profile)}
         aria-label={profile.name}
         data-valo-touch="true"
-        className="h-5 w-5 cursor-pointer accent-[var(--valo-prime)]"
+        className="sr-only"
       />
-      {/* 头像占位：首字母圆圈 */}
+      <img
+        src={`/valo/images/${profile.avatar}`}
+        alt=""
+        data-valo-avatar-mini={profile.profileId}
+        className="h-6 w-6 shrink-0 rounded-full object-cover"
+      />
+      <span className="min-w-0 flex-1 truncate text-xs font-normal text-[var(--valo-text-primary)]">
+        {profile.name}
+      </span>
       <span
         aria-hidden="true"
-        data-valo-avatar-mini={profile.profileId}
         className={
-          'inline-flex h-8 w-8 items-center justify-center rounded-full shrink-0 ' +
-          'bg-[var(--valo-border)] text-[var(--valo-text-primary)] ' +
-          'text-xs font-semibold uppercase'
+          'grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full border ' +
+          (checked
+            ? 'border-[var(--valo-active)] bg-[var(--valo-active)] shadow-[0_0_10px_color-mix(in_srgb,var(--valo-active)_60%,transparent)]'
+            : 'border-white/35')
         }
       >
-        {initials}
-      </span>
-      <span className="text-sm font-medium text-[var(--valo-text-primary)]">
-        {profile.name}
+        {checked && (
+          <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 text-black" fill="none">
+            <path
+              d="m3 6.1 1.8 1.8L9 3.8"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
       </span>
     </label>
   );
-}
-
-/**
- * 从 profile 名称提取最多 2 个字符作为头像占位首字母。
- * 中文取首字；英文取首字母（大写）。
- */
-function getInitials(name: string): string {
-  if (!name) return '?';
-  const trimmed = name.trim();
-  // 英文：按空格切分取各词首字母
-  if (/^[A-Za-z]/.test(trimmed)) {
-    const parts = trimmed.split(/\s+/).filter(Boolean);
-    if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
-    return (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase();
-  }
-  // 中文 / 其他：取前 1 个字符
-  return trimmed.charAt(0);
 }

@@ -79,7 +79,7 @@ describe('HomeHeader', () => {
   it('Avatar 点击打开 AccountSwitcherSheet（弹出 dialog）', async () => {
     const { apiClient } = await import('@/lib/api-client');
     (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { profileId: 'profile-a', name: 'Account A', age: 30, gender: 'male', recordCount: 1 },
+      { profileId: 'profile-a', name: 'Account A', avatar: 'avatar-1.png', age: 30, gender: 'male', recordCount: 1 },
     ]);
 
     renderWithIntl(<HomeHeader />);

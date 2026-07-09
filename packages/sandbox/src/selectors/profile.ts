@@ -16,6 +16,7 @@ export function getProfile(profiles: Map<string, ProfileData>, profileId: string
 export interface ProfileSummary {
   profileId: string;
   name: string;
+  avatar: string;
   age: number;
   gender: string;
   recordCount: number;
@@ -31,6 +32,7 @@ export function listProfiles(profiles: Map<string, ProfileData>, locale: Locale 
     result.push({
       profileId: data.profile.profileId,
       name: localize(data.profile.name, locale),
+      avatar: data.profile.avatar,
       age: data.profile.age,
       gender: data.profile.gender,
       recordCount: data.records.length,

@@ -2,12 +2,12 @@
   "profile": {
     "profileId": "profile-a",
     "name": {
-      "zh": "林巅峰",
-      "en": "Lin Dianfeng"
+      "zh": "Cristofer Schleifer",
+      "en": "Cristofer Schleifer"
     },
     "age": 28,
     "gender": "male",
-    "avatar": "avatar-a.png",
+    "avatar": "avatar-1.png",
     "tags": [
       {
         "zh": "规律健身",

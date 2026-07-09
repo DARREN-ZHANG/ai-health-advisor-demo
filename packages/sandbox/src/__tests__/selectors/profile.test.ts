@@ -48,6 +48,7 @@ describe('listProfiles', () => {
 
     expect(summary).toHaveLength(2);
     expect(summary.map((s) => s.profileId)).toEqual(expect.arrayContaining(['test-1', 'test-2']));
+    expect(summary[0]!.avatar).toBe('avatar-test-1.png');
   });
 
   it('should include correct record counts', () => {
