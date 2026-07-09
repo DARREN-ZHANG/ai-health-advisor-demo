@@ -148,8 +148,10 @@ describe('AIAdvisorDrawer', () => {
     renderWithIntl(<AIAdvisorDrawer />);
     expect(screen.getAllByRole('dialog')).toHaveLength(2);
     expect(getMobileContainer()).toBeInTheDocument();
-    const desktop = document.querySelector('[data-valo-viewport="desktop"]');
+    const desktop = document.querySelector('[data-valo-viewport="desktop"]') as HTMLElement | null;
     expect(desktop).not.toBeNull();
+    const desktopDialog = desktop?.querySelector('[role="dialog"]') as HTMLElement | null;
+    expect(desktopDialog?.getAttribute('style') ?? '').toContain('width: 402px');
   });
 
   it('消息滚动区允许在抽屉 flex 布局中收缩到底部', () => {
@@ -160,21 +162,20 @@ describe('AIAdvisorDrawer', () => {
     expect(scroller?.className).toContain('min-h-0');
   });
 
-  it('header 显示标题 "AI 顾问" 与 BETA 标签（移动端 viewport）', () => {
+  it('外层渲染 Figma frame shell 与圆角主面板（移动端 viewport）', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
-    expect(within(mobile).getByText('AI 顾问')).toBeInTheDocument();
-    expect(within(mobile).getByText('BETA')).toBeInTheDocument();
+    expect(mobile.querySelector('[data-valo-chat-shell="true"]')).not.toBeNull();
+    expect(mobile.querySelector('[data-valo-chat-panel="true"]')).not.toBeNull();
   });
 
-  it('empty state：无消息时显示 Valo 品牌欢迎标题、副标题与推荐问题小标题', () => {
+  it('empty state：无消息时显示欢迎标题，但不再渲染旧 subtitle', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
     expect(within(mobile).getByText('你好，我是你的健康顾问')).toBeInTheDocument();
-    expect(within(mobile).getByText('有什么健康问题尽管问我')).toBeInTheDocument();
-    expect(within(mobile).getByText('试试这些问题：')).toBeInTheDocument();
+    expect(within(mobile).queryByText('有什么健康问题尽管问我')).toBeNull();
     // empty state 容器标识存在
     expect(mobile.querySelector('[data-valo-empty-state="true"]')).not.toBeNull();
   });
@@ -203,20 +204,21 @@ describe('AIAdvisorDrawer', () => {
     expect(mobile.querySelector('[data-valo-empty-hero="true"]')).not.toBeNull();
   });
 
-  it('composer textarea 形态为胶囊（rounded-full）', () => {
+  it('composer 容器使用 Figma 的深色胶囊背景', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
     const textarea = within(mobile).getByPlaceholderText('输入你的问题...');
-    expect(textarea.className).toContain('rounded-full');
+    const wrapper = textarea.parentElement as HTMLElement | null;
+    expect(wrapper?.className ?? '').toContain('rounded-full');
+    expect(wrapper?.getAttribute('style') ?? '').toContain('var(--valo-chat-composer)');
   });
 
-  it('send 按钮形态为圆形（rounded-full）', () => {
+  it('empty state 时不显示更多菜单按钮', () => {
     useUIStore.setState({ isAdvisorDrawerOpen: true });
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
-    const sendBtn = within(mobile).getByRole('button', { name: '发送' });
-    expect(sendBtn.className).toContain('rounded-full');
+    expect(within(mobile).queryByRole('button', { name: '更多选项' })).toBeNull();
   });
 
   it('有消息后 SmartPrompts 不再渲染', () => {
@@ -227,14 +229,6 @@ describe('AIAdvisorDrawer', () => {
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
     expect(within(mobile).queryByRole('button', { name: '分析我昨晚的睡眠质量' })).toBeNull();
-  });
-
-  it('composer 引用 --valo-prime 作为发送按钮背景', () => {
-    useUIStore.setState({ isAdvisorDrawerOpen: true });
-    renderWithIntl(<AIAdvisorDrawer />);
-    const mobile = getMobileContainer();
-    const sendBtn = within(mobile).getByRole('button', { name: '发送' });
-    expect(sendBtn.getAttribute('style') ?? '').toContain('var(--valo-prime)');
   });
 
   it('发送按钮在 composer 为空时 disabled', () => {
@@ -347,6 +341,7 @@ describe('AIAdvisorDrawer', () => {
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
     expect(within(mobile).queryByText('你好，我是你的健康顾问')).toBeNull();
+    expect(within(mobile).getByRole('button', { name: '更多选项' })).toBeInTheDocument();
   });
 
   it('isLoading=true 时渲染"打字指示器"（三个跳动小点）', () => {

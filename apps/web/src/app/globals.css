@@ -16,6 +16,18 @@
   --valo-glass: rgba(26, 26, 38, 0.72);
   /** Sheet / Dialog 背后的黑色半透明遮罩 */
   --valo-scrim: rgba(0, 0, 0, 0.6);
+  /** AI Chat 画板外层 frame 背景 */
+  --valo-chat-frame: #111118;
+  /** AI Chat 主面板背景（Figma: #1C1924） */
+  --valo-chat-panel: #1c1924;
+  /** AI Chat 推荐胶囊背景（Figma: #434459） */
+  --valo-chat-chip: #434459;
+  /** AI Chat 输入栏背景（Figma: #2E3039） */
+  --valo-chat-composer: #2e3039;
+  /** AI Chat 关闭 / 更多按钮背景（Figma: #09080C） */
+  --valo-chat-close-bg: #09080c;
+  /** AI Chat 关闭 / 更多按钮图标色（Figma: #706C79） */
+  --valo-chat-close-icon: #706c79;
 
   /* ---------- 文本 ---------- */
   /** 标题、重要数值、主要操作 */

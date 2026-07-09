@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback, useId } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { m, AnimatePresence } from 'framer-motion';
 import { useUIStore } from '@/stores/ui.store';
@@ -15,13 +15,14 @@ import type { Message } from '@/stores/ai-advisor.store';
 import { MessageBubble } from './MessageBubble';
 import { SmartPrompts } from './SmartPrompts';
 import type { SmartPromptOption } from './SmartPrompts';
-import { PhysiologicalTags } from './PhysiologicalTags';
 import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 import {
   PaperAirplaneIcon,
   TrashIcon,
   EllipsisVerticalIcon,
   XMarkIcon,
+  MicrophoneIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline';
 import { useTranslations } from 'next-intl';
 
@@ -30,7 +31,7 @@ import { useTranslations } from 'next-intl';
  *
  * 设计要点（I5.1）：
  * - 移动端（default → lg）：`ValoSheet variant="full-screen"`，全屏对话沉浸。
- * - 桌面端（lg+）：`ValoDialog variant="drawer" width={480}`，右侧面板。
+ * - 桌面端（lg+）：`ValoDialog variant="drawer" width={402}`，右侧面板。
  * - 两层 overlay 同时挂载 DOM，靠 Tailwind 的 `block lg:hidden` 与
  *   `hidden lg:block` 切换可见性。jsdom 不解析断点，故给每层加
  *   `data-valo-viewport` 标识，测试可基于该属性 scope 查询（与
@@ -40,9 +41,8 @@ import { useTranslations } from 'next-intl';
  * - 行为完全保留：真实 Chat API、`pendingPrompt` 自动发送、loading、
  *   6 秒 UI 超时提示、清空会话。
  *
- * 与 I5.2 的边界：MessageBubble / PhysiologicalTags / ChartTokenRenderer /
- * MemoryCandidateCard 的内部视觉仍由 I5.2 统一改造，此处只把它们当作
- * 纯展示组件挂在新的容器里，不修改其实现。
+ * 与 I5.2 的边界：MessageBubble / ChartTokenRenderer / MemoryCandidateCard
+ * 的内部视觉仍由 I5.2 统一改造，此处只改抽屉壳层，不修改其实现。
  */
 export function AIAdvisorDrawer() {
   const pathname = usePathname();
@@ -197,21 +197,23 @@ export function AIAdvisorDrawer() {
           variant="full-screen"
           bodyScroll="native"
           ariaLabel={t('title')}
+          className="bg-[var(--valo-chat-frame)]"
         >
           {sharedContent}
         </ValoSheet>
       </div>
       {/*
-        桌面端：右侧 Drawer（480px），与首页内容并列。
+        桌面端：右侧 Drawer（402px），与设计稿 frame 宽度一致。
       */}
       <div className="hidden lg:block" data-valo-viewport="desktop">
         <ValoDialog
           open={isAdvisorDrawerOpen}
           onClose={handleClose}
           variant="drawer"
-          width={480}
+          width={402}
           bodyScroll="native"
           ariaLabel={t('title')}
+          className="border-l-0 bg-[var(--valo-chat-frame)] shadow-none"
         >
           {sharedContent}
         </ValoDialog>
@@ -235,9 +237,8 @@ interface ChatContentProps {
 }
 
 /**
- * 对话主体：Header（标题 + 清空 + 关闭）/ PhysiologicalTags / 消息区 /
- * Loading / Empty State / Composer。无 overlay 行为，纯粹由外层
- * ValoSheet / ValoDialog 提供遮罩、焦点约束、滚动锁。
+ * 对话主体：对齐 Figma AI Chat frame。
+ * 空态与输入区严格按设计稿尺寸与层次重排；真实消息流与发送行为保持不变。
  */
 function ChatContent({
   scrollRef,
@@ -254,196 +255,165 @@ function ChatContent({
 }: ChatContentProps) {
   const t = useTranslations('advisor');
   const hasMessages = messages.length > 0;
+  const sendDisabled = !composerValue.trim() || isLoading;
 
   return (
-    <div id="ai-advisor-drawer" className="contents" data-valo-chat-content="true">
-      <div className="flex flex-1 flex-col min-h-0">
-        {/* ---------- Header ---------- */}
-        <header
-          className={
-            'shrink-0 z-10 flex items-center justify-between gap-3 border-b ' +
-            'border-[var(--valo-border)] bg-[var(--valo-surface)] px-4 py-3'
-          }
-        >
-          <div className="flex items-center gap-2">
-            <h2
-              className="text-base font-semibold text-[var(--valo-text-primary)]"
-              data-valo-serif="true"
-              data-valo-advisor-title="true"
-            >
-              {t('title')}
-            </h2>
-            <span
-              className={
-                'inline-flex items-center rounded-full border border-[var(--valo-border)] ' +
-                'bg-[var(--valo-canvas)] px-2 py-0.5 text-[10px] font-semibold uppercase ' +
-                'text-[var(--valo-text-secondary)]'
-              }
-            >
-              {t('beta')}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <MoreMenu
-              open={isMenuOpen}
-              setOpen={setIsMenuOpen}
-              onClear={onClearChat}
-              disabled={!hasMessages}
-            />
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t('close')}
-              data-valo-touch="true"
-              className={
-                'rounded-full p-2 text-[var(--valo-text-secondary)] transition-colors ' +
-                'hover:bg-[var(--valo-border)] hover:text-[var(--valo-text-primary)]'
-              }
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
-
-        {/* ---------- PhysiologicalTags ---------- */}
-        <PhysiologicalTags />
-
-        {/* ---------- 消息区 / Empty State ---------- */}
+    <div id="ai-advisor-drawer" className="h-full" data-valo-chat-content="true">
+      <div
+        className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--valo-chat-frame)]"
+        data-valo-chat-shell="true"
+      >
         <div
-          ref={scrollRef}
-          className={
-            'min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar scroll-smooth'
-          }
-        >
-          {!hasMessages ? (
-            <>
-              <EmptyState />
-              <SmartPrompts onSelect={onSendMessage} />
-            </>
-          ) : (
-            messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
-          )}
-          {isLoading && <LoadingBubble isTimeoutHint={isTimeoutHint} />}
-        </div>
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-24"
+          style={{
+            background:
+              'radial-gradient(circle at 50% 0%, rgba(167, 139, 250, 0.24), transparent 62%)',
+          }}
+        />
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col pt-24">
+          <div
+            className="flex min-h-0 flex-1 flex-col rounded-t-[24px] bg-[var(--valo-chat-panel)]"
+            data-valo-chat-panel="true"
+          >
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label={t('close')}
+                className="absolute left-6 top-6 z-20 grid h-8 w-8 place-items-center rounded-full transition-opacity hover:opacity-85 focus:outline-none focus-visible:shadow-[var(--valo-focus-ring)]"
+                style={{
+                  backgroundColor: 'var(--valo-chat-close-bg)',
+                  color: 'var(--valo-chat-close-icon)',
+                }}
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
 
-        {/* ---------- Composer ---------- */}
-        <footer
-          className={
-            'shrink-0 z-10 space-y-3 border-t border-[var(--valo-border)] ' +
-            'bg-[var(--valo-surface)] px-4 py-3'
-          }
-        >
-          <div className="relative flex items-end gap-2">
-            <textarea
-              rows={1}
-              value={composerValue}
-              onChange={(e) => setComposerValue(e.target.value)}
-              aria-label={t('composerLabel')}
-              placeholder={t('composerPlaceholder')}
-              data-valo-advisor-composer="true"
-              className={
-                'flex-1 min-h-[44px] max-h-32 resize-none rounded-full px-5 py-2.5 text-sm ' +
-                'border border-[var(--valo-border)] bg-[var(--valo-canvas)] ' +
-                'text-[var(--valo-text-primary)] placeholder:text-[var(--valo-text-secondary)] ' +
-                'transition-all focus:outline-none focus-visible:shadow-[var(--valo-focus-ring)]'
-              }
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  onSendMessage('');
-                }
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => onSendMessage('')}
-              disabled={!composerValue.trim() || isLoading}
-              aria-label={t('send')}
-              data-valo-touch="true"
-              data-valo-advisor-send="true"
-              className={
-                'flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-opacity ' +
-                'disabled:opacity-40 hover:opacity-90 focus:outline-none ' +
-                'focus-visible:shadow-[var(--valo-focus-ring)]'
-              }
-              style={{
-                backgroundColor: 'var(--valo-prime)',
-                color: 'var(--valo-canvas)',
-              }}
-            >
-              <PaperAirplaneIcon className="w-5 h-5 -rotate-45" />
-            </button>
+              {hasMessages ? (
+                <div className="absolute right-6 top-6 z-20">
+                  <MoreMenu
+                    open={isMenuOpen}
+                    setOpen={setIsMenuOpen}
+                    onClear={onClearChat}
+                    disabled={!hasMessages}
+                  />
+                </div>
+              ) : null}
+
+              <div
+                ref={scrollRef}
+                className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-24 no-scrollbar scroll-smooth"
+              >
+                {!hasMessages ? (
+                  <div className="flex min-h-full flex-col justify-center gap-10">
+                    <EmptyState />
+                    <SmartPrompts onSelect={onSendMessage} />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {messages.map((msg) => (
+                      <MessageBubble key={msg.id} message={msg} />
+                    ))}
+                    {isLoading ? <LoadingBubble isTimeoutHint={isTimeoutHint} /> : null}
+                  </div>
+                )}
+              </div>
+
+              <footer className="shrink-0 px-5 pb-6 pt-4">
+                <div
+                  className="flex h-12 items-center rounded-full px-4"
+                  style={{ backgroundColor: 'var(--valo-chat-composer)' }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="mr-3 inline-flex h-4 w-4 shrink-0 items-center justify-center text-[var(--valo-text-primary)]"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                  </span>
+                  <textarea
+                    rows={1}
+                    value={composerValue}
+                    onChange={(e) => setComposerValue(e.target.value)}
+                    aria-label={t('composerLabel')}
+                    placeholder={t('composerPlaceholder')}
+                    data-valo-advisor-composer="true"
+                    className="min-h-[18px] flex-1 resize-none bg-transparent text-[14px] leading-[18px] font-medium text-[var(--valo-text-primary)] placeholder:text-[var(--valo-text-secondary)] focus:outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        onSendMessage('');
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onSendMessage('')}
+                    disabled={sendDisabled}
+                    aria-label={t('send')}
+                    data-valo-advisor-send="true"
+                    className="ml-3 inline-flex h-5 w-5 shrink-0 items-center justify-center text-[var(--valo-text-primary)] transition-opacity hover:opacity-85 focus:outline-none focus-visible:shadow-[var(--valo-focus-ring)] disabled:opacity-60"
+                  >
+                    {sendDisabled ? (
+                      <MicrophoneIcon className="h-5 w-5" />
+                    ) : (
+                      <PaperAirplaneIcon className="h-5 w-5 -rotate-45" />
+                    )}
+                  </button>
+                </div>
+              </footer>
+            </div>
           </div>
-        </footer>
+        </div>
       </div>
     </div>
   );
 }
 
 /**
- * Empty State —— Valo 品牌空态：环形霓虹主视觉 + 欢迎文案。
- *
- * 主视觉用纯 SVG 实现（绿→蓝→紫→粉渐变环 + drop-shadow 发光晕染），
- * 中央镂空保留页面背景，与 design-manifest.md AI Chat 画板对齐。
- * 推荐问题（SmartPrompts）由 ChatContent 在空态时一并渲染。
+ * Empty State —— Figma AI Chat 空态：48px orb + 24px 衬线标题。
  */
 function EmptyState() {
   const t = useTranslations('advisor');
-  // 用 useId 生成唯一 id，避免 mobile + desktop 双 overlay 同时挂载时
-  // linearGradient id 重复导致渐变引用错乱（React 18 稳定 API）。
-  const ringGradientId = useId();
   return (
     <div
-      className="flex flex-col items-center justify-center gap-6 px-6 py-10 text-center"
+      className="flex flex-col items-center gap-4 px-6 text-center"
       data-valo-empty-state="true"
     >
-      {/* 环形霓虹主视觉：纯 SVG + 渐变 + drop-shadow */}
-      <svg
-        viewBox="0 0 200 200"
-        width={200}
-        height={200}
+      <div
         aria-hidden="true"
         data-valo-empty-hero="true"
-        className="drop-shadow-[0_0_24px_rgba(167,139,250,0.45)]"
+        className="relative h-12 w-12 rounded-full"
+        style={{
+          background:
+            'radial-gradient(circle at 36% 28%, rgba(255,255,255,0.28), transparent 24%), radial-gradient(circle at 61% 64%, var(--valo-prime) 0%, #7c3aed 44%, #43208f 78%, #271248 100%)',
+          boxShadow:
+            '0 10px 24px rgba(76, 52, 199, 0.34), 0 0 18px rgba(167, 139, 250, 0.28)',
+        }}
       >
-        <defs>
-          <linearGradient id={ringGradientId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="var(--valo-active)" />
-            <stop offset="35%" stopColor="var(--valo-accent-cool)" />
-            <stop offset="70%" stopColor="var(--valo-prime)" />
-            <stop offset="100%" stopColor="var(--valo-accent-warm)" />
-          </linearGradient>
-        </defs>
-        <circle
-          cx="100"
-          cy="100"
-          r="80"
-          fill="none"
-          stroke={`url(#${ringGradientId})`}
-          strokeWidth="6"
+        <span
+          className="absolute left-[12px] top-[13px] h-[18px] w-[11px] rounded-full"
+          style={{
+            backgroundColor: 'rgba(210, 234, 255, 0.92)',
+            boxShadow: '0 0 12px rgba(96, 165, 250, 0.46)',
+          }}
         />
-        <circle
-          cx="100"
-          cy="100"
-          r="64"
-          fill="none"
-          stroke={`url(#${ringGradientId})`}
-          strokeWidth="2"
-          opacity="0.6"
+        <span
+          className="absolute right-[12px] top-[13px] h-[18px] w-[11px] rounded-full"
+          style={{
+            backgroundColor: 'rgba(226, 214, 255, 0.88)',
+            boxShadow: '0 0 12px rgba(167, 139, 250, 0.46)',
+          }}
         />
-      </svg>
-      <div className="space-y-1">
+      </div>
+      <div className="space-y-0.5">
         <p
-          className="text-base font-semibold text-[var(--valo-text-primary)]"
+          className="text-[24px] leading-[33px] text-[var(--valo-text-primary)]"
           data-valo-serif="true"
         >
           {t('welcomeTitle')}
         </p>
-        <p className="text-sm text-[var(--valo-text-secondary)]">{t('welcomeSubtitle')}</p>
       </div>
-      <p className="mt-2 self-start text-xs font-semibold uppercase tracking-wide text-[var(--valo-text-secondary)]">
-        {t('suggestionsTitle')}
-      </p>
     </div>
   );
 }
@@ -464,8 +434,8 @@ function LoadingBubble({ isTimeoutHint }: { isTimeoutHint: boolean }) {
     >
       <div
         className={
-          'flex items-center gap-1 rounded-2xl rounded-tl-none border px-4 py-2 ' +
-          'border-[var(--valo-border)] bg-[var(--valo-canvas)]'
+          'flex items-center gap-1 rounded-[20px] rounded-tl-none px-4 py-2 ' +
+          'bg-[var(--valo-chat-chip)]'
         }
       >
         {[0, 150, 300].map((delay) => (
@@ -486,8 +456,7 @@ function LoadingBubble({ isTimeoutHint }: { isTimeoutHint: boolean }) {
 }
 
 /**
- * More Menu —— 顶部"更多"按钮，承载清空对话动作。
- * 用 Valo token 重写：surface 背景、border 边框、depleted 文字色。
+ * More Menu —— 仅在已有消息时显示的右上角菜单。
  */
 function MoreMenu({
   open,
@@ -509,13 +478,13 @@ function MoreMenu({
         aria-label={t('moreOptions')}
         aria-haspopup="menu"
         aria-expanded={open}
-        data-valo-touch="true"
-        className={
-          'rounded-full p-2 text-[var(--valo-text-secondary)] transition-colors ' +
-          'hover:bg-[var(--valo-border)] hover:text-[var(--valo-text-primary)]'
-        }
+        className="grid h-8 w-8 place-items-center rounded-full transition-opacity hover:opacity-85 focus:outline-none focus-visible:shadow-[var(--valo-focus-ring)]"
+        style={{
+          backgroundColor: 'var(--valo-chat-close-bg)',
+          color: 'var(--valo-chat-close-icon)',
+        }}
       >
-        <EllipsisVerticalIcon className="h-5 w-5" />
+        <EllipsisVerticalIcon className="h-4 w-4" />
       </button>
       <AnimatePresence>
         {open && (
@@ -527,7 +496,7 @@ function MoreMenu({
               exit={{ opacity: 0, scale: 0.95, y: -10 }}
               className={
                 'absolute right-0 mt-1 w-44 overflow-hidden rounded-xl border z-20 py-1.5 ' +
-                'border-[var(--valo-border)] bg-[var(--valo-surface)] ' +
+                'border-[var(--valo-border)] bg-[var(--valo-chat-panel)] ' +
                 'shadow-[var(--valo-shadow-elevated)]'
               }
               role="menu"
