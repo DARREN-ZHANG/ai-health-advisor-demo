@@ -47,7 +47,7 @@ const SAMPLE_STATE: GodModeStateResponse = {
   activeSensing: null,
 } as unknown as GodModeStateResponse;
 
-describe('useGodModeActions - advanceClock invalidation', () => {
+describe('useGodModeActions query invalidation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useProfileStore.setState({ currentProfileId: 'profile-a', currentProfile: null });
@@ -114,5 +114,33 @@ describe('useGodModeActions - advanceClock invalidation', () => {
     });
 
     invalidateSpy.mockRestore();
+  });
+
+  it('appendMicroEvent 不自动刷新 homepage，避免与显式 LLM 刷新竞争', async () => {
+    const { apiClient } = await import('@/lib/api-client');
+    (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValue(SAMPLE_STATE);
+
+    const { Wrapper, queryClient } = createWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => useGodModeActions(), {
+      wrapper: Wrapper,
+    });
+
+    await act(async () => {
+      await result.current.appendMicroEvent({
+        microEventType: 'micro_hydration_walk',
+        advanceClock: true,
+      });
+    });
+
+    expect(invalidateSpy).not.toHaveBeenCalledWith({
+      queryKey: queryKeys.homepage.all,
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.dataCenter.all,
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.godMode.all,
+    });
   });
 });

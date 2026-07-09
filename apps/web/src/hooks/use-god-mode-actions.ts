@@ -155,6 +155,10 @@ export function useGodModeActions() {
 
   /**
    * E1: 追加微事件动作
+   *
+   * 首页简报由 useActionInteractions 在写入成功后通过 bustCache 显式刷新。
+   * 此处不得同时 invalidate homepage，否则普通 query refetch 会与显式 LLM
+   * 请求竞争写入同一个 cache key，造成简报内容二次覆盖。
    */
   const appendMicroEventMutation = useMutation({
     mutationFn: async (payload: MicroEventAppendPayload) => {
@@ -163,7 +167,6 @@ export function useGodModeActions() {
     onSuccess: (state) => {
       setProfileId(state.currentProfileId);
       syncActiveSensingBanner(state.activeSensing);
-      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
     },
