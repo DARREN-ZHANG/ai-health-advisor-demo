@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, ApiError } from '@/lib/api-client';
 import { mapActiveSensingToBanner } from '@/lib/god-mode';
 import { queryKeys } from '@/lib/query-keys';
 import { useProfileStore } from '@/stores/profile.store';
@@ -105,13 +105,26 @@ export function useGodModeActions() {
 
   const removeTimelineSegmentMutation = useMutation({
     mutationFn: async (segmentId: string) => {
-      return apiClient.delete<GodModeStateResponse>(
-        `/god-mode/timeline-segments/${encodeURIComponent(segmentId)}`,
-      );
+      try {
+        return await apiClient.delete<GodModeStateResponse>(
+          `/god-mode/timeline-segments/${encodeURIComponent(segmentId)}`,
+        );
+      } catch (error) {
+        // 404 = 后端 segment 已不存在（reset / watch 重启 / profile 切换导致内存状态清空）。
+        // 视为成功：目标状态（条目消失）已达成，前端继续删除本地 entry 即可。
+        // 其他错误照常抛出，由调用方决定如何提示。
+        if (error instanceof ApiError && error.status === 404) {
+          return null;
+        }
+        throw error;
+      }
     },
     onSuccess: (state) => {
-      setProfileId(state.currentProfileId);
-      syncActiveSensingBanner(state.activeSensing);
+      // state 为 null（404 幂等）时跳过 god-mode 状态同步；缓存失效仍要执行
+      if (state) {
+        setProfileId(state.currentProfileId);
+        syncActiveSensingBanner(state.activeSensing);
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
