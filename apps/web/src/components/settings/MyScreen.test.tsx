@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { MyScreen } from './MyScreen';
 
@@ -25,6 +25,10 @@ const MESSAGES = {
       faq: 'FAQ',
       termsOfService: 'Terms of Service',
       privacyPolicy: 'Privacy Policy',
+    },
+    languageSheet: {
+      title: 'Language',
+      legend: 'Choose language',
     },
   },
 } as const;
@@ -60,11 +64,31 @@ describe('MyScreen', () => {
     }
   });
 
-  it('菜单项是静态列表，不渲染旧版可点击设置按钮', () => {
+  it('只有 language 菜单项渲染为 button，其他保持静态', () => {
     renderScreen();
 
-    expect(screen.queryByRole('button')).toBeNull();
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveTextContent('Language');
+  });
+
+  it('data-valo-my 共 13 个（1 root + 12 行）', () => {
+    renderScreen();
+
     expect(document.querySelector('[data-valo-my="root"]')).not.toBeNull();
     expect(document.querySelectorAll('[data-valo-my]').length).toBe(13);
+  });
+
+  it('点击 language 按钮打开语言切换弹窗', () => {
+    renderScreen();
+
+    // 初始无弹窗
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Language' }));
+
+    // 弹窗出现（至少 1 个；实际 2 个 = 移动端 + 桌面端 dual-render）
+    const dialogs = screen.getAllByRole('dialog');
+    expect(dialogs.length).toBeGreaterThanOrEqual(1);
   });
 });

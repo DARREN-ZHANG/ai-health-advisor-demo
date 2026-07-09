@@ -1,11 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ChevronRightIcon } from '@heroicons/react/24/outline';
+import { LanguageSheet } from './LanguageSheet';
 
 /**
- * MyScreen —— "My" 页面静态设置列表。
+ * MyScreen —— "My" 页面设置列表。
  * Source of truth: Figma Valo-App-Demo node 55-270, frame "My", 402 x 1064.
+ *
+ * 仅 `language` 行可点击，挂载 `<LanguageSheet>` 切换 locale；
+ * 其他菜单项保持静态不可点击（设计稿为未来功能预留位）。
  */
 const GROUP_KEYS = ['general', 'app', 'resources', 'legal'] as const;
 
@@ -18,6 +23,7 @@ const ROW_KEYS = {
 
 export function MyScreen() {
   const t = useTranslations('my');
+  const [languageOpen, setLanguageOpen] = useState(false);
 
   return (
     <section
@@ -47,17 +53,28 @@ export function MyScreen() {
               {t(`groups.${groupKey}`)}
             </h2>
             <ul>
-              {ROW_KEYS[groupKey].map((rowKey) => (
-                <MenuRow
-                  key={rowKey}
-                  label={t(`items.${rowKey}`)}
-                  dataValoMy={rowKey}
-                />
-              ))}
+              {ROW_KEYS[groupKey].map((rowKey) =>
+                rowKey === 'language' ? (
+                  <MenuButton
+                    key={rowKey}
+                    label={t(`items.${rowKey}`)}
+                    dataValoMy={rowKey}
+                    onClick={() => setLanguageOpen(true)}
+                  />
+                ) : (
+                  <MenuRow
+                    key={rowKey}
+                    label={t(`items.${rowKey}`)}
+                    dataValoMy={rowKey}
+                  />
+                ),
+              )}
             </ul>
           </section>
         ))}
       </div>
+
+      <LanguageSheet open={languageOpen} onClose={() => setLanguageOpen(false)} />
     </section>
   );
 }
@@ -79,6 +96,34 @@ function MenuRow({ label, dataValoMy }: MenuRowProps) {
         strokeWidth={2}
         aria-hidden="true"
       />
+    </li>
+  );
+}
+
+interface MenuButtonProps {
+  label: string;
+  dataValoMy?: string;
+  onClick: () => void;
+}
+
+function MenuButton({ label, dataValoMy, onClick }: MenuButtonProps) {
+  return (
+    <li
+      data-valo-my={dataValoMy}
+      className="border-b border-white/[0.06] last:border-b-0"
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex h-[52px] w-full items-center text-left text-[15px] font-normal leading-none text-[var(--valo-text-primary)]"
+      >
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <ChevronRightIcon
+          className="h-[18px] w-[18px] shrink-0 text-[var(--valo-text-primary)]"
+          strokeWidth={2}
+          aria-hidden="true"
+        />
+      </button>
     </li>
   );
 }
