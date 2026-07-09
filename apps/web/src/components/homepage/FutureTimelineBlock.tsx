@@ -16,7 +16,8 @@ export function FutureTimelineBlock({ suggestion }: FutureTimelineBlockProps) {
   const { timePoint, predictedState, rationale, action } = suggestion;
   const hour = Number(timePoint.split(':')[0]);
   const period = hour >= 12 ? 'PM' : 'AM';
-  const daypart = hour >= 18 ? t('night.title') : t('afternoon.title');
+  const daypart =
+    hour < 12 ? t('morning.title') : hour < 18 ? t('afternoon.title') : t('night.title');
 
   return (
     <section className="relative pl-8" data-valo-future-tip="">

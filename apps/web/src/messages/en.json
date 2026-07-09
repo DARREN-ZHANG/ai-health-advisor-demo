@@ -87,6 +87,9 @@
       "cancel": "Cancel",
       "disclaimer": "Demo only — won't open your calendar app"
     },
+    "morning": {
+      "title": "Morning"
+    },
     "afternoon": {
       "title": "Afternoon",
       "body": "Light meal planned, gentle stretch recommended."

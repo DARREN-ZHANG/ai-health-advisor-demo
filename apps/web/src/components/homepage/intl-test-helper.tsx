@@ -30,6 +30,7 @@ const ZH_MESSAGES = {
     now: '现在',
     microTipsTitle: '提示',
     predictionBody: '基于{rationale}，{predictedState}。建议{actionTitle}：{actionDescription}',
+    morning: { title: '上午' },
     afternoon: { title: '下午', body: '已安排轻食与舒缓拉伸。' },
     night: { title: '晚间', body: '已就绪放松流程，建议降低屏幕亮度。' },
     action: {

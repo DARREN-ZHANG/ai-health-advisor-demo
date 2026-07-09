@@ -87,6 +87,9 @@
       "cancel": "取消",
       "disclaimer": "演示功能 — 不会打开日历应用"
     },
+    "morning": {
+      "title": "上午"
+    },
     "afternoon": {
       "title": "下午",
       "body": "已安排轻食与舒缓拉伸。"

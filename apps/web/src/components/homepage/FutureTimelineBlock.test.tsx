@@ -66,4 +66,10 @@ describe('FutureTimelineBlock', () => {
 
     expect(screen.getByRole('heading', { name: '晚间 - 22:45 PM' })).toBeInTheDocument();
   });
+
+  it('上午预测使用上午标题', () => {
+    renderBlock({ ...suggestion, timePoint: '9:30' });
+
+    expect(screen.getByRole('heading', { name: '上午 - 9:30 AM' })).toBeInTheDocument();
+  });
 });
