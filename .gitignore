@@ -18,3 +18,6 @@ docs/superpowers/*
 
 .DS_Store
 **/.DS_Store
+
+# 包管理器缓存
+.pnpm-store/
