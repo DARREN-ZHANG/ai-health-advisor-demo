@@ -163,20 +163,25 @@ export default function HomePage() {
             />
 
             {visibleActions.length > 0 ? (
-              <ul
-                className="-mt-2 flex gap-3 overflow-x-auto overscroll-x-contain list-none p-0 pb-1 pl-8 pr-8 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                data-valo-action-tips=""
+              <div
+                className="-mt-2 ml-8 overflow-hidden"
+                data-valo-action-tips-viewport=""
               >
-                {visibleActions.map((action: ActionOption) => (
-                  <ActionCard
-                    key={action.id}
-                    action={action}
-                    onYes={interactions.handleYes}
-                    onNotNow={interactions.handleNotNow}
-                    pending={interactions.pendingActionId === action.id}
-                  />
-                ))}
-              </ul>
+                <ul
+                  className="flex list-none gap-3 overflow-x-auto overscroll-x-none p-0 pb-1 after:block after:w-5 after:shrink-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  data-valo-action-tips=""
+                >
+                  {visibleActions.map((action: ActionOption) => (
+                    <ActionCard
+                      key={action.id}
+                      action={action}
+                      onYes={interactions.handleYes}
+                      onNotNow={interactions.handleNotNow}
+                      pending={interactions.pendingActionId === action.id}
+                    />
+                  ))}
+                </ul>
+              </div>
             ) : null}
 
             {/* 下午/晚间：LLM futureSuggestions 优先；响应到达后仍缺失才降级到 Figma 静态文案 */}

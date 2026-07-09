@@ -143,7 +143,7 @@ describe('ActionCard', () => {
     expect(button.querySelector('svg')).not.toBeNull();
   });
 
-  it('移动端行动卡片按约 1.8 张可见设置宽度', () => {
+  it('行动卡片按第二张露出约 80% 设置宽度', () => {
     renderWithIntl(
       <ActionCard action={makeAction()} onYes={() => {}} onNotNow={() => {}} />,
     );
