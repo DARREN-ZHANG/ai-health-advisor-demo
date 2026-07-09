@@ -454,6 +454,17 @@ describe('God-Mode Routes', () => {
       expect(removed.statusCode).toBe(200);
     });
 
+    test('删除不存在的片段返回 404 而非 500', async () => {
+      const response = await app.inject({
+        method: 'DELETE',
+        url: '/god-mode/timeline-segments/seg-gm-nonexistent-202607090705',
+      });
+      expect(response.statusCode).toBe(404);
+      const body = response.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('NOT_FOUND');
+    });
+
     test('无效 segmentType 返回 400', async () => {
       const response = await app.inject({
         method: 'POST',

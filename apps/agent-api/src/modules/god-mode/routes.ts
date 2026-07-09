@@ -190,13 +190,20 @@ export async function godModeRoutes(app: FastifyInstance) {
 
   app.delete<{ Params: { segmentId: string } }>(
     '/god-mode/timeline-segments/:segmentId',
-    async (request) => {
-      const result = service.removeTimelineSegment(
-        request.params.segmentId,
-        request.ctx?.sessionId,
-      );
-      invalidateBriefCache();
-      return createSuccessResponse(result, buildMeta(request));
+    async (request, reply) => {
+      try {
+        const result = service.removeTimelineSegment(
+          request.params.segmentId,
+          request.ctx?.sessionId,
+        );
+        invalidateBriefCache();
+        return createSuccessResponse(result, buildMeta(request));
+      } catch (error) {
+        const statusCode = (error as unknown as { statusCode?: number }).statusCode ?? 500;
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        const code = statusCode === 404 ? ErrorCode.NOT_FOUND : ErrorCode.UNKNOWN;
+        return reply.status(statusCode).send(createErrorResponse(code, message, buildMeta(request)));
+      }
     },
   );
 
