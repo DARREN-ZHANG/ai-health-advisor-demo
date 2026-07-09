@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, AI_REQUEST_TIMEOUT_MS } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
 import type { AgentResponseEnvelope, PageContext, DataTab, Timeframe } from '@health-advisor/shared';
@@ -39,11 +39,16 @@ export function useMorningBrief(profileId: string | undefined) {
 /**
  * 手动刷新 morning brief，绕过前后端缓存强制调用 LLM。
  * 使用 useMutation 而非 refetch，以便传递 bustCache 标记。
+ *
+ * onSuccess 把结果 setQueryData 写回 useMorningBrief 的缓存，
+ * 使 mutation 结果立即反映到 UI（否则 mutation 返回值会被丢弃，
+ * 首页仍显示 invalidateQueries 后台 refetch 拿到的旧 Supabase 缓存）。
  */
 export function useRefetchBrief(
   profileId: string | undefined,
   options?: { onSuccess?: (data: AgentResponseEnvelope | null) => void },
 ) {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
       if (!profileId) return null;
@@ -60,7 +65,12 @@ export function useRefetchBrief(
         bustCache: true,
       }, { timeoutMs: AI_REQUEST_TIMEOUT_MS });
     },
-    onSuccess: options?.onSuccess,
+    onSuccess: (data) => {
+      if (data && profileId) {
+        queryClient.setQueryData(queryKeys.homepage.brief(profileId), data);
+      }
+      options?.onSuccess?.(data);
+    },
   });
 }
 

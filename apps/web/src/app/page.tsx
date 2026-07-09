@@ -13,6 +13,7 @@ import { AppointmentSheet } from '@/components/homepage/AppointmentSheet';
 import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
 import { LifeLogPanel } from '@/components/life-log/LifeLogPanel';
 import { useProfileStore } from '@/stores/profile.store';
+import { useGodModeStore } from '@/stores/god-mode.store';
 import {
   useHealthStatusStore,
   selectActiveVisualState,
@@ -50,7 +51,12 @@ export default function HomePage() {
   const t = useTranslations('homepage');
 
   const interactions = useActionInteractions(currentProfileId);
-  const briefIsLoading = isLoading || isFetching || refetchBrief.isPending;
+  // isBriefRefreshing：添加事件后强制刷新简报期间，由 useDemoControlActions 设置。
+  // 解决 useRefetchBrief 在不同组件实例间 mutation state 不共享的问题——
+  // 抽屉 hook 和首页各自独立的 mutation 实例，isPending 不互通，用 store flag 桥接。
+  const isBriefRefreshing = useGodModeStore((s) => s.isBriefRefreshing);
+  const briefIsLoading =
+    isLoading || isFetching || refetchBrief.isPending || isBriefRefreshing;
 
   // —— Hero 状态管理 ——
   const activeState = useHealthStatusStore(selectActiveVisualState);
@@ -96,12 +102,14 @@ export default function HomePage() {
     }
   }, [error, showToast, t]);
 
+  // 刷新期间视同无数据：隐藏旧简报内容，显示 skeleton（与首次进入页面一致）
+  const effectiveData = isBriefRefreshing ? null : data;
   const summary =
-    data?.summary ||
+    effectiveData?.summary ||
     (error ? t('briefNetworkError') : t('briefPreparing'));
-  const actions = data?.actions ?? [];
+  const actions = effectiveData?.actions ?? [];
   // 未来时间点建议：LLM 基于今日已发生活动推断，缺失时降级为静态 Figma 文案
-  const futureSuggestions = data?.futureSuggestions ?? [];
+  const futureSuggestions = effectiveData?.futureSuggestions ?? [];
 
   // 已记录/已加入日历/正在 Timer 或 Appointment 中 的 action 不再渲染为可交互卡片，
   // 避免用户在浮层打开期间重复点击 Yes。
@@ -133,6 +141,7 @@ export default function HomePage() {
         <HealthHero
           ref={ringRef}
           state={activeState}
+          isLoading={briefIsLoading}
           onOpenSwitchStatus={handleOpenSwitchStatus}
           isSwitchStatusOpen={isSwitchStatusOpen}
           switchStatusDialogId="switch-status-dialog"
@@ -141,7 +150,6 @@ export default function HomePage() {
         <SwitchStatusDialog
           open={isSwitchStatusOpen}
           onClose={handleCloseSwitchStatus}
-          isLoading={briefIsLoading}
           current={activeState}
           onSelect={handleSelectStatus}
           triggerRef={ringRef}
@@ -159,8 +167,8 @@ export default function HomePage() {
 
             <BriefTimeline
               summary={summary}
-              microTips={data?.microTips}
-              isLoading={briefIsLoading && !data}
+              microTips={effectiveData?.microTips}
+              isLoading={briefIsLoading && !effectiveData}
             />
 
             {visibleActions.length > 0 ? (
@@ -193,7 +201,7 @@ export default function HomePage() {
                   suggestion={suggestion}
                 />
               ))
-            ) : briefIsLoading && !data ? (
+            ) : briefIsLoading && !effectiveData ? (
               // LLM 响应中：暂不展示静态降级，避免响应到达后被替换造成闪烁
               null
             ) : (
