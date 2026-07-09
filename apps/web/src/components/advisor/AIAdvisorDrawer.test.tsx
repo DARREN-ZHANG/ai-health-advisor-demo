@@ -202,6 +202,7 @@ describe('AIAdvisorDrawer', () => {
     renderWithIntl(<AIAdvisorDrawer />);
     const mobile = getMobileContainer();
     expect(mobile.querySelector('[data-valo-empty-hero="true"]')).not.toBeNull();
+    expect(mobile.querySelector('img[src*="chat-entrance.png"]')).not.toBeNull();
   });
 
   it('composer 容器使用 Figma 的深色胶囊背景', () => {
@@ -212,6 +213,17 @@ describe('AIAdvisorDrawer', () => {
     const wrapper = textarea.parentElement as HTMLElement | null;
     expect(wrapper?.className ?? '').toContain('rounded-full');
     expect(wrapper?.getAttribute('style') ?? '').toContain('var(--valo-chat-composer)');
+  });
+
+  it('empty state 时推荐问题锚定在 input 上方，并保持 45px 间距', () => {
+    useUIStore.setState({ isAdvisorDrawerOpen: true });
+    renderWithIntl(<AIAdvisorDrawer />);
+    const mobile = getMobileContainer();
+    const promptsAnchor = mobile.querySelector('[data-valo-smart-prompts-anchor="true"]') as HTMLElement | null;
+    const composerShell = mobile.querySelector('[data-valo-composer-shell="true"]') as HTMLElement | null;
+    expect(promptsAnchor).not.toBeNull();
+    expect(composerShell).not.toBeNull();
+    expect(promptsAnchor?.getAttribute('style') ?? '').toContain('margin-bottom: 45px');
   });
 
   it('empty state 时不显示更多菜单按钮', () => {

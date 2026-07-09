@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { m, AnimatePresence } from 'framer-motion';
@@ -306,9 +307,8 @@ function ChatContent({
                 className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-24 no-scrollbar scroll-smooth"
               >
                 {!hasMessages ? (
-                  <div className="flex min-h-full flex-col justify-center gap-10">
+                  <div className="flex min-h-full flex-col justify-center">
                     <EmptyState />
-                    <SmartPrompts onSelect={onSendMessage} />
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -321,7 +321,16 @@ function ChatContent({
               </div>
 
               <footer className="shrink-0 px-5 pb-6 pt-4">
+                {!hasMessages ? (
+                  <div
+                    data-valo-smart-prompts-anchor="true"
+                    style={{ marginBottom: '45px' }}
+                  >
+                    <SmartPrompts onSelect={onSendMessage} />
+                  </div>
+                ) : null}
                 <div
+                  data-valo-composer-shell="true"
                   className="flex h-12 items-center rounded-full px-4"
                   style={{ backgroundColor: 'var(--valo-chat-composer)' }}
                 >
@@ -380,32 +389,15 @@ function EmptyState() {
       className="flex flex-col items-center gap-4 px-6 text-center"
       data-valo-empty-state="true"
     >
-      <div
+      <Image
+        src="/valo/images/chat-entrance.png"
+        alt=""
+        width={48}
+        height={48}
+        priority
         aria-hidden="true"
         data-valo-empty-hero="true"
-        className="relative h-12 w-12 rounded-full"
-        style={{
-          background:
-            'radial-gradient(circle at 36% 28%, rgba(255,255,255,0.28), transparent 24%), radial-gradient(circle at 61% 64%, var(--valo-prime) 0%, #7c3aed 44%, #43208f 78%, #271248 100%)',
-          boxShadow:
-            '0 10px 24px rgba(76, 52, 199, 0.34), 0 0 18px rgba(167, 139, 250, 0.28)',
-        }}
-      >
-        <span
-          className="absolute left-[12px] top-[13px] h-[18px] w-[11px] rounded-full"
-          style={{
-            backgroundColor: 'rgba(210, 234, 255, 0.92)',
-            boxShadow: '0 0 12px rgba(96, 165, 250, 0.46)',
-          }}
-        />
-        <span
-          className="absolute right-[12px] top-[13px] h-[18px] w-[11px] rounded-full"
-          style={{
-            backgroundColor: 'rgba(226, 214, 255, 0.88)',
-            boxShadow: '0 0 12px rgba(167, 139, 250, 0.46)',
-          }}
-        />
-      </div>
+      />
       <div className="space-y-0.5">
         <p
           className="text-[24px] leading-[33px] text-[var(--valo-text-primary)]"
