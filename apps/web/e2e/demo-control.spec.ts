@@ -80,12 +80,12 @@ test.describe('Add Event', () => {
     await gotoAndWait(page, '/');
   });
 
-  test('严格显示设计稿中的六个事件', async ({ page }) => {
+  test('以设计稿样式显示原有全部十三个事件', async ({ page }) => {
     await openPanel(page);
     await expect(page.getByRole('heading', { name: /添加事件|Add Event/ })).toBeVisible();
     await expect(
       page.getByRole('dialog').locator('button[aria-label^="添加 "], button[aria-label^="Add "]'),
-    ).toHaveCount(6);
+    ).toHaveCount(13);
     await expect(page.getByText(/日常节律|Daily Rhythm/)).toHaveCount(0);
     await expect(page.getByText('LIVE', { exact: true })).toHaveCount(0);
     await expect(page.getByText('+1h', { exact: true })).toHaveCount(0);

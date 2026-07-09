@@ -10,29 +10,12 @@ export interface DemoControlDrawerProps {
   onSegmentClick?: (segment: TimelineSegmentConfig) => void;
 }
 
-const ADD_EVENT_TYPES = [
-  'steady_cardio',
-  'intermittent_exercise',
-  'walk',
-  'strength_training',
-  'caffeine_intake',
-  'alcohol_intake',
-] as const;
-
-const ADD_EVENT_SEGMENTS = ADD_EVENT_TYPES.map((type) => {
-  const segment = TIMELINE_SEGMENTS.find((candidate) => candidate.type === type);
-  if (!segment) {
-    throw new Error(`Missing timeline segment configuration: ${type}`);
-  }
-  return segment;
-});
-
 /**
  * Demo 事件面板。
  *
  * Source of truth: Figma Valo-App-Demo node 243:224, frame "Add Event", 402 × 874.
- * 设计仅包含标题、关闭按钮和六个快捷事件，因此这里不再承载时间控制、
- * 事件摘要、分组说明或重置流程。
+ * Figma 仅作为视觉基准；事件内容继续使用完整的 TIMELINE_SEGMENTS 配置。
+ * 设计稿在 71% 缩放下的事件中心距约 34.5px，反算原始行高约 49px。
  */
 export function DemoControlDrawer({ onSegmentClick }: DemoControlDrawerProps) {
   const t = useTranslations('demoControl');
@@ -70,13 +53,13 @@ export function DemoControlDrawer({ onSegmentClick }: DemoControlDrawerProps) {
           </h2>
         </header>
 
-        <div className="mt-3 flex flex-col">
-          {ADD_EVENT_SEGMENTS.map((segment) => {
+        <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
+          {TIMELINE_SEGMENTS.map((segment) => {
             const pending = pendingSegmentType === segment.type;
             const disabled = pendingSegmentType !== null;
 
             return (
-              <div key={segment.type} className="flex h-[68px] items-center">
+              <div key={segment.type} className="flex h-[49px] shrink-0 items-center">
                 <span className="w-7 shrink-0 text-[19px] leading-none" aria-hidden="true">
                   {segment.type === 'alcohol_intake' ? '🍷' : segment.icon}
                 </span>

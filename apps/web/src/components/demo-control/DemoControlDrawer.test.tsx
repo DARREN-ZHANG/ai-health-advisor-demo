@@ -50,20 +50,32 @@ describe('DemoControlDrawer', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('严格渲染设计稿中的六个事件', () => {
+  it('以设计稿样式渲染原有全部十三个事件', () => {
     renderDrawer();
     expect(screen.getByRole('heading', { name: '添加事件' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /^添加 / })).toHaveLength(6);
+    expect(screen.getAllByRole('button', { name: /^添加 / })).toHaveLength(13);
+    expect(screen.getByText('进餐')).toBeInTheDocument();
     expect(screen.getByText('有氧')).toBeInTheDocument();
+    expect(screen.getByText('久坐')).toBeInTheDocument();
     expect(screen.getByText('HIIT 运动')).toBeInTheDocument();
     expect(screen.getByText('散步')).toBeInTheDocument();
+    expect(screen.getByText('睡眠')).toBeInTheDocument();
+    expect(screen.getByText('小憩')).toBeInTheDocument();
+    expect(screen.getByText('专注')).toBeInTheDocument();
+    expect(screen.getByText('焦虑')).toBeInTheDocument();
     expect(screen.getByText('力量')).toBeInTheDocument();
     expect(screen.getByText('咖啡因')).toBeInTheDocument();
     expect(screen.getByText('饮酒')).toBeInTheDocument();
+    expect(screen.getByText('放松')).toBeInTheDocument();
     expect(screen.queryByText('日常节律')).toBeNull();
     expect(screen.queryByText('LIVE')).toBeNull();
     expect(screen.queryByText('+1h')).toBeNull();
     expect(screen.queryByText('重置')).toBeNull();
+  });
+
+  it('事件行按设计稿校准为 49px', () => {
+    renderDrawer();
+    expect(screen.getByText('散步').closest('div')).toHaveClass('h-[49px]');
   });
 
   it('点击添加按钮传递对应事件配置', () => {
