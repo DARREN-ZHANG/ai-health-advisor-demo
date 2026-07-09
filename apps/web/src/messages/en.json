@@ -276,7 +276,8 @@
     }
   },
   "demoControl": {
-    "title": "Demo Control",
+    "title": "Add Event",
+    "add": "Add",
     "live": "LIVE",
     "close": "Close",
     "openTrigger": "Open Demo Control",

@@ -15,7 +15,7 @@ import type { TimelineSegmentType } from '@/components/demo-control/types';
 interface GodModeState {
   isEnabled: boolean;
   isOpen: boolean;
-  /** 当前正在变更的 segmentType；用于 TimelineSegmentCard 的 loading 态 */
+  /** 当前正在添加的事件类型；用于 Add Event 按钮的 loading 态 */
   pendingSegmentType: TimelineSegmentType | null;
   /** 当前正在执行的底部动作；用于 +1h / 重置 按钮的 loading 态 */
   pendingAction: 'advance' | 'reset' | null;

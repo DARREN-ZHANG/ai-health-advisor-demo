@@ -12,7 +12,8 @@ import { NextIntlClientProvider } from 'next-intl';
  */
 const ZH_MESSAGES = {
   demoControl: {
-    title: 'Demo 控制台',
+    title: '添加事件',
+    add: '添加',
     live: 'LIVE',
     close: '关闭',
     openTrigger: '打开 Demo 控制',

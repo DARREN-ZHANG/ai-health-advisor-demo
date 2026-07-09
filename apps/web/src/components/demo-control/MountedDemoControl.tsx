@@ -17,12 +17,6 @@ import { useDemoControlActions } from '@/hooks/use-demo-control-actions';
 import { DemoControlDrawer } from './DemoControlDrawer';
 
 export function MountedDemoControl() {
-  const { onSegmentClick, onAdvanceHour, onReset } = useDemoControlActions();
-  return (
-    <DemoControlDrawer
-      onSegmentClick={onSegmentClick}
-      onAdvanceHour={onAdvanceHour}
-      onReset={onReset}
-    />
-  );
+  const { onSegmentClick } = useDemoControlActions();
+  return <DemoControlDrawer onSegmentClick={onSegmentClick} />;
 }
