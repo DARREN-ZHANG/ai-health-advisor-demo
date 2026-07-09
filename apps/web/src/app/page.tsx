@@ -141,6 +141,7 @@ export default function HomePage() {
         <SwitchStatusDialog
           open={isSwitchStatusOpen}
           onClose={handleCloseSwitchStatus}
+          isLoading={briefIsLoading}
           current={activeState}
           onSelect={handleSelectStatus}
           triggerRef={ringRef}

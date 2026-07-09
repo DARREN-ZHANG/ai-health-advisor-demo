@@ -25,6 +25,8 @@ import { HeroGlowCanvas } from './HeroGlowCanvas';
 export interface HealthHeroProps {
   /** 当前生效的视觉状态（由父组件从 store 选取） */
   state: HealthVisualState;
+  /** LLM 正在生成简报；临时展示最佳准备配色的思考态 */
+  isLoading?: boolean;
   /** 圆环点击：打开 Switch Status 弹窗 */
   onOpenSwitchStatus: () => void;
   /** 圆环是否处于 expanded 态（弹窗已打开），驱动 aria-expanded */
@@ -45,21 +47,32 @@ export interface HealthHeroProps {
  */
 export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
   function HealthHero(
-    { state, onOpenSwitchStatus, isSwitchStatusOpen = false, switchStatusDialogId, children },
+    {
+      state,
+      isLoading = false,
+      onOpenSwitchStatus,
+      isSwitchStatusOpen = false,
+      switchStatusDialogId,
+      children,
+    },
     ref,
   ) {
     const t = useTranslations('health');
-    const meta = HEALTH_STATE_METADATA[state];
-    const stateLabel = t(`state.${state}` as const);
+    const visualState = isLoading ? 'prime-readiness' : state;
+    const meta = HEALTH_STATE_METADATA[visualState];
+    const stateLabel = isLoading
+      ? t('thinking')
+      : t(`state.${state}` as const);
     const ringLabel = t('switchStatus.ringLabel');
 
     return (
       <section
         className="relative -mx-4 -mt-[128px] flex min-h-[488px] flex-col items-center justify-center overflow-hidden px-4 pb-10 pt-[208px] md:mx-0 md:rounded-none"
         data-valo-hero="true"
-        data-valo-state={state}
+        data-valo-state={visualState}
+        data-valo-loading={isLoading ? 'true' : undefined}
       >
-        <HeroGlowCanvas state={state} />
+        <HeroGlowCanvas state={visualState} isLoading={isLoading} />
 
         {/*
          * 整个圆环就是 button 本身：
@@ -78,6 +91,7 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
           onClick={onOpenSwitchStatus}
           aria-haspopup="dialog"
           aria-expanded={isSwitchStatusOpen}
+          aria-busy={isLoading}
           {...(switchStatusDialogId ? { 'aria-controls': switchStatusDialogId } : {})}
           aria-label={ringLabel}
           data-valo-touch="true"

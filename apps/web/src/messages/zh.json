@@ -143,6 +143,7 @@
     "demoTimeUnavailable": "Mock Timeline 时间不可用"
   },
   "health": {
+    "thinking": "Valo is thinking",
     "state": {
       "prime-readiness": "最佳准备",
       "active-recovery": "积极恢复",

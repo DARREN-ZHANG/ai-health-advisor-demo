@@ -114,6 +114,39 @@ describe('HealthHero', () => {
     expect(screen.getByText('积极恢复')).toBeInTheDocument();
   });
 
+  it('LLM loading 时使用最佳准备视觉并显示思考文案', () => {
+    renderWithIntl(
+      <HealthHero
+        state="glycogen-depleted"
+        isLoading
+        onOpenSwitchStatus={() => {}}
+      />,
+    );
+
+    const hero = document.querySelector('[data-valo-hero="true"]');
+    expect(hero).toHaveAttribute('data-valo-state', 'prime-readiness');
+    expect(hero).toHaveAttribute('data-valo-loading', 'true');
+    expect(screen.getByText('Valo is thinking')).toBeInTheDocument();
+    expect(screen.queryByText('糖原耗尽')).not.toBeInTheDocument();
+  });
+
+  it('LLM loading 时标记圆环和 Canvas 的忙碌及动画状态', () => {
+    renderWithIntl(
+      <HealthHero
+        state="active-recovery"
+        isLoading
+        onOpenSwitchStatus={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole('button')).toHaveAttribute('aria-busy', 'true');
+    expect(
+      document.querySelector(
+        '[data-valo-hero-canvas="prime-readiness"][data-valo-loading="true"]',
+      ),
+    ).not.toBeNull();
+  });
+
   it('圆环 data-valo-state 反映当前状态', () => {
     renderWithIntl(
       <HealthHero state="glycogen-depleted" onOpenSwitchStatus={() => {}} />,

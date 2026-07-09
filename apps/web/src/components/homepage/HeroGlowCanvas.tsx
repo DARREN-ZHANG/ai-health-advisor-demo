@@ -5,6 +5,7 @@ import { HEALTH_STATE_METADATA, type HealthVisualState } from '@/lib/valo-theme'
 
 interface HeroGlowCanvasProps {
   state: HealthVisualState;
+  isLoading?: boolean;
 }
 
 interface RingGeometry {
@@ -40,7 +41,10 @@ const RING_STOPS: Record<HealthVisualState, readonly string[]> = {
   ],
 };
 
-export function HeroGlowCanvas({ state }: HeroGlowCanvasProps) {
+export function HeroGlowCanvas({
+  state,
+  isLoading = false,
+}: HeroGlowCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -184,7 +188,8 @@ export function HeroGlowCanvas({ state }: HeroGlowCanvasProps) {
       ctx.fill();
       ctx.restore();
 
-      const rotation = media.matches ? -0.4 : frame * 0.006;
+      const rotationSpeed = isLoading ? 0.024 : 0.006;
+      const rotation = media.matches ? -0.4 : frame * rotationSpeed;
       const ringGradient = ctx.createConicGradient(rotation - Math.PI * 0.18, ring.cx, ring.cy);
       for (let i = 0; i <= stops.length; i += 1) {
         ringGradient.addColorStop(i / stops.length, stops[i % stops.length]!);
@@ -251,13 +256,14 @@ export function HeroGlowCanvas({ state }: HeroGlowCanvasProps) {
       window.removeEventListener('resize', resize);
       window.cancelAnimationFrame(raf);
     };
-  }, [state]);
+  }, [isLoading, state]);
 
   return (
     <canvas
       ref={canvasRef}
       aria-hidden="true"
       data-valo-hero-canvas={state}
+      data-valo-loading={isLoading ? 'true' : undefined}
       className="absolute inset-0 h-full w-full"
     />
   );
