@@ -47,8 +47,6 @@ export function HomeHeader({ onAvatarClick }: HomeHeaderProps) {
   return (
     <>
       <div className="relative z-20 -mx-4 h-[128px]" data-valo-header-shell="home">
-        <StatusBar />
-
         <header
           className="absolute left-0 right-0 top-[68px] flex h-10 items-center justify-between bg-transparent px-[22px]"
           data-valo-header="home"
@@ -130,35 +128,6 @@ const AvatarButton = forwardRef<HTMLButtonElement, AvatarButtonProps>(
     );
   },
 );
-
-function StatusBar() {
-  return (
-    <div
-      aria-hidden="true"
-      className="absolute left-0 right-0 top-[18px] flex h-6 items-center justify-between px-[31px] text-sm font-semibold leading-none text-[var(--valo-text-primary)]"
-      data-valo-status-bar="true"
-    >
-      <span>10:01</span>
-      <div className="flex items-center gap-2">
-        <span className="flex h-4 items-end gap-0.5">
-          <span className="h-1.5 w-1 rounded-sm bg-current" />
-          <span className="h-2.5 w-1 rounded-sm bg-current" />
-          <span className="h-3.5 w-1 rounded-sm bg-current" />
-          <span className="h-4 w-1 rounded-sm bg-current" />
-        </span>
-        <span className="relative h-4 w-5 overflow-hidden">
-          <span className="absolute left-1/2 top-2 h-5 w-5 -translate-x-1/2 rounded-full border-2 border-current" />
-          <span className="absolute left-1/2 top-3 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-current" />
-          <span className="absolute bottom-0 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-current" />
-        </span>
-        <span className="relative h-3.5 w-7 rounded-sm border border-current">
-          <span className="absolute -right-1 top-1/2 h-1.5 w-0.5 -translate-y-1/2 rounded-r-sm bg-current" />
-          <span className="absolute inset-y-0.5 left-0.5 right-1 rounded-[1px] bg-current" />
-        </span>
-      </div>
-    </div>
-  );
-}
 
 function ValoMark() {
   return (
