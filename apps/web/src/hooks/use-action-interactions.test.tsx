@@ -4,14 +4,27 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
 import { useActionInteractions } from './use-action-interactions';
+import { useGodModeStore } from '@/stores/god-mode.store';
 import { useUIStore } from '@/stores/ui.store';
 import type { ActionOption } from '@health-advisor/shared';
 
-vi.mock('@/lib/api-client', () => ({
-  apiClient: {
-    post: vi.fn(),
-    get: vi.fn(),
-  },
+const mocks = vi.hoisted(() => ({
+  appendMicroEvent: vi.fn(),
+  refetchBrief: vi.fn(),
+}));
+
+vi.mock('@/hooks/use-god-mode-actions', () => ({
+  useGodModeActions: () => ({
+    appendMicroEvent: mocks.appendMicroEvent,
+    isAppendingMicroEvent: false,
+  }),
+}));
+
+vi.mock('@/hooks/use-ai-query', () => ({
+  useRefetchBrief: () => ({
+    mutateAsync: mocks.refetchBrief,
+    isPending: false,
+  }),
 }));
 
 // use-action-interactions 内部使用 useTranslations('homepage.action')，
@@ -94,7 +107,10 @@ function makePlainAction(): ActionOption {
 
 describe('useActionInteractions', () => {
   beforeEach(() => {
+    mocks.appendMicroEvent.mockResolvedValue({});
+    mocks.refetchBrief.mockResolvedValue(null);
     useUIStore.setState({ toasts: [] });
+    useGodModeStore.setState({ isBriefRefreshing: false });
   });
   afterEach(() => {
     vi.clearAllMocks();
@@ -133,6 +149,37 @@ describe('useActionInteractions', () => {
     await waitFor(() => {
       expect(result.current.pendingActionId).toBeNull();
     });
+  });
+
+  it('立即提交在 LLM 刷新期间驱动首页 loading 状态', async () => {
+    let resolveBrief: (value: unknown) => void = () => {};
+    const briefRequest = new Promise((resolve) => {
+      resolveBrief = resolve;
+    });
+    mocks.refetchBrief.mockReturnValueOnce(briefRequest);
+
+    const { result } = renderHook(
+      () => useActionInteractions('p1'),
+      { wrapper: createWrapper() },
+    );
+
+    let submitPromise: Promise<void> | undefined;
+    act(() => {
+      submitPromise = result.current.handleYes(makeMicroAction(undefined));
+    });
+
+    await waitFor(() => {
+      expect(mocks.appendMicroEvent).toHaveBeenCalledTimes(1);
+      expect(mocks.refetchBrief).toHaveBeenCalledTimes(1);
+      expect(useGodModeStore.getState().isBriefRefreshing).toBe(true);
+    });
+
+    resolveBrief(null);
+    await act(async () => {
+      await submitPromise;
+    });
+
+    expect(useGodModeStore.getState().isBriefRefreshing).toBe(false);
   });
 
   it('handleYes 对 calendar action 打开 Appointment', async () => {

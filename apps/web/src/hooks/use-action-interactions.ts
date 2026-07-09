@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import type { ActionOption } from '@health-advisor/shared';
 import { useRefetchBrief } from '@/hooks/use-ai-query';
 import { useGodModeActions } from '@/hooks/use-god-mode-actions';
+import { useGodModeStore } from '@/stores/god-mode.store';
 import { useUIStore } from '@/stores/ui.store';
 
 /**
@@ -17,6 +18,8 @@ import { useUIStore } from '@/stores/ui.store';
  *   - `micro_event` 且无 duration → 立即提交（appendMicroEvent + refetchBrief）
  *   - 其他（calendar / 无 interaction） → 仅记录选择，不刷新简报
  * - Timer 完成（自然或立即）：appendMicroEvent + refetchBrief（仅一次）
+ * - 需要刷新简报的操作从提交开始到 LLM 返回期间设置 isBriefRefreshing，
+ *   统一驱动首页 Hero 思考态和简报 skeleton。
  * - Timer Stop：关闭，不提交
  * - Not Now：仅收起，不记录
  * - Calendar action：打开 Appointment sheet，确认后仅记录（不调用外部日历）
@@ -27,6 +30,9 @@ export function useActionInteractions(profileId: string | undefined) {
   const { showToast } = useUIStore();
   const refetchBrief = useRefetchBrief(profileId);
   const { appendMicroEvent, isAppendingMicroEvent } = useGodModeActions();
+  const setIsBriefRefreshing = useGodModeStore(
+    (state) => state.setIsBriefRefreshing,
+  );
   const t = useTranslations('homepage.action');
 
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
@@ -48,6 +54,7 @@ export function useActionInteractions(profileId: string | undefined) {
     async (action: ActionOption) => {
       if (action.interaction?.kind !== 'micro_event') return;
       setPendingActionId(action.id);
+      setIsBriefRefreshing(true);
       try {
         await appendMicroEvent({
           microEventType: action.interaction.microEvent.type,
@@ -64,9 +71,16 @@ export function useActionInteractions(profileId: string | undefined) {
         showToast(message, 'error');
       } finally {
         setPendingActionId(null);
+        setIsBriefRefreshing(false);
       }
     },
-    [appendMicroEvent, refetchBrief, showToast, t],
+    [
+      appendMicroEvent,
+      refetchBrief,
+      setIsBriefRefreshing,
+      showToast,
+      t,
+    ],
   );
 
   /** Yes 按钮：根据 action.interaction 决定立即提交或打开 Timer */
