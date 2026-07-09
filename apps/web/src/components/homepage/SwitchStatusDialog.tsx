@@ -81,7 +81,7 @@ export function SwitchStatusDialog({
           ariaLabel={title}
           triggerRef={triggerRef}
         >
-          <div id={dialogId} className="px-4 py-4">
+          <div id={dialogId} className="px-5 pb-6 pt-3">
             {form}
           </div>
         </ValoSheet>
@@ -96,7 +96,7 @@ export function SwitchStatusDialog({
           ariaLabel={title}
           triggerRef={triggerRef}
         >
-          <div id={dialogId} className="px-5 py-4">
+          <div id={dialogId} className="px-6 pb-6 pt-3">
             {form}
           </div>
         </ValoDialog>
@@ -128,7 +128,7 @@ function SwitchStatusForm({ legendId, legend, current, onSelect }: SwitchStatusF
         <legend id={legendId} className="sr-only">
           {legend}
         </legend>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-0.5">
           {HEALTH_VISUAL_STATES.map((state) => {
             const meta = HEALTH_STATE_METADATA[state];
             const id = `${reactId}-${state}`;
@@ -174,11 +174,8 @@ function RadioOption({
       data-valo-option={state}
       data-valo-checked={checked ? 'true' : 'false'}
       className={
-        'flex items-center gap-3 rounded-xl border px-3 py-3 cursor-pointer ' +
-        'transition-colors select-none ' +
-        (checked
-          ? 'border-[var(--valo-border)] bg-[var(--valo-border)] '
-          : 'border-[var(--valo-border)] bg-transparent hover:bg-[var(--valo-border)]')
+        'flex min-h-10 items-center gap-2.5 rounded-lg px-1.5 py-1.5 cursor-pointer ' +
+        'transition-colors select-none hover:bg-white/[0.04]'
       }
     >
       <input
@@ -191,24 +188,42 @@ function RadioOption({
         // 让 SR 朗读"已选中 / 状态名"
         aria-label={stateLabel}
         data-valo-touch="true"
-        className="h-5 w-5 cursor-pointer accent-[var(--valo-state-color)]"
-        style={
-          // @ts-expect-error -- CSS custom property in style object
-          { '--valo-state-color': colorVar }
-        }
+        className="sr-only"
       />
-      {/* 颜色样本：小圆点用状态对应的 CSS 变量着色 */}
+      {/* 主题色圆点：用状态对应的 CSS 变量着色 */}
       <span
         aria-hidden="true"
-        className="inline-block h-4 w-4 rounded-full shrink-0"
+        className="h-3.5 w-3.5 shrink-0 rounded-full"
         style={{
           backgroundColor: colorVar,
           boxShadow: `0 0 0 1px color-mix(in srgb, ${colorVar} 40%, transparent)`,
         }}
         data-valo-swatch={state}
       />
-      <span className="text-sm font-medium text-[var(--valo-text-primary)]">
+      <span className="min-w-0 flex-1 truncate text-xs font-normal text-[var(--valo-text-primary)]">
         {stateLabel}
+      </span>
+      {/* 右侧 check 圆点：对标 AccountSwitcherSheet */}
+      <span
+        aria-hidden="true"
+        className={
+          'grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full border ' +
+          (checked
+            ? 'border-[var(--valo-active)] bg-[var(--valo-active)] shadow-[0_0_10px_color-mix(in_srgb,var(--valo-active)_60%,transparent)]'
+            : 'border-white/35')
+        }
+      >
+        {checked && (
+          <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 text-black" fill="none">
+            <path
+              d="m3 6.1 1.8 1.8L9 3.8"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
       </span>
     </label>
   );
