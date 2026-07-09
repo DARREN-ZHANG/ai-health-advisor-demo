@@ -209,7 +209,7 @@ function SheetHeader({ title, titleId, onClose }: SheetHeaderProps) {
         onClick={onClose}
         aria-label="关闭"
         data-valo-touch="true"
-        className="rounded-full p-2 text-[var(--valo-text-secondary)] hover:text-[var(--valo-text-primary)] hover:bg-[var(--valo-border)] transition-colors"
+        className="flex items-center justify-center rounded-full p-2 text-[var(--valo-text-secondary)] hover:text-[var(--valo-text-primary)] hover:bg-[var(--valo-border)] transition-colors"
       >
         <XMarkIcon className="w-5 h-5" />
       </button>
