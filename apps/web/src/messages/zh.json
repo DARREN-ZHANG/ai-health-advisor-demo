@@ -64,6 +64,7 @@
     "readinessScore": "健康分 {score}",
     "now": "现在",
     "microTipsTitle": "提示",
+    "predictionBody": "基于{rationale}，{predictedState}。建议{actionTitle}：{actionDescription}",
     "action": {
       "yes": "确认",
       "notNow": "稍后",

@@ -64,6 +64,7 @@
     "readinessScore": "Readiness score {score}",
     "now": "Now",
     "microTipsTitle": "Tips",
+    "predictionBody": "Based on {rationale}, {predictedState}. {actionTitle}: {actionDescription}",
     "action": {
       "yes": "Yes",
       "notNow": "Not Now",

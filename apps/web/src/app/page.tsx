@@ -179,24 +179,24 @@ export default function HomePage() {
               </ul>
             ) : null}
 
-            {/* 下午/晚间：LLM futureSuggestions 优先；缺失时降级到 Figma 静态文案 */}
+            {/* 下午/晚间：LLM futureSuggestions 优先；响应到达后仍缺失才降级到 Figma 静态文案 */}
             {futureSuggestions.length > 0 ? (
               futureSuggestions.map((suggestion) => (
                 <FutureTimelineBlock
                   key={suggestion.action.id}
                   suggestion={suggestion}
-                  onYes={interactions.handleYes}
-                  onNotNow={interactions.handleNotNow}
-                  pending={interactions.pendingActionId === suggestion.action.id}
                 />
               ))
+            ) : briefIsLoading && !data ? (
+              // LLM 响应中：暂不展示静态降级，避免响应到达后被替换造成闪烁
+              null
             ) : (
               <>
-                <StaticTimelineBlock title={t('afternoon.title')} time="15:00PM">
+                <StaticTimelineBlock title={t('afternoon.title')} time="15:00 PM">
                   {t('afternoon.body')}
                 </StaticTimelineBlock>
 
-                <StaticTimelineBlock title={t('night.title')} time="22:45PM">
+                <StaticTimelineBlock title={t('night.title')} time="22:45 PM">
                   {t('night.body')}
                 </StaticTimelineBlock>
               </>

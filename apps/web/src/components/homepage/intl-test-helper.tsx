@@ -29,6 +29,7 @@ const ZH_MESSAGES = {
     sourceFallback: '离线受限模式',
     now: '现在',
     microTipsTitle: '提示',
+    predictionBody: '基于{rationale}，{predictedState}。建议{actionTitle}：{actionDescription}',
     afternoon: { title: '下午', body: '已安排轻食与舒缓拉伸。' },
     night: { title: '晚间', body: '已就绪放松流程，建议降低屏幕亮度。' },
     action: {
