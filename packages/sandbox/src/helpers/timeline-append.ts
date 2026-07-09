@@ -16,6 +16,8 @@ export interface TimelineAppendResult {
   events: DeviceEvent[];
   /** 更新后的当前时间 */
   newCurrentTime: string;
+  /** 本次新增的片段。 */
+  segment: ActivitySegment;
 }
 
 // 需要在此处导入 DeviceEvent（用于类型标注）
@@ -34,9 +36,17 @@ const DEFAULT_DURATION: Record<ActivitySegmentType, number> = {
   anxiety_episode: 30,
   alcohol_intake: 180,
   caffeine_intake: 120,
+  hydration_intake: 5,
   relaxation: 30,
   strength_training: 30,
 };
+
+const INTAKE_EVENT_TYPES: ReadonlySet<ActivitySegmentType> = new Set([
+  'meal_intake',
+  'alcohol_intake',
+  'caffeine_intake',
+  'hydration_intake',
+]);
 
 /** 给 YYYY-MM-DDTHH:mm 格式的时间戳加 N 分钟（使用本地时间解析） */
 function addMinutes(timestamp: string, minutes: number): string {
@@ -91,11 +101,24 @@ export function appendSegment(
   const duration = options?.durationMinutes ?? DEFAULT_DURATION[segmentType];
   const end = addMinutes(start, duration);
 
-  // 生成片段 ID（使用起始时间的时间戳使其唯一）
-  const segmentId = `seg-gm-${segmentType}-${start.replace(/[-T:]/g, '')}`;
+  // 同一分钟可记录多次摄入；后缀按已有同前缀片段数稳定递增。
+  const segmentIdPrefix = `seg-gm-${segmentType}-${start.replace(/[-T:]/g, '')}`;
+  const sameMinuteCount = currentSegments.filter(
+    (segment) =>
+      segment.segmentId === segmentIdPrefix ||
+      segment.segmentId.startsWith(`${segmentIdPrefix}-`),
+  ).length;
+  const segmentId =
+    sameMinuteCount === 0 ? segmentIdPrefix : `${segmentIdPrefix}-${sameMinuteCount + 1}`;
 
-  // 检查是否与已有片段重叠
+  // 摄入是可与日常活动并发的时间点事件；非摄入活动仍保持互斥。
   for (const existing of currentSegments) {
+    if (
+      INTAKE_EVENT_TYPES.has(segmentType) ||
+      INTAKE_EVENT_TYPES.has(existing.type)
+    ) {
+      continue;
+    }
     if (start < existing.end && end > existing.start) {
       throw new Error(
         `新片段 (${start}~${end}) 与已有片段 "${existing.segmentId}" (${existing.start}~${existing.end}) 重叠`,
@@ -128,5 +151,6 @@ export function appendSegment(
     segments: updatedSegments,
     events,
     newCurrentTime,
+    segment: newSegment,
   };
 }

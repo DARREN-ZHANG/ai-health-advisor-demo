@@ -1,167 +1,87 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { LifeLogEntrySheet } from './LifeLogEntrySheet';
 import { LifeLogIntlProvider } from './intl-test-helper';
-import type { LifeLogEntry } from '@/lib/life-log';
 
-function renderWithIntl(node: React.ReactNode) {
-  return render(<LifeLogIntlProvider>{node}</LifeLogIntlProvider>);
-}
-
-function makeEntry(
-  overrides: Partial<LifeLogEntry> = {},
-): LifeLogEntry {
-  return {
-    id: 'entry-1',
-    profileId: 'profile-a',
-    type: 'caffeine',
-    cups: 1,
-    timestamp: '2026-07-05T09:30:00.000Z',
-    note: 'afternoon',
-    ...overrides,
-  };
+function renderSheet(
+  props: Partial<React.ComponentProps<typeof LifeLogEntrySheet>> = {},
+) {
+  const onSubmit = vi.fn();
+  const onClose = vi.fn();
+  render(
+    <LifeLogIntlProvider>
+      <LifeLogEntrySheet
+        open
+        type="caffeine"
+        defaultTime="10:01"
+        onSubmit={onSubmit}
+        onClose={onClose}
+        {...props}
+      />
+    </LifeLogIntlProvider>,
+  );
+  return { onSubmit, onClose };
 }
 
 describe('LifeLogEntrySheet', () => {
-  afterEach(() => cleanup());
+  afterEach(cleanup);
 
-  it('新增模式：渲染"自定义"标题和添加按钮', () => {
-    renderWithIntl(
-      <LifeLogEntrySheet
-        open
-        type="caffeine"
-        onSubmit={() => {}}
-        onClose={() => {}}
-      />,
-    );
-    expect(screen.getAllByText(/自定义/).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: '添加' }).length).toBeGreaterThan(0);
+  it('自定义新增默认一杯并提交 Mock 当日时间', () => {
+    const { onSubmit } = renderSheet();
+    expect(screen.getByText('1 杯')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '添加' }));
+    expect(onSubmit).toHaveBeenCalledWith({ cups: 1, timeOfDay: '10:01' });
   });
 
-  it('编辑模式：渲染"编辑记录"标题并预填字段', () => {
-    renderWithIntl(
-      <LifeLogEntrySheet
-        open
-        type="caffeine"
-        initialEntry={makeEntry({ cups: 2, note: 'double shot' })}
-        onSubmit={() => {}}
-        onClose={() => {}}
-      />,
-    );
-    expect(screen.getAllByText(/编辑记录/).length).toBeGreaterThan(0);
-    // cups input 预填 2（移动端 + 桌面端各一）
-    expect(screen.getAllByDisplayValue('2').length).toBeGreaterThan(0);
-    // note textarea 预填 "double shot"
-    expect(screen.getAllByDisplayValue('double shot').length).toBeGreaterThan(0);
+  it('加减按钮以一个 drink 为步长', () => {
+    renderSheet();
+    fireEvent.click(screen.getByRole('button', { name: '增加' }));
+    expect(screen.getByText('2 杯')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '减少' }));
+    expect(screen.getByText('1 杯')).toBeTruthy();
   });
 
-  it('保存调用 onSubmit，cups/timestamp/note 字段被传入', () => {
-    const onSubmit = vi.fn();
-    renderWithIntl(
-      <LifeLogEntrySheet
-        open
-        type="caffeine"
-        initialEntry={makeEntry({ cups: 1.5, note: 'latte' })}
-        onSubmit={onSubmit}
-        onClose={() => {}}
-      />,
-    );
-    // 找到任意一个保存按钮（移动端 + 桌面端各一）
-    const saveButtons = screen.getAllByRole('button', { name: '保存' });
-    fireEvent.click(saveButtons[0]!);
-    expect(onSubmit).toHaveBeenCalledTimes(1);
-    const arg = onSubmit.mock.calls[0]![0];
-    expect(arg.cups).toBe(1.5);
-    expect(typeof arg.timestamp).toBe('string');
-    expect(arg.timestamp.length).toBeGreaterThan(0);
-    expect(arg.note).toBe('latte');
+  it('点击时间打开时间弹窗并可完成', () => {
+    renderSheet();
+    const timeButton = document.querySelector('[data-valo-life-log-time]');
+    if (!timeButton) throw new Error('Missing time button');
+    fireEvent.click(timeButton);
+    expect(screen.getByRole('dialog', { name: '选择时间' })).toBeTruthy();
+    fireEvent.change(screen.getByDisplayValue('10:01'), {
+      target: { value: '14:00' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '完成' }));
+    expect(screen.getByText('14:00')).toBeTruthy();
   });
 
-  it('新增模式点击添加调用 onSubmit', () => {
-    const onSubmit = vi.fn();
-    renderWithIntl(
-      <LifeLogEntrySheet
-        open
-        type="caffeine"
-        onSubmit={onSubmit}
-        onClose={() => {}}
-      />,
-    );
-    fireEvent.click(screen.getAllByRole('button', { name: '添加' })[0]!);
-    expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(onSubmit.mock.calls[0]![0].cups).toBe(1);
+  it('饮水使用 250ml 为一个单位', () => {
+    renderSheet({ type: 'hydration' });
+    expect(screen.getByText('250ml')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '增加' }));
+    expect(screen.getByText('500ml')).toBeTruthy();
   });
 
-  it('空 note 保存时为 undefined（不传空串）', () => {
-    const onSubmit = vi.fn();
-    renderWithIntl(
-      <LifeLogEntrySheet
-        open
-        type="caffeine"
-        initialEntry={makeEntry({ cups: 1, note: '' })}
-        onSubmit={onSubmit}
-        onClose={() => {}}
-      />,
-    );
-    const saveButtons = screen.getAllByRole('button', { name: '保存' });
-    fireEvent.click(saveButtons[0]!);
-    expect(onSubmit.mock.calls[0]![0].note).toBeUndefined();
+  it('编辑模式预填记录并提供更新和删除', () => {
+    const onDelete = vi.fn();
+    renderSheet({
+      initialEntry: {
+        id: 'entry',
+        profileId: 'profile-a',
+        type: 'caffeine',
+        cups: 2,
+        timestamp: '2026-07-08T14:00',
+      },
+      onDelete,
+    });
+    expect(screen.getByText('2 杯')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '更新' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '删除' }));
+    expect(onDelete).toHaveBeenCalled();
   });
 
-  it('新增模式点击关闭调用 onClose 不调用 onSubmit', () => {
-    const onSubmit = vi.fn();
-    const onClose = vi.fn();
-    renderWithIntl(
-      <LifeLogEntrySheet
-        open
-        type="caffeine"
-        onSubmit={onSubmit}
-        onClose={onClose}
-      />,
-    );
-    const closeButtons = screen.getAllByRole('button', { name: '关闭' });
-    fireEvent.click(closeButtons[0]!);
+  it('返回关闭弹窗', () => {
+    const { onClose } = renderSheet();
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
     expect(onClose).toHaveBeenCalled();
-    expect(onSubmit).not.toHaveBeenCalled();
-  });
-
-  it('open=false 不渲染', () => {
-    renderWithIntl(
-      <LifeLogEntrySheet
-        open={false}
-        type="caffeine"
-        onSubmit={() => {}}
-        onClose={() => {}}
-      />,
-    );
-    expect(screen.queryAllByRole('button', { name: '保存' })).toHaveLength(0);
-  });
-
-  it('hydration 类目预览展示 ml 单位', () => {
-    renderWithIntl(
-      <LifeLogEntrySheet
-        open
-        type="hydration"
-        initialEntry={makeEntry({ type: 'hydration', cups: 2 })}
-        onSubmit={() => {}}
-        onClose={() => {}}
-      />,
-    );
-    // 2 杯 hydration = 500ml
-    expect(screen.getAllByText(/500ml/).length).toBeGreaterThan(0);
-  });
-
-  it('alcohol 类目预览展示 g 单位', () => {
-    renderWithIntl(
-      <LifeLogEntrySheet
-        open
-        type="alcohol"
-        initialEntry={makeEntry({ type: 'alcohol', cups: 1 })}
-        onSubmit={() => {}}
-        onClose={() => {}}
-      />,
-    );
-    // 1 杯 alcohol = 14g
-    expect(screen.getAllByText(/14g/).length).toBeGreaterThan(0);
   });
 });

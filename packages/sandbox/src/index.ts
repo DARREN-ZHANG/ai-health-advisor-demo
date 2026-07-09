@@ -67,6 +67,7 @@ export {
   generateAnxietyEpisodeEvents,
   generateAlcoholIntakeEvents,
   generateCaffeineIntakeEvents,
+  generateHydrationIntakeEvents,
   generateRelaxationEvents,
 } from './helpers/activity-generators';
 

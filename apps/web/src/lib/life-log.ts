@@ -14,6 +14,7 @@
  * `labelKey` / `unitLabelKey` 是 i18n 翻译键，由下游文案表统一翻译，
  * 避免在此硬编码中英文。
  */
+import type { TimelineAppendPayload } from '@health-advisor/shared';
 
 /** Life Log 三大摄入类目 */
 export type LifeLogCategory = 'caffeine' | 'alcohol' | 'hydration';
@@ -98,12 +99,86 @@ export interface LifeLogEntry {
   readonly cups: number;
   /** ISO 时间字符串 */
   readonly timestamp: string;
+  /** Mock Timeline 中对应的活动片段 ID。 */
+  readonly timelineSegmentId?: string;
   /** 可选备注 */
   readonly note?: string;
 }
 
 /** 默认快捷新增的 cup 数量 */
 export const DEFAULT_QUICK_CUPS = 1;
+
+/** 把生活记录转换为 Mock Timeline 的确定性摄入事件。 */
+export function buildLifeLogTimelinePayload(
+  type: LifeLogCategory,
+  cups: number,
+  timeOfDay: string,
+): TimelineAppendPayload {
+  const normalizedCups = Math.max(0.5, cups);
+
+  if (type === 'caffeine') {
+    return {
+      segmentType: 'caffeine_intake',
+      timeOfDay,
+      advanceClock: false,
+      params: {
+        source: 'life_log',
+        drinks: normalizedCups,
+        amountMg: normalizedCups * LIFE_LOG_CATEGORIES.caffeine.perCupAmount,
+        dose:
+          normalizedCups <= 1
+            ? 'light'
+            : normalizedCups <= 2
+              ? 'moderate'
+              : 'high_or_sensitive',
+      },
+    };
+  }
+
+  if (type === 'alcohol') {
+    return {
+      segmentType: 'alcohol_intake',
+      timeOfDay,
+      advanceClock: false,
+      params: {
+        source: 'life_log',
+        drinks: normalizedCups,
+        amountGrams: normalizedCups * LIFE_LOG_CATEGORIES.alcohol.perCupAmount,
+        amount:
+          normalizedCups <= 1
+            ? 'light'
+            : normalizedCups <= 2
+              ? 'moderate'
+              : 'heavy',
+      },
+    };
+  }
+
+  return {
+    segmentType: 'hydration_intake',
+    timeOfDay,
+    advanceClock: false,
+    params: {
+      source: 'life_log',
+      units: normalizedCups,
+      amountMl: normalizedCups * LIFE_LOG_CATEGORIES.hydration.perCupAmount,
+    },
+  };
+}
+
+/** 当前 Mock 日期 + 当日时间，保持无时区的演示时间语义。 */
+export function buildMockTimestamp(
+  currentDemoTime: string,
+  timeOfDay: string,
+): string {
+  return `${currentDemoTime.slice(0, 10)}T${timeOfDay}`;
+}
+
+/** 从 Mock 时间戳读取 HH:mm。 */
+export function getTimeOfDay(timestamp: string): string {
+  const match = /T(\d{2}:\d{2})/.exec(timestamp);
+  return match?.[1] ?? '';
+}
 
 /**
  * 计算给定类目下 entries 的总杯数。

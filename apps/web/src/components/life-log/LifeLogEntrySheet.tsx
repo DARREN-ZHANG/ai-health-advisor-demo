@@ -1,359 +1,266 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useEffect, useRef, useState } from 'react';
 import {
+  ChevronLeftIcon,
   MinusIcon,
   PlusIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
-import { ValoSheet } from '@/components/valo/ValoSheet';
-import { ValoDialog } from '@/components/valo/ValoDialog';
+import { useTranslations } from 'next-intl';
+import { useOverlayBehavior } from '@/components/valo/hooks/useOverlayBehavior';
 import {
   computeRawAmount,
   DEFAULT_QUICK_CUPS,
+  getTimeOfDay,
   LIFE_LOG_CATEGORIES,
   type LifeLogCategory,
   type LifeLogEntry,
 } from '@/lib/life-log';
 
-/**
- * LifeLogEntrySheet —— 自定义新增 / 编辑单条 Life Log 记录的浮层。
- *
- * 双渲染（与 AppointmentSheet / ActionTimerSheet 同构）：
- * - 移动端：ValoSheet（block lg:hidden）
- * - 桌面端：ValoDialog（hidden lg:block）
- *
- * 字段：
- * - cups：数字输入（step 0.5，min 0）
- * - time：datetime-local
- * - note：可选文本
- *
- * 行为契约：
- * - `initialEntry` 存在 → 编辑模式，标题"编辑记录"，预填字段；
- *   保存调用 `onSubmit`，回调内由父组件决定 updateEntry。
- * - `initialEntry` 缺失 → 新增模式，标题"新增记录"，默认 cups = DEFAULT_QUICK_CUPS、
- *   时间 = 当前时间；保存调用 `onSubmit`。
- * - 关闭（Cancel / 遮罩 / Escape）调用 `onClose`，不调用 `onSubmit`。
- */
 export interface LifeLogEntrySheetProps {
   open: boolean;
-  /** 类目（用于预览原始物理量与图标） */
   type: LifeLogCategory;
-  /** 编辑模式下的初始值；新增模式传 undefined */
+  defaultTime: string;
   initialEntry?: LifeLogEntry | null;
-  /** 保存回调：返回的字段已校验（cups>=0，timestamp 非空） */
+  pending?: boolean;
   onSubmit: (values: EntrySheetValues) => void;
+  onDelete?: () => void;
   onClose: () => void;
 }
 
 export interface EntrySheetValues {
   cups: number;
-  /** ISO 时间字符串 */
-  timestamp: string;
-  note?: string;
+  timeOfDay: string;
 }
 
 export function LifeLogEntrySheet({
   open,
   type,
+  defaultTime,
   initialEntry,
+  pending = false,
   onSubmit,
+  onDelete,
   onClose,
 }: LifeLogEntrySheetProps) {
   const t = useTranslations('lifeLog');
-  const titleId = useId();
   const config = LIFE_LOG_CATEGORIES[type];
+  const [cups, setCups] = useState(DEFAULT_QUICK_CUPS);
+  const [timeOfDay, setTimeOfDay] = useState(defaultTime);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const sheetRef = useRef<HTMLElement>(null);
+  const { handleScrimClick } = useOverlayBehavior({
+    open: open && !timePickerOpen,
+    containerRef: sheetRef,
+    onClose,
+  });
 
-  const [cups, setCups] = useState<number>(DEFAULT_QUICK_CUPS);
-  const [timeLocal, setTimeLocal] = useState<string>('');
-  const [note, setNote] = useState<string>('');
-
-  // 每次打开时重置表单：新增 → 默认值；编辑 → 预填值
   useEffect(() => {
     if (!open) return;
-    if (initialEntry) {
-      setCups(initialEntry.cups);
-      setTimeLocal(toDatetimeLocalValue(initialEntry.timestamp));
-      setNote(initialEntry.note ?? '');
-    } else {
-      setCups(DEFAULT_QUICK_CUPS);
-      setTimeLocal(toDatetimeLocalValue(new Date().toISOString()));
-      setNote('');
-    }
-  }, [open, initialEntry]);
+    setCups(initialEntry?.cups ?? DEFAULT_QUICK_CUPS);
+    setTimeOfDay(
+      initialEntry ? getTimeOfDay(initialEntry.timestamp) : defaultTime,
+    );
+    setTimePickerOpen(false);
+  }, [defaultTime, initialEntry, open]);
 
+  if (!open) return null;
+
+  const raw = computeRawAmount(cups, config);
   const isEdit = !!initialEntry;
-  const titleKey = isEdit ? 'sheetTitleEdit' : 'customAdd';
-  const title = isEdit ? `${config.icon} ${t(titleKey)}` : t(titleKey);
-
-  function handleSubmit() {
-    const safeCups = Math.max(0, Number.isFinite(cups) ? cups : 0);
-    const iso = fromDatetimeLocalValue(timeLocal);
-    onSubmit({
-      cups: safeCups,
-      timestamp: iso,
-      note: note.trim() || undefined,
-    });
-  }
-
-  const raw = computeRawAmount(
-    Number.isFinite(cups) ? Math.max(0, cups) : 0,
-    config,
-  );
-
-  const amountUnit = type === 'hydration' ? 'ml' : 'drink';
-  const displayAmount = Number.isInteger(cups) ? cups : cups.toFixed(1);
-  const customAddBody = (
-    <div className="space-y-4 px-3 pb-5 pt-2">
-      <div className="flex items-center justify-center gap-7 py-2">
-        <button
-          type="button"
-          onClick={() => setCups((value) => Math.max(0, value - 0.5))}
-          aria-label={t('decrease')}
-          className="grid h-7 w-7 place-items-center rounded-full bg-white/15
-                     text-[var(--valo-text-primary)] transition-colors
-                     hover:bg-white/20 focus-visible:outline-none
-                     focus-visible:[box-shadow:var(--valo-focus-ring)]"
-        >
-          <MinusIcon className="h-4 w-4" aria-hidden="true" />
-        </button>
-
-        <div className="min-w-[92px] text-center">
-          <div className="text-xl font-semibold leading-6 text-[var(--valo-text-primary)]">
-            {displayAmount} {amountUnit}
-          </div>
-          <div className="mt-0.5 text-xs leading-4 text-[var(--valo-text-secondary)]">
-            ({raw.amount}{raw.unit})
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setCups((value) => value + 0.5)}
-          aria-label={t('increase')}
-          className="grid h-7 w-7 place-items-center rounded-full bg-white/15
-                     text-[var(--valo-text-primary)] transition-colors
-                     hover:bg-white/20 focus-visible:outline-none
-                     focus-visible:[box-shadow:var(--valo-focus-ring)]"
-        >
-          <PlusIcon className="h-4 w-4" aria-hidden="true" />
-        </button>
-      </div>
-
-      <label
-        htmlFor="life-log-time"
-        className="flex h-10 items-center justify-between rounded-md
-                   bg-[rgba(62,61,78,0.72)] px-3 text-xs leading-4
-                   text-[var(--valo-text-primary)]"
-      >
-        <span>{t('time')}</span>
-        <input
-          id="life-log-time"
-          type="datetime-local"
-          value={timeLocal}
-          onChange={(e) => setTimeLocal(e.target.value)}
-          data-valo-life-log-time=""
-          className="max-w-[150px] bg-transparent text-right text-xs
-                     text-[var(--valo-text-primary)] [color-scheme:dark]
-                     focus-visible:outline-none"
-        />
-      </label>
-
-      <button
-        type="button"
-        onClick={handleSubmit}
-        data-valo-touch="true"
-        data-valo-life-log-save=""
-        className="h-10 w-full rounded-full bg-[rgba(118,116,145,0.78)]
-                   px-4 text-xs font-semibold leading-4
-                   text-[var(--valo-text-primary)] transition-opacity
-                   hover:opacity-90 focus-visible:outline-none
-                   focus-visible:[box-shadow:var(--valo-focus-ring)]"
-      >
-        {t('add')}
-      </button>
-    </div>
-  );
-
-  const editBody = (
-    <div className="space-y-5 px-5 py-6">
-      {/* 类目预览 */}
-      <div
-        className="rounded-xl border border-[var(--valo-border)] p-3
-                   text-sm text-[var(--valo-text-secondary)]"
-      >
-        <span className="font-semibold text-[var(--valo-text-primary)]">
-          {config.icon} {t(`category.${type}`)}
-        </span>
-        <span className="ml-2" style={{ color: `var(${config.accentToken})` }}>
-          {raw.amount}
-          {raw.unit}
-        </span>
-      </div>
-
-      <Field label={t('cupsLabel')} htmlFor="life-log-cups">
-        <input
-          id="life-log-cups"
-          type="number"
-          inputMode="decimal"
-          step={t('cupsStep')}
-          min={0}
-          value={Number.isFinite(cups) ? cups : 0}
-          onChange={(e) => {
-            const v = Number(e.target.value);
-            setCups(Number.isFinite(v) ? v : 0);
-          }}
-          data-valo-life-log-cups=""
-          className="w-full rounded-lg border border-[var(--valo-border)]
-                     bg-[var(--valo-canvas)]
-                     px-3 py-2 text-sm text-[var(--valo-text-primary)]
-                     focus-visible:outline-none
-                     focus-visible:[box-shadow:var(--valo-focus-ring)]"
-        />
-      </Field>
-
-      <Field label={t('time')} htmlFor="life-log-time">
-        <input
-          id="life-log-time"
-          type="datetime-local"
-          value={timeLocal}
-          onChange={(e) => setTimeLocal(e.target.value)}
-          data-valo-life-log-time=""
-          className="w-full rounded-lg border border-[var(--valo-border)]
-                     bg-[var(--valo-canvas)]
-                     px-3 py-2 text-sm text-[var(--valo-text-primary)]
-                     focus-visible:outline-none
-                     focus-visible:[box-shadow:var(--valo-focus-ring)]"
-        />
-      </Field>
-
-      <Field label={t('note')} htmlFor="life-log-note">
-        <textarea
-          id="life-log-note"
-          rows={2}
-          value={note}
-          placeholder={t('notePlaceholder')}
-          onChange={(e) => setNote(e.target.value)}
-          data-valo-life-log-note=""
-          className="w-full rounded-lg border border-[var(--valo-border)]
-                     bg-[var(--valo-canvas)]
-                     px-3 py-2 text-sm text-[var(--valo-text-primary)]
-                     resize-none
-                     focus-visible:outline-none
-                     focus-visible:[box-shadow:var(--valo-focus-ring)]"
-        />
-      </Field>
-
-      <div className="flex flex-col gap-2 pt-1">
-        <button
-          type="button"
-          onClick={handleSubmit}
-          data-valo-touch="true"
-          data-valo-life-log-save=""
-          className="w-full rounded-full px-4 py-3 text-sm font-semibold
-                     bg-[var(--valo-prime)] text-[var(--valo-canvas)]
-                     hover:opacity-90 transition-opacity
-                     focus-visible:outline-none
-                     focus-visible:[box-shadow:var(--valo-focus-ring)]"
-        >
-          {t('save')}
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          data-valo-touch="true"
-          className="w-full rounded-full px-4 py-2 text-sm font-semibold
-                     border border-[var(--valo-border)]
-                     text-[var(--valo-text-primary)]
-                     hover:border-[var(--valo-text-secondary)] transition-colors
-                     focus-visible:outline-none
-                     focus-visible:[box-shadow:var(--valo-focus-ring)]"
-        >
-          {t('cancel')}
-        </button>
-      </div>
-    </div>
-  );
-  const body = isEdit ? editBody : customAddBody;
+  const step = 1;
+  const amountLabel =
+    type === 'hydration'
+      ? `${raw.amount}ml`
+      : `${formatAmount(cups)} ${t('drink')}`;
 
   return (
     <>
-      <div className="block lg:hidden">
-        <ValoSheet
-          open={open}
-          onClose={onClose}
-          title={title}
-          ariaLabelledBy={titleId}
+      <div
+        aria-hidden={timePickerOpen ? true : undefined}
+        className="fixed inset-0 z-[100] flex items-end justify-center bg-black/75"
+        onClick={handleScrimClick}
+      >
+        <section
+          ref={sheetRef}
+          tabIndex={-1}
+          role="dialog"
+          aria-modal="true"
+          aria-label={isEdit ? t('sheetTitleEdit') : t('customAdd')}
+          className="w-full max-w-[430px] rounded-t-[12px] bg-[#181720] px-4 pb-[max(24px,env(safe-area-inset-bottom))] pt-4 text-white"
+          data-valo-life-log-entry-sheet=""
         >
-          <div id={titleId} className="sr-only">
-            {title}
+          <header className="relative flex h-8 items-center justify-center">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t('back')}
+              className="absolute left-0 grid h-7 w-7 place-items-center rounded-full bg-[#0e0d13] text-[#96949e]"
+            >
+              <ChevronLeftIcon className="h-4 w-4" />
+            </button>
+            <h2 className="text-[12px] font-medium">
+              {isEdit ? t('edit') : t('customAdd')}
+            </h2>
+            {isEdit && onDelete ? (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={onDelete}
+                aria-label={t('delete')}
+                className="absolute right-0 grid h-7 w-7 place-items-center text-[#ff454d] disabled:opacity-50"
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            ) : null}
+          </header>
+
+          <div className="flex items-center justify-center gap-8 py-4">
+            <CounterButton
+              label={t('decrease')}
+              onClick={() => setCups((value) => Math.max(step, value - step))}
+            >
+              <MinusIcon className="h-4 w-4" />
+            </CounterButton>
+
+            <div className="min-w-[110px] text-center">
+              <div className="text-[20px] font-medium leading-6">{amountLabel}</div>
+              {type !== 'hydration' ? (
+                <div className="text-[11px] text-[#777581]">
+                  ({raw.amount}{raw.unit})
+                </div>
+              ) : null}
+            </div>
+
+            <CounterButton
+              label={t('increase')}
+              onClick={() => setCups((value) => value + step)}
+            >
+              <PlusIcon className="h-4 w-4" />
+            </CounterButton>
           </div>
-          {body}
-        </ValoSheet>
+
+          <button
+            type="button"
+            onClick={() => setTimePickerOpen(true)}
+            data-valo-life-log-time=""
+            className="flex h-11 w-full items-center justify-between rounded-md bg-[#272631] px-3 text-[11px]"
+          >
+            <span>{t('time')}</span>
+            <span className="flex items-center gap-2 text-[#d2d0d8]">
+              {timeOfDay}
+              <span aria-hidden="true">›</span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => onSubmit({ cups, timeOfDay })}
+            data-valo-life-log-save=""
+            className="mt-4 h-10 w-full rounded-full bg-[#454358] text-[11px] font-medium disabled:opacity-50"
+          >
+            {isEdit ? t('update') : t('add')}
+          </button>
+        </section>
       </div>
 
-      <div className="hidden lg:block">
-        <ValoDialog
-          open={open}
-          onClose={onClose}
-          title={title}
-          ariaLabelledBy={titleId}
-          width="sm"
-        >
-          <div id={titleId} className="sr-only">
-            {title}
-          </div>
-          {body}
-        </ValoDialog>
-      </div>
+      {timePickerOpen ? (
+        <TimePicker
+          value={timeOfDay}
+          onChange={setTimeOfDay}
+          onClose={() => setTimePickerOpen(false)}
+        />
+      ) : null}
     </>
   );
 }
 
-interface FieldProps {
+function CounterButton({
+  label,
+  onClick,
+  children,
+}: {
   label: string;
-  htmlFor: string;
+  onClick: () => void;
   children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="grid h-7 w-7 place-items-center rounded-full bg-[#2d2c37] text-[#bbb9c2]"
+    >
+      {children}
+    </button>
+  );
 }
 
-function Field({ label, htmlFor, children }: FieldProps) {
+function TimePicker({
+  value,
+  onChange,
+  onClose,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onClose: () => void;
+}) {
+  const t = useTranslations('lifeLog');
+  const pickerRef = useRef<HTMLElement>(null);
+  const { handleScrimClick } = useOverlayBehavior({
+    open: true,
+    containerRef: pickerRef,
+    onClose,
+  });
+
   return (
-    <div className="space-y-1.5">
-      <label
-        htmlFor={htmlFor}
-        className="block text-xs font-semibold uppercase tracking-wider
-                   text-[var(--valo-text-secondary)]"
+    <div
+      className="fixed inset-0 z-[110] flex items-end justify-center bg-black/80"
+      onClick={handleScrimClick}
+    >
+      <section
+        ref={pickerRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('selectTime')}
+        className="w-full max-w-[430px] rounded-t-[12px] bg-[#181720] px-4 pb-[max(24px,env(safe-area-inset-bottom))] pt-4 text-white"
       >
-        {label}
-      </label>
-      {children}
+        <header className="relative flex h-8 items-center justify-center">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t('close')}
+            className="absolute left-0 grid h-7 w-7 place-items-center rounded-full bg-[#0e0d13] text-[#96949e]"
+          >
+            <ChevronLeftIcon className="h-4 w-4" />
+          </button>
+          <h3 className="text-[12px] font-medium">{t('time')}</h3>
+        </header>
+
+        <div className="my-6 flex justify-center">
+          <input
+            type="time"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            className="rounded-lg bg-[#272631] px-8 py-3 text-center text-xl [color-scheme:dark]"
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-10 w-full rounded-full bg-[#454358] text-[11px] font-medium"
+        >
+          {t('done')}
+        </button>
+      </section>
     </div>
   );
 }
 
-/**
- * ISO timestamp → datetime-local 控件所需的 `YYYY-MM-DDTHH:MM` 格式。
- *
- * 失败回退到空串，让控件显示 placeholder（少数浏览器对非法 value 会拒绝）。
- */
-function toDatetimeLocalValue(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return (
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  );
-}
-
-/**
- * datetime-local 值 → ISO 字符串。
- *
- * 空值回退到当前时间，避免提交空字符串。
- */
-function fromDatetimeLocalValue(local: string): string {
-  if (!local) return new Date().toISOString();
-  const d = new Date(local);
-  if (Number.isNaN(d.getTime())) return new Date().toISOString();
-  return d.toISOString();
+function formatAmount(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }

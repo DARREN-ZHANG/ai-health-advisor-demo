@@ -403,6 +403,7 @@ describe('ActivitySegmentTypeSchema', () => {
       'anxiety_episode',
       'alcohol_intake',
       'caffeine_intake',
+      'hydration_intake',
       'relaxation',
       'strength_training',
     ];
@@ -617,6 +618,7 @@ describe('RecognizedEventTypeSchema', () => {
       'anxiety_episode',
       'alcohol_intake',
       'caffeine_intake',
+      'hydration_intake',
       'relaxation',
       'strength_training',
     ];

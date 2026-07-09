@@ -8,7 +8,6 @@ import {
   type LifeLogCategory,
   type LifeLogEntry,
 } from '@/lib/life-log';
-import { LifeLogEntryRow } from './LifeLogEntryRow';
 
 /**
  * LifeLogCategorySection —— 单个类目的展示与交互区块。
@@ -27,17 +26,13 @@ import { LifeLogEntryRow } from './LifeLogEntryRow';
 export interface LifeLogCategorySectionProps {
   type: LifeLogCategory;
   entries: ReadonlyArray<LifeLogEntry>;
-  onCustomAdd: (type: LifeLogCategory) => void;
-  onEdit: (entry: LifeLogEntry) => void;
-  onDelete: (entry: LifeLogEntry) => void;
+  onOpen: (type: LifeLogCategory) => void;
 }
 
 export function LifeLogCategorySection({
   type,
   entries,
-  onCustomAdd,
-  onEdit,
-  onDelete,
+  onOpen,
 }: LifeLogCategorySectionProps) {
   const t = useTranslations('lifeLog');
   const config = LIFE_LOG_CATEGORIES[type];
@@ -45,7 +40,8 @@ export function LifeLogCategorySection({
   const totalCups = entries.reduce((sum, e) => sum + e.cups, 0);
   const raw = computeRawAmount(totalCups, config);
   const visualUnit = type === 'hydration' ? 'ml' : 'drinks';
-  const visualAmount = totalCups > 0 ? raw.amount : '-';
+  const visualAmount =
+    totalCups > 0 ? (type === 'hydration' ? raw.amount : totalCups) : '-';
 
   return (
     <section
@@ -80,7 +76,7 @@ export function LifeLogCategorySection({
           </span>
           <button
             type="button"
-            onClick={() => onCustomAdd(type)}
+            onClick={() => onOpen(type)}
             data-valo-life-log-custom-add=""
             className="grid h-[22px] w-[22px] place-items-center rounded-[5px]
                        border border-white/15 bg-white/[0.025]
@@ -94,26 +90,6 @@ export function LifeLogCategorySection({
           </button>
         </div>
       </header>
-
-      {entries.length > 0 ? (
-        <ul className="space-y-1 border-t border-white/[0.04] px-3 py-2">
-          {entries.map((entry) => (
-            <LifeLogEntryRow
-              key={entry.id}
-              entry={entry}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          ))}
-        </ul>
-      ) : (
-        <p
-          className="sr-only"
-          data-valo-life-log-empty=""
-        >
-          {t('empty')}
-        </p>
-      )}
     </section>
   );
 }

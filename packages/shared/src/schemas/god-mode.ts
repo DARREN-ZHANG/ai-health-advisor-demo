@@ -8,6 +8,8 @@ import { MicroEventParamsSchema, MicroEventTypeSchema } from './micro-event';
 
 export const TimelineAppendPayloadSchema = z.object({
   segmentType: ActivitySegmentTypeSchema,
+  replaceSegmentId: z.string().min(1).optional(),
+  timeOfDay: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
   durationMinutes: z.number().int().positive().optional(),
   offsetMinutes: z.number().int().min(0).optional(),
   params: z.record(z.union([z.number(), z.string(), z.boolean()])).optional(),
@@ -28,6 +30,7 @@ export const ResetProfileTimelinePayloadSchema = z.object({
 
 export const MicroEventAppendPayloadSchema = z.object({
   microEventType: MicroEventTypeSchema,
+  timeOfDay: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
   durationMinutes: z.number().int().positive().optional(),
   params: MicroEventParamsSchema.optional(),
   advanceClock: z.boolean().optional(),
@@ -59,5 +62,3 @@ export const MetricOverridePayloadSchema = z.object({
 export const ResetPayloadSchema = z.object({
   scope: z.enum(['profile', 'events', 'overrides', 'all']),
 });
-
-

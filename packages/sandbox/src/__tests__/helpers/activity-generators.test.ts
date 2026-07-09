@@ -11,6 +11,7 @@ import {
   generateSleepEvents,
   generateCaffeineIntakeEvents,
   generateAlcoholIntakeEvents,
+  generateHydrationIntakeEvents,
 } from '../../helpers/activity-generators';
 
 // ============================================================
@@ -945,6 +946,30 @@ describe('activity-generators', () => {
       const events = generateStrengthTrainingEvents(segment);
       const motionEvents = events.filter((e) => e.metric === 'motion');
       expect(motionEvents.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('generateHydrationIntakeEvents', () => {
+    it('记录基线附近的确定性传感器事件', () => {
+      const segment = makeSegment({
+        segmentId: 'seg-hydration-1',
+        type: 'hydration_intake',
+        start: '2026-04-16T10:00',
+        end: '2026-04-16T10:05',
+        params: {
+          amountMl: 250,
+          _baselineRestingHr: 60,
+          _baselineHrv: 45,
+          _baselineSpo2: 97,
+        },
+      });
+      const events = generateHydrationIntakeEvents(segment);
+
+      expect(events.some((event) => event.metric === 'heartRate' && event.value === 60)).toBe(true);
+      expect(events.some((event) => event.metric === 'hrvRmssd' && event.value === 45)).toBe(true);
+      expect(events.some((event) => event.metric === 'spo2' && event.value === 97)).toBe(true);
+      expect(generateHydrationIntakeEvents(segment)).toEqual(events);
+      assertEventsInRange(events, segment.start, segment.end);
     });
   });
 });

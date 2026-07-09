@@ -181,11 +181,24 @@ export async function godModeRoutes(app: FastifyInstance) {
       {
         durationMinutes: parsed.data.durationMinutes,
         advanceClock: parsed.data.advanceClock,
+        timeOfDay: parsed.data.timeOfDay,
       },
     );
     invalidateBriefCache();
     return createSuccessResponse(result, buildMeta(request));
   });
+
+  app.delete<{ Params: { segmentId: string } }>(
+    '/god-mode/timeline-segments/:segmentId',
+    async (request) => {
+      const result = service.removeTimelineSegment(
+        request.params.segmentId,
+        request.ctx?.sessionId,
+      );
+      invalidateBriefCache();
+      return createSuccessResponse(result, buildMeta(request));
+    },
+  );
 
   // 时间轴追加片段
   app.post('/god-mode/timeline-append', async (request, reply) => {
@@ -204,6 +217,8 @@ export async function godModeRoutes(app: FastifyInstance) {
       {
         durationMinutes: parsed.data.durationMinutes,
         advanceClock: parsed.data.advanceClock,
+        timeOfDay: parsed.data.timeOfDay,
+        replaceSegmentId: parsed.data.replaceSegmentId,
       },
     );
     invalidateBriefCache();

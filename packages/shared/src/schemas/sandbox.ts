@@ -19,6 +19,7 @@ export const ActivitySegmentTypeSchema = z.enum([
   'anxiety_episode',
   'alcohol_intake',
   'caffeine_intake',
+  'hydration_intake',
   'relaxation',
   'strength_training',
 ]);

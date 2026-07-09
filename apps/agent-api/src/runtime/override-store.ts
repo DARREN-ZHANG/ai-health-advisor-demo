@@ -71,15 +71,23 @@ export interface OverrideStoreService {
     segmentType: ActivitySegmentType,
     params?: Record<string, number | string | boolean>,
     offsetMinutes?: number,
-    options?: { durationMinutes?: number; advanceClock?: boolean },
-  ): { events: DeviceEvent[]; newCurrentTime: string; segmentStart: string; segmentEnd: string };
+    options?: { durationMinutes?: number; advanceClock?: boolean; startTime?: string },
+  ): { events: DeviceEvent[]; newCurrentTime: string; segmentId: string; segmentStart: string; segmentEnd: string };
+  replaceSegment(
+    profileId: string,
+    segmentId: string,
+    segmentType: ActivitySegmentType,
+    params?: Record<string, number | string | boolean>,
+    options?: { durationMinutes?: number; startTime?: string },
+  ): { events: DeviceEvent[]; newCurrentTime: string; segmentId: string; segmentStart: string; segmentEnd: string };
+  removeSegment(profileId: string, segmentId: string): boolean;
 
   // — 追加微事件 —
   appendMicroEvent(
     profileId: string,
     microEventType: MicroEventType,
     params?: MicroEventParams,
-    options?: { durationMinutes?: number; advanceClock?: boolean },
+    options?: { durationMinutes?: number; advanceClock?: boolean; startTime?: string },
   ): { events: DeviceEvent[]; newCurrentTime: string; eventStart: string; eventEnd: string };
 
   // — 同步操作 —
@@ -208,12 +216,12 @@ export function createOverrideStore(
       segmentType: ActivitySegmentType,
       params?: Record<string, number | string | boolean>,
       offsetMinutes?: number,
-      options?: { durationMinutes?: number; advanceClock?: boolean },
-    ): { events: DeviceEvent[]; newCurrentTime: string; segmentStart: string; segmentEnd: string } {
+      options?: { durationMinutes?: number; advanceClock?: boolean; startTime?: string },
+    ): { events: DeviceEvent[]; newCurrentTime: string; segmentId: string; segmentStart: string; segmentEnd: string } {
       const state = ensureDemoState(profileId);
       const result = appendSegment(
         state.segments,
-        state.clock.currentTime,
+        options?.startTime ?? state.clock.currentTime,
         segmentType,
         profileId,
         params,
@@ -251,9 +259,99 @@ export function createOverrideStore(
       return {
         events: [...result.events],
         newCurrentTime: result.newCurrentTime,
+        segmentId: result.segment.segmentId,
         segmentStart: newSegment!.start,
         segmentEnd: newSegment!.end,
       };
+    },
+
+    replaceSegment(
+      profileId: string,
+      segmentId: string,
+      segmentType: ActivitySegmentType,
+      params?: Record<string, number | string | boolean>,
+      options?: { durationMinutes?: number; startTime?: string },
+    ) {
+      const state = ensureDemoState(profileId);
+      if (!state.segments.some((segment) => segment.segmentId === segmentId)) {
+        throw new Error(`时间轴片段不存在: ${segmentId}`);
+      }
+
+      const retainedSegments = state.segments.filter(
+        (segment) => segment.segmentId !== segmentId,
+      );
+      const retainedEvents = state.rawEvents.filter(
+        (event) => event.segmentId !== segmentId,
+      );
+      const result = appendSegment(
+        retainedSegments,
+        options?.startTime ?? state.clock.currentTime,
+        segmentType,
+        profileId,
+        params,
+        0,
+        {
+          durationMinutes: options?.durationMinutes,
+          advanceClock: false,
+        },
+      );
+      const updatedState: DemoProfileState = {
+        ...state,
+        segments: result.segments,
+        rawEvents: [...retainedEvents, ...result.events],
+      };
+      const internalSync = rebuildSyncState(updatedState);
+      const { state: newSync } = sandboxPerformSync(
+        internalSync,
+        'app_open',
+        updatedState.clock.currentTime,
+      );
+      demoStateByProfile.set(profileId, {
+        ...updatedState,
+        syncState: {
+          lastSyncedMeasuredAt: newSync.lastSyncedMeasuredAt,
+          syncSessions: [...newSync.syncSessions],
+        },
+      });
+
+      return {
+        events: [...result.events],
+        newCurrentTime: result.newCurrentTime,
+        segmentId: result.segment.segmentId,
+        segmentStart: result.segment.start,
+        segmentEnd: result.segment.end,
+      };
+    },
+
+    removeSegment(profileId: string, segmentId: string): boolean {
+      const state = ensureDemoState(profileId);
+      if (!state.segments.some((segment) => segment.segmentId === segmentId)) {
+        return false;
+      }
+
+      const updatedState: DemoProfileState = {
+        ...state,
+        segments: state.segments.filter(
+          (segment) => segment.segmentId !== segmentId,
+        ),
+        rawEvents: state.rawEvents.filter(
+          (event) => event.segmentId !== segmentId,
+        ),
+      };
+      const internalSync = rebuildSyncState(updatedState);
+      const { state: newSync } = sandboxPerformSync(
+        internalSync,
+        'app_open',
+        updatedState.clock.currentTime,
+      );
+      demoStateByProfile.set(profileId, {
+        ...updatedState,
+        syncState: {
+          lastSyncedMeasuredAt: newSync.lastSyncedMeasuredAt,
+          syncSessions: [...newSync.syncSessions],
+        },
+      });
+      return true;
     },
 
     // — 追加微事件（自动同步，不添加 segment，不注入事件） —
@@ -261,11 +359,11 @@ export function createOverrideStore(
       profileId: string,
       microEventType: MicroEventType,
       params?: MicroEventParams,
-      options?: { durationMinutes?: number; advanceClock?: boolean },
+      options?: { durationMinutes?: number; advanceClock?: boolean; startTime?: string },
     ): { events: DeviceEvent[]; newCurrentTime: string; eventStart: string; eventEnd: string } {
       const state = ensureDemoState(profileId);
       const result = sandboxAppendMicroEvent(
-        state.clock.currentTime,
+        options?.startTime ?? state.clock.currentTime,
         microEventType,
         profileId,
         params,

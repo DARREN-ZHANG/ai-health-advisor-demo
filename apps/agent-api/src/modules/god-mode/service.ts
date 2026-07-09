@@ -97,7 +97,7 @@ export class GodModeService {
     microEventType: MicroEventType,
     params?: MicroEventParams,
     sessionId?: string,
-    options?: { durationMinutes?: number; advanceClock?: boolean },
+    options?: { durationMinutes?: number; advanceClock?: boolean; timeOfDay?: string },
   ): GodModeStateResponse {
     const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
     const profile = this.registry.getRawProfile(currentProfileId);
@@ -111,7 +111,19 @@ export class GodModeService {
       } : {}),
     };
 
-    this.registry.overrideStore.appendMicroEvent(currentProfileId, microEventType, enrichedParams, options);
+    const currentDemoTime = this.registry.overrideStore.getDemoClock(currentProfileId).currentTime;
+    this.registry.overrideStore.appendMicroEvent(
+      currentProfileId,
+      microEventType,
+      enrichedParams,
+      {
+        durationMinutes: options?.durationMinutes,
+        advanceClock: options?.timeOfDay ? false : options?.advanceClock,
+        startTime: options?.timeOfDay
+          ? `${currentDemoTime.slice(0, 10)}T${options.timeOfDay}`
+          : undefined,
+      },
+    );
     this.invalidateSessionAnalytical(sessionId);
     return this.getStateForProfile(currentProfileId);
   }
@@ -122,9 +134,18 @@ export class GodModeService {
     params?: Record<string, number | string | boolean>,
     offsetMinutes?: number,
     sessionId?: string,
-    options?: { durationMinutes?: number; advanceClock?: boolean },
+    options?: {
+      durationMinutes?: number;
+      advanceClock?: boolean;
+      timeOfDay?: string;
+      replaceSegmentId?: string;
+    },
   ): GodModeStateResponse {
     const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
+    const currentDemoTime = this.registry.overrideStore.getDemoClock(currentProfileId).currentTime;
+    const startTime = options?.timeOfDay
+      ? `${currentDemoTime.slice(0, 10)}T${options.timeOfDay}`
+      : undefined;
 
     // 注入 profile 基线到 params，使生成器能基于用户实际生理特征生成数据
     const profile = this.registry.getRawProfile(currentProfileId);
@@ -134,12 +155,37 @@ export class GodModeService {
       ...(baseline ? { _baselineRestingHr: baseline.restingHr, _baselineHrv: baseline.hrv, _baselineSpo2: baseline.spo2 } : {}),
     };
 
-    const appendResult = this.registry.overrideStore.appendSegment(currentProfileId, segmentType, enrichedParams, offsetMinutes, options);
+    const appendResult = options?.replaceSegmentId
+      ? this.registry.overrideStore.replaceSegment(
+          currentProfileId,
+          options.replaceSegmentId,
+          segmentType,
+          enrichedParams,
+          {
+            durationMinutes: options.durationMinutes,
+            startTime,
+          },
+        )
+      : this.registry.overrideStore.appendSegment(
+          currentProfileId,
+          segmentType,
+          enrichedParams,
+          offsetMinutes,
+          {
+            durationMinutes: options?.durationMinutes,
+            advanceClock: options?.timeOfDay ? false : options?.advanceClock,
+            startTime,
+          },
+        );
 
     // 同步注入 Active Sensing 事件，使 deriveActiveSensing 能反映最新操作
     // 使用 segment 的真实 mock 时间（从 timeline-append 计算，不受 advanceClock 影响）
+    const isConfirmedLifeLog = params?.source === 'life_log';
     const bannerEventType = GodModeService.TIMELINE_TO_BANNER_EVENT[segmentType];
-    if (bannerEventType) {
+    if (isConfirmedLifeLog) {
+      // 已确认的生活记录已经作为 timeline segment 进入识别管线，
+      // 不再写一份无法随编辑/删除同步的 injected event。
+    } else if (bannerEventType) {
       this.registry.overrideStore.injectEvent(currentProfileId, {
         date: appendResult.segmentStart,
         type: bannerEventType,
@@ -154,6 +200,18 @@ export class GodModeService {
       });
     }
 
+    this.invalidateSessionAnalytical(sessionId);
+    return {
+      ...this.getStateForProfile(currentProfileId),
+      lastTimelineSegmentId: appendResult.segmentId,
+    };
+  }
+
+  removeTimelineSegment(segmentId: string, sessionId?: string): GodModeStateResponse {
+    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
+    if (!this.registry.overrideStore.removeSegment(currentProfileId, segmentId)) {
+      throw new Error(`时间轴片段不存在: ${segmentId}`);
+    }
     this.invalidateSessionAnalytical(sessionId);
     return this.getStateForProfile(currentProfileId);
   }

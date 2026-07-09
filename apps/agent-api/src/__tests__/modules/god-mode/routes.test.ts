@@ -409,6 +409,51 @@ describe('God-Mode Routes', () => {
       });
     });
 
+    test('饮水记录支持 Mock 当日时间、原子编辑与删除', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+
+      const created = await app.inject({
+        method: 'POST',
+        url: '/god-mode/timeline-append',
+        payload: {
+          segmentType: 'hydration_intake',
+          timeOfDay: '14:00',
+          advanceClock: false,
+          params: { source: 'life_log', amountMl: 250 },
+        },
+      });
+      expect(created.statusCode).toBe(200);
+      const createdBody = created.json();
+      const segmentId = createdBody.data.lastTimelineSegmentId as string;
+      expect(segmentId).toContain('hydration_intake');
+      expect(segmentId).toContain('1400');
+
+      const updated = await app.inject({
+        method: 'POST',
+        url: '/god-mode/timeline-append',
+        payload: {
+          segmentType: 'hydration_intake',
+          replaceSegmentId: segmentId,
+          timeOfDay: '15:30',
+          advanceClock: false,
+          params: { source: 'life_log', amountMl: 500 },
+        },
+      });
+      expect(updated.statusCode).toBe(200);
+      const updatedId = updated.json().data.lastTimelineSegmentId as string;
+      expect(updatedId).toContain('1530');
+
+      const removed = await app.inject({
+        method: 'DELETE',
+        url: `/god-mode/timeline-segments/${updatedId}`,
+      });
+      expect(removed.statusCode).toBe(200);
+    });
+
     test('无效 segmentType 返回 400', async () => {
       const response = await app.inject({
         method: 'POST',

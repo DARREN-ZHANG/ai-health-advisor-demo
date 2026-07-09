@@ -12,6 +12,10 @@ import type { MicroEventParams, MicroEventType } from './micro-event';
 /** 时间轴追加片段载荷 */
 export interface TimelineAppendPayload {
   segmentType: ActivitySegmentType;
+  /** 编辑既有时间轴片段时传入原片段 ID。 */
+  replaceSegmentId?: string;
+  /** 在当前 mock 日期中的精确开始时间（HH:mm） */
+  timeOfDay?: string;
   /** 片段持续时长（分钟），不提供时使用各片段类型的默认时长 */
   durationMinutes?: number;
   /** 起始偏移分钟数（默认 0） */
@@ -40,6 +44,7 @@ export interface ResetProfileTimelinePayload {
 
 export interface MicroEventAppendPayload {
   microEventType: MicroEventType;
+  timeOfDay?: string;
   durationMinutes?: number;
   params?: MicroEventParams;
   advanceClock?: boolean;
@@ -99,6 +104,8 @@ export interface GodModeStateResponse {
   /** 上次同步时间 YYYY-MM-DDTHH:mm */
   lastSyncTime: string | null;
   pendingEventCount: number;
+  /** 最近一次新增或替换产生的片段 ID。 */
+  lastTimelineSegmentId?: string;
   recentRecognizedEvents: RecognizedEvent[];
   recentDerivedStates: DerivedTemporalState[];
   /** 所有可用 profile 列表 */

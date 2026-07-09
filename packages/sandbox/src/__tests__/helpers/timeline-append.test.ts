@@ -52,6 +52,36 @@ describe('appendSegment', () => {
     expect(result.events.length).toBeGreaterThan(0);
   });
 
+  it('allows intake events to overlap activities and keeps same-minute ids unique', () => {
+    const walk = makeSegment({
+      segmentId: 'walk-active',
+      type: 'walk',
+      start: '2026-04-16T08:00',
+      end: '2026-04-16T08:30',
+    });
+    const first = appendSegment(
+      [walk],
+      '2026-04-16T08:10',
+      'hydration_intake',
+      profileId,
+      { amountMl: 250 },
+      0,
+      { advanceClock: false },
+    );
+    const second = appendSegment(
+      first.segments,
+      '2026-04-16T08:10',
+      'hydration_intake',
+      profileId,
+      { amountMl: 250 },
+      0,
+      { advanceClock: false },
+    );
+
+    expect(first.segment.segmentId).toBe('seg-gm-hydration_intake-202604160810');
+    expect(second.segment.segmentId).toBe('seg-gm-hydration_intake-202604160810-2');
+  });
+
   it('should add the new segment to the segments list', () => {
     const result = appendSegment(
       [],

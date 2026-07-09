@@ -53,7 +53,10 @@ export function DemoControlDrawer({ onSegmentClick }: DemoControlDrawerProps) {
           </h2>
         </header>
 
-        <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
+        <div
+          data-testid="demo-event-list"
+          className="mt-3 min-h-0 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           {TIMELINE_SEGMENTS.map((segment) => {
             const pending = pendingSegmentType === segment.type;
             const disabled = pendingSegmentType !== null;

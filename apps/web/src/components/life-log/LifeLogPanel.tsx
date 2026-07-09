@@ -2,158 +2,196 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useProfileStore } from '@/stores/profile.store';
-import { useLifeLogStore } from '@/stores/life-log.store';
 import {
+  buildLifeLogTimelinePayload,
+  buildMockTimestamp,
+  getTimeOfDay,
   LIFE_LOG_CATEGORY_ORDER,
   type LifeLogCategory,
   type LifeLogEntry,
 } from '@/lib/life-log';
+import { useGodModeActions, useGodModeState } from '@/hooks/use-god-mode-actions';
+import { useLifeLogStore } from '@/stores/life-log.store';
+import { useProfileStore } from '@/stores/profile.store';
+import { useUIStore } from '@/stores/ui.store';
+import { LifeLogCategoryDialog } from './LifeLogCategoryDialog';
 import { LifeLogCategorySection } from './LifeLogCategorySection';
 import { LifeLogEntrySheet, type EntrySheetValues } from './LifeLogEntrySheet';
 
-/**
- * 模块级空数组常量：当 profile 还没有任何条目时，selector 返回此引用，
- * 避免每次渲染都创建新数组导致 zustand 触发不必要的重渲染。
- */
 const EMPTY_ENTRIES: ReadonlyArray<LifeLogEntry> = [];
 
-/**
- * LifeLogPanel —— Life Log 顶层容器（profile-scoped，仅当前会话）。
- *
- * 数据流：
- * - `useProfileStore` 提供 `currentProfileId`。
- * - `useLifeLogStore` 提供 entries 与 add/update/delete/clear。
- * - 切换 profile 时 React 自动重新订阅，仅显示当前 profile 的条目。
- *
- * 浮层状态：
- * - `addFor` —— 当前打开的"自定义新增"类目（null 表示关闭）。
- * - `editingEntry` —— 当前编辑的 entry（null 表示关闭）。
- *
- * **不持久化**：刷新页面后 zustand 内存被清空，所有 entries 消失。这是
- * Life Log 作为交互式原型的设计意图，并非 bug。
- */
 export function LifeLogPanel() {
   const t = useTranslations('lifeLog');
-  const profileId = useProfileStore((s) => s.currentProfileId);
-
-  // 注意：`selectEntriesForProfile` 每次调用都返回新数组（不可变），
-  // 直接放进 zustand selector 会触发无限渲染（引用每次都不等）。
-  // 因此先取稳定的 entries 数组（仅在实际内容变化时改变引用），
-  // 再用 useMemo 在客户端做排序与分桶。
+  const profileId = useProfileStore((state) => state.currentProfileId);
+  const showToast = useUIStore((state) => state.showToast);
   const rawEntries = useLifeLogStore(
-    (s) => s.entriesByProfile[profileId] ?? EMPTY_ENTRIES,
+    (state) => state.entriesByProfile[profileId] ?? EMPTY_ENTRIES,
   );
-  const addEntry = useLifeLogStore((s) => s.addEntry);
-  const updateEntry = useLifeLogStore((s) => s.updateEntry);
-  const deleteEntry = useLifeLogStore((s) => s.deleteEntry);
+  const addEntry = useLifeLogStore((state) => state.addEntry);
+  const updateEntry = useLifeLogStore((state) => state.updateEntry);
+  const deleteEntry = useLifeLogStore((state) => state.deleteEntry);
+  const { data: godModeState } = useGodModeState();
+  const {
+    appendTimeline,
+    removeTimelineSegment,
+    isAppendingTimeline,
+    isRemovingTimelineSegment,
+  } = useGodModeActions();
 
-  // 浮层状态
+  const [activeCategory, setActiveCategory] =
+    useState<LifeLogCategory | null>(null);
   const [addFor, setAddFor] = useState<LifeLogCategory | null>(null);
   const [editingEntry, setEditingEntry] = useState<LifeLogEntry | null>(null);
+  const currentDemoTime = godModeState?.currentDemoTime ?? '';
+  const pending = isAppendingTimeline || isRemovingTimelineSegment;
 
-  // 按时间倒序排序（最新在前）
-  const entries = useMemo(() => {
-    return [...rawEntries].sort((a, b) =>
-      b.timestamp.localeCompare(a.timestamp),
-    );
-  }, [rawEntries]);
-
-  // 按类目分桶（保持类目顺序）
+  const entries = useMemo(
+    () => [...rawEntries].sort((a, b) => b.timestamp.localeCompare(a.timestamp)),
+    [rawEntries],
+  );
   const entriesByType = useMemo(() => {
-    const map: Record<LifeLogCategory, LifeLogEntry[]> = {
+    const result: Record<LifeLogCategory, LifeLogEntry[]> = {
       caffeine: [],
       alcohol: [],
       hydration: [],
     };
-    for (const e of entries) {
-      map[e.type].push(e);
-    }
-    return map;
+    entries.forEach((entry) => result[entry.type].push(entry));
+    return result;
   }, [entries]);
 
-  function handleOpenCustomAdd(type: LifeLogCategory) {
-    setEditingEntry(null);
-    setAddFor(type);
+  function requireDemoTime(): string | null {
+    if (currentDemoTime) return currentDemoTime;
+    showToast(t('demoTimeUnavailable'), 'error');
+    return null;
   }
 
-  function handleOpenEdit(entry: LifeLogEntry) {
-    setAddFor(null);
-    setEditingEntry(entry);
-  }
+  async function persistEntry(
+    type: LifeLogCategory,
+    values: EntrySheetValues,
+    existing?: LifeLogEntry,
+  ) {
+    const demoTime = requireDemoTime();
+    if (!demoTime) return;
 
-  function handleClose() {
-    setAddFor(null);
-    setEditingEntry(null);
-  }
-
-  function handleSubmitAdd(values: EntrySheetValues) {
-    if (addFor) {
-      addEntry({
-        profileId,
-        type: addFor,
-        cups: values.cups,
-        timestamp: values.timestamp,
-        note: values.note,
+    try {
+      const payload = buildLifeLogTimelinePayload(
+        type,
+        values.cups,
+        values.timeOfDay,
+      );
+      const result = await appendTimeline({
+        ...payload,
+        replaceSegmentId: existing?.timelineSegmentId,
       });
-    } else if (editingEntry) {
-      updateEntry(profileId, editingEntry.id, {
-        cups: values.cups,
-        timestamp: values.timestamp,
-        note: values.note,
-      });
+      if (!result.lastTimelineSegmentId) {
+        throw new Error('Timeline append did not return a segment id');
+      }
+      const timestamp = buildMockTimestamp(demoTime, values.timeOfDay);
+
+      if (existing) {
+        updateEntry(profileId, existing.id, {
+          cups: values.cups,
+          timestamp,
+          timelineSegmentId: result.lastTimelineSegmentId,
+        });
+      } else {
+        addEntry({
+          profileId,
+          type,
+          cups: values.cups,
+          timestamp,
+          timelineSegmentId: result.lastTimelineSegmentId,
+        });
+      }
+      setAddFor(null);
+      setEditingEntry(null);
+    } catch (error) {
+      console.error('Failed to persist life log entry:', error);
+      showToast(t('operationFailed'), 'error');
     }
-    handleClose();
   }
 
-  function handleDelete(entry: LifeLogEntry) {
-    deleteEntry(profileId, entry.id);
+  async function handleQuickAdd(type: LifeLogCategory) {
+    const demoTime = requireDemoTime();
+    if (!demoTime) return;
+    await persistEntry(type, {
+      cups: 1,
+      timeOfDay: getTimeOfDay(demoTime),
+    });
+  }
+
+  async function handleDelete() {
+    if (!editingEntry?.timelineSegmentId) {
+      showToast(t('operationFailed'), 'error');
+      return;
+    }
+    try {
+      await removeTimelineSegment(editingEntry.timelineSegmentId);
+      deleteEntry(profileId, editingEntry.id);
+      setEditingEntry(null);
+    } catch (error) {
+      console.error('Failed to delete life log entry:', error);
+      showToast(t('operationFailed'), 'error');
+    }
   }
 
   return (
     <section aria-label={t('title')} data-valo-life-log-panel="">
-      <header className="mb-4 space-y-1">
-        <div className="flex items-baseline gap-2">
+      <div aria-hidden={activeCategory ? true : undefined}>
+        <header className="mb-4 space-y-1">
           <h2
             className="text-lg leading-6 text-[var(--valo-text-primary)]"
             data-valo-serif="true"
           >
             {t('title')}
           </h2>
-          <span
-            className="sr-only"
-            data-valo-life-log-session-badge=""
-          >
-            {t('sessionOnlyBadge')}
-          </span>
-        </div>
-        <p className="max-w-[32ch] text-xs leading-4 text-[var(--valo-text-secondary)]">
-          {t('description')}
-        </p>
-      </header>
+          <span className="sr-only">{t('sessionOnlyBadge')}</span>
+          <p className="max-w-[32ch] text-xs leading-4 text-[var(--valo-text-secondary)]">
+            {t('description')}
+          </p>
+        </header>
 
-      <div className="space-y-2">
-        {LIFE_LOG_CATEGORY_ORDER.map((type) => (
-          <LifeLogCategorySection
-            key={type}
-            type={type}
-            entries={entriesByType[type]}
-            onCustomAdd={handleOpenCustomAdd}
-            onEdit={handleOpenEdit}
-            onDelete={handleDelete}
-          />
-        ))}
+        <div className="space-y-2">
+          {LIFE_LOG_CATEGORY_ORDER.map((type) => (
+            <LifeLogCategorySection
+              key={type}
+              type={type}
+              entries={entriesByType[type]}
+              onOpen={setActiveCategory}
+            />
+          ))}
+        </div>
       </div>
 
-      {(addFor || editingEntry) && (
+      {activeCategory && !addFor && !editingEntry ? (
+        <LifeLogCategoryDialog
+          type={activeCategory}
+          entries={entriesByType[activeCategory]}
+          pending={pending || !currentDemoTime}
+          onClose={() => setActiveCategory(null)}
+          onQuickAdd={() => void handleQuickAdd(activeCategory)}
+          onCustomAdd={() => setAddFor(activeCategory)}
+          onEdit={setEditingEntry}
+        />
+      ) : null}
+
+      {addFor || editingEntry ? (
         <LifeLogEntrySheet
           open
-          type={(addFor ?? editingEntry?.type) as LifeLogCategory}
+          type={addFor ?? editingEntry!.type}
+          defaultTime={getTimeOfDay(currentDemoTime)}
           initialEntry={editingEntry}
-          onSubmit={handleSubmitAdd}
-          onClose={handleClose}
+          pending={pending}
+          onSubmit={(values) =>
+            void persistEntry(addFor ?? editingEntry!.type, values, editingEntry ?? undefined)
+          }
+          onDelete={editingEntry ? () => void handleDelete() : undefined}
+          onClose={() => {
+            setAddFor(null);
+            setEditingEntry(null);
+          }}
         />
-      )}
+      ) : null}
     </section>
   );
 }

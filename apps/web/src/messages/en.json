@@ -110,13 +110,22 @@
     },
     "quickAdd": "+1 cup",
     "customAdd": "Custom add",
+    "addQuick": "Add {amount}",
+    "drink": "drink",
+    "todaysEntries": "Today's Entries",
+    "recommended": "Recommended {amount} daily",
     "edit": "Edit",
     "delete": "Delete",
     "add": "Add",
     "decrease": "Decrease",
     "increase": "Increase",
     "save": "Save",
+    "update": "Update",
     "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back",
+    "done": "Done",
+    "selectTime": "Select time",
     "cups": "Cups",
     "time": "Time",
     "note": "Note",
@@ -126,7 +135,9 @@
     "sheetTitleAdd": "Add Entry",
     "sheetTitleEdit": "Edit Entry",
     "cupsLabel": "Cups",
-    "cupsStep": "0.5"
+    "cupsStep": "0.5",
+    "operationFailed": "Unable to update the life log",
+    "demoTimeUnavailable": "Mock Timeline time is unavailable"
   },
   "health": {
     "state": {

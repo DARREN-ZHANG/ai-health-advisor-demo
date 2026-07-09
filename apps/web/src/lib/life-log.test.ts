@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildLifeLogTimelinePayload,
+  buildMockTimestamp,
   DEFAULT_QUICK_CUPS,
   LIFE_LOG_CATEGORIES,
   computeRawAmount,
@@ -163,5 +165,36 @@ describe('isLifeLogCategory', () => {
     expect(isLifeLogCategory('unknown')).toBe(false);
     expect(isLifeLogCategory('')).toBe(false);
     expect(isLifeLogCategory('Caffeine')).toBe(false);
+  });
+});
+
+describe('Mock Timeline mapping', () => {
+  it('咖啡因和酒精映射为 drink 摄入事件', () => {
+    expect(buildLifeLogTimelinePayload('caffeine', 2, '14:00')).toEqual(
+      expect.objectContaining({
+        segmentType: 'caffeine_intake',
+        timeOfDay: '14:00',
+        advanceClock: false,
+        params: expect.objectContaining({ drinks: 2, amountMg: 100 }),
+      }),
+    );
+    expect(buildLifeLogTimelinePayload('alcohol', 1, '18:30')).toEqual(
+      expect.objectContaining({
+        segmentType: 'alcohol_intake',
+        params: expect.objectContaining({ drinks: 1, amountGrams: 14 }),
+      }),
+    );
+  });
+
+  it('饮水按 250ml 单位映射并使用 Mock 日期', () => {
+    expect(buildLifeLogTimelinePayload('hydration', 2, '09:45')).toEqual(
+      expect.objectContaining({
+        segmentType: 'hydration_intake',
+        params: expect.objectContaining({ units: 2, amountMl: 500 }),
+      }),
+    );
+    expect(buildMockTimestamp('2026-07-08T10:01', '09:45')).toBe(
+      '2026-07-08T09:45',
+    );
   });
 });

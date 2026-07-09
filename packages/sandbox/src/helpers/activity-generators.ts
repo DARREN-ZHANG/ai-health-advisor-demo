@@ -849,6 +849,36 @@ function generateCaffeineIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
 }
 
 // ============================================================
+// 生成器: hydration_intake（饮水）
+// ============================================================
+
+/**
+ * 饮水是确定性的摄入事件，不伪造显著生理响应。
+ *
+ * 这里记录短时佩戴、静息心率、HRV、血氧、动作与步数样本，使事件进入统一的
+ * device stream / sync / recognition 管线，同时保持各指标在 profile 基线附近。
+ */
+function generateHydrationIntakeEvents(segment: ActivitySegment): DeviceEvent[] {
+  const totalMin = diffMinutes(segment.start, segment.end);
+  const { restingHr, hrv, spo2 } = extractBaselines(segment.params);
+  const events: DeviceEvent[] = [];
+  let idx = 0;
+
+  events.push(makeEvent(segment, 0, 'wearState', true, idx++));
+  events.push(makeEvent(segment, totalMin, 'wearState', false, idx++));
+
+  for (let m = 0; m <= totalMin; m += 1) {
+    events.push(makeEvent(segment, m, 'heartRate', restingHr, idx++));
+    events.push(makeEvent(segment, m, 'hrvRmssd', hrv, idx++));
+    events.push(makeEvent(segment, m, 'spo2', spo2, idx++));
+    events.push(makeEvent(segment, m, 'motion', m === 0 ? 0.8 : 0.2, idx++));
+    events.push(makeEvent(segment, m, 'steps', 0, idx++));
+  }
+
+  return events;
+}
+
+// ============================================================
 // 公共调度函数
 // ============================================================
 
@@ -865,6 +895,7 @@ const GENERATOR_MAP: Record<ActivitySegmentType, (segment: ActivitySegment) => D
   anxiety_episode: generateAnxietyEpisodeEvents,
   alcohol_intake: generateAlcoholIntakeEvents,
   caffeine_intake: generateCaffeineIntakeEvents,
+  hydration_intake: generateHydrationIntakeEvents,
   relaxation: generateRelaxationEvents,
   strength_training: generateStrengthTrainingEvents,
 };
@@ -893,6 +924,7 @@ export {
   generateAnxietyEpisodeEvents,
   generateAlcoholIntakeEvents,
   generateCaffeineIntakeEvents,
+  generateHydrationIntakeEvents,
   generateRelaxationEvents,
   generateStrengthTrainingEvents,
 };

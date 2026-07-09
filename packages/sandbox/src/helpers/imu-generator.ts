@@ -143,6 +143,7 @@ export const MOTION_PATTERN_MAP: Record<ActivitySegmentType, MotionPattern> = {
   meal_intake:         'intermittent_gesture',
   alcohol_intake:      'intermittent_gesture',
   caffeine_intake:     'still_with_micro',
+  hydration_intake:    'intermittent_gesture',
   deep_focus:          'irregular_fidget',
   intermittent_exercise: 'intermittent_burst',
   anxiety_episode:     'irregular_restless',

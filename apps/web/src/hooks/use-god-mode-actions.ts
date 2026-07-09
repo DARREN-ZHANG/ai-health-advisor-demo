@@ -103,6 +103,21 @@ export function useGodModeActions() {
     },
   });
 
+  const removeTimelineSegmentMutation = useMutation({
+    mutationFn: async (segmentId: string) => {
+      return apiClient.delete<GodModeStateResponse>(
+        `/god-mode/timeline-segments/${encodeURIComponent(segmentId)}`,
+      );
+    },
+    onSuccess: (state) => {
+      setProfileId(state.currentProfileId);
+      syncActiveSensingBanner(state.activeSensing);
+      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
+    },
+  });
+
   /**
    * GM-TL3: 推进时钟
    *
@@ -161,6 +176,8 @@ export function useGodModeActions() {
     isInjectingEvent: injectEventMutation.isPending,
     appendTimeline: appendTimelineMutation.mutateAsync,
     isAppendingTimeline: appendTimelineMutation.isPending,
+    removeTimelineSegment: removeTimelineSegmentMutation.mutateAsync,
+    isRemovingTimelineSegment: removeTimelineSegmentMutation.isPending,
 
     advanceClock: advanceClockMutation.mutateAsync,
     isAdvancingClock: advanceClockMutation.isPending,

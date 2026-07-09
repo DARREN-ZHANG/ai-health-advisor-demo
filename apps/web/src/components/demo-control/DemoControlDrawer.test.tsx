@@ -78,6 +78,15 @@ describe('DemoControlDrawer', () => {
     expect(screen.getByText('散步').closest('div')).toHaveClass('h-[49px]');
   });
 
+  it('事件列表保留滚动能力但隐藏滚动条', () => {
+    renderDrawer();
+    expect(screen.getByTestId('demo-event-list')).toHaveClass(
+      'overflow-y-auto',
+      '[scrollbar-width:none]',
+      '[&::-webkit-scrollbar]:hidden',
+    );
+  });
+
   it('点击添加按钮传递对应事件配置', () => {
     const onSegmentClick = vi.fn();
     renderDrawer(onSegmentClick);
