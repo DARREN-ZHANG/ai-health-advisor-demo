@@ -440,6 +440,10 @@
       "faq": "FAQ",
       "termsOfService": "Terms of Service",
       "privacyPolicy": "Privacy Policy"
+    },
+    "languageSheet": {
+      "title": "语言",
+      "legend": "选择语言"
     }
   },
   "accountSwitcher": {
