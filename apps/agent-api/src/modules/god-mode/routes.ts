@@ -196,6 +196,15 @@ export async function godModeRoutes(app: FastifyInstance) {
           request.params.segmentId,
           request.ctx?.sessionId,
         );
+        if (result === null) {
+          return reply.status(404).send(
+            createErrorResponse(
+              ErrorCode.NOT_FOUND,
+              `时间轴片段不存在: ${request.params.segmentId}`,
+              buildMeta(request),
+            ),
+          );
+        }
         invalidateBriefCache();
         return createSuccessResponse(result, buildMeta(request));
       } catch (error) {

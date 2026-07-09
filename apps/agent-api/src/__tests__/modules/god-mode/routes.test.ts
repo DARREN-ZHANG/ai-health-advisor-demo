@@ -465,6 +465,48 @@ describe('God-Mode Routes', () => {
       expect(body.error.code).toBe('NOT_FOUND');
     });
 
+    test('caffeine_intake 片段重复删除时第二次返回 404 而非 500', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/god-mode/reset',
+        payload: { scope: 'all' },
+      });
+
+      const created = await app.inject({
+        method: 'POST',
+        url: '/god-mode/timeline-append',
+        payload: {
+          segmentType: 'caffeine_intake',
+          timeOfDay: '07:05',
+          advanceClock: false,
+          params: {
+            source: 'life_log',
+            drinks: 1,
+            amountMg: 50,
+            dose: 'light',
+          },
+        },
+      });
+
+      expect(created.statusCode).toBe(200);
+      const segmentId = created.json().data.lastTimelineSegmentId as string;
+
+      const removed = await app.inject({
+        method: 'DELETE',
+        url: `/god-mode/timeline-segments/${segmentId}`,
+      });
+      expect(removed.statusCode).toBe(200);
+
+      const removedAgain = await app.inject({
+        method: 'DELETE',
+        url: `/god-mode/timeline-segments/${segmentId}`,
+      });
+      expect(removedAgain.statusCode).toBe(404);
+      const body = removedAgain.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('NOT_FOUND');
+    });
+
     test('无效 segmentType 返回 400', async () => {
       const response = await app.inject({
         method: 'POST',

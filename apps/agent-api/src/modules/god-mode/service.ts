@@ -207,11 +207,10 @@ export class GodModeService {
     };
   }
 
-  removeTimelineSegment(segmentId: string, sessionId?: string): GodModeStateResponse {
+  removeTimelineSegment(segmentId: string, sessionId?: string): GodModeStateResponse | null {
     const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
     if (!this.registry.overrideStore.removeSegment(currentProfileId, segmentId)) {
-      // 与 profile-manager 一致：抛带 statusCode 的错误，使路由层返回 404 而非 500
-      throw Object.assign(new Error(`时间轴片段不存在: ${segmentId}`), { statusCode: 404 });
+      return null;
     }
     this.invalidateSessionAnalytical(sessionId);
     return this.getStateForProfile(currentProfileId);
