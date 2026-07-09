@@ -143,6 +143,7 @@ export {
   AGENT_SLA_TIMEOUT_MS,
   MAX_CHART_TOKENS,
   MAX_MICRO_TIPS,
+  MAX_HOMEPAGE_MICRO_TIPS,
   LOW_DATA_THRESHOLD,
 } from './constants/limits';
 

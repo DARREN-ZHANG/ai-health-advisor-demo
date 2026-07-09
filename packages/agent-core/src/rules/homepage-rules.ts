@@ -4,6 +4,7 @@ import type { AgentContext } from '../types/agent-context';
 import type { InsightRule, InsightSignal, RuleEvaluationResult } from './types';
 import { InsightRuleEngine } from './rule-engine';
 import { average, getRecords, computeHrv, computeTrend } from './helpers';
+import { MAX_HOMEPAGE_MICRO_TIPS } from '../constants/limits';
 
 // ────────────────────────────────────────────
 // HRV 规则 (趋势 + 绝对值)
@@ -246,6 +247,6 @@ function suggestHomepageTokens(
 function suggestHomepageMicroTips(insights: InsightSignal[]): string[] {
   return insights
     .filter((i) => i.severity !== 'info')
-    .slice(0, 3)
+    .slice(0, MAX_HOMEPAGE_MICRO_TIPS)
     .map((i) => i.message);
 }

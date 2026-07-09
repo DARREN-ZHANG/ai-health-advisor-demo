@@ -90,7 +90,7 @@ describe('parseAgentResponse', () => {
     }
   });
 
-  it('microTips 数组被截断到 MAX_MICRO_TIPS', () => {
+  it('homepage microTips 截断到 MAX_HOMEPAGE_MICRO_TIPS', () => {
     const tips = Array.from({ length: 10 }, (_, i) => `贴士 ${i}`);
     const raw = JSON.stringify({
       summary: '测试',
@@ -105,7 +105,27 @@ describe('parseAgentResponse', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.envelope.microTips.length).toBeLessThanOrEqual(3);
+      // 首页场景单独放宽到 4 条
+      expect(result.envelope.microTips).toHaveLength(4);
+    }
+  });
+
+  it('非首页场景 microTips 仍截断到 MAX_MICRO_TIPS', () => {
+    const tips = Array.from({ length: 10 }, (_, i) => `tip ${i}`);
+    const raw = JSON.stringify({
+      summary: '测试',
+      chartTokens: [],
+      microTips: tips,
+    });
+
+    const result = parseAgentResponse(raw, {
+      taskType: AgentTaskType.VIEW_SUMMARY,
+      pageContext: basePageContext,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.envelope.microTips).toHaveLength(3);
     }
   });
 

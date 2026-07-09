@@ -7,7 +7,7 @@ import {
 } from '@health-advisor/shared';
 import type { AgentResponseEnvelope, PageContext, FutureSuggestion } from '@health-advisor/shared';
 import { ChartTokenIdSchema } from '@health-advisor/shared';
-import { MAX_CHART_TOKENS, MAX_MICRO_TIPS, MAX_ACTIONS } from '../constants/limits';
+import { MAX_CHART_TOKENS, MAX_MICRO_TIPS, MAX_HOMEPAGE_MICRO_TIPS, MAX_ACTIONS } from '../constants/limits';
 
 export interface ParseMeta {
   taskType: AgentTaskType;
@@ -78,11 +78,13 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
     .map((t) => t as ChartTokenId)
     .slice(0, MAX_CHART_TOKENS);
 
-  // microTips 截断
+  // microTips 截断：首页场景放宽到 MAX_HOMEPAGE_MICRO_TIPS，其余场景保持 MAX_MICRO_TIPS
   const rawTips = Array.isArray(obj.microTips)
     ? obj.microTips.filter((t): t is string => typeof t === 'string')
     : [];
-  const tips = rawTips.slice(0, MAX_MICRO_TIPS);
+  const microTipsLimit =
+    meta.taskType === AgentTaskType.HOMEPAGE_SUMMARY ? MAX_HOMEPAGE_MICRO_TIPS : MAX_MICRO_TIPS;
+  const tips = rawTips.slice(0, microTipsLimit);
 
   // actions 严格校验
   let actions: AgentResponseEnvelope['actions'] = undefined;

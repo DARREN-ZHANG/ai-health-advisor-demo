@@ -13,6 +13,9 @@ export const MAX_CHART_TOKENS = 2;
 /** 单次响应最大 micro tips 数 */
 export const MAX_MICRO_TIPS = 3;
 
+/** 首页简报最大 micro tips 数（首页场景单独放宽） */
+export const MAX_HOMEPAGE_MICRO_TIPS = 4;
+
 /** 低数据阈值：窗口内记录少于该数量视为低数据 */
 export const LOW_DATA_THRESHOLD = 3;
 
