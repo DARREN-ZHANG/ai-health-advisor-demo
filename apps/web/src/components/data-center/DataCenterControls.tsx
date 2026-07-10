@@ -27,28 +27,30 @@ export function DataCenterControls() {
     <div className="flex flex-col" data-valo-trends-controls="">
       <nav
         aria-label={t('datePagination')}
-        className="relative h-[58px] px-5"
+        className="flex h-[58px] items-center justify-center"
       >
-        <button
-          type="button"
-          aria-label={t('previousDate')}
-          className="absolute left-5 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center text-white/80"
-        >
-          <ChevronLeftIcon className="size-5" aria-hidden="true" />
-        </button>
-        <time
-          dateTime={formatDateISO()}
-          className="flex h-full items-center justify-center text-center text-[13px] font-semibold leading-[18px] text-white"
-        >
-          {t('today')}
-        </time>
-        <button
-          type="button"
-          aria-label={t('nextDate')}
-          className="absolute right-5 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center text-white/35"
-        >
-          <ChevronRightIcon className="size-5" aria-hidden="true" />
-        </button>
+        <div className="flex items-center gap-2" data-valo-date-pagination-group="">
+          <button
+            type="button"
+            aria-label={t('previousDate')}
+            className="flex size-6 items-center justify-center text-white/80"
+          >
+            <ChevronLeftIcon className="size-4" aria-hidden="true" />
+          </button>
+          <time
+            dateTime={formatDateISO()}
+            className="text-center text-[13px] font-semibold leading-[18px] text-white"
+          >
+            {t('today')}
+          </time>
+          <button
+            type="button"
+            aria-label={t('nextDate')}
+            className="flex size-6 items-center justify-center text-white/35"
+          >
+            <ChevronRightIcon className="size-4" aria-hidden="true" />
+          </button>
+        </div>
       </nav>
 
       <div className="relative">
