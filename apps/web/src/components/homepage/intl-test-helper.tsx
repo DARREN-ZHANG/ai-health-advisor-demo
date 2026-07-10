@@ -54,7 +54,6 @@ const ZH_MESSAGES = {
     },
   },
   health: {
-    thinking: 'Valo is thinking',
     state: {
       'prime-readiness': '最佳准备',
       'active-recovery': '积极恢复',
