@@ -15,6 +15,7 @@ export const ActivitySegmentTypeSchema = z.enum([
   'intermittent_exercise',
   'walk',
   'sleep',
+  'nap',
   'deep_focus',
   'anxiety_episode',
   'alcohol_intake',
