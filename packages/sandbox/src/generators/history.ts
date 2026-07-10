@@ -302,7 +302,7 @@ export function generateHistory(config: ProfileConfig, startDate: string, endDat
     }
 
     if (rng() >= config.missingRate.spo2) {
-      record.spo2 = Math.max(90, Math.min(100, jittered(rng, config.baseline.spo2, 2)));
+      record.spo2 = Math.max(90, Math.min(100, jittered(rng, config.baseline.spo2, 1)));
     }
 
     record.stress = generateStress(rng, config.baseline, dayIndex, config.trend.stressDirection);
