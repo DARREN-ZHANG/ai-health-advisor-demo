@@ -45,7 +45,7 @@ export default function DataCenterPage() {
   );
 
   return (
-    <Container className="relative w-full !max-w-none !px-0 pb-20 pt-[22px]">
+    <Container className="relative w-full max-w-[430px] overflow-x-hidden !px-0 pb-20 pt-[22px]">
       <h1 className="sr-only">{t('pageTitle')}</h1>
 
       <DataCenterControls />
