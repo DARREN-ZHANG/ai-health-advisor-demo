@@ -166,9 +166,10 @@ describe('HomeHeader', () => {
     const shell = document.querySelector('[data-valo-header-shell="home"]');
     const header = document.querySelector('[data-valo-header="home"]');
 
-    expect(shell?.className).toContain('h-10');
+    expect(shell?.className).toContain('h-[50px]');
+    expect(shell?.className).toContain('pt-[10px]');
     expect(header?.className).not.toContain('top-[');
     expect(header?.className).not.toContain('absolute');
-    expect(header?.className).toContain('pt-[10px]');
+    expect(header?.className).not.toContain('pt-[10px]');
   });
 });
