@@ -68,16 +68,15 @@ export function HeroGlowCanvas({
     const primeColor = resolve(HEALTH_STATE_METADATA[state].cssVar);
     const stops = RING_STOPS[state].map(resolve);
 
-    const stars = Array.from({ length: 180 }, (_, index) => {
-      const seed = (index * 9301 + 49297) % 233280;
-      const seedB = (index * 19333 + 731) % 104729;
+    const random = createSeededRandom(0x7a10_51af);
+    const stars = Array.from({ length: 180 }, () => {
       return {
-        x: seed / 233280,
-        y: seedB / 104729,
-        size: 0.48 + ((index * 37) % 100) / 116,
-        brightness: 0.78 + ((index * 53) % 100) / 220,
-        glow: index % 7 === 0,
-        phase: (index * 0.61) % (Math.PI * 2),
+        x: random(),
+        y: random(),
+        size: 0.48 + random() * 0.86,
+        brightness: 0.78 + random() * 0.45,
+        glow: random() < 0.14,
+        phase: random() * Math.PI * 2,
       };
     });
 
@@ -323,4 +322,14 @@ function colorWithAlpha(color: string, alpha: number): string {
     return `rgba(${r},${g},${b},${alpha})`;
   }
   return color;
+}
+
+function createSeededRandom(seed: number): () => number {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let value = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    value = (value + Math.imul(value ^ (value >>> 7), 61 | value)) ^ value;
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
 }
