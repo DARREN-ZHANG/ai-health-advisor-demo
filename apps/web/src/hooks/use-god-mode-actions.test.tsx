@@ -9,13 +9,13 @@ import { useActiveSensingStore } from '@/stores/active-sensing.store';
 import type { GodModeStateResponse } from '@health-advisor/shared';
 
 /**
- * 仅针对 advanceClock 的 spec 合规测试（I2.3 review follow-up）。
+ * God Mode 写操作的 query invalidation 回归测试。
  *
  * Spec step 6 要求 advanceClock.onSuccess 同步失效 homepage、dataCenter、godMode
  * 三类查询；本测试 mock apiClient + invalidateQueries spy，验证三个 key 都被调用。
  *
- * 其他 mutation（appendTimeline / resetTimeline / appendMicroEvent）保持不动，
- * 不在此处重复覆盖，避免成为“过度测试”。
+ * appendTimeline / appendMicroEvent 由上层流程显式强制刷新简报，
+ * 不得在 mutation 层再次失效 homepage，避免并发 LLM 请求。
  */
 
 vi.mock('@/lib/api-client', () => ({
@@ -131,6 +131,31 @@ describe('useGodModeActions query invalidation', () => {
         microEventType: 'micro_hydration_walk',
         advanceClock: true,
       });
+    });
+
+    expect(invalidateSpy).not.toHaveBeenCalledWith({
+      queryKey: queryKeys.homepage.all,
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.dataCenter.all,
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.godMode.all,
+    });
+  });
+
+  it('appendTimeline 不自动刷新 homepage，避免同一次添加事件生成两次简报', async () => {
+    const { apiClient } = await import('@/lib/api-client');
+    (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValue(SAMPLE_STATE);
+
+    const { Wrapper, queryClient } = createWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => useGodModeActions(), {
+      wrapper: Wrapper,
+    });
+
+    await act(async () => {
+      await result.current.appendTimeline({ segmentType: 'walk' });
     });
 
     expect(invalidateSpy).not.toHaveBeenCalledWith({

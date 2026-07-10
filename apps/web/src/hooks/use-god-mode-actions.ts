@@ -89,6 +89,10 @@ export function useGodModeActions() {
 
   /**
    * GM-TL1: 追加活动片段
+   *
+   * 添加事件流程会在 append 成功后通过 bustCache 显式刷新首页简报。
+   * 这里不能同时 invalidate homepage，否则会并发一次普通查询和
+   * 一次强制刷新，两个 LLM 结果竞争写入同一个 query cache。
    */
   const appendTimelineMutation = useMutation({
     mutationFn: async (payload: TimelineAppendPayload) => {
@@ -97,7 +101,6 @@ export function useGodModeActions() {
     onSuccess: (state) => {
       setProfileId(state.currentProfileId);
       syncActiveSensingBanner(state.activeSensing);
-      queryClient.invalidateQueries({ queryKey: queryKeys.homepage.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.dataCenter.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.godMode.all });
     },
