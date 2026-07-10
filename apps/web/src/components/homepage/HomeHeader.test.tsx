@@ -169,5 +169,6 @@ describe('HomeHeader', () => {
     expect(shell?.className).toContain('h-10');
     expect(header?.className).not.toContain('top-[');
     expect(header?.className).not.toContain('absolute');
+    expect(header?.className).toContain('pt-[10px]');
   });
 });
