@@ -74,7 +74,9 @@ export function HeroGlowCanvas({
       return {
         x: seed / 233280,
         y: seedB / 104729,
-        size: 0.42 + ((index * 37) % 100) / 128,
+        size: 0.48 + ((index * 37) % 100) / 116,
+        brightness: 0.78 + ((index * 53) % 100) / 220,
+        glow: index % 7 === 0,
         phase: (index * 0.61) % (Math.PI * 2),
       };
     });
@@ -159,11 +161,23 @@ export function HeroGlowCanvas({
       ctx.restore();
 
       for (const star of stars) {
-        const alpha = 0.22 + Math.sin(frame * 0.035 + star.phase) * 0.16;
-        ctx.fillStyle = `rgba(255,255,255,${media.matches ? 0.36 : alpha})`;
+        const twinkle = media.matches
+          ? 0.92
+          : 0.78 + Math.sin(frame * 0.035 + star.phase) * 0.22;
+        const alpha = Math.min(
+          0.82,
+          star.brightness * twinkle * (star.glow ? 0.74 : 0.5),
+        );
+        ctx.save();
+        if (star.glow) {
+          ctx.shadowBlur = star.size * 6.4;
+          ctx.shadowColor = 'rgba(210,235,255,0.78)';
+        }
+        ctx.fillStyle = `rgba(245,250,255,${alpha})`;
         ctx.beginPath();
         ctx.arc(star.x * width, star.y * starFieldBottom, star.size, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
       }
 
       ctx.save();
