@@ -132,17 +132,52 @@ export function HeroGlowCanvas({
       const pulse = media.matches ? 0 : Math.sin(frame * 0.018) * 0.5 + 0.5;
       ctx.save();
       ctx.beginPath();
-      ctx.rect(0, Math.max(0, ring.cy - ring.radius * 0.82), width, starFieldBottom);
+      ctx.rect(0, 0, width, starFieldBottom);
       ctx.clip();
       fillEllipticalGlow(ctx, {
         cx: ring.cx,
-        cy: ring.cy + ring.radius * 0.82,
-        rx: Math.max(width * 0.72, ring.radius * 2.55),
-        ry: ring.radius * 1.34,
+        cy: curveEdgeY + ring.radius * 0.32,
+        rx: Math.max(width * 0.98, ring.radius * 3.45),
+        ry: ring.radius * 1.96,
         stops: [
-          [0, colorWithAlpha(primeColor, 0.52 + pulse * 0.06)],
-          [0.42, colorWithAlpha(primeColor, 0.34)],
-          [0.72, colorWithAlpha(primeColor, 0.14)],
+          [0, colorWithAlpha(primeColor, 0.68 + pulse * 0.08)],
+          [0.28, colorWithAlpha(primeColor, 0.48)],
+          [0.58, colorWithAlpha(primeColor, 0.25)],
+          [0.84, colorWithAlpha(primeColor, 0.1)],
+          [1, 'rgba(17,17,24,0)'],
+        ],
+      });
+      fillEllipticalGlow(ctx, {
+        cx: -width * 0.08,
+        cy: curveEdgeY + ring.radius * 0.1,
+        rx: width * 0.48,
+        ry: ring.radius * 1.42,
+        stops: [
+          [0, colorWithAlpha(primeColor, 0.24)],
+          [0.58, colorWithAlpha(primeColor, 0.12)],
+          [1, 'rgba(17,17,24,0)'],
+        ],
+      });
+      fillEllipticalGlow(ctx, {
+        cx: width * 1.08,
+        cy: curveEdgeY + ring.radius * 0.1,
+        rx: width * 0.48,
+        ry: ring.radius * 1.42,
+        stops: [
+          [0, colorWithAlpha(primeColor, 0.24)],
+          [0.58, colorWithAlpha(primeColor, 0.12)],
+          [1, 'rgba(17,17,24,0)'],
+        ],
+      });
+      fillEllipticalGlow(ctx, {
+        cx: ring.cx,
+        cy: ring.cy + ring.radius * 0.82,
+        rx: Math.max(width * 0.82, ring.radius * 2.86),
+        ry: ring.radius * 1.44,
+        stops: [
+          [0, colorWithAlpha(primeColor, 0.44 + pulse * 0.05)],
+          [0.42, colorWithAlpha(primeColor, 0.28)],
+          [0.72, colorWithAlpha(primeColor, 0.12)],
           [1, 'rgba(17,17,24,0)'],
         ],
       });
