@@ -20,7 +20,12 @@ import { LifeLogEntrySheet, type EntrySheetValues } from './LifeLogEntrySheet';
 
 const EMPTY_ENTRIES: ReadonlyArray<LifeLogEntry> = [];
 
-export function LifeLogPanel() {
+export interface LifeLogPanelProps {
+  /** LLM 简报加载中：禁用整区交互（pointer + keyboard + AT） */
+  disabled?: boolean;
+}
+
+export function LifeLogPanel({ disabled = false }: LifeLogPanelProps) {
   const t = useTranslations('lifeLog');
   const profileId = useProfileStore((state) => state.currentProfileId);
   const showToast = useUIStore((state) => state.showToast);
@@ -136,7 +141,17 @@ export function LifeLogPanel() {
   }
 
   return (
-    <section aria-label={t('title')} data-valo-life-log-panel="">
+    <section
+      aria-label={t('title')}
+      data-valo-life-log-panel=""
+      data-valo-disabled={disabled ? 'true' : undefined}
+      // React 19 原生支持 inert 作为 prop；false 时传 undefined 让 React 省略属性
+      inert={disabled || undefined}
+      className={
+        'transition-opacity duration-300 ' +
+        (disabled ? 'opacity-50' : 'opacity-100')
+      }
+    >
       <div aria-hidden={activeCategory ? true : undefined}>
         <header className="mb-4 space-y-1">
           <h2
@@ -167,7 +182,7 @@ export function LifeLogPanel() {
         <LifeLogCategoryDialog
           type={activeCategory}
           entries={entriesByType[activeCategory]}
-          pending={pending || !currentDemoTime}
+          pending={pending || !currentDemoTime || disabled}
           onClose={() => setActiveCategory(null)}
           onQuickAdd={() => void handleQuickAdd(activeCategory)}
           onCustomAdd={() => setAddFor(activeCategory)}
@@ -181,7 +196,7 @@ export function LifeLogPanel() {
           type={addFor ?? editingEntry!.type}
           defaultTime={getTimeOfDay(currentDemoTime)}
           initialEntry={editingEntry}
-          pending={pending}
+          pending={pending || disabled}
           onSubmit={(values) =>
             void persistEntry(addFor ?? editingEntry!.type, values, editingEntry ?? undefined)
           }

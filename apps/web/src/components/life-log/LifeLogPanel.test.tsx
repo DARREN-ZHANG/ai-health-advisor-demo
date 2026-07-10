@@ -177,4 +177,26 @@ describe('LifeLogPanel', () => {
     expect(screen.queryByText('1 杯 (50mg)')).toBeNull();
     expect(useLifeLogStore.getState().entriesByProfile['profile-a']).toHaveLength(1);
   });
+
+  it('disabled=true 时根 section 带 inert 属性与半透明样式', () => {
+    render(
+      <LifeLogIntlProvider>
+        <LifeLogPanel disabled />
+      </LifeLogIntlProvider>,
+    );
+    const section = document.querySelector('[data-valo-life-log-panel]');
+    expect(section).not.toBeNull();
+    // inert 是 React 19 原生 prop；真实浏览器据此阻断 pointer+keyboard+AT
+    expect(section?.hasAttribute('inert')).toBe(true);
+    expect(section?.className).toContain('opacity-50');
+    expect(section?.getAttribute('data-valo-disabled')).toBe('true');
+  });
+
+  it('默认（disabled=false）无 inert、opacity-100、无 data-valo-disabled', () => {
+    renderPanel();
+    const section = document.querySelector('[data-valo-life-log-panel]');
+    expect(section?.hasAttribute('inert')).toBe(false);
+    expect(section?.getAttribute('data-valo-disabled')).toBeNull();
+    expect(section?.className).toContain('opacity-100');
+  });
 });
