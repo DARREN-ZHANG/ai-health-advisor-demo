@@ -160,4 +160,14 @@ describe('HomeHeader', () => {
     const header = document.querySelector('[data-valo-header="home"]');
     expect(header).not.toBeNull();
   });
+
+  it('Header 紧贴页面顶部，不保留顶部空白', () => {
+    renderWithIntl(<HomeHeader />);
+    const shell = document.querySelector('[data-valo-header-shell="home"]');
+    const header = document.querySelector('[data-valo-header="home"]');
+
+    expect(shell?.className).toContain('h-10');
+    expect(header?.className).not.toContain('top-[');
+    expect(header?.className).not.toContain('absolute');
+  });
 });

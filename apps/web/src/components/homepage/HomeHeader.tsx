@@ -46,9 +46,9 @@ export function HomeHeader({ onAvatarClick }: HomeHeaderProps) {
 
   return (
     <>
-      <div className="relative z-20 -mx-4 h-[128px]" data-valo-header-shell="home">
+      <div className="relative z-20 -mx-4 h-10" data-valo-header-shell="home">
         <header
-          className="absolute left-0 right-0 top-[68px] flex h-10 items-center justify-between bg-transparent px-[22px]"
+          className="flex h-10 items-center justify-between bg-transparent px-[22px]"
           data-valo-header="home"
         >
           <div className="flex items-center gap-3">
