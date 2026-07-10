@@ -66,6 +66,7 @@ export function HeroGlowCanvas({
         ? css.getPropertyValue(value.slice(4, -1)).trim()
         : value;
     const primeColor = resolve(HEALTH_STATE_METADATA[state].cssVar);
+    const basePrimeColor = resolve('var(--valo-prime)');
     const stops = RING_STOPS[state].map(resolve);
 
     const random = createSeededRandom(0x7a10_51af);
@@ -136,36 +137,36 @@ export function HeroGlowCanvas({
       ctx.clip();
       fillEllipticalGlow(ctx, {
         cx: ring.cx,
-        cy: curveEdgeY + ring.radius * 0.32,
-        rx: Math.max(width * 0.98, ring.radius * 3.45),
-        ry: ring.radius * 1.96,
+        cy: curveEdgeY + ring.radius * 0.72,
+        rx: Math.max(width * 0.86, ring.radius * 3.05),
+        ry: ring.radius * 1.52,
         stops: [
-          [0, colorWithAlpha(primeColor, 0.68 + pulse * 0.08)],
-          [0.28, colorWithAlpha(primeColor, 0.48)],
-          [0.58, colorWithAlpha(primeColor, 0.25)],
-          [0.84, colorWithAlpha(primeColor, 0.1)],
+          [0, colorWithAlpha(primeColor, 0.82 + pulse * 0.06)],
+          [0.24, colorWithAlpha(primeColor, 0.58)],
+          [0.5, colorWithAlpha(primeColor, 0.28)],
+          [0.78, colorWithAlpha(primeColor, 0.1)],
           [1, 'rgba(17,17,24,0)'],
         ],
       });
       fillEllipticalGlow(ctx, {
         cx: -width * 0.08,
-        cy: curveEdgeY + ring.radius * 0.1,
-        rx: width * 0.48,
-        ry: ring.radius * 1.42,
+        cy: curveEdgeY + ring.radius * 0.5,
+        rx: width * 0.36,
+        ry: ring.radius * 1.08,
         stops: [
-          [0, colorWithAlpha(primeColor, 0.24)],
-          [0.58, colorWithAlpha(primeColor, 0.12)],
+          [0, colorWithAlpha(primeColor, 0.16)],
+          [0.58, colorWithAlpha(primeColor, 0.07)],
           [1, 'rgba(17,17,24,0)'],
         ],
       });
       fillEllipticalGlow(ctx, {
         cx: width * 1.08,
-        cy: curveEdgeY + ring.radius * 0.1,
-        rx: width * 0.48,
-        ry: ring.radius * 1.42,
+        cy: curveEdgeY + ring.radius * 0.5,
+        rx: width * 0.36,
+        ry: ring.radius * 1.08,
         stops: [
-          [0, colorWithAlpha(primeColor, 0.24)],
-          [0.58, colorWithAlpha(primeColor, 0.12)],
+          [0, colorWithAlpha(primeColor, 0.16)],
+          [0.58, colorWithAlpha(primeColor, 0.07)],
           [1, 'rgba(17,17,24,0)'],
         ],
       });
@@ -183,12 +184,13 @@ export function HeroGlowCanvas({
       });
       fillEllipticalGlow(ctx, {
         cx: ring.cx,
-        cy: ring.cy + ring.radius * 0.36,
-        rx: ring.radius * 1.24,
-        ry: ring.radius * 1.08,
+        cy: ring.cy + ring.radius * 0.24,
+        rx: ring.radius * 1.2,
+        ry: ring.radius * 1.02,
         stops: [
-          [0, 'rgba(3,6,9,0.74)'],
-          [0.7, 'rgba(3,6,9,0.46)'],
+          [0, 'rgba(3,6,9,0.88)'],
+          [0.58, 'rgba(3,6,9,0.62)'],
+          [0.82, 'rgba(3,6,9,0.24)'],
           [1, 'rgba(3,6,9,0)'],
         ],
       });
@@ -232,8 +234,19 @@ export function HeroGlowCanvas({
       foreground.addColorStop(1, '#251f4d');
       ctx.fillStyle = foreground;
       ctx.shadowBlur = 26;
-      ctx.shadowColor = colorWithAlpha(primeColor, 0.42);
+      ctx.shadowColor = colorWithAlpha(basePrimeColor, 0.42);
       ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      ctx.lineWidth = 2.6;
+      ctx.strokeStyle = colorWithAlpha(basePrimeColor, 0.44);
+      ctx.shadowBlur = 16;
+      ctx.shadowColor = colorWithAlpha(basePrimeColor, 0.7);
+      ctx.beginPath();
+      ctx.moveTo(0, curveEdgeY);
+      ctx.quadraticCurveTo(ring.cx, curveControlY, width, curveEdgeY);
+      ctx.stroke();
       ctx.restore();
 
       const rotationSpeed = isLoading ? 0.024 : 0.006;
