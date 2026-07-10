@@ -222,7 +222,7 @@ export default function HomePage() {
             数据为内存原型，不持久化；刷新页面即清空。挂载位置：Afternoon/Night 之后，
             符合 design-manifest.md "下方生命记录区"的版式约定。
           */}
-          <LifeLogPanel />
+          <LifeLogPanel disabled={briefIsLoading} />
         </div>
       </div>
 
