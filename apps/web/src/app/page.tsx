@@ -167,7 +167,6 @@ export default function HomePage() {
 
             <BriefTimeline
               summary={summary}
-              microTips={effectiveData?.microTips}
               isLoading={briefIsLoading && !effectiveData}
             />
 

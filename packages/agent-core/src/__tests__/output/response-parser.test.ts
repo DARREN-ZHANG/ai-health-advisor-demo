@@ -229,7 +229,10 @@ describe('actions parsing', () => {
     const raw = JSON.stringify({
       summary: '测试',
       chartTokens: [],
-      actions: [],
+      actions: [
+        { id: 'a1', emoji: '💪', title: '去运动', description: '适当运动有助于恢复', aiPromise: '我会记录你的选择并用于本次建议上下文' },
+        { id: 'a2', emoji: '😴', title: '去休息', description: '充足睡眠有助于恢复', aiPromise: '我会记录你的选择并用于本次建议上下文' },
+      ],
     });
 
     const result = parseAgentResponse(raw, {
@@ -243,7 +246,22 @@ describe('actions parsing', () => {
     }
   });
 
-  it('rejects actions above max 3', () => {
+  it('accepts 4 actions for homepage responses', () => {
+    const actions = Array.from({ length: 4 }, (_, i) => ({
+      id: `a${i}`,
+      emoji: '🔹',
+      title: `选项${i}`,
+      description: '描述',
+      aiPromise: '承诺',
+    }));
+    const result = parseAgentResponse(JSON.stringify({ summary: '测试', chartTokens: [], actions }), {
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: basePageContext,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects actions above homepage max 4', () => {
     const actions = Array.from({ length: 5 }, (_, i) => ({
       id: `a${i}`,
       emoji: '🔹',

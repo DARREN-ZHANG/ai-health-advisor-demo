@@ -205,6 +205,9 @@ describe('buildTaskPrompt', () => {
 
     expect(prompt).toContain('"actions"');
     expect(prompt).toContain('"actionsSectionTitle"');
+    expect(prompt).toContain('2-4 个行动方案');
+    expect(prompt).toContain('"id": "action_2"');
+    expect(prompt).toContain('不要输出 `microTips` 字段');
     expect(prompt).not.toContain('"microTips": ["贴士1", "贴士2"]');
     expect(prompt).not.toContain('returned to baseline');
   });

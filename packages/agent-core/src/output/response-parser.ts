@@ -7,7 +7,13 @@ import {
 } from '@health-advisor/shared';
 import type { AgentResponseEnvelope, PageContext, FutureSuggestion } from '@health-advisor/shared';
 import { ChartTokenIdSchema } from '@health-advisor/shared';
-import { MAX_CHART_TOKENS, MAX_MICRO_TIPS, MAX_HOMEPAGE_MICRO_TIPS, MAX_ACTIONS } from '../constants/limits';
+import {
+  MAX_ACTIONS,
+  MAX_CHART_TOKENS,
+  MAX_HOMEPAGE_ACTIONS,
+  MAX_HOMEPAGE_MICRO_TIPS,
+  MAX_MICRO_TIPS,
+} from '../constants/limits';
 
 export interface ParseMeta {
   taskType: AgentTaskType;
@@ -96,10 +102,12 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
         raw,
       };
     }
-    if (obj.actions.length > MAX_ACTIONS) {
+    const maxActions =
+      meta.taskType === AgentTaskType.HOMEPAGE_SUMMARY ? MAX_HOMEPAGE_ACTIONS : MAX_ACTIONS;
+    if (obj.actions.length > maxActions) {
       return {
         success: false,
-        error: `actions 数量超过最大值 ${MAX_ACTIONS}`,
+        error: `actions 数量超过最大值 ${maxActions}`,
         raw,
       };
     }

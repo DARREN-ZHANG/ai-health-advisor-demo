@@ -235,8 +235,8 @@ export function buildTaskPrompt(
     sections.push(
       t(
         locale,
-        '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "🚶",\n      "title": "要不要轻走一下",\n      "description": "现在起身走 10 分钟，让心率和注意力缓一缓",\n      "aiPromise": "我会记录你的选择并用于本次建议上下文",\n      "interaction": {\n        "kind": "micro_event",\n        "microEvent": {\n          "type": "micro_short_walk",\n          "durationMinutes": 10\n        }\n      }\n    }\n  ],',
-        '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "🚶",\n      "title": "Take a light walk",\n      "description": "Stand up and walk for 10 minutes to ease your heart rate and focus load",\n      "aiPromise": "I will record your choice and use it in this advice context",\n      "interaction": {\n        "kind": "micro_event",\n        "microEvent": {\n          "type": "micro_short_walk",\n          "durationMinutes": 10\n        }\n      }\n    }\n  ],',
+        '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "💧",\n      "title": "先小口补水",\n      "description": "运动后小口补水，帮助身体平稳恢复",\n      "aiPromise": "我会记录你的选择并用于本次建议上下文"\n    },\n    {\n      "id": "action_2",\n      "emoji": "🧘",\n      "title": "做组恢复拉伸",\n      "description": "用 5 分钟轻柔拉伸放松紧张肌群",\n      "aiPromise": "我会记录你的选择并用于本次建议上下文"\n    }\n  ],',
+        '  "actions": [\n    {\n      "id": "action_1",\n      "emoji": "💧",\n      "title": "Have some water",\n      "description": "Sip water after exercise to support a steady recovery",\n      "aiPromise": "I will record your choice and use it in this advice context"\n    },\n    {\n      "id": "action_2",\n      "emoji": "🧘",\n      "title": "Do a recovery stretch",\n      "description": "Use five minutes of gentle stretching to relax tense muscles",\n      "aiPromise": "I will record your choice and use it in this advice context"\n    }\n  ],',
       ),
     );
     sections.push(

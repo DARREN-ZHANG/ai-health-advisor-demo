@@ -105,7 +105,7 @@ export const AgentResponseEnvelopeSchema = z.object({
   statusColor: z.enum(['good', 'warning', 'error']),
   chartTokens: z.array(ChartTokenIdSchema),
   microTips: z.array(z.string()).optional(),
-  actions: z.array(ActionOptionSchema).max(3).optional(),
+  actions: z.array(ActionOptionSchema).max(4).optional(),
   actionsSectionTitle: z.string().optional(),
   memoryCandidates: z.array(MemoryCandidateConfirmationSchema).optional(),
   futureSuggestions: z.array(FutureSuggestionSchema).max(2).optional(),

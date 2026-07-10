@@ -28,49 +28,17 @@ describe('BriefTimeline', () => {
     expect(arrow?.className).toContain('leading-5');
   });
 
-  it('渲染 microTips 列表', () => {
-    renderWithIntl(
-      <BriefTimeline summary="x" microTips={['多喝水', '适当拉伸']} />,
-    );
-    expect(screen.getByText('多喝水')).toBeInTheDocument();
-    expect(screen.getByText('适当拉伸')).toBeInTheDocument();
-    expect(screen.getByText('提示')).toBeInTheDocument();
-  });
-
-  it('microTips 为空时不渲染 Tips 区', () => {
-    renderWithIntl(<BriefTimeline summary="x" microTips={[]} />);
-    expect(screen.queryByText('提示')).not.toBeInTheDocument();
-  });
-
-  it('默认无 microTips 不渲染 Tips 区', () => {
+  it('不渲染第二类 microTips 建议卡片', () => {
     renderWithIntl(<BriefTimeline summary="x" />);
-    expect(screen.queryByText('提示')).not.toBeInTheDocument();
-  });
-
-  it('microTips 项不渲染任何按钮（非交互）', () => {
-    renderWithIntl(
-      <BriefTimeline summary="x" microTips={['提示一', '提示二']} />,
-    );
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
-  });
-
-  it('microTips 移动端按约 1.8 张卡片可见设置宽度', () => {
-    renderWithIntl(
-      <BriefTimeline summary="x" microTips={['提示一', '提示二']} />,
-    );
-    const card = document.querySelector('[data-valo-micro-tip-card]');
-    expect(card).not.toBeNull();
-    expect((card as HTMLElement).style.flexBasis).toBe(
-      'calc(0.5555555555555556 * (100% - 12px))',
-    );
+    expect(document.querySelector('[data-valo-micro-tips]')).toBeNull();
+    expect(document.querySelector('[data-valo-micro-tip-card]')).toBeNull();
   });
 
   it('isLoading=true 渲染骨架而非内容', () => {
     renderWithIntl(
-      <BriefTimeline summary="x" microTips={['a']} isLoading />,
+      <BriefTimeline summary="x" isLoading />,
     );
     expect(screen.queryByText('x')).not.toBeInTheDocument();
-    expect(screen.queryByText('a')).not.toBeInTheDocument();
   });
 
   it('isLoading=true 标记 aria-busy', () => {

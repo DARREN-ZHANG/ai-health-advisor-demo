@@ -1006,7 +1006,7 @@ describe('AgentResponseEnvelopeSchema — actions & microTips optional', () => {
     }
   });
 
-  it('rejects actions with more than 3 items', () => {
+  it('accepts up to 4 actions', () => {
     const actions = Array.from({ length: 4 }, (_, i) => ({
       id: `opt-${i}`,
       emoji: '🏃',
@@ -1027,6 +1027,29 @@ describe('AgentResponseEnvelopeSchema — actions & microTips optional', () => {
       },
     };
     const result = AgentResponseEnvelopeSchema.safeParse(envelope);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects actions with more than 4 items', () => {
+    const actions = Array.from({ length: 5 }, (_, i) => ({
+      id: `opt-${i}`,
+      emoji: '🏃',
+      title: `选项${i}`,
+      description: `描述${i}`,
+      aiPromise: `承诺${i}`,
+    }));
+    const result = AgentResponseEnvelopeSchema.safeParse({
+      summary: '测试摘要',
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      actions,
+      meta: {
+        taskType: 'homepage_summary',
+        pageContext: validPageContext,
+        finishReason: 'complete',
+      },
+    });
     expect(result.success).toBe(false);
   });
 

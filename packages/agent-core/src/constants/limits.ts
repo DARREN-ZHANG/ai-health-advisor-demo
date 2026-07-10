@@ -21,3 +21,6 @@ export const LOW_DATA_THRESHOLD = 3;
 
 /** 单次响应最大 action 选项数 */
 export const MAX_ACTIONS = 3;
+
+/** 首页简报最大 action 选项数 */
+export const MAX_HOMEPAGE_ACTIONS = 4;
