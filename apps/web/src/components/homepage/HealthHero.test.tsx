@@ -126,7 +126,7 @@ describe('HealthHero', () => {
     const hero = document.querySelector('[data-valo-hero="true"]');
     expect(hero).toHaveAttribute('data-valo-state', 'prime-readiness');
     expect(hero).toHaveAttribute('data-valo-loading', 'true');
-    expect(screen.getByText('Valo is thinking')).toBeInTheDocument();
+    expect(screen.getByText('Thinking')).toBeInTheDocument();
     expect(screen.queryByText('糖原耗尽')).not.toBeInTheDocument();
   });
 

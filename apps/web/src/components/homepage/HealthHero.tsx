@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { HEALTH_STATE_METADATA } from '@/lib/valo-theme';
 import type { HealthVisualState } from '@/lib/valo-theme';
 import { HeroGlowCanvas } from './HeroGlowCanvas';
+import { ThinkingText } from './ThinkingText';
 
 /**
  * HealthHero —— 首页 Hero 区，承载"四态健康状态环"。
@@ -60,8 +61,9 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
     const t = useTranslations('health');
     const visualState = isLoading ? 'prime-readiness' : state;
     const meta = HEALTH_STATE_METADATA[visualState];
+    // loading 时圆心由 <ThinkingText /> 接管，stateLabel 留空
     const stateLabel = isLoading
-      ? t('thinking')
+      ? null
       : t(`state.${state}` as const);
     const ringLabel = t('switchStatus.ringLabel');
 
@@ -119,7 +121,7 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
               className="max-w-[8ch] text-center text-[28px] leading-[1.05] text-[var(--valo-text-primary)]"
               style={{ fontFamily: 'var(--valo-font-serif)' }}
             >
-              {stateLabel}
+              {stateLabel ?? <ThinkingText />}
             </span>
           </span>
         </button>

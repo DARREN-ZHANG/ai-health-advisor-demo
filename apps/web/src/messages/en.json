@@ -143,7 +143,6 @@
     "demoTimeUnavailable": "Mock Timeline time is unavailable"
   },
   "health": {
-    "thinking": "Valo is thinking",
     "state": {
       "prime-readiness": "Prime Readiness",
       "active-recovery": "Active Recovery",
