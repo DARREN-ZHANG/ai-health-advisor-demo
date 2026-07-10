@@ -27,7 +27,7 @@ const dmSerif = DM_Serif_Display({
 });
 
 export const metadata: Metadata = {
-  title: 'AI Health Advisor',
+  title: 'VALO',
   description: '智能健康顾问 - 你的个人 AI 健康专家',
 };
 
