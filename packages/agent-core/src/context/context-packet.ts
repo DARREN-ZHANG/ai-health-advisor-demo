@@ -352,6 +352,8 @@ export interface HomepageEventTransitionContext {
 
 export interface HomepageEventInsight {
   eventId: string;
+  /** 事件识别器输出的原始类型；语义归一化不能丢失用户刚触发的微事件。 */
+  rawEventType?: string;
   eventType: HomepageSemanticEventType;
   priority: 'high' | 'medium' | 'low';
   timeRelation: string;

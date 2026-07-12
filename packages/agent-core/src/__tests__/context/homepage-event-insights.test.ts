@@ -24,6 +24,28 @@ describe('homepage event insights', () => {
   ])('maps %s to %s', (input, expected) => {
     expect(normalizeHomepageEventType(input)).toBe(expected);
   });
+
+  it('保留最近微事件的原始类型供 LLM context 使用', () => {
+    const homepage = makeHomepage({
+      recentEvents: [{
+        recognizedEventId: 're-micro-breathing',
+        type: 'micro_deep_breathing',
+        start: '2026-04-21T12:00',
+        end: '2026-04-21T12:03',
+        durationMin: 3,
+        confidence: 1,
+        sourceSegmentId: 'seg-micro-deep-breathing',
+        recognitionEvidence: ['用户选择触发微事件 micro_deep_breathing'],
+        syncState: { lastSyncedMeasuredAt: '2026-04-21T12:03', pendingEventCount: 0, fromSyncedWindow: true },
+        evidenceIds: ['event_micro_deep_breathing_2026-04-21T12:00'],
+      }],
+    });
+
+    const [insight] = buildHomepageEventInsights({ homepage, demoNow: '2026-04-21T12:03' });
+
+    expect(insight?.eventType).toBe('unknown');
+    expect(insight?.rawEventType).toBe('micro_deep_breathing');
+  });
 });
 
 function makeHomepage(overrides: Partial<HomepageContextPacket> = {}): HomepageContextPacket {

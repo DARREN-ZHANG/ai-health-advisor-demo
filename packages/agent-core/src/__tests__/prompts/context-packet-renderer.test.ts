@@ -737,6 +737,7 @@ describe('renderTaskContextPacket', () => {
         eventInsights: [
           {
             eventId: 'event_deep_focus_2026-04-21T10:00',
+            rawEventType: 'micro_deep_breathing',
             eventType: 'work_focus',
             priority: 'high',
             timeRelation: '刚结束约 10 min',
@@ -795,6 +796,7 @@ describe('renderTaskContextPacket', () => {
 
     const output = renderTaskContextPacket(packet, 'zh', '2026-04-21T12:10');
     expect(output).toContain('actions 候选');
+    expect(output).toContain('最近事件原始类型：micro_deep_breathing');
     expect(output).toContain('"kind":"micro_event"');
     expect(output).toContain('"type":"micro_deep_breathing"');
     expect(output).toContain('interaction=none');

@@ -109,6 +109,7 @@ export function buildHomepageEventInsights(
 
     return {
       eventId,
+      rawEventType: event.type,
       eventType,
       priority: index === 0 ? 'high' : 'medium',
       timeRelation: formatTimeRelation(event.end, demoNow),

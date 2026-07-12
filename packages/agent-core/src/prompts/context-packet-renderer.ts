@@ -277,6 +277,9 @@ function renderDisplayableHomepageEvent(homepage: HomepageContextPacket, locale:
     ),
   );
   lines.push(`- [${current.priority}] ${current.eventType}, ${current.timeRelation}`);
+  lines.push(
+    `  - ${t(locale, '最近事件原始类型', 'Latest raw event type')}${colon(locale)}${current.rawEventType ?? current.eventType}`,
+  );
   lines.push(`  - ${t(locale, '事件摘要', 'Event summary')}${colon(locale)}${current.headline}`);
   if (current.eventWindow) {
     lines.push(
