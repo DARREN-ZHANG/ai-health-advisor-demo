@@ -12,7 +12,16 @@ vi.mock('./use-god-mode-actions', () => ({ useGodModeActions: vi.fn() }));
 vi.mock('./use-ai-query', () => ({ useRefetchBrief: vi.fn() }));
 
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <NextIntlClientProvider locale="zh" messages={{ demoControl: { operationFailed: '操作失败' } }}>
+  <NextIntlClientProvider
+    locale="zh"
+    messages={{
+      demoControl: {
+        operationFailed: '操作失败',
+        resetFailed: '重置时间轴失败',
+        resetSucceeded: '时间轴已重置',
+      },
+    }}
+  >
     {children}
   </NextIntlClientProvider>
 );
@@ -34,6 +43,7 @@ function segment(
 async function setup(overrides: {
   appendTimeline?: ReturnType<typeof vi.fn>;
   injectEvent?: ReturnType<typeof vi.fn>;
+  resetTimeline?: ReturnType<typeof vi.fn>;
   refetchBrief?: ReturnType<typeof vi.fn>;
 }) {
   const { useGodModeActions } = await import('./use-god-mode-actions');
@@ -41,6 +51,8 @@ async function setup(overrides: {
   (useGodModeActions as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
     appendTimeline: overrides.appendTimeline ?? vi.fn(),
     injectEvent: overrides.injectEvent ?? vi.fn(),
+    resetTimeline: overrides.resetTimeline ?? vi.fn(),
+    isResettingTimeline: false,
   });
   const refetchMock = overrides.refetchBrief ?? vi.fn().mockResolvedValue(null);
   (useRefetchBrief as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -118,6 +130,33 @@ describe('useDemoControlActions', () => {
     // toast + pending 清空
     expect(useUIStore.getState().toasts[0]?.message).toBe('操作失败');
     expect(useGodModeStore.getState().pendingSegmentType).toBeNull();
+    expect(useGodModeStore.getState().isBriefRefreshing).toBe(false);
+  });
+
+  it('重置时间轴期间展示 skeleton，完成简报刷新后清除 loading 状态', async () => {
+    let resolveReset: (() => void) | undefined;
+    const resetTimeline = vi.fn(
+      () => new Promise<void>((resolve) => {
+        resolveReset = resolve;
+      }),
+    );
+    const refetchBrief = vi.fn().mockResolvedValue(null);
+    const { result } = await setup({ resetTimeline, refetchBrief });
+
+    let resetPromise: Promise<void> | undefined;
+    act(() => {
+      resetPromise = result.current.onResetTimeline();
+    });
+
+    expect(resetTimeline).toHaveBeenCalledWith({ profileId: 'profile-a' });
+    expect(useGodModeStore.getState().isBriefRefreshing).toBe(true);
+
+    resolveReset?.();
+    await act(async () => {
+      await resetPromise;
+    });
+
+    expect(refetchBrief).toHaveBeenCalledTimes(1);
     expect(useGodModeStore.getState().isBriefRefreshing).toBe(false);
   });
 });

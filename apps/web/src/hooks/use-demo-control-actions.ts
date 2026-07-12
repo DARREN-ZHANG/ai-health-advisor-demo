@@ -120,6 +120,9 @@ export function useDemoControlActions() {
   );
 
   const handleResetTimeline = useCallback(async () => {
+    // reset 与添加普通事件一样会改变简报上下文；在后端重置和 LLM 刷新期间
+    // 维持全局标志，使首页隐藏旧简报并展示 skeleton。
+    setIsBriefRefreshing(true);
     try {
       await resetTimeline({ profileId: currentProfileId });
       toggleOpen(false);
@@ -128,8 +131,18 @@ export function useDemoControlActions() {
     } catch (error) {
       showToast(t('resetFailed'), 'error');
       console.error('Failed to reset profile timeline:', error);
+    } finally {
+      setIsBriefRefreshing(false);
     }
-  }, [currentProfileId, refetchBrief, resetTimeline, showToast, t, toggleOpen]);
+  }, [
+    currentProfileId,
+    refetchBrief,
+    resetTimeline,
+    setIsBriefRefreshing,
+    showToast,
+    t,
+    toggleOpen,
+  ]);
 
   return {
     onSegmentClick: handleSegmentClick,
