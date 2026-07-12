@@ -20,6 +20,12 @@ services:
         sync: false
       - key: LLM_MODEL
         sync: false
+      - key: AI_TIMEOUT_MS
+        value: "60000"
+      - key: LLM_TIMEOUT_MS
+        value: "60000"
+      - key: LLM_MAX_RETRIES
+        value: "0"
       - key: FALLBACK_ONLY_MODE
         value: "true"
       - key: ENABLE_GOD_MODE

@@ -9,7 +9,7 @@ describe('resolveProviderConfig', () => {
     expect(config.apiKey).toBe('');
     expect(config.timeoutMs).toBe(60000);
     expect(config.temperature).toBe(0.3);
-    expect(config.maxRetries).toBe(2);
+    expect(config.maxRetries).toBe(0);
   });
 
   it('reads env vars when provided', () => {

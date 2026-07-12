@@ -91,6 +91,45 @@ describe('AiOrchestrator', () => {
     expect(metrics.calls).toEqual({});
   });
 
+  it('记录执行阶段耗时，供生产日志定位慢请求', async () => {
+    mockedExecuteAgent.mockImplementationOnce(async (_request, _deps, _timeout, observer) => {
+      observer?.onContextBuilt?.({} as never);
+      observer?.onRulesEvaluated?.({} as never);
+      observer?.onPacketBuilt?.({} as never);
+      observer?.onPromptBuilt?.({ systemPrompt: 'system', taskPrompt: 'task' });
+      observer?.onModelOutput?.('{"summary":"ok"}');
+      observer?.onParsed?.(completeResponse);
+      observer?.onVerified?.({} as never);
+      return completeResponse;
+    });
+    const orchestrator = new AiOrchestrator({
+      registry: makeRegistry(),
+      metrics: makeMetrics(),
+      timeoutMs: 60000,
+      memoryServices: makeMemoryServices(),
+      modelVersion: 'gpt-test',
+    });
+    let timings: Record<string, unknown> | undefined;
+
+    await orchestrator.execute({
+      requestId: 'req-timing', sessionId: 'sess-1', profileId: 'profile-a',
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY, pageContext: defaultPageContext,
+    }, undefined, { onTimings: (value) => { timings = value; } });
+
+    expect(timings).toMatchObject({
+      cacheLookupMs: expect.any(Number),
+      contextMs: expect.any(Number),
+      rulesMs: expect.any(Number),
+      packetMs: expect.any(Number),
+      promptBuildMs: expect.any(Number),
+      llmMs: expect.any(Number),
+      postProcessMs: expect.any(Number),
+      agentMs: expect.any(Number),
+      cacheWriteMs: expect.any(Number),
+      orchestrationMs: expect.any(Number),
+    });
+  });
+
   it('fallback 时增加 fallbackUsed 计数', async () => {
     const fallbackResponse: AgentResponseEnvelope = {
       ...completeResponse,

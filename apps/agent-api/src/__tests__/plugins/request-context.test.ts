@@ -92,6 +92,7 @@ describe('requestContextPlugin', () => {
         model: 'gpt-4o-mini',
         finishReason: 'complete',
         fallbackTriggered: false,
+        timings: { llmMs: 4200, orchestrationMs: 4300 },
       };
       return { ok: true };
     });
@@ -109,6 +110,7 @@ describe('requestContextPlugin', () => {
     expect(logObj.model).toBe('gpt-4o-mini');
     expect(logObj.finishReason).toBe('complete');
     expect(logObj.fallbackTriggered).toBe(false);
+    expect(logObj.timings).toEqual({ llmMs: 4200, orchestrationMs: 4300 });
 
     logSpy.mockRestore();
     await testApp.close();

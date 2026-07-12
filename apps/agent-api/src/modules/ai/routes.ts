@@ -4,8 +4,9 @@ import { createSuccessResponse, createErrorResponse, ErrorCode, AgentTaskType, P
 import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 import { AgentRequestSchema } from '@health-advisor/agent-core';
 import { buildMeta } from '../../utils/meta.js';
-import { AiOrchestrator } from '../../services/ai-orchestrator.js';
+import { AiOrchestrator, type AiExecutionTimings } from '../../services/ai-orchestrator.js';
 import type { AiRequestMeta } from '../../plugins/request-context.js';
+import { SINGLE_LLM_TIMEOUT_MS } from '../../runtime/registry.js';
 
 interface MorningBriefBody {
   profileId: string;
@@ -32,7 +33,7 @@ export async function aiRoutes(app: FastifyInstance) {
   const orchestrator = new AiOrchestrator({
     registry: app.runtime,
     metrics: app.metrics,
-    timeoutMs: app.config.AI_TIMEOUT_MS,
+    timeoutMs: Math.min(app.config.AI_TIMEOUT_MS, SINGLE_LLM_TIMEOUT_MS),
     memoryServices: app.memoryServices,
     modelVersion: app.config.LLM_MODEL,
   });
@@ -41,17 +42,20 @@ export async function aiRoutes(app: FastifyInstance) {
   function attachAiLogMeta(
     request: { ctx: { aiMeta?: AiRequestMeta } },
     finishReason: string,
+    timings?: AiExecutionTimings,
   ) {
     request.ctx.aiMeta = {
       provider: app.config.LLM_PROVIDER,
       model: app.config.LLM_MODEL,
       finishReason,
       fallbackTriggered: finishReason === 'fallback' || finishReason === 'timeout',
+      ...(timings ? { timings } : {}),
     };
   }
 
   // BE-018: /ai/morning-brief
   app.post<{ Body: MorningBriefBody }>('/ai/morning-brief', async (request, reply) => {
+    const routeStartedAt = performance.now();
     const { profileId, pageContext, bustCache } = request.body;
 
     // 手动刷新时清除该 profile 的当日缓存，确保调用 LLM
@@ -90,13 +94,23 @@ export async function aiRoutes(app: FastifyInstance) {
       );
     }
 
-    const result = await orchestrator.execute(parseResult.data, request.lang);
-    attachAiLogMeta(request, result.meta.finishReason);
+    const orchestrationStartedAt = performance.now();
+    let timings: AiExecutionTimings | undefined;
+    const result = await orchestrator.execute(parseResult.data, request.lang, {
+      onTimings: (value) => {
+        timings = {
+          ...value,
+          routePreparationMs: Math.round(orchestrationStartedAt - routeStartedAt),
+        };
+      },
+    });
+    attachAiLogMeta(request, result.meta.finishReason, timings);
     return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
   });
 
   // BE-019: /ai/view-summary
   app.post<{ Body: ViewSummaryBody }>('/ai/view-summary', async (request, reply) => {
+    const routeStartedAt = performance.now();
     const { profileId, pageContext, tab, timeframe } = request.body;
 
     const parsed = PageContextSchema.safeParse(pageContext);
@@ -123,13 +137,23 @@ export async function aiRoutes(app: FastifyInstance) {
       );
     }
 
-    const result = await orchestrator.execute(parseResult.data, request.lang);
-    attachAiLogMeta(request, result.meta.finishReason);
+    const orchestrationStartedAt = performance.now();
+    let timings: AiExecutionTimings | undefined;
+    const result = await orchestrator.execute(parseResult.data, request.lang, {
+      onTimings: (value) => {
+        timings = {
+          ...value,
+          routePreparationMs: Math.round(orchestrationStartedAt - routeStartedAt),
+        };
+      },
+    });
+    attachAiLogMeta(request, result.meta.finishReason, timings);
     return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
   });
 
   // BE-020: /ai/chat
   app.post<{ Body: ChatBody }>('/ai/chat', async (request, reply) => {
+    const routeStartedAt = performance.now();
     const { profileId, pageContext, userMessage, smartPromptId, visibleChartIds } = request.body;
 
     if (!userMessage || typeof userMessage !== 'string') {
@@ -163,8 +187,17 @@ export async function aiRoutes(app: FastifyInstance) {
       );
     }
 
-    const result = await orchestrator.execute(parseResult.data, request.lang);
-    attachAiLogMeta(request, result.meta.finishReason);
+    const orchestrationStartedAt = performance.now();
+    let timings: AiExecutionTimings | undefined;
+    const result = await orchestrator.execute(parseResult.data, request.lang, {
+      onTimings: (value) => {
+        timings = {
+          ...value,
+          routePreparationMs: Math.round(orchestrationStartedAt - routeStartedAt),
+        };
+      },
+    });
+    attachAiLogMeta(request, result.meta.finishReason, timings);
 
     const memoryCandidates = [];
 

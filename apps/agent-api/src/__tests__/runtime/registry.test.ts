@@ -105,6 +105,7 @@ describe('RuntimeRegistry', () => {
       LLM_MODEL: 'glm-4.7',
       LLM_BASE_URL: 'https://open.bigmodel.cn/api/paas/v4',
       LLM_TIMEOUT_MS: '60000',
+      LLM_MAX_RETRIES: '2',
       DATA_DIR,
     });
 
@@ -114,6 +115,26 @@ describe('RuntimeRegistry', () => {
       LLM_API_KEY: 'sk-test',
       LLM_BASE_URL: 'https://open.bigmodel.cn/api/paas/v4',
       LLM_TIMEOUT_MS: '60000',
+      LLM_MAX_RETRIES: '0',
+      PLANNER_LLM_MAX_RETRIES: '0',
+      REVIEWER_LLM_MAX_RETRIES: '0',
+    });
+  });
+
+  it('将超过 60 秒的模型超时限制为单次请求预算', () => {
+    const config = loadConfig({
+      FALLBACK_ONLY_MODE: 'false',
+      LLM_API_KEY: 'sk-test',
+      LLM_TIMEOUT_MS: '120000',
+      PLANNER_LLM_TIMEOUT_MS: '90000',
+      REVIEWER_LLM_TIMEOUT_MS: '70000',
+      DATA_DIR,
+    });
+
+    expect(toProviderEnv(config)).toMatchObject({
+      LLM_TIMEOUT_MS: '60000',
+      PLANNER_LLM_TIMEOUT_MS: '60000',
+      REVIEWER_LLM_TIMEOUT_MS: '60000',
     });
   });
 

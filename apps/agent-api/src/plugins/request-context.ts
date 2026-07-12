@@ -1,6 +1,7 @@
 import fp from 'fastify-plugin';
 import crypto from 'node:crypto';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { AiExecutionTimings } from '../services/ai-orchestrator.js';
 
 /** AI 路由的额外日志字段 */
 export interface AiRequestMeta {
@@ -8,6 +9,7 @@ export interface AiRequestMeta {
   model: string;
   finishReason: string;
   fallbackTriggered: boolean;
+  timings?: AiExecutionTimings;
 }
 
 export interface RequestContext {

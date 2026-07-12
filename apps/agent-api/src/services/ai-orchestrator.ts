@@ -1,6 +1,10 @@
 import crypto from 'node:crypto';
 import { AgentTaskType, type AgentResponseEnvelope, type Locale } from '@health-advisor/shared';
-import { executeAgent, type AgentRequest } from '@health-advisor/agent-core';
+import {
+  executeAgent,
+  type AgentRequest,
+  type AgentRuntimeObserver,
+} from '@health-advisor/agent-core';
 import type { RuntimeRegistry } from '../runtime/registry.js';
 import type { MetricsStore } from '../plugins/metrics.js';
 import type { MemoryServices } from '../runtime/memory-services.js';
@@ -14,6 +18,30 @@ export interface AiOrchestratorDeps {
   modelVersion: string;
 }
 
+/**
+ * 单个 AI 请求的关键阶段耗时。所有值单位均为毫秒，未执行的阶段省略。
+ * 该结构会写入 Render 的 request completed 日志，便于直接定位慢点。
+ */
+export interface AiExecutionTimings {
+  routePreparationMs?: number;
+  cacheLookupMs?: number;
+  cacheHit?: boolean;
+  contextMs?: number;
+  rulesMs?: number;
+  packetMs?: number;
+  promptBuildMs?: number;
+  llmMs?: number;
+  postProcessMs?: number;
+  syncGateMs?: number;
+  agentMs?: number;
+  cacheWriteMs?: number;
+  orchestrationMs: number;
+}
+
+export interface AiOrchestratorExecuteOptions {
+  onTimings?(timings: AiExecutionTimings): void;
+}
+
 function cacheableTask(taskType: AgentTaskType): boolean {
   return taskType === AgentTaskType.HOMEPAGE_SUMMARY || taskType === AgentTaskType.VIEW_SUMMARY;
 }
@@ -21,7 +49,13 @@ function cacheableTask(taskType: AgentTaskType): boolean {
 export class AiOrchestrator {
   constructor(private deps: AiOrchestratorDeps) {}
 
-  async execute(request: AgentRequest, locale?: Locale): Promise<AgentResponseEnvelope> {
+  async execute(
+    request: AgentRequest,
+    locale?: Locale,
+    options?: AiOrchestratorExecuteOptions,
+  ): Promise<AgentResponseEnvelope> {
+    const startedAt = performance.now();
+    const timings: AiExecutionTimings = { orchestrationMs: 0 };
     const cacheIdentity = cacheableTask(request.taskType)
       ? buildAgentCacheIdentity({
           request,
@@ -32,29 +66,36 @@ export class AiOrchestrator {
         })
       : undefined;
 
-    if (cacheIdentity) {
-      const cached = await this.deps.memoryServices.cache.get({
-        ...cacheIdentity,
-        profileId: request.profileId,
-        now: Date.now(),
-      });
-      if (cached) {
-        this.deps.metrics.incrementBriefCacheHit();
-        return {
-          ...(cached.payload as unknown as AgentResponseEnvelope),
-          meta: { ...(cached.payload as unknown as AgentResponseEnvelope).meta, finishReason: 'cached' },
-        };
-      }
-    }
-
     try {
+      if (cacheIdentity) {
+        const cacheStartedAt = performance.now();
+        const cached = await this.deps.memoryServices.cache.get({
+          ...cacheIdentity,
+          profileId: request.profileId,
+          now: Date.now(),
+        });
+        timings.cacheLookupMs = Math.round(performance.now() - cacheStartedAt);
+        if (cached) {
+          timings.cacheHit = true;
+          this.deps.metrics.incrementBriefCacheHit();
+          return {
+            ...(cached.payload as unknown as AgentResponseEnvelope),
+            meta: { ...(cached.payload as unknown as AgentResponseEnvelope).meta, finishReason: 'cached' },
+          };
+        }
+      }
+
+      const phaseTimings = createRuntimeTimingObserver(startedAt);
+      const agentStartedAt = performance.now();
       const result = await executeAgent(
         request,
         this.deps.registry,
         this.deps.timeoutMs,
-        undefined,
+        phaseTimings.observer,
         locale,
       );
+      timings.agentMs = Math.round(performance.now() - agentStartedAt);
+      Object.assign(timings, phaseTimings.snapshot());
 
       if (result.meta.finishReason === 'timeout') {
         this.deps.metrics.incrementAiTimeout();
@@ -64,6 +105,7 @@ export class AiOrchestrator {
       }
 
       if (cacheIdentity && result.meta.finishReason === 'complete') {
+        const cacheWriteStartedAt = performance.now();
         await this.deps.memoryServices.cache.set({
           id: crypto.randomUUID(),
           ...cacheIdentity,
@@ -74,12 +116,78 @@ export class AiOrchestrator {
           createdAt: Date.now(),
           expiresAt: Date.now() + 2 * 60 * 60 * 1000,
         });
+        timings.cacheWriteMs = Math.round(performance.now() - cacheWriteStartedAt);
       }
 
       return result;
     } catch (error) {
       this.deps.metrics.incrementProviderError();
       throw error;
+    } finally {
+      timings.orchestrationMs = Math.round(performance.now() - startedAt);
+      options?.onTimings?.(timings);
     }
   }
+}
+
+function createRuntimeTimingObserver(startedAt: number): {
+  observer: AgentRuntimeObserver;
+  snapshot: () => Omit<AiExecutionTimings, 'cacheLookupMs' | 'cacheHit' | 'agentMs' | 'cacheWriteMs' | 'orchestrationMs'>;
+} {
+  let contextBuiltAt: number | undefined;
+  let rulesEvaluatedAt: number | undefined;
+  let packetBuiltAt: number | undefined;
+  let promptBuiltAt: number | undefined;
+  let modelOutputAt: number | undefined;
+  let parsedAt: number | undefined;
+  let verifiedAt: number | undefined;
+  let syncGateStartedAt: number | undefined;
+  const timings: Record<string, number> = {};
+
+  const now = () => performance.now();
+  const elapsed = (from: number) => Math.round(now() - from);
+
+  return {
+    observer: {
+      onContextBuilt: () => {
+        contextBuiltAt = now();
+        timings.contextMs = Math.round(contextBuiltAt - startedAt);
+      },
+      onRulesEvaluated: () => {
+        rulesEvaluatedAt = now();
+        if (contextBuiltAt !== undefined) timings.rulesMs = Math.round(rulesEvaluatedAt - contextBuiltAt);
+      },
+      onPacketBuilt: () => {
+        packetBuiltAt = now();
+        if (rulesEvaluatedAt !== undefined) timings.packetMs = Math.round(packetBuiltAt - rulesEvaluatedAt);
+      },
+      onPromptBuilt: () => {
+        promptBuiltAt = now();
+        if (packetBuiltAt !== undefined) timings.promptBuildMs = Math.round(promptBuiltAt - packetBuiltAt);
+      },
+      onModelOutput: () => {
+        modelOutputAt = now();
+        if (promptBuiltAt !== undefined) timings.llmMs = Math.round(modelOutputAt - promptBuiltAt);
+      },
+      onParsed: () => {
+        parsedAt = now();
+        if (modelOutputAt !== undefined) timings.postProcessMs = Math.round(parsedAt - modelOutputAt);
+      },
+      onVerified: () => {
+        verifiedAt = now();
+        syncGateStartedAt = verifiedAt;
+      },
+      onSyncGate: () => {
+        if (syncGateStartedAt !== undefined) timings.syncGateMs = elapsed(syncGateStartedAt);
+      },
+    },
+    snapshot: () => {
+      // 模型超时/连接错误时不会触发 onModelOutput；仍将从 prompt 构建到
+      // Agent 结束的时间归入 llmMs，保证慢请求在 Render 日志中可定位。
+      if (promptBuiltAt !== undefined && modelOutputAt === undefined && timings.llmMs === undefined) {
+        timings.llmMs = Math.round(now() - promptBuiltAt);
+      }
+      return timings;
+    },
+  };
 }

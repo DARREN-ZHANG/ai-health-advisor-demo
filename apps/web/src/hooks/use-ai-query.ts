@@ -32,7 +32,8 @@ export function useMorningBrief(profileId: string | undefined) {
     },
     enabled: !!profileId,
     staleTime: 30 * 60 * 1000, // 30 minutes
-    retry: 1,
+    // AI 请求采用 quick fail，避免浏览器超时后隐式发起第二次长请求。
+    retry: false,
   });
 }
 
@@ -98,7 +99,8 @@ export function useViewSummary(
     },
     enabled: !!profileId, // 页面加载时自动请求
     staleTime: 5 * 60 * 1000,
-    retry: 1,
+    // AI 请求采用 quick fail，避免浏览器超时后隐式发起第二次长请求。
+    retry: false,
   });
 }
 
