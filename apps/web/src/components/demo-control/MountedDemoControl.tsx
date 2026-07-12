@@ -17,6 +17,12 @@ import { useDemoControlActions } from '@/hooks/use-demo-control-actions';
 import { DemoControlDrawer } from './DemoControlDrawer';
 
 export function MountedDemoControl() {
-  const { onSegmentClick } = useDemoControlActions();
-  return <DemoControlDrawer onSegmentClick={onSegmentClick} />;
+  const { onSegmentClick, onResetTimeline, isResettingTimeline } = useDemoControlActions();
+  return (
+    <DemoControlDrawer
+      onSegmentClick={onSegmentClick}
+      onResetTimeline={onResetTimeline}
+      isResettingTimeline={isResettingTimeline}
+    />
+  );
 }

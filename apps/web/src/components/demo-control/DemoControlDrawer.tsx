@@ -1,13 +1,17 @@
 'use client';
 
-import { ArrowPathIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useGodModeStore } from '@/stores/god-mode.store';
+import { ValoConfirmDialog } from '@/components/valo/ValoConfirmDialog';
 import { TIMELINE_SEGMENTS } from './timeline-segments';
 import type { TimelineSegmentConfig } from './types';
 
 export interface DemoControlDrawerProps {
   onSegmentClick?: (segment: TimelineSegmentConfig) => void;
+  onResetTimeline?: () => void;
+  isResettingTimeline?: boolean;
 }
 
 /**
@@ -17,17 +21,23 @@ export interface DemoControlDrawerProps {
  * Figma 仅作为视觉基准；事件内容继续使用完整的 TIMELINE_SEGMENTS 配置。
  * 设计稿在 71% 缩放下的事件中心距约 34.5px，反算原始行高约 49px。
  */
-export function DemoControlDrawer({ onSegmentClick }: DemoControlDrawerProps) {
+export function DemoControlDrawer({
+  onSegmentClick,
+  onResetTimeline,
+  isResettingTimeline = false,
+}: DemoControlDrawerProps) {
   const t = useTranslations('demoControl');
   const tSegments = useTranslations('godMode.segments');
   const isEnabled = useGodModeStore((state) => state.isEnabled);
   const isOpen = useGodModeStore((state) => state.isOpen);
   const toggleOpen = useGodModeStore((state) => state.toggleOpen);
   const pendingSegmentType = useGodModeStore((state) => state.pendingSegmentType);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   if (!isEnabled || !isOpen) return null;
 
   const close = () => toggleOpen(false);
+  const confirmReset = () => onResetTimeline?.();
 
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70" onClick={close}>
@@ -87,7 +97,35 @@ export function DemoControlDrawer({ onSegmentClick }: DemoControlDrawerProps) {
             );
           })}
         </div>
+
+        <div className="mt-3 shrink-0 border-t border-white/10 pt-3">
+          <button
+            type="button"
+            disabled={pendingSegmentType !== null || isResettingTimeline}
+            onClick={() => setIsResetConfirmOpen(true)}
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-4 text-[13px] font-medium text-red-200 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isResettingTimeline ? (
+              <ArrowPathIcon className="h-4 w-4 animate-spin" />
+            ) : (
+              <TrashIcon className="h-4 w-4" />
+            )}
+            {t('reset')}
+          </button>
+        </div>
       </section>
+
+      <ValoConfirmDialog
+        open={isResetConfirmOpen}
+        onClose={() => setIsResetConfirmOpen(false)}
+        onConfirm={confirmReset}
+        title={t('resetConfirmTitle')}
+        description={t('resetConfirmDescription')}
+        confirmLabel={t('resetConfirmAction')}
+        cancelLabel={t('resetConfirmCancel')}
+        confirmDisabled={isResettingTimeline}
+        tone="danger"
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useGodModeStore } from '@/stores/god-mode.store';
 import { DemoControlIntlProvider } from './intl-test-helper';
@@ -50,7 +50,7 @@ describe('DemoControlDrawer', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('以设计稿样式渲染原有全部十三个事件', () => {
+  it('渲染全部十三个事件和重置时间轴入口', () => {
     renderDrawer();
     expect(screen.getByRole('heading', { name: '添加事件' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^添加 / })).toHaveLength(13);
@@ -70,7 +70,7 @@ describe('DemoControlDrawer', () => {
     expect(screen.queryByText('日常节律')).toBeNull();
     expect(screen.queryByText('LIVE')).toBeNull();
     expect(screen.queryByText('+1h')).toBeNull();
-    expect(screen.queryByText('重置')).toBeNull();
+    expect(screen.getByRole('button', { name: '重置' })).toBeInTheDocument();
   });
 
   it('事件行按设计稿校准为 49px', () => {
@@ -110,5 +110,25 @@ describe('DemoControlDrawer', () => {
     expect(
       screen.getByRole('button', { name: '添加 散步' }).querySelector('.animate-spin'),
     ).not.toBeNull();
+  });
+
+  it('确认后才执行重置时间轴', () => {
+    const onResetTimeline = vi.fn();
+    render(
+      <DemoControlIntlProvider>
+        <DemoControlDrawer onResetTimeline={onResetTimeline} />
+      </DemoControlIntlProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '重置' }));
+    expect(screen.getByRole('dialog', { name: '重置时间轴？' })).toBeInTheDocument();
+    expect(onResetTimeline).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: '重置时间轴？' })).getByRole('button', {
+        name: '重置',
+      }),
+    );
+    expect(onResetTimeline).toHaveBeenCalledTimes(1);
   });
 });

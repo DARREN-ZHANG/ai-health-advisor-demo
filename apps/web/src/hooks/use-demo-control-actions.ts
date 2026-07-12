@@ -44,7 +44,7 @@ import type { TimelineSegmentConfig } from '@/components/demo-control/types';
  * pendingSegmentType 在 finally 中始终清空，确保 UI 不卡死。
  */
 export function useDemoControlActions() {
-  const { appendTimeline, injectEvent } = useGodModeActions();
+  const { appendTimeline, injectEvent, resetTimeline, isResettingTimeline } = useGodModeActions();
   const { currentProfileId } = useProfileStore();
   const refetchBrief = useRefetchBrief(currentProfileId);
   const setPendingSegmentType = useGodModeStore((s) => s.setPendingSegmentType);
@@ -119,5 +119,21 @@ export function useDemoControlActions() {
     ],
   );
 
-  return { onSegmentClick: handleSegmentClick };
+  const handleResetTimeline = useCallback(async () => {
+    try {
+      await resetTimeline({ profileId: currentProfileId });
+      toggleOpen(false);
+      showToast(t('resetSucceeded'), 'success');
+      await refetchBrief.mutateAsync();
+    } catch (error) {
+      showToast(t('resetFailed'), 'error');
+      console.error('Failed to reset profile timeline:', error);
+    }
+  }, [currentProfileId, refetchBrief, resetTimeline, showToast, t, toggleOpen]);
+
+  return {
+    onSegmentClick: handleSegmentClick,
+    onResetTimeline: handleResetTimeline,
+    isResettingTimeline,
+  };
 }
