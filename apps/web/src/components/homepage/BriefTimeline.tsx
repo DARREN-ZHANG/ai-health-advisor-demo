@@ -1,7 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import {
+  HERO_LOADING_ROTATION_DURATION_SECONDS,
+  HERO_RING_STOPS,
+} from './hero-ring';
 
 /**
  * BriefTimeline —— Now 区段。
@@ -63,10 +66,25 @@ export function BriefTimeline({
             <span
               role="status"
               aria-live="polite"
-              className="inline-flex shrink-0 items-center gap-1.5 text-xs leading-4 text-[var(--valo-text-secondary)]"
+              className="inline-flex shrink-0 items-center gap-1.5 text-sm leading-5 text-[color-mix(in_srgb,var(--valo-text-primary)_86%,transparent)]"
               data-valo-brief-updating="true"
             >
-              <ArrowPathIcon aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+              <span
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 animate-spin rounded-full drop-shadow-[0_0_5px_var(--valo-prime)]"
+                data-valo-brief-updating-ring="true"
+                style={{
+                  backgroundImage: `conic-gradient(${[
+                    ...HERO_RING_STOPS['prime-readiness'],
+                    HERO_RING_STOPS['prime-readiness'][0],
+                  ].join(', ')})`,
+                  animationDuration: `${HERO_LOADING_ROTATION_DURATION_SECONDS}s`,
+                  WebkitMaskImage:
+                    'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0)',
+                  maskImage:
+                    'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0)',
+                }}
+              />
               {t('updating')}
             </span>
           ) : null}

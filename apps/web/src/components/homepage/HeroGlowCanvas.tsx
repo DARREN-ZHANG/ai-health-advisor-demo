@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { HEALTH_STATE_METADATA, type HealthVisualState } from '@/lib/valo-theme';
+import { HERO_RING_STOPS } from './hero-ring';
 
 interface HeroGlowCanvasProps {
   state: HealthVisualState;
@@ -13,33 +14,6 @@ interface RingGeometry {
   cy: number;
   radius: number;
 }
-
-const RING_STOPS: Record<HealthVisualState, readonly string[]> = {
-  'prime-readiness': [
-    'var(--valo-active)',
-    'var(--valo-accent-cool)',
-    'var(--valo-prime)',
-    'var(--valo-accent-warm)',
-  ],
-  'active-recovery': [
-    'var(--valo-active)',
-    'var(--valo-accent-cool)',
-    'var(--valo-prime)',
-    'var(--valo-active)',
-  ],
-  'metabolic-sluggish': [
-    'var(--valo-sluggish)',
-    'var(--valo-accent-warm)',
-    'var(--valo-prime)',
-    'var(--valo-sluggish)',
-  ],
-  'glycogen-depleted': [
-    'var(--valo-depleted)',
-    'var(--valo-sluggish)',
-    'var(--valo-prime)',
-    'var(--valo-depleted)',
-  ],
-};
 
 export function HeroGlowCanvas({
   state,
@@ -67,7 +41,7 @@ export function HeroGlowCanvas({
         : value;
     const primeColor = resolve(HEALTH_STATE_METADATA[state].cssVar);
     const basePrimeColor = resolve('var(--valo-prime)');
-    const stops = RING_STOPS[state].map(resolve);
+    const stops = HERO_RING_STOPS[state].map(resolve);
 
     const random = createSeededRandom(0x7a10_51af);
     const stars = Array.from({ length: 180 }, () => {

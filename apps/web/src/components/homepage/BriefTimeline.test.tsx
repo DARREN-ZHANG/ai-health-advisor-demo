@@ -53,8 +53,16 @@ describe('BriefTimeline', () => {
   it('已有内容更新时保留 summary 并显示更新状态', () => {
     renderWithIntl(<BriefTimeline summary="保留的简报" isUpdating />);
     expect(screen.getByText('保留的简报')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('更新中');
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('更新中');
+    expect(status.className).toContain('text-sm');
+    expect(status.className).toContain('leading-5');
+    expect(status.className).toContain('var(--valo-text-primary)_86%');
     expect(document.querySelector('[data-valo-brief-updating="true"]')).not.toBeNull();
+    const ring = document.querySelector<HTMLElement>('[data-valo-brief-updating-ring="true"]');
+    expect(ring?.style.backgroundImage).toContain('var(--valo-active)');
+    expect(ring?.style.backgroundImage).toContain('var(--valo-prime)');
+    expect(ring?.className).toContain('animate-spin');
   });
 
   it('summary 支持多行（whitespace-pre-line）', () => {
