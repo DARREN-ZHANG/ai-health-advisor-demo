@@ -93,6 +93,7 @@ export const useBriefStreamStore = create<BriefStreamState>((set, get) => ({
       return;
     }
     set((state) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [profileId]: _removed, ...rest } = state.entries;
       return { entries: rest };
     });
@@ -104,6 +105,7 @@ export const useBriefStreamStore = create<BriefStreamState>((set, get) => ({
       return;
     }
     set((state) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [profileId]: _removed, ...rest } = state.entries;
       return { entries: rest };
     });

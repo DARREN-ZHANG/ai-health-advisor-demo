@@ -111,13 +111,17 @@ health-advisor/
 
 ### 3. 首页 & 晨报
 
-**何时查阅**：修改首页布局、晨报摘要、健康趋势、快速入口。
+**何时查阅**：修改首页布局、晨报摘要、健康趋势、快速入口、实时简报流式传输。
 
 | 层级 | 文件 | 说明 |
 |------|------|------|
 | 页面入口 | `apps/web/src/app/page.tsx` | 首页 |
 | 首页组件 | `apps/web/src/components/homepage/` | 首页专用组件 |
-| AI 摘要 | `apps/agent-api/src/routes/ai.ts` → `morning-brief` | 晨报 AI 端点 |
+| AI 摘要 | `apps/agent-api/src/routes/ai.ts` → `morning-brief` | 晨报 AI 端点 (JSON) |
+| 流式端点 | `apps/agent-api/src/modules/ai/routes.ts` → `morning-brief/stream` | 晨报 SSE 流式端点 |
+| 流式 client | `apps/web/src/lib/brief-stream-client.ts` | fetch SSE + eventsource-parser 消费 |
+| draft store | `apps/web/src/stores/brief-stream.store.ts` | profile/request scoped provisional summary |
+| 技术设计 | `docs/detailed-tech-design/realtime-brief-generation-logic.md` | 实时简报生成逻辑（含流式传输数据流） |
 | 布局组件 | `apps/web/src/components/layout/` | 通用布局 (Header / Footer / Toast 等) |
 
 ---

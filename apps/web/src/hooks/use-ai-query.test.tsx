@@ -3,7 +3,6 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import {
   QueryClient,
   QueryClientProvider,
-  type QueryCache,
 } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';

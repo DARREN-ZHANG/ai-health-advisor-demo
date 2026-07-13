@@ -460,6 +460,8 @@ describe('streamMorningBrief', () => {
     expect(headers.get('X-Session-Id')).toBe('sess-existing');
     expect(headers.get('X-Lang')).toBe('zh');
     expect(headers.get('Content-Type')).toBe('application/json');
+    // 锁定 X-Request-Id header 透传，防回归（前后端 requestId 必须一致，否则 SSE 事件被 MISMATCH 拒绝）
+    expect(headers.get('X-Request-Id')).toBe(REQUEST_ID);
   });
 
   // ---- delta 必须在 completed 之前出现(协议顺序简化校验由 schema + 状态机保证) ----

@@ -113,6 +113,11 @@ export async function streamMorningBrief(
   const body = JSON.stringify(payload);
   const headers = buildApiHeaders(undefined, body);
 
+  // 关键：把 client 生成的 requestId 通过 X-Request-Id header 发给后端。
+  // Fastify 配置了 requestIdHeader: 'x-request-id'，后端 request.ctx.requestId
+  // 会使用此值，SSE 事件里的 requestId 与前端期望一致，避免 STREAM_REQUEST_ID_MISMATCH。
+  headers.set('X-Request-Id', requestId);
+
   // 关键:fetch 的 signal 直接透传;aborted 时 fetch 抛 AbortError,这里不 catch,
   // 让其原样向上抛(React Query 据此区分取消与失败)。
   const response = await fetch(url, {

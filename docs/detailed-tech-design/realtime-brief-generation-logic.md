@@ -25,6 +25,12 @@
 | **确定性验证** | `packages/agent-core/src/output/verifier.ts` | 同步确定性校验，生成 VerificationReport |
 | **前端组件** | `apps/web/src/components/homepage/MorningBriefCard.tsx` | 简报卡片 UI 渲染 |
 | **前端 Hook** | `apps/web/src/app/page.tsx` | 首页入口，调用 `useMorningBrief` 获取数据 |
+| **SSE 事件契约** | `packages/shared/src/schemas/brief-stream.ts` | BriefStreamEvent Zod schema（前后端共用） |
+| **summary 增量提取** | `packages/agent-core/src/output/streaming-summary-extractor.ts` | @streamparser/json 增量解析，只释放 `$.summary` |
+| **SSE route** | `apps/agent-api/src/modules/ai/routes.ts` → `/ai/morning-brief/stream` | SSE 流式端点 |
+| **SSE writer** | `apps/agent-api/src/utils/sse-writer.ts` | 帧序列化 + 背压 + exactly-one-terminal |
+| **Web SSE client** | `apps/web/src/lib/brief-stream-client.ts` | fetch ReadableStream + eventsource-parser |
+| **draft store** | `apps/web/src/stores/brief-stream.store.ts` | profile/request scoped provisional summary |
 
 ---
 
@@ -68,6 +74,111 @@ POST /ai/morning-brief  ──────────────────�
     ▼                                                      │
 前端 MorningBriefCard 渲染  ◄──────────────────────────────┘
 ```
+
+---
+
+## 1.1 流式传输数据流（Homepage Summary Streaming）
+
+首页 morning brief 已从"完整 JSON 一次返回"升级为"SSE 流式传输"：`summary`
+随 LLM 生成逐步推送到前端，其余结构化字段（actions / statusColor /
+chartTokens / meta）只在完整校验通过后随 `brief.completed` 一次发布。
+
+### 端到端数据流
+
+```
+upstream Chat Completions (stream=true, GPT-5.6)
+    │  choices[].delta.content 增量 token
+    ▼
+@streamparser/json 增量解析 $.summary
+    │  StreamingSummaryExtractor 只释放 summary 字段片段
+    ▼
+HealthAgent.stream() → agent-runtime onSummaryDelta callback
+    │  每个 delta 透传给 orchestrator（不阻塞模型迭代）
+    ▼
+AiOrchestrator.execute({ onSummaryDelta, signal })
+    │  包装计时（llmFirstTokenMs / streamChunkCount / streamDurationMs）
+    ▼
+Fastify SSE route /ai/morning-brief/stream
+    │  SseWriter.writeEvent(brief.summary.delta)
+    │  hijack reply.raw，text/event-stream + no-transform + X-Accel-Buffering:no
+    ▼
+fetch ReadableStream（浏览器，非 EventSource）
+    │  reader.read() + TextDecoder 增量解码
+    ▼
+eventsource-parser 分帧（与后端 SseWriter 序列化格式对称）
+    │  BriefStreamEventSchema 校验每个事件 + requestId 一致性
+    ▼
+streamMorningBrief onEvent → useBriefStreamStore.append
+    │  provisional draft 存入独立 store（不进 React Query cache）
+    ▼
+BriefTimeline 渲染 draftSummary（aria-busy=true，逐步增长）
+    │  旧 actions/statusColor/futureSuggestions 保留（来自旧 cache）
+    ▼
+[brief.completed] → React Query cache 原子替换 → 清除 draft
+    │  完整 envelope 通过 parse + token whitelist + safety + customer policy
+    │  后才写 memory / 后端 cache / React Query cache
+```
+
+### 协议契约
+
+| 事件 | 载荷 | 时机 |
+|------|------|------|
+| `brief.started` | `{ requestId }` | SSE 连接建立后立即发送 |
+| `brief.summary.delta` | `{ requestId, delta }` | cache miss 时，每个 summary 片段（delta 非空） |
+| `brief.completed` | `{ requestId, response: AgentResponseEnvelope }` | 完整输出通过所有校验后，终态 |
+| `brief.failed` | `{ requestId, error: { code, message } }` | 任何失败路径（异常/非 complete/parse error），终态 |
+
+**流协议 invariant**：`started → delta* → (completed | failed)`，恰好一个终态。
+schema 定义在 `packages/shared/src/schemas/brief-stream.ts`，前后端共用同一份 Zod 契约。
+
+### 关键设计决策
+
+| 决策 | 原因 |
+|------|------|
+| 只流式 `summary`，不流式 `actions`/`statusColor` | 结构化字段必须通过完整校验（token whitelist / safety / customer policy）才能发布，半成品 JSON 会暴露未完成结构 |
+| provisional draft 不进 React Query cache | cache 只承载终态数据，避免结构化字段在 draft 期间被部分更新 |
+| completed 时原子替换 cache + 清除 draft | 保证 UI 在终态到达瞬间从"旧 cache + draft summary"切换到"新 cache" |
+| 失败时清除 draft，不发布结构化字段 | customer content policy 无法撤回已显示的 summary token，但必须阻止失败结果进入 cache |
+| cache hit 直接 completed（无 delta） | 不人工切片伪造流式；缓存命中本身就是瞬时返回 |
+| fetch 而非 EventSource | 需要 POST body / 自定义 headers / AbortSignal 取消，EventSource 均不支持 |
+| hijack reply.raw 而非 Fastify SSE 插件 | 直接控制背压（drain）、headers（X-Accel-Buffering）、断连取消链路 |
+
+### 相关文件
+
+| 模块 | 文件路径 | 职责 |
+|------|----------|------|
+| **SSE 事件契约** | `packages/shared/src/schemas/brief-stream.ts` | BriefStreamEvent Zod schema（前后端共用） |
+| **summary 增量提取** | `packages/agent-core/src/output/streaming-summary-extractor.ts` | @streamparser/json 增量解析，只释放 `$.summary` |
+| **Agent stream 入口** | `packages/agent-core/src/executor/create-agent.ts` | HealthAgent.stream()，LangChain chunk → 字符串 |
+| **Runtime delta 回调** | `packages/agent-core/src/runtime/agent-runtime.ts` | onSummaryDelta 透传，signal 取消 |
+| **Orchestrator streaming** | `apps/agent-api/src/services/ai-orchestrator.ts` | cache/signal/timing 编排，包装 onSummaryDelta 计时 |
+| **SSE route** | `apps/agent-api/src/modules/ai/routes.ts` | POST /ai/morning-brief/stream，hijack + SseWriter |
+| **SSE writer** | `apps/agent-api/src/utils/sse-writer.ts` | 帧序列化 + 背压 + exactly-one-terminal 守卫 |
+| **Web SSE client** | `apps/web/src/lib/brief-stream-client.ts` | fetch ReadableStream + eventsource-parser + 状态机 |
+| **draft store** | `apps/web/src/stores/brief-stream.store.ts` | profile/request scoped provisional summary |
+| **首页 hook** | `apps/web/src/hooks/use-ai-query.ts` | runBriefStream 生命周期管理（begin/append/complete/fail） |
+
+### 运维观测
+
+日志记录流式计时指标，不记录 delta 文本、完整模型正文或 secret：
+
+- `llmFirstTokenMs`：从 agent 开始到首个 summary delta 的时延（TTFT）
+- `streamChunkCount`：onSummaryDelta 被调用的总次数
+- `streamDurationMs`：从 agent 开始到 executeAgent 返回的总时长
+
+cache hit 时这三个字段均为 undefined（`cacheHit: true` 替代）。
+
+### 部署要求
+
+生产反向代理必须满足：
+
+- `Content-Type: text/event-stream`（不被中间层改写）
+- chunked transfer encoding（不缓冲完整 response 后才 flush）
+- `Cache-Control: no-transform`（禁止中间层转换/压缩）
+- `X-Accel-Buffering: no`（nginx 显式禁用缓冲）
+
+上线门槛：真实 MoreCode GPT-5.6 probe 产生至少 2 个非空 content chunk，
+首 token 时延明显小于完整生成耗时；不满足则功能不得上线。
 
 ---
 
