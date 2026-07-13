@@ -136,6 +136,31 @@ export type {
   BuildHomepageEventWindowSummaryInput,
 } from './context/homepage-event-window';
 
+// Customer-Facing Evidence Packet (Task 3.1)
+export {
+  buildCustomerFacingEvidencePacket,
+} from './context/customer-facing-evidence';
+export type {
+  CustomerFacingEvidencePacket,
+  PublicMetricUnit,
+  PublicNumericFact,
+  PublicQualitativeFact,
+  PublicFact,
+  PublicEventWindowMetric,
+  PublicEventWindowSummary,
+  PublicEventPhysiologySummary,
+  PublicRecoveryContextSummary,
+  PublicEventBodyTension,
+  PublicHomepageEventTransitionContext,
+  PublicHomepageEventInsight,
+  PublicHomepageContextPacket,
+  PublicMetricValue,
+  PublicMetricSummary,
+  PublicVisibleChartPacket,
+  PublicViewSummaryContextPacket,
+  PublicAdvisorChatContextPacket,
+} from './context/customer-facing-evidence';
+
 // Constants
 export {
   MAX_TURNS,

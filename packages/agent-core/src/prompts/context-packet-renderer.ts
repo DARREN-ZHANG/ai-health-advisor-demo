@@ -1,17 +1,24 @@
 import type {
-  TaskContextPacket,
   TaskPacket,
   UserContextPacket,
   DataWindowPacket,
   MissingDataItem,
-  EvidenceFact,
-  VisibleChartPacket,
-  HomepageContextPacket,
-  ViewSummaryContextPacket,
-  AdvisorChatContextPacket,
-  MetricSummary,
-  EventCertaintyBand,
 } from '../context/context-packet';
+import type {
+  CustomerFacingEvidencePacket,
+  PublicFact,
+  PublicNumericFact,
+  PublicHomepageEventInsight,
+  PublicEventWindowMetric,
+  PublicEventPhysiologySummary,
+  PublicHomepageContextPacket,
+  PublicViewSummaryContextPacket,
+  PublicAdvisorChatContextPacket,
+  PublicMetricSummary,
+  PublicVisibleChartPacket,
+  PublicMetricValue,
+} from '../context/customer-facing-evidence';
+import type { EventCertaintyBand } from '../context/context-packet';
 import type { RecentRecommendedAction } from '../types/memory';
 import { ACTION_SEMANTIC_GROUPS } from '../context/homepage-event-insights';
 import { ChartTokenId, type DataTab, type Locale } from '@health-advisor/shared';
@@ -58,18 +65,24 @@ function colon(locale: Locale): string {
 }
 
 // ────────────────────────────────────────────
-// 主入口
+// 主入口 — 接收 CustomerFacingEvidencePacket
 // ────────────────────────────────────────────
 
+/**
+ * 渲染客户可见上下文为 LLM prompt 片段。
+ *
+ * 输入必须是 CustomerFacingEvidencePacket（已投影）。
+ * 内部 TaskContextPacket 不可直接传入；调用方需先调用 buildCustomerFacingEvidencePacket。
+ */
 export function renderTaskContextPacket(
-  packet: TaskContextPacket,
+  packet: CustomerFacingEvidencePacket,
   locale: Locale = 'zh',
   demoNow?: string,
 ): string {
   const sections: string[] = [];
 
   // 检测首页是否有最近事件，用于控制上下文数据的详细程度
-  const hasHomepageEvents = (packet.homepage?.recentEvents?.length ?? 0) > 0;
+  const hasHomepageEvents = (packet.homepage?.eventInsights?.length ?? 0) > 0;
 
   sections.push(renderTaskPacket(packet.task, locale));
 
@@ -84,7 +97,7 @@ export function renderTaskContextPacket(
   sections.push(renderDataWindow(packet.dataWindow, locale));
   sections.push(renderMissingData(packet.missingData, locale));
   sections.push(renderVisibleCharts(packet.visibleCharts, locale, hasHomepageEvents));
-  sections.push(renderEvidence(packet.evidence, homepageVisibleEvidenceIds(packet.homepage)));
+  sections.push(renderPublicFacts(packet.facts));
 
   if (packet.homepage) sections.push(renderHomepage(packet.homepage, locale));
   if (packet.viewSummary) sections.push(renderViewSummary(packet.viewSummary, locale));
@@ -227,7 +240,7 @@ function renderMissingData(items: MissingDataItem[], locale: Locale): string {
 // ────────────────────────────────────────────
 
 function renderVisibleCharts(
-  charts: VisibleChartPacket[],
+  charts: PublicVisibleChartPacket[],
   locale: Locale,
   hasHomepageEvents: boolean = false,
 ): string {
@@ -247,7 +260,7 @@ function renderVisibleCharts(
   } else {
     for (const chart of charts) {
       lines.push(`- ${chart.chartToken} (${chart.metric}, ${chart.timeframe})`);
-      lines.push(renderMetricSummary(chart.dataSummary, '  ', {}, locale));
+      lines.push(renderPublicMetricSummary(chart.dataSummary, '  ', locale));
     }
   }
 
@@ -255,34 +268,23 @@ function renderVisibleCharts(
 }
 
 // ────────────────────────────────────────────
-// Evidence
+// Public Facts（取代原 Evidence Facts）
 // ────────────────────────────────────────────
 
-function homepageVisibleEvidenceIds(homepage?: HomepageContextPacket): Set<string> | undefined {
-  if (!homepage || homepage.recentEvents.length === 0) return undefined;
-  const displayableInsights = homepage.eventInsights.filter(
-    (insight) => insight.mentionPolicy?.summary === 'allowed',
-  );
-  return new Set(displayableInsights.flatMap((insight) => insight.evidenceIds));
-}
-
-function renderEvidence(evidence: EvidenceFact[], visibleEvidenceIds?: Set<string>): string {
-  const facts = visibleEvidenceIds
-    ? evidence.filter((fact) => visibleEvidenceIds.has(fact.id))
-    : evidence;
+function renderPublicFacts(facts: PublicFact[]): string {
   if (facts.length === 0) return '';
 
   const lines = ['## Evidence Facts'];
   for (const fact of facts) {
-    const parts: string[] = [`- ${fact.id}:`];
-    parts.push(`source=${fact.source}`);
-    if (fact.dateRange) parts.push(`${fact.dateRange.start}~${fact.dateRange.end}`);
-    if (fact.metric) parts.push(`metric=${fact.metric}`);
-    if (fact.value !== undefined) {
-      parts.push(`value=${fact.value}${fact.unit ?? ''}`);
+    if (fact.kind === 'numeric') {
+      lines.push(
+        `- ${fact.evidenceId}: ${fact.metric}=${fact.value}${fact.unit} — ${fact.interpretation}`,
+      );
+    } else {
+      lines.push(
+        `- ${fact.evidenceId}: ${fact.metric}=${fact.qualifier} — ${fact.interpretation}`,
+      );
     }
-    parts.push(`derivation=${fact.derivation}`);
-    lines.push(parts.join(', '));
   }
   return lines.join('\n');
 }
@@ -291,7 +293,10 @@ function renderEvidence(evidence: EvidenceFact[], visibleEvidenceIds?: Set<strin
 // Homepage
 // ────────────────────────────────────────────
 
-function renderDisplayableHomepageEvent(homepage: HomepageContextPacket, locale: Locale): string {
+function renderDisplayableHomepageEvent(
+  homepage: PublicHomepageContextPacket,
+  locale: Locale,
+): string {
   const current = homepage.eventInsights?.find(
     (insight) => insight.mentionPolicy?.summary === 'allowed',
   );
@@ -306,9 +311,7 @@ function renderDisplayableHomepageEvent(homepage: HomepageContextPacket, locale:
     ),
   );
   lines.push(`- [${current.priority}] ${current.eventType}, ${current.timeRelation}`);
-  lines.push(
-    `  - ${t(locale, '最近事件原始类型', 'Latest raw event type')}${colon(locale)}${current.rawEventType ?? current.eventType}`,
-  );
+  // Task 3.1：不再渲染 rawEventType（已在投影中移除）
   // Task 2.1：确定性档位 — 替代 raw confidence 参与文案生成
   // 禁止显示 confidence 百分比；renderer 只输出语义化档位与措辞指引
   lines.push(
@@ -333,33 +336,14 @@ function renderDisplayableHomepageEvent(homepage: HomepageContextPacket, locale:
       `  - ${t(locale, '事件窗口', 'Event window')}${colon(locale)}${current.eventWindow.start} ~ ${current.eventWindow.end}, ${t(locale, '样本数', 'samples')}${colon(locale)}${current.eventWindow.sampleCount}, ${t(locale, '覆盖度', 'coverage')}${colon(locale)}${current.eventWindow.coverage}`,
     );
     for (const metric of current.eventWindow.metrics) {
-      const values = [
-        metric.max !== undefined ? `${t(locale, '峰值', 'max')} ${metric.max}${metric.unit}` : '',
-        metric.average !== undefined
-          ? `${t(locale, '均值', 'avg')} ${metric.average}${metric.unit}`
-          : '',
-        metric.latest !== undefined
-          ? `${t(locale, '末段', 'latest')} ${metric.latest}${metric.unit}`
-          : '',
-        metric.delta !== undefined
-          ? `${t(locale, '变化', 'delta')} ${metric.delta > 0 ? '+' : ''}${metric.delta}${metric.unit}`
-          : '',
-      ]
-        .filter(Boolean)
-        .join(', ');
-      lines.push(
-        `  - ${t(locale, '事件窗口指标', 'Event-window metric')}${colon(locale)}${metric.metric} ${metric.qualifier}${values ? ` (${values})` : ''} — ${metric.interpretation}`,
-      );
+      lines.push(renderPublicEventWindowMetric(metric, locale));
     }
   }
   lines.push(
     `  - ${t(locale, '当前张力', 'Body tension')}${colon(locale)}${current.tension.level}: ${current.tension.summary}`,
   );
   for (const item of current.physiology) {
-    const value = item.value !== undefined ? ` ${item.value}${item.unit ?? ''}` : '';
-    lines.push(
-      `  - ${t(locale, '生理特征', 'Physiology')}${colon(locale)}${item.metric} ${item.qualifier}${value} — ${item.interpretation}`,
-    );
+    lines.push(renderPublicPhysiology(item, locale));
   }
   for (const item of current.recoveryContext) {
     lines.push(
@@ -387,15 +371,41 @@ function renderDisplayableHomepageEvent(homepage: HomepageContextPacket, locale:
   return lines.join('\n');
 }
 
+/** 渲染公开事件窗口指标 — score 类指标无数值 */
+function renderPublicEventWindowMetric(metric: PublicEventWindowMetric, locale: Locale): string {
+  const c = colon(locale);
+  // 物理单位指标：保留代表性数值（max/latest/average）
+  if (metric.unit && metric.value !== undefined) {
+    const roleLabel = metric.valueRole
+      ? t(locale, `峰值${c}`, `max${c}`)
+      : '';
+    // 事件窗口指标：heart_rate elevated — 峰值：172bpm — interpretation
+    return `  - ${t(locale, '事件窗口指标', 'Event-window metric')}${c}${metric.metric} ${metric.qualifier}, ${roleLabel}${metric.value}${metric.unit} — ${metric.interpretation}`;
+  }
+  // score 类指标：仅展示 qualifier
+  return `  - ${t(locale, '事件窗口指标', 'Event-window metric')}${c}${metric.metric} ${metric.qualifier} — ${metric.interpretation}`;
+}
+
+/** 渲染公开生理特征 — score 类指标无数值 */
+function renderPublicPhysiology(item: PublicEventPhysiologySummary, locale: Locale): string {
+  const c = colon(locale);
+  // 物理单位 + value 保留
+  if (item.unit && item.value !== undefined) {
+    return `  - ${t(locale, '生理特征', 'Physiology')}${c}${item.metric} ${item.qualifier} ${item.value}${item.unit} — ${item.interpretation}`;
+  }
+  // score 类或无 value：仅展示 qualifier
+  return `  - ${t(locale, '生理特征', 'Physiology')}${c}${item.metric} ${item.qualifier} — ${item.interpretation}`;
+}
+
 function renderInternalHomepageAnalysisContext(
-  homepage: HomepageContextPacket,
+  homepage: PublicHomepageContextPacket,
   locale: Locale,
 ): string {
   const current = homepage.eventInsights?.find(
     (insight) => insight.mentionPolicy?.summary === 'allowed',
   );
   const transition = current?.transitionContext;
-  if (!transition || (!transition.priorEventId && transition.relation === 'neutral')) return '';
+  if (!transition || transition.relation === 'neutral') return '';
 
   const lines = [
     t(
@@ -407,14 +417,12 @@ function renderInternalHomepageAnalysisContext(
   lines.push(
     t(
       locale,
-      '本区块只能用于推理当前事件的影响。summary 和 actions 禁止直接提及 priorEventType、priorEventId、forbiddenMentions 或前一事件动作链路。',
-      'Use this only to reason about the current event. Summary and actions must not mention priorEventType, priorEventId, forbiddenMentions, or prior event chains.',
+      '本区块只能用于推理当前事件的影响。summary 和 actions 禁止直接提及 forbiddenMentions 或前一事件动作链路。',
+      'Use this only to reason about the current event. Summary and actions must not mention forbiddenMentions or prior event chains.',
     ),
   );
+  // Task 3.1：投影后不再渲染 priorEventId / priorEventType / internalFinding（内部 IDs 已移除）
   lines.push(`- relation: ${transition.relation}`);
-  if (transition.priorEventType) lines.push(`- priorEventType: ${transition.priorEventType}`);
-  if (transition.priorEventId) lines.push(`- priorEventId: ${transition.priorEventId}`);
-  lines.push(`- internalFinding: ${transition.internalFinding}`);
   lines.push(`- allowedUserFacingAngle: ${transition.allowedUserFacingAngle}`);
   if (transition.forbiddenMentions.length > 0) {
     lines.push(`- forbiddenMentions: ${transition.forbiddenMentions.join(', ')}`);
@@ -463,10 +471,12 @@ function renderPreviousActions(actions: RecentRecommendedAction[], locale: Local
  * 渲染"今日已发生活动"区段（独立用途通道）。
  *
  * 关键约束：本区段仅供 futureSuggestions 推断当天剩余时间的预测，
- * 禁止用于 summary 或 actions。区段标题与首行说明都必须显式标注该约束，
- * 复用 ## 内部分析上下文（禁止显式提及）的隔离模式。
+ * 禁止用于 summary 或 actions。区段标题与首行说明都必须显式标注该约束。
  */
-function renderTodayOccurredActivities(homepage: HomepageContextPacket, locale: Locale): string {
+function renderTodayOccurredActivities(
+  homepage: PublicHomepageContextPacket,
+  locale: Locale,
+): string {
   const activities = homepage.todayOccurredActivities;
   if (!activities || activities.length === 0) return '';
 
@@ -503,11 +513,11 @@ function toHHmm(iso: string): string {
   return iso.length >= 16 ? iso.slice(11, 16) : '??:??';
 }
 
-function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string {
+function renderHomepage(homepage: PublicHomepageContextPacket, locale: Locale): string {
   const c = colon(locale);
   const lines: string[] = [];
 
-  const hasEvents = homepage.recentEvents.length > 0;
+  const hasEvents = homepage.eventInsights.length > 0;
 
   // 内容优先级指引
   if (hasEvents) {
@@ -537,7 +547,9 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string
 
   if (hasEvents) {
     const materialRecoveryMetrics = new Set(
-      homepage.eventInsights.flatMap((insight) => insight.recoveryContext.map((ctx) => ctx.metric)),
+      homepage.eventInsights.flatMap((insight) =>
+        insight.recoveryContext.map((ctx) => ctx.metric),
+      ),
     );
     const suppressedSleepMetrics = homepage.latest24h.metrics
       .filter((metric) => ['sleep_total', 'sleep_deep', 'sleep_rem'].includes(metric.metric))
@@ -605,6 +617,10 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string
     for (const m of homepage.latest24h.metrics) {
       if (m.status === 'missing') {
         lines.push(`- ${m.metric}${c}${t(locale, '数据缺失', 'data missing')}`);
+      } else if (m.value === undefined) {
+        // Task 3.1：score 类指标投影后无数值，仅渲染 status
+        const statusLabel = m.status === 'normal' ? t(locale, '正常', 'normal') : m.status;
+        lines.push(`- ${m.metric}${c}${statusLabel}`);
       } else {
         const parts: string[] = [`- ${m.metric}${c}${m.value}${m.unit}`];
         if (m.baseline !== undefined && m.deltaPctVsBaseline !== undefined) {
@@ -622,7 +638,9 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string
   }
 
   // Trend 7d — 当有事件时仅渲染异常趋势
-  const eventTrendEvidence = homepage.trend7d.filter((tr) => tr.anomalyPoints.length > 0);
+  const eventTrendEvidence = homepage.trend7d.filter(
+    (tr) => tr.anomalyPoints.length > 0,
+  );
   if (homepage.trend7d.length > 0) {
     if (hasEvents) {
       if (eventTrendEvidence.length > 0) {
@@ -630,13 +648,13 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string
           t(locale, '## 过去一周趋势（仅异常补充）', '## Past Week Trends (Anomalies Only)'),
         );
         for (const tr of eventTrendEvidence) {
-          lines.push(renderMetricSummaryCompact(tr, '- ', locale));
+          lines.push(renderPublicMetricSummaryCompact(tr, '- ', locale));
         }
       }
     } else {
       lines.push(t(locale, '## 过去一周趋势', '## Past Week Trends'));
       for (const tr of homepage.trend7d) {
-        lines.push(renderMetricSummary(tr, '- ', {}, locale));
+        lines.push(renderPublicMetricSummary(tr, '- ', locale));
       }
     }
   }
@@ -664,7 +682,7 @@ function renderHomepage(homepage: HomepageContextPacket, locale: Locale): string
 // View Summary
 // ────────────────────────────────────────────
 
-function renderViewSummary(vs: ViewSummaryContextPacket, locale: Locale): string {
+function renderViewSummary(vs: PublicViewSummaryContextPacket, locale: Locale): string {
   const c = colon(locale);
   const lines: string[] = [];
 
@@ -676,14 +694,14 @@ function renderViewSummary(vs: ViewSummaryContextPacket, locale: Locale): string
     lines.push('');
     lines.push(t(locale, '## 选中指标详情', '## Selected Metric Details'));
     lines.push(`- chartToken${c}${getChartTokenForTab(vs.tab) ?? 'N/A'}`);
-    lines.push(renderMetricSummary(vs.selectedMetric, '- ', {}, locale));
+    lines.push(renderPublicMetricSummary(vs.selectedMetric, '- ', locale));
   }
 
   if (vs.overviewMetrics && vs.overviewMetrics.length > 0) {
     lines.push('');
     lines.push(t(locale, '## 核心指标概览', '## Key Metrics Overview'));
     for (const m of vs.overviewMetrics) {
-      lines.push(renderMetricSummary(m, '- ', {}, locale));
+      lines.push(renderPublicMetricSummary(m, '- ', locale));
     }
   }
 
@@ -710,7 +728,7 @@ function renderViewSummary(vs: ViewSummaryContextPacket, locale: Locale): string
 // Advisor Chat
 // ────────────────────────────────────────────
 
-function renderAdvisorChat(chat: AdvisorChatContextPacket, locale: Locale): string {
+function renderAdvisorChat(chat: PublicAdvisorChatContextPacket, locale: Locale): string {
   const c = colon(locale);
   const lines: string[] = [];
 
@@ -758,41 +776,33 @@ function renderAdvisorChat(chat: AdvisorChatContextPacket, locale: Locale): stri
 
   lines.push('');
   lines.push(t(locale, '## 回答约束', '## Response Constraints'));
-  for (const c of chat.constraints) {
-    lines.push(`- ${c.description}`);
+  for (const con of chat.constraints) {
+    lines.push(`- ${con.description}`);
   }
 
   return lines.join('\n');
 }
 
 // ────────────────────────────────────────────
-// MetricSummary 渲染（公共辅助）
+// PublicMetricSummary 渲染（公共辅助）
 // ────────────────────────────────────────────
 
-function renderMetricSummary(
-  ms: MetricSummary,
+function formatPublicMetricValue(v: PublicMetricValue): string {
+  return `${v.value}${v.unit}${v.date ? ` on ${v.date}` : ''}`;
+}
+
+function renderPublicMetricSummary(
+  ms: PublicMetricSummary,
   prefix: string = '',
-  _options: { interpretationOnly?: boolean } = {},
   locale: Locale = 'zh',
 ): string {
-  void _options;
   const parts: string[] = [];
   parts.push(`${prefix}${ms.metric}:`);
-  if (ms.latest)
-    parts.push(`latest ${ms.latest.value}${ms.latest.unit} on ${ms.latest.date ?? 'latest'}`);
+  if (ms.latest) parts.push(`latest ${formatPublicMetricValue(ms.latest)}`);
   if (ms.average) parts.push(`avg ${ms.average.value}${ms.average.unit}`);
-  if (ms.baseline) {
-    const delta =
-      ms.deltaPctVsBaseline !== undefined
-        ? ` (${ms.deltaPctVsBaseline > 0 ? '+' : ''}${ms.deltaPctVsBaseline}%)`
-        : '';
-    parts.push(
-      `${t(locale, '通常水平', 'usual level')} ${ms.baseline.value}${ms.baseline.unit}${delta}`,
-    );
-  }
   parts.push(`trend ${ms.trendDirection}`);
   if (ms.anomalyPoints.length > 0) {
-    parts.push(`anomalies: ${ms.anomalyPoints.map((a) => `${a.date}=${a.value}`).join(', ')}`);
+    parts.push(`anomalies: ${ms.anomalyPoints.map((a) => a.date).join(', ')}`);
   }
   parts.push(
     `completeness ${ms.missing.completenessPct}% (${ms.missing.totalCount - ms.missing.missingCount}/${ms.missing.totalCount})`,
@@ -801,18 +811,19 @@ function renderMetricSummary(
 }
 
 // ────────────────────────────────────────────
-// 精简版 MetricSummary 渲染（有事件时使用，只保留趋势方向）
+// 精简版 PublicMetricSummary 渲染（有事件时使用）
 // ────────────────────────────────────────────
 
-function renderMetricSummaryCompact(
-  ms: MetricSummary,
+function renderPublicMetricSummaryCompact(
+  ms: PublicMetricSummary,
   prefix: string = '',
   locale: Locale = 'zh',
 ): string {
+  void locale;
   const parts: string[] = [];
   parts.push(`${prefix}${ms.metric}:`);
   if (ms.latest) parts.push(`${ms.latest.value}${ms.latest.unit}`);
-  parts.push(`${t(locale, '趋势', 'trend')} ${ms.trendDirection}`);
+  parts.push(`trend ${ms.trendDirection}`);
   return parts.join(' ');
 }
 

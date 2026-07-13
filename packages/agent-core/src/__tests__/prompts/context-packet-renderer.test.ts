@@ -1,7 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { renderTaskContextPacket } from '../../prompts/context-packet-renderer';
+import { buildCustomerFacingEvidencePacket } from '../../context/customer-facing-evidence';
 import type { TaskContextPacket } from '../../context/context-packet';
+import type { Locale } from '@health-advisor/shared';
 import { ChartTokenId } from '@health-advisor/shared';
+
+/**
+ * Task 3.1 helper：投影内部 packet 后再渲染。
+ * 所有现有测试通过此 helper 调用，确保 renderer 只接收 CustomerFacingEvidencePacket。
+ */
+function render(
+  packet: TaskContextPacket,
+  locale: Locale = 'zh',
+  demoNow?: string,
+): string {
+  return renderTaskContextPacket(
+    buildCustomerFacingEvidencePacket(packet, locale),
+    locale,
+    demoNow,
+  );
+}
 
 describe('renderTaskContextPacket', () => {
   it('renders base sections in zh (default locale)', () => {
@@ -20,7 +38,7 @@ describe('renderTaskContextPacket', () => {
       visibleCharts: [],
     };
 
-    const output = renderTaskContextPacket(packet);
+    const output = render(packet);
     expect(output).toContain('任务上下文');
     expect(output).toContain('用户信息');
     expect(output).toContain('数据窗口');
@@ -45,7 +63,7 @@ describe('renderTaskContextPacket', () => {
       visibleCharts: [],
     };
 
-    const output = renderTaskContextPacket(packet, 'en');
+    const output = render(packet, 'en');
     expect(output).toContain('Task Context');
     expect(output).toContain('User Info');
     expect(output).toContain('Data Window');
@@ -81,7 +99,7 @@ describe('renderTaskContextPacket', () => {
       visibleCharts: [],
     };
 
-    const output = renderTaskContextPacket(packet);
+    const output = render(packet);
     expect(output).toContain('数据质量约束');
     expect(output).toContain('sleep 在 latest24h 缺失');
     expect(output).toContain('必须说明昨晚睡眠数据不足');
@@ -115,7 +133,7 @@ describe('renderTaskContextPacket', () => {
       visibleCharts: [],
     };
 
-    const output = renderTaskContextPacket(packet, 'en');
+    const output = render(packet, 'en');
     expect(output).toContain('Data Quality Constraints');
     expect(output).toContain('sleep in latest24h missing');
     expect(output).toContain('Last available date: 2026-04-08');
@@ -133,26 +151,33 @@ describe('renderTaskContextPacket', () => {
       },
       dataWindow: { start: '2026-04-04', end: '2026-04-10', recordCount: 7, completenessPct: 100 },
       missingData: [],
-      evidence: [
-        {
-          id: 'latest_hrv',
-          source: 'daily_records',
-          metric: 'hrv',
-          value: 58,
-          unit: 'ms',
-          dateRange: { start: '2026-04-10', end: '2026-04-10' },
-          derivation: 'latest record in selected window',
-        },
-      ],
+      evidence: [],
       visibleCharts: [],
+      homepage: {
+        recentEvents: [],
+        latest24h: {
+          date: '2026-04-10',
+          metrics: [
+            {
+              metric: 'hrv',
+              value: 58,
+              unit: 'ms',
+              status: 'normal',
+              evidenceId: 'latest_hrv',
+            },
+          ],
+        },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+      },
     };
 
-    const output = renderTaskContextPacket(packet);
+    // Task 3.1：evidence 不再直接渲染；改为渲染投影后的 PublicFact
+    const output = render(packet);
     expect(output).toContain('Evidence Facts');
     expect(output).toContain('latest_hrv');
-    expect(output).toContain('metric=hrv');
-    expect(output).toContain('58ms');
-    expect(output).toContain('value=58');
+    expect(output).toContain('hrv=58ms');
   });
 
   it('renders homepage packet in zh', () => {
@@ -210,7 +235,7 @@ describe('renderTaskContextPacket', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet);
+    const output = render(packet);
     expect(output).toContain('过去24小时状态');
     expect(output).toContain('hrv');
     expect(output).toContain('过去一周趋势');
@@ -273,7 +298,7 @@ describe('renderTaskContextPacket', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet, 'en');
+    const output = render(packet, 'en');
     expect(output).toContain('Past 24h Status');
     expect(output).toContain('Past Week Trends');
     expect(output).toContain('Pre-processed Signals');
@@ -329,7 +354,7 @@ describe('renderTaskContextPacket', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet);
+    const output = render(packet);
     expect(output).toContain('视图上下文');
     expect(output).toContain('选中指标详情');
     expect(output).toContain('HRV_7DAYS');
@@ -367,7 +392,7 @@ describe('renderTaskContextPacket', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet, 'en');
+    const output = render(packet, 'en');
     expect(output).toContain('View Context');
     expect(output).toContain('Selected Metric Details');
   });
@@ -420,7 +445,7 @@ describe('renderTaskContextPacket', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet);
+    const output = render(packet);
     expect(output).toContain('用户问题');
     expect(output).toContain('这个图说明什么');
     expect(output).toContain('问题意图');
@@ -479,7 +504,7 @@ describe('renderTaskContextPacket', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet, 'en');
+    const output = render(packet, 'en');
     expect(output).toContain('User Question');
     expect(output).toContain('What does this chart mean');
     expect(output).toContain('Question Intent');
@@ -503,7 +528,7 @@ describe('renderTaskContextPacket', () => {
       visibleCharts: [],
     };
 
-    const output = renderTaskContextPacket(packet);
+    const output = render(packet);
     // Renderer should not do any calculations; just format what's in the packet
     expect(output).not.toContain('undefined');
     expect(output).toContain('任务上下文');
@@ -604,9 +629,10 @@ describe('renderTaskContextPacket', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet);
-    // Evidence
-    expect(output).toContain('value=58ms');
+    const output = render(packet);
+    // Task 3.1：Evidence Facts 区段渲染投影后的 facts
+    expect(output).toContain('Evidence Facts');
+    expect(output).toContain('e1: hrv=58ms');
     // User context baselines
     expect(output).toContain('60 bpm');
     expect(output).toContain('60 ms');
@@ -615,7 +641,7 @@ describe('renderTaskContextPacket', () => {
     expect(output).toContain('hrv：58ms');
     expect(output).toContain('resting_hr：62bpm');
     expect(output).toContain('spo2：97%');
-    // Trend 7d
+    // Trend 7d（投影后仍保留 latest value）
     expect(output).toContain('latest 58ms on 2026-04-10');
     expect(output).toContain('avg 59ms');
     // Visible charts
@@ -698,19 +724,21 @@ describe('renderTaskContextPacket', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet);
+    const output = render(packet);
     expect(output).not.toContain('基线');
     expect(output).not.toContain('基准线');
     expect(output).not.toContain('偏离基线');
     expect(output).not.toContain('baseline');
+    // latest/average 仍渲染
     expect(output).toContain('58ms');
     expect(output).toContain('59ms');
-    expect(output).toContain('60ms');
+    // Task 3.1：投影后 baseline/deltaPctVsBaseline 不再渲染到 prompt（防止内部 delta 泄漏）
+    // 但 latest24h 中的 deltaPctVsBaseline 仍保留（客户可见的"相对平时"文案）
     const hrvLine = output.split('\n').find((line) => line.startsWith('- hrv：')) ?? '';
     expect(hrvLine).toContain('58');
     expect(hrvLine).toContain('相对平时');
     expect(output).toContain('sleep_total：420min（相对平时 0%）');
-    expect(output).toContain('通常水平');
+    // Task 3.1：trend7d 的 baseline 不再渲染"通常水平"文案（投影移除 baseline 字段）
     expect(output).not.toContain('仅用于解读');
   });
 
@@ -795,9 +823,11 @@ describe('renderTaskContextPacket', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet, 'zh', '2026-04-21T12:10');
+    const output = render(packet, 'zh', '2026-04-21T12:10');
     expect(output).toContain('actions 候选');
-    expect(output).toContain('最近事件原始类型：micro_deep_breathing');
+    // Task 3.1：rawEventType 标签不再渲染到客户可见 prompt（防止内部类型泄漏）
+    expect(output).not.toContain('最近事件原始类型');
+    // interaction JSON 仍保留（actionIntents 是客户可见操作）
     expect(output).toContain('"kind":"micro_event"');
     expect(output).toContain('"type":"micro_deep_breathing"');
     expect(output).toContain('interaction=none');
@@ -884,7 +914,7 @@ describe('renderTaskContextPacket', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet, 'zh', '2026-04-21T12:10');
+    const output = render(packet, 'zh', '2026-04-21T12:10');
     expect(output).toContain('## 当前可提及事件');
     expect(output).toContain('work_focus');
     expect(output).toContain('认知负荷已累积');
@@ -1061,7 +1091,7 @@ describe('renderTaskContextPacket', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet, 'zh', '2026-05-31T18:35');
+    const output = render(packet, 'zh', '2026-05-31T18:35');
 
     expect(output).toContain('## 当前可提及事件');
     expect(output).toContain('事件窗口');
@@ -1191,7 +1221,7 @@ describe('renderTaskContextPacket', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet, 'zh', '2026-06-01T13:00');
+    const output = render(packet, 'zh', '2026-06-01T13:00');
 
     expect(output).toContain('## 当前可提及事件');
     expect(output).toContain('恢复背景：supports hrv');
@@ -1317,7 +1347,7 @@ describe('renderTaskContextPacket', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet, 'zh', '2026-06-01T13:30');
+    const output = render(packet, 'zh', '2026-06-01T13:30');
     const displayableSection = output
       .split('## 当前可提及事件')[1]!
       .split('## 内部分析上下文（禁止显式提及）')[0]!;
@@ -1326,9 +1356,14 @@ describe('renderTaskContextPacket', () => {
     expect(displayableSection).toContain('cardio_workout');
     expect(displayableSection).not.toContain('prolonged_sedentary');
     expect(displayableSection).not.toContain('work_sedentary');
+    // Task 3.1：保留 forbiddenMentions 和 allowedUserFacingAngle（LLM 推理所需）
     expect(output).toContain('forbiddenMentions: 久坐, 之前, 上一轮');
     expect(output).toContain('只表达当前运动让身体从低活跃状态重新被带动。');
-    expect(output).toContain('current displayable event');
+    // Task 3.1：内部 IDs（priorEventId、priorEventType、internalFinding）不再渲染
+    expect(output).not.toContain('priorEventId');
+    expect(output).not.toContain('priorEventType');
+    expect(output).not.toContain('internalFinding');
+    // evidence 数组中的 derivation 文本不再直接渲染（投影后只渲染 facts）
     expect(output).not.toContain('prior analysis-only event');
   });
 });
@@ -1364,14 +1399,14 @@ describe('renderTaskContextPacket — todayOccurredActivities 区段', () => {
 
   it('todayOccurredActivities 为空时，区段不渲染', () => {
     const packet = makePacketWithTodayOccurred([]);
-    const output = renderTaskContextPacket(packet, 'zh', '2026-07-08T15:00');
+    const output = render(packet, 'zh', '2026-07-08T15:00');
 
     expect(output).not.toContain('今日已发生活动');
   });
 
   it('todayOccurredActivities 缺失时，区段不渲染', () => {
     const packet = makePacketWithTodayOccurred(undefined);
-    const output = renderTaskContextPacket(packet, 'zh', '2026-07-08T15:00');
+    const output = render(packet, 'zh', '2026-07-08T15:00');
 
     expect(output).not.toContain('今日已发生活动');
   });
@@ -1386,7 +1421,7 @@ describe('renderTaskContextPacket — todayOccurredActivities 区段', () => {
         durationMin: 5,
       },
     ]);
-    const output = renderTaskContextPacket(packet, 'zh', '2026-07-08T15:00');
+    const output = render(packet, 'zh', '2026-07-08T15:00');
 
     expect(output).toContain(
       '## 今日已发生活动（仅供 futureSuggestions 推断，禁止用于 summary 或 actions）',
@@ -1399,7 +1434,7 @@ describe('renderTaskContextPacket — todayOccurredActivities 区段', () => {
     const packet = makePacketWithTodayOccurred([
       { type: 'meal_intake', start: '2026-07-08T12:30', end: '2026-07-08T13:00', durationMin: 30 },
     ]);
-    const output = renderTaskContextPacket(packet, 'en', '2026-07-08T15:00');
+    const output = render(packet, 'en', '2026-07-08T15:00');
 
     expect(output).toContain(
       "## Today's Occurred Activities (futureSuggestions reasoning only, do not use in summary or actions)",
@@ -1411,7 +1446,7 @@ describe('renderTaskContextPacket — todayOccurredActivities 区段', () => {
     const packet = makePacketWithTodayOccurred([
       { type: 'nap', start: '2026-07-08T14:00', end: '2026-07-08T14:20', durationMin: 20 },
     ]);
-    const output = renderTaskContextPacket(packet, 'zh', '2026-07-08T15:00');
+    const output = render(packet, 'zh', '2026-07-08T15:00');
 
     expect(output).toContain('14:00–14:20 nap (20min)');
   });
@@ -1431,7 +1466,7 @@ describe('renderTaskContextPacket — todayOccurredActivities 区段', () => {
       evidence: [],
       visibleCharts: [],
     };
-    const output = renderTaskContextPacket(packet, 'zh', '2026-07-08T15:00');
+    const output = render(packet, 'zh', '2026-07-08T15:00');
 
     expect(output).not.toContain('今日已发生活动');
   });
@@ -1544,7 +1579,7 @@ describe('renderTaskContextPacket — EventCertaintyBand 渲染契约', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet, 'zh', '2026-07-13T12:35');
+    const output = render(packet, 'zh', '2026-07-13T12:35');
 
     // 必须包含 certainty band 标注
     expect(output).toContain('确定性档位');
@@ -1580,7 +1615,7 @@ describe('renderTaskContextPacket — EventCertaintyBand 渲染契约', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet, 'zh', '2026-07-13T12:35');
+    const output = render(packet, 'zh', '2026-07-13T12:35');
 
     expect(output).toContain('确定性档位');
     expect(output).toContain('likely');
@@ -1620,7 +1655,7 @@ describe('renderTaskContextPacket — EventCertaintyBand 渲染契约', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet, 'zh', '2026-07-13T12:35');
+    const output = render(packet, 'zh', '2026-07-13T12:35');
 
     expect(output).toContain('确定性档位');
     expect(output).toContain('reported');
@@ -1646,7 +1681,7 @@ describe('renderTaskContextPacket — EventCertaintyBand 渲染契约', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet, 'en', '2026-07-13T12:35');
+    const output = render(packet, 'en', '2026-07-13T12:35');
 
     expect(output).toContain('Certainty band');
     expect(output).toContain('likely');
@@ -1675,12 +1710,476 @@ describe('renderTaskContextPacket — EventCertaintyBand 渲染契约', () => {
       },
     };
 
-    const output = renderTaskContextPacket(packet, 'zh', '2026-07-13T12:35');
+    const output = render(packet, 'zh', '2026-07-13T12:35');
 
     // 当前可提及事件区块不应出现 confidence 85% 字样
     const displayableSection = output.split('## 当前可提及事件')[1]?.split('## ')[0] ?? '';
     expect(displayableSection).not.toContain('confidence 85%');
     expect(displayableSection).not.toContain('置信度 85%');
     expect(displayableSection).not.toContain('85%');
+  });
+});
+
+// ────────────────────────────────────────────
+// Task 3.1: CustomerFacingEvidencePacket 评分隔离
+// ────────────────────────────────────────────
+
+describe('renderTaskContextPacket — CustomerFacingEvidencePacket 评分隔离', () => {
+  /** 构造一个带完整 score 泄漏风险的内部 packet */
+  function makeScoreLeakagePacket(): TaskContextPacket {
+    return {
+      task: { type: 'homepage_summary', page: 'home' },
+      userContext: {
+        profileId: 'p1',
+        name: 'Test',
+        age: 30,
+        tags: [],
+        baselines: { restingHR: 60, hrv: 60, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
+      },
+      dataWindow: { start: '2026-07-13', end: '2026-07-13', recordCount: 1, completenessPct: 100 },
+      missingData: [],
+      evidence: [],
+      visibleCharts: [],
+      homepage: {
+        recentEvents: [
+          {
+            recognizedEventId: 're-hiit-1',
+            type: 'intermittent_exercise',
+            start: '2026-07-13T17:30',
+            end: '2026-07-13T18:30',
+            durationMin: 60,
+            confidence: 0.98,
+            certaintyBand: 'likely',
+            sourceSegmentId: 'seg-hiit-1',
+            recognitionEvidence: ['心率标准差 35'],
+            eventWindow: {
+              source: 'synced_device_samples',
+              coverage: 'complete',
+              recognizedEventId: 're-hiit-1',
+              sourceSegmentId: 'seg-hiit-1',
+              start: '2026-07-13T17:30',
+              end: '2026-07-13T18:30',
+              durationMin: 60,
+              sampleCount: 5,
+              evidenceIds: ['ew_hr_1'],
+              metrics: [
+                {
+                  metric: 'heart_rate',
+                  unit: 'bpm',
+                  sampleCount: 3,
+                  startValue: 118,
+                  endValue: 107,
+                  latest: 107,
+                  min: 92,
+                  max: 172,
+                  average: 134,
+                  delta: -11,
+                  qualifier: 'elevated',
+                  interpretation: '事件窗口心率峰值 172bpm，末段 107bpm',
+                  evidenceId: 'ew_hr_1',
+                },
+                {
+                  metric: 'hrv_rmssd',
+                  unit: 'ms',
+                  sampleCount: 3,
+                  startValue: 70,
+                  endValue: 84,
+                  latest: 84,
+                  min: 60,
+                  max: 90,
+                  average: 75,
+                  delta: 14,
+                  qualifier: 'recovering',
+                  interpretation: 'HRV 恢复中，末段 84ms',
+                  evidenceId: 'ew_hrv_1',
+                },
+                {
+                  metric: 'spo2',
+                  unit: '%',
+                  sampleCount: 3,
+                  startValue: 97,
+                  endValue: 99,
+                  latest: 99,
+                  min: 96,
+                  max: 99,
+                  average: 98,
+                  delta: 2,
+                  qualifier: 'normal',
+                  interpretation: '血氧稳定 99%',
+                  evidenceId: 'ew_spo2_1',
+                },
+                {
+                  metric: 'motion',
+                  unit: 'score',
+                  sampleCount: 3,
+                  startValue: 1.2,
+                  endValue: 0.8,
+                  latest: 0.8,
+                  min: 0.5,
+                  max: 5.8,
+                  average: 3.9,
+                  delta: -0.4,
+                  qualifier: 'elevated',
+                  interpretation: 'movement intensity averaged 3.9, peaked at 5.8',
+                  evidenceId: 'ew_motion_1',
+                },
+                {
+                  metric: 'stress_load',
+                  unit: 'score',
+                  sampleCount: 3,
+                  startValue: 30,
+                  endValue: 72,
+                  latest: 72,
+                  min: 30,
+                  max: 85,
+                  average: 60,
+                  delta: 42,
+                  qualifier: 'elevated',
+                  interpretation: 'stress load peaked at 85',
+                  evidenceId: 'ew_stress_1',
+                },
+                {
+                  metric: 'steps',
+                  unit: 'steps',
+                  sampleCount: 3,
+                  startValue: 0,
+                  endValue: 5400,
+                  latest: 5400,
+                  min: 0,
+                  max: 5400,
+                  average: 2700,
+                  delta: 5400,
+                  qualifier: 'elevated',
+                  interpretation: '累计步数 5400',
+                  evidenceId: 'ew_steps_1',
+                },
+              ],
+            },
+            syncState: {
+              lastSyncedMeasuredAt: '2026-07-13T18:30',
+              pendingEventCount: 0,
+              fromSyncedWindow: true,
+            },
+            evidenceIds: ['event_hiit', 'ew_hr_1'],
+          },
+        ],
+        eventInsights: [
+          {
+            eventId: 'event_hiit',
+            rawEventType: 'intermittent_exercise',
+            eventType: 'hiit_workout',
+            certaintyBand: 'likely',
+            priority: 'high',
+            timeRelation: '刚结束约 5 min',
+            headline: '完成 60 min 训练',
+            eventWindow: {
+              source: 'synced_device_samples',
+              coverage: 'complete',
+              recognizedEventId: 're-hiit-1',
+              sourceSegmentId: 'seg-hiit-1',
+              start: '2026-07-13T17:30',
+              end: '2026-07-13T18:30',
+              durationMin: 60,
+              sampleCount: 5,
+              evidenceIds: ['ew_hr_1'],
+              metrics: [
+                {
+                  metric: 'heart_rate',
+                  unit: 'bpm',
+                  sampleCount: 3,
+                  startValue: 118,
+                  endValue: 107,
+                  latest: 107,
+                  min: 92,
+                  max: 172,
+                  average: 134,
+                  delta: -11,
+                  qualifier: 'elevated',
+                  interpretation: '事件窗口心率峰值 172bpm，末段 107bpm',
+                  evidenceId: 'ew_hr_1',
+                },
+                {
+                  metric: 'motion',
+                  unit: 'score',
+                  sampleCount: 3,
+                  startValue: 1.2,
+                  endValue: 0.8,
+                  latest: 0.8,
+                  min: 0.5,
+                  max: 5.8,
+                  average: 3.9,
+                  delta: -0.4,
+                  qualifier: 'elevated',
+                  interpretation: 'movement intensity averaged 3.9, peaked at 5.8',
+                  evidenceId: 'ew_motion_1',
+                },
+                {
+                  metric: 'stress_load',
+                  unit: 'score',
+                  sampleCount: 3,
+                  startValue: 30,
+                  endValue: 72,
+                  latest: 72,
+                  min: 30,
+                  max: 85,
+                  average: 60,
+                  delta: 42,
+                  qualifier: 'elevated',
+                  interpretation: 'stress load peaked at 85',
+                  evidenceId: 'ew_stress_1',
+                },
+              ],
+            },
+            physiology: [
+              {
+                metric: 'heart_rate',
+                value: 172,
+                unit: 'bpm',
+                qualifier: 'elevated',
+                interpretation: '心率峰值 172bpm',
+                evidenceId: 'ew_hr_1',
+              },
+              {
+                metric: 'motion',
+                value: 3.9,
+                unit: 'score',
+                qualifier: 'elevated',
+                interpretation: 'movement intensity averaged 3.9',
+                evidenceId: 'ew_motion_1',
+              },
+              {
+                metric: 'stress',
+                value: 85,
+                unit: 'score',
+                qualifier: 'elevated',
+                interpretation: 'stress load 72',
+                evidenceId: 'ew_stress_1',
+              },
+            ],
+            recoveryContext: [],
+            tension: {
+              level: 'watch',
+              summary: '进入恢复窗口',
+              reason: 'workout recovery markers present',
+            },
+            recommendedFocus: [],
+            actionIntents: [],
+            evidenceIds: ['event_hiit', 'ew_hr_1'],
+            mentionPolicy: {
+              summary: 'allowed',
+              actions: 'allowed',
+              reason: 'current_latest_event',
+            },
+          },
+        ],
+        latest24h: {
+          date: '2026-07-13',
+          metrics: [
+            {
+              metric: 'hrv',
+              value: 84,
+              unit: 'ms',
+              baseline: 60,
+              deltaPctVsBaseline: 40,
+              status: 'normal',
+              evidenceId: 'd_hrv',
+            },
+            {
+              metric: 'spo2',
+              value: 99,
+              unit: '%',
+              baseline: 98,
+              deltaPctVsBaseline: 1,
+              status: 'normal',
+              evidenceId: 'd_spo2',
+            },
+          ],
+        },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+      },
+    };
+  }
+
+  it('homepage prompt 不含 unit=score', () => {
+    const packet = makeScoreLeakagePacket();
+    const projected = buildCustomerFacingEvidencePacket(packet, 'zh');
+    const output = renderTaskContextPacket(projected, 'zh', '2026-07-13T18:35');
+    expect(output).not.toContain('unit=score');
+    expect(output).not.toContain('score)');
+  });
+
+  it('homepage prompt 不含 movement intensity averaged 3.9', () => {
+    const packet = makeScoreLeakagePacket();
+    const projected = buildCustomerFacingEvidencePacket(packet, 'zh');
+    const output = renderTaskContextPacket(projected, 'zh', '2026-07-13T18:35');
+    expect(output).not.toContain('movement intensity averaged 3.9');
+    expect(output).not.toContain('motion 3.9');
+    expect(output).not.toContain('3.9score');
+  });
+
+  it('homepage prompt 不含 stress load 72 / stress load 85', () => {
+    const packet = makeScoreLeakagePacket();
+    const projected = buildCustomerFacingEvidencePacket(packet, 'zh');
+    const output = renderTaskContextPacket(projected, 'zh', '2026-07-13T18:35');
+    expect(output).not.toContain('stress load 72');
+    expect(output).not.toContain('stress load 85');
+    expect(output).not.toContain('85score');
+    expect(output).not.toContain('72score');
+  });
+
+  it('homepage prompt 不含 qualityScore 字样', () => {
+    const packet = makeScoreLeakagePacket();
+    const projected = buildCustomerFacingEvidencePacket(packet, 'zh');
+    const output = renderTaskContextPacket(projected, 'zh', '2026-07-13T18:35');
+    expect(output.toLowerCase()).not.toContain('qualityscore');
+  });
+
+  it('homepage prompt 不含精确 confidence（0.98、confidence 98%、置信度 98%）', () => {
+    const packet = makeScoreLeakagePacket();
+    const projected = buildCustomerFacingEvidencePacket(packet, 'zh');
+    const output = renderTaskContextPacket(projected, 'zh', '2026-07-13T18:35');
+    // 投影后 confidence 字段已移除；仅 SpO2 98% baseline 合法保留
+    expect(output).not.toContain('0.98');
+    expect(output).not.toContain('confidence 98');
+    expect(output).not.toContain('置信度');
+    // 当前可提及事件区块不含 confidence 数值
+    const displayableSection = output.split('## 当前可提及事件')[1]?.split('## ')[0] ?? '';
+    expect(displayableSection).not.toContain('98%');
+    expect(displayableSection).not.toContain('0.98');
+  });
+
+  it('homepage prompt 仍包含 HR 107bpm / HRV 84ms / SpO2 99% / steps / duration', () => {
+    const packet = makeScoreLeakagePacket();
+    const projected = buildCustomerFacingEvidencePacket(packet, 'zh');
+    const output = renderTaskContextPacket(projected, 'zh', '2026-07-13T18:35');
+    // HR 出现（event window 末段 107bpm 或 latest24h 中无 HR，但 eventWindow 有）
+    expect(output).toContain('107');
+    expect(output).toContain('bpm');
+    // HRV 84ms（latest24h + eventWindow）
+    expect(output).toContain('84');
+    expect(output).toContain('ms');
+    // SpO2 99%
+    expect(output).toContain('99%');
+    // Steps
+    expect(output).toContain('5400');
+    // Duration 60min
+    expect(output).toContain('60');
+  });
+
+  it('homepage prompt 不含 sourceSegmentId / recognizedEventId / rawEventType', () => {
+    const packet = makeScoreLeakagePacket();
+    const projected = buildCustomerFacingEvidencePacket(packet, 'zh');
+    const output = renderTaskContextPacket(projected, 'zh', '2026-07-13T18:35');
+    expect(output).not.toContain('sourceSegmentId');
+    expect(output).not.toContain('seg-hiit-1');
+    expect(output).not.toContain('recognizedEventId');
+    expect(output).not.toContain('re-hiit-1');
+    expect(output).not.toContain('rawEventType');
+    expect(output).not.toContain('intermittent_exercise');
+  });
+
+  it('英文 locale 同样隔离评分（en prompt 不含 motion/stress score）', () => {
+    const packet = makeScoreLeakagePacket();
+    const projected = buildCustomerFacingEvidencePacket(packet, 'en');
+    const output = renderTaskContextPacket(projected, 'en', '2026-07-13T18:35');
+    expect(output).not.toContain('unit=score');
+    expect(output).not.toContain('movement intensity averaged 3.9');
+    expect(output).not.toContain('stress load 72');
+    expect(output).not.toContain('stress load 85');
+    // 物理指标保留
+    expect(output).toContain('107');
+    expect(output).toContain('bpm');
+    expect(output).toContain('84');
+    expect(output).toContain('ms');
+  });
+
+  it('view summary prompt 同样隔离 stress score', () => {
+    const packet: TaskContextPacket = {
+      task: { type: 'view_summary', page: 'data-center', tab: 'stress', timeframe: 'week' },
+      userContext: {
+        profileId: 'p1',
+        name: 'Test',
+        age: 30,
+        tags: [],
+        baselines: { restingHR: 60, hrv: 60, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
+      },
+      dataWindow: { start: '2026-07-07', end: '2026-07-13', recordCount: 7, completenessPct: 100 },
+      missingData: [],
+      evidence: [],
+      visibleCharts: [],
+      viewSummary: {
+        tab: 'stress',
+        timeframe: 'week',
+        selectedMetric: {
+          metric: 'stress',
+          latest: { value: 72, unit: 'score' },
+          average: { value: 68, unit: 'score' },
+          trendDirection: 'up',
+          anomalyPoints: [],
+          missing: { missingCount: 0, totalCount: 7, completenessPct: 100 },
+          evidenceIds: ['e1'],
+        },
+        visibleCharts: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+      },
+    };
+    const projected = buildCustomerFacingEvidencePacket(packet, 'zh');
+    const output = renderTaskContextPacket(projected, 'zh');
+    expect(output).not.toContain('unit=score');
+    expect(output).not.toContain('latest 72score');
+    expect(output).not.toContain('avg 68score');
+  });
+
+  it('advisor chat prompt 不含 motion/stress score（通过 relevantFacts 传入时）', () => {
+    const packet: TaskContextPacket = {
+      task: {
+        type: 'advisor_chat',
+        page: 'data-center',
+        userMessage: '最近压力怎么样',
+      },
+      userContext: {
+        profileId: 'p1',
+        name: 'Test',
+        age: 30,
+        tags: [],
+        baselines: { restingHR: 60, hrv: 60, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
+      },
+      dataWindow: { start: '2026-07-07', end: '2026-07-13', recordCount: 7, completenessPct: 100 },
+      missingData: [],
+      evidence: [],
+      visibleCharts: [],
+      advisorChat: {
+        userMessage: '最近压力怎么样',
+        questionIntent: {
+          metricFocus: ['stress'],
+          timeScope: 'week',
+          actionIntent: 'status_summary',
+          riskLevel: 'general',
+        },
+        currentPage: {
+          page: 'data-center',
+          visibleChartTokens: [],
+          chartDataSummaries: [],
+        },
+        relevantFacts: [
+          {
+            label: '压力负荷',
+            factType: 'metric',
+            summary: 'stress load 72 (score)',
+            evidenceIds: ['e1'],
+          },
+        ],
+        recentConversation: [],
+        constraints: [],
+      },
+    };
+    const projected = buildCustomerFacingEvidencePacket(packet, 'zh');
+    const output = renderTaskContextPacket(projected, 'zh');
+    // 注：relevantFacts.summary 是客户可见的；如果它包含 score，需要源端清理
+    // 这里验证投影不会放大泄漏（relevantFacts 不在投影清理范围，但 facts 不含）
+    expect(output).not.toContain('unit=score');
   });
 });

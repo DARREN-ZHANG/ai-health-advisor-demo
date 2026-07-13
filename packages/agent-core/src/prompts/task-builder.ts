@@ -3,6 +3,7 @@ import type { AgentContext } from '../types/agent-context';
 import type { PromptLoader, PromptName } from './prompt-loader';
 import type { RuleEvaluationResult } from '../rules/types';
 import type { TaskContextPacket } from '../context/context-packet';
+import { buildCustomerFacingEvidencePacket } from '../context/customer-facing-evidence';
 import { renderTaskContextPacket } from './context-packet-renderer';
 import { renderDurableMemoryFacts } from '../memory/durable-memory-context';
 import { TASK_ROUTES } from '../routing/task-router';
@@ -117,9 +118,11 @@ export function buildTaskPrompt(
   }
 
   // 使用 TaskContextPacket 渲染（如果可用）
+  // Task 3.1：先投影为客户可见包，再渲染；内部 packet 不直接进入 prompt
   if (packet) {
+    const customerPacket = buildCustomerFacingEvidencePacket(packet, locale);
     sections.push('');
-    sections.push(renderTaskContextPacket(packet, locale, context.demoNow));
+    sections.push(renderTaskContextPacket(customerPacket, locale, context.demoNow));
   } else {
     // 降级：保留基本数据窗口信息
     sections.push('');
