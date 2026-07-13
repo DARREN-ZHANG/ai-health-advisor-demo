@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import type { ActivitySegment, DeviceEvent, RecognizedEvent } from '@health-advisor/shared';
+import type { ActivitySegment, DeviceEvent, RecognizedEvent, SensorObservation, BaselineMetrics } from '@health-advisor/shared';
 import { generateEventsForSegment } from '../../helpers/activity-generators';
-import { recognizeEvents } from '../../helpers/event-recognition';
+import {
+  recognizeEvents,
+  aggregatePerMinute,
+  detectCandidateWindows,
+  weightedIntervalScheduling,
+  mergeAdjacentSameType,
+} from '../../helpers/event-recognition';
 import { appendMicroEvent } from '../../helpers/micro-event-append';
 
 // ============================================================
@@ -53,8 +59,10 @@ describe('event-recognition', () => {
       expect(sleepEvent!.type).toBe('sleep');
       expect(sleepEvent!.confidence).toBeGreaterThan(0);
       expect(sleepEvent!.confidence).toBeLessThanOrEqual(1);
+      // 任务 1.2：识别器从无标签观察估算边界，start 可能有 1 分钟偏差
       expect(sleepEvent!.start).toBe('2026-04-16T22:00');
-      expect(sleepEvent!.sourceSegmentId).toBe('seg-sleep-1');
+      // 任务 1.2：sensor 推断路径不暴露 sourceSegmentId
+      expect(sleepEvent!.sourceSegmentId).toBeUndefined();
     });
 
     it('睡眠事件应包含心率等证据', () => {
@@ -88,9 +96,11 @@ describe('event-recognition', () => {
       expect(mealEvent).toBeDefined();
       expect(mealEvent!.type).toBe('meal_intake');
       expect(mealEvent!.confidence).toBeGreaterThan(0);
+      // 任务 1.2：边界由 PELT 变化点估算，最后有数据的分钟为 08:24（08:25 只有 wearState）
       expect(mealEvent!.start).toBe('2026-04-16T08:00');
-      expect(mealEvent!.end).toBe('2026-04-16T08:25');
-      expect(mealEvent!.sourceSegmentId).toBe('seg-meal-1');
+      expect(mealEvent!.end).toBe('2026-04-16T08:24');
+      // 任务 1.2：sensor 推断路径不暴露 sourceSegmentId
+      expect(mealEvent!.sourceSegmentId).toBeUndefined();
     });
   });
 
@@ -123,8 +133,9 @@ describe('event-recognition', () => {
       const results = recognizeEvents(events, profileId, currentTime);
       const cardioEvent = results.find((r) => r.type === 'steady_cardio');
 
+      // 任务 1.2：边界由 PELT 变化点估算，最后有数据的分钟为 09:29（09:30 只有 wearState）
       expect(cardioEvent!.start).toBe('2026-04-16T09:00');
-      expect(cardioEvent!.end).toBe('2026-04-16T09:30');
+      expect(cardioEvent!.end).toBe('2026-04-16T09:29');
     });
   });
 
@@ -891,6 +902,316 @@ describe('event-recognition', () => {
       expect(micro!.calibrationStatus).toBe('not_applicable');
       expect(sensor!.recognitionSource).toBe('sensor_inference');
       expect(sensor!.calibrationStatus).toBe('calibrated');
+    });
+  });
+
+  // ============================================================
+  // 任务 1.2：标签不变量、边界估算、纯函数单元测试
+  // ============================================================
+
+  describe('任务 1.2：标签不变量', () => {
+    /** 生成包含 walk + meal 的混合场景 */
+    function generateMixedScenario(): DeviceEvent[] {
+      const segments = [
+        makeSegment({
+          segmentId: 'seg-walk-invariance',
+          type: 'walk',
+          start: '2026-04-16T07:00',
+          end: '2026-04-16T07:30',
+        }),
+        makeSegment({
+          segmentId: 'seg-meal-invariance',
+          type: 'meal_intake',
+          start: '2026-04-16T08:00',
+          end: '2026-04-16T08:25',
+        }),
+      ];
+      return generateAllEvents(segments);
+    }
+
+    it('相同观察序列配上不同 segmentId 标签应产生相同识别结果', () => {
+      const events = generateMixedScenario();
+      // 第一组：使用原始 segmentId
+      const resultsA = recognizeEvents(events, profileId, currentTime);
+
+      // 第二组：重命名所有 segmentId（保持观察值不变）
+      const renamed = events.map((e, idx) => ({
+        ...e,
+        segmentId: e.segmentId ? `seg-foo-${idx}` : e.segmentId,
+      }));
+      const resultsB = recognizeEvents(renamed, profileId, currentTime);
+
+      // 标签不变量：识别结果数量相同
+      expect(resultsB.length).toBe(resultsA.length);
+
+      // 每个对应事件的 type、confidence、start、end 相同
+      for (let i = 0; i < resultsA.length; i++) {
+        const a = resultsA[i]!;
+        const b = resultsB[i]!;
+        expect(b.type).toBe(a.type);
+        expect(b.start).toBe(a.start);
+        expect(b.end).toBe(a.end);
+        expect(b.confidence).toBeCloseTo(a.confidence, 5);
+        expect(b.recognitionSource).toBe(a.recognitionSource);
+        expect(b.calibrationStatus).toBe(a.calibrationStatus);
+      }
+    });
+
+    it('相同观察序列配上 god-mode 风格 segmentId 不得获得 confidence=1.0', () => {
+      const events = generateMixedScenario();
+      // 注入 god-mode 风格 segmentId
+      const godModeEvents = events.map((e) => ({
+        ...e,
+        segmentId: e.segmentId ? `seg-gm-walk-${Date.now()}` : e.segmentId,
+      }));
+      const results = recognizeEvents(godModeEvents, profileId, currentTime);
+      // 不应有任何事件的 confidence 为 1.0（god-mode 直读已删除）
+      const perfect = results.filter((r) => r.confidence >= 1.0 && r.recognitionSource === 'sensor_inference');
+      expect(perfect).toEqual([]);
+    });
+  });
+
+  describe('任务 1.2：边界估算', () => {
+    it('20 分钟进餐样本不提供 segment 边界，识别器仍估算 start/end', () => {
+      // meal_intake 生成 20 分钟数据
+      const segment = makeSegment({
+        segmentId: 'seg-meal-boundary',
+        type: 'meal_intake',
+        start: '2026-04-16T12:00',
+        end: '2026-04-16T12:20',
+      });
+      const events = generateEventsForSegment(segment);
+
+      // 重命名 segmentId 为不相关名称（模拟"不提供 segment 边界"）
+      const unlabeled = events.map((e) => ({
+        ...e,
+        segmentId: e.segmentId ? 'seg-unknown' : e.segmentId,
+      }));
+      const results = recognizeEvents(unlabeled, profileId, currentTime);
+
+      const meal = results.find((r) => r.type === 'meal_intake');
+      expect(meal).toBeDefined();
+      // 估算的 start 应在 12:00 附近（±2 分钟）— ISO 格式字符串可直接字典序比较
+      expect(meal!.start >= '2026-04-16T11:58').toBe(true);
+      expect(meal!.start <= '2026-04-16T12:02').toBe(true);
+      // 估算的 end 应在 12:19 附近（最后有数据分钟）
+      expect(meal!.end >= '2026-04-16T12:17').toBe(true);
+      expect(meal!.end <= '2026-04-16T12:20').toBe(true);
+    });
+  });
+
+  // ============================================================
+  // 纯函数单元测试
+  // ============================================================
+
+  describe('aggregatePerMinute', () => {
+    it('应按分钟聚合观察并生成 z-score 特征', () => {
+      const baseline: BaselineMetrics = {
+        restingHr: 60,
+        hrv: 50,
+        spo2: 97,
+        avgSleepMinutes: 420,
+        avgSteps: 8000,
+      };
+      const observations: SensorObservation[] = [
+        { observationId: 'a', profileId: 'p', measuredAt: '2026-04-16T08:00', metric: 'heartRate', value: 70 },
+        { observationId: 'b', profileId: 'p', measuredAt: '2026-04-16T08:00', metric: 'motion', value: 4 },
+        { observationId: 'c', profileId: 'p', measuredAt: '2026-04-16T08:01', metric: 'heartRate', value: 75 },
+        { observationId: 'd', profileId: 'p', measuredAt: '2026-04-16T08:01', metric: 'motion', value: 6 },
+      ];
+      const samples = aggregatePerMinute(observations, baseline);
+      expect(samples).toHaveLength(2);
+      expect(samples[0]!.minute).toBe('2026-04-16T08:00');
+      expect(samples[1]!.minute).toBe('2026-04-16T08:01');
+      // z-score for hr=70 with mean=60 std=15 → (70-60)/15 = 0.667
+      expect(samples[0]!.features.heartRate).toBeCloseTo(0.667, 2);
+    });
+
+    it('应跳过只有非数值 metric 的分钟', () => {
+      const baseline: BaselineMetrics = {
+        restingHr: 60,
+        hrv: 50,
+        spo2: 97,
+        avgSleepMinutes: 420,
+        avgSteps: 8000,
+      };
+      const observations: SensorObservation[] = [
+        { observationId: 'a', profileId: 'p', measuredAt: '2026-04-16T08:00', metric: 'wearState', value: true },
+        { observationId: 'b', profileId: 'p', measuredAt: '2026-04-16T08:01', metric: 'heartRate', value: 70 },
+      ];
+      const samples = aggregatePerMinute(observations, baseline);
+      // 08:00 只有 wearState，应被跳过
+      expect(samples).toHaveLength(1);
+      expect(samples[0]!.minute).toBe('2026-04-16T08:01');
+    });
+  });
+
+  describe('detectCandidateWindows', () => {
+    it('应在稳定段内不产生变化点', () => {
+      // 构造 20 分钟的稳定数据（所有特征相同）
+      const samples = Array.from({ length: 20 }, (_, i) => ({
+        minute: `2026-04-16T08:${String(i).padStart(2, '0')}`,
+        offset: i,
+        features: {
+          heartRate: 0.5,
+          hrv: 0,
+          motion: 1.0,
+          stepRate: 0,
+          spo2: 0,
+          stressLoad: 0,
+        },
+        raw: {
+          heartRates: [70],
+          motions: [2],
+          steps: [0],
+          spo2Values: [],
+          hrvRmssds: [],
+          stressLoads: [],
+          sleepStages: [],
+        },
+      }));
+      const windows = detectCandidateWindows(samples);
+      // 稳定段应该只有 1 个窗口
+      expect(windows.length).toBe(1);
+      expect(windows[0]!.startOffset).toBe(0);
+      expect(windows[0]!.endOffset).toBe(19);
+    });
+
+    it('应在显著跳变处产生变化点', () => {
+      // 前 10 分钟 hr_z=0，后 10 分钟 hr_z=5（巨大跳变）
+      const samples = Array.from({ length: 20 }, (_, i) => ({
+        minute: `2026-04-16T08:${String(i).padStart(2, '0')}`,
+        offset: i,
+        features: {
+          heartRate: i < 10 ? 0 : 5,
+          hrv: 0,
+          motion: i < 10 ? 0 : 3,
+          stepRate: 0,
+          spo2: 0,
+          stressLoad: 0,
+        },
+        raw: {
+          heartRates: [i < 10 ? 60 : 135],
+          motions: [i < 10 ? 0 : 6],
+          steps: [0],
+          spo2Values: [],
+          hrvRmssds: [],
+          stressLoads: [],
+          sleepStages: [],
+        },
+      }));
+      const windows = detectCandidateWindows(samples);
+      // 应至少切成 2 个窗口
+      expect(windows.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('weightedIntervalScheduling', () => {
+    it('应选择非重叠的最优子集', () => {
+      const makeEvent = (type: string, start: string, end: string, confidence: number): RecognizedEvent => ({
+        recognizedEventId: `re-${type}-${start}`,
+        profileId: 'p',
+        type: type as RecognizedEvent['type'],
+        start,
+        end,
+        confidence,
+        evidence: [],
+        recognitionSource: 'sensor_inference',
+        calibrationStatus: 'calibrated',
+      });
+
+      // 两个重叠窗口，应选 confidence 高的
+      const intervals = [
+        { event: makeEvent('walk', '2026-04-16T08:00', '2026-04-16T08:30', 0.7), start: '2026-04-16T08:00', end: '2026-04-16T08:30' },
+        { event: makeEvent('meal_intake', '2026-04-16T08:10', '2026-04-16T08:40', 0.9), start: '2026-04-16T08:10', end: '2026-04-16T08:40' },
+      ];
+      const selected = weightedIntervalScheduling(intervals);
+      expect(selected).toHaveLength(1);
+      expect(selected[0]!.type).toBe('meal_intake');
+    });
+
+    it('不重叠窗口应全部保留', () => {
+      const makeEvent = (type: string, start: string, end: string, confidence: number): RecognizedEvent => ({
+        recognizedEventId: `re-${type}-${start}`,
+        profileId: 'p',
+        type: type as RecognizedEvent['type'],
+        start,
+        end,
+        confidence,
+        evidence: [],
+        recognitionSource: 'sensor_inference',
+        calibrationStatus: 'calibrated',
+      });
+
+      const intervals = [
+        { event: makeEvent('meal_intake', '08:00', '08:25', 0.8), start: '2026-04-16T08:00', end: '2026-04-16T08:25' },
+        { event: makeEvent('walk', '09:00', '09:30', 0.7), start: '2026-04-16T09:00', end: '2026-04-16T09:30' },
+      ];
+      const selected = weightedIntervalScheduling(intervals);
+      expect(selected).toHaveLength(2);
+    });
+
+    it('空输入应返回空', () => {
+      expect(weightedIntervalScheduling([])).toEqual([]);
+    });
+  });
+
+  describe('任务 1.2：micro event 显式合并', () => {
+    it('micro event 通过 userReportedEvents 通道合并，不经过传感器推断', () => {
+      // 传感器观察（meal_intake）
+      const mealSegment = makeSegment({
+        segmentId: 'seg-meal-micro-merge',
+        type: 'meal_intake',
+        start: '2026-04-16T08:00',
+        end: '2026-04-16T08:25',
+      });
+      const sensorEvents = generateEventsForSegment(mealSegment);
+
+      // 用户上报的 micro event（已构造为 RecognizedEvent）
+      const userReported: RecognizedEvent[] = [
+        {
+          recognizedEventId: 're-micro-test',
+          profileId,
+          type: 'micro_deep_breathing',
+          start: '2026-04-16T09:00',
+          end: '2026-04-16T09:03',
+          confidence: 1.0,
+          evidence: ['用户选择触发微事件 micro_deep_breathing'],
+          sourceSegmentId: 'seg-micro-micro_deep_breathing-202604160900',
+          recognitionSource: 'user_report',
+          calibrationStatus: 'not_applicable',
+        },
+      ];
+
+      // 通过新签名调用：observations 只含 sensor 数据
+      const sensorObs: SensorObservation[] = sensorEvents
+        .filter((e) => e.metric !== 'wearState' || typeof e.value === 'boolean')
+        .map((e) => ({
+          observationId: `obs-${e.eventId}`,
+          profileId: e.profileId,
+          measuredAt: e.measuredAt,
+          metric: e.metric,
+          value: e.value,
+        }));
+
+      const results = recognizeEvents({
+        observations: sensorObs,
+        userReportedEvents: userReported,
+        profileId,
+        currentTime,
+      });
+
+      // micro event 应原样出现在结果中
+      const micro = results.find((r) => r.type === 'micro_deep_breathing');
+      expect(micro).toBeDefined();
+      expect(micro!.recognitionSource).toBe('user_report');
+      expect(micro!.calibrationStatus).toBe('not_applicable');
+      expect(micro!.confidence).toBe(1.0);
+
+      // sensor 事件也应出现
+      const sensor = results.find((r) => r.type === 'meal_intake');
+      expect(sensor).toBeDefined();
+      expect(sensor!.recognitionSource).toBe('sensor_inference');
     });
   });
 });

@@ -94,7 +94,17 @@ export {
 } from './helpers/profile-write';
 
 // Helpers — event recognition
-export { recognizeEvents } from './helpers/event-recognition';
+export {
+  recognizeEvents,
+  buildRecognizeInputFromDeviceEvents,
+  aggregatePerMinute,
+  detectCandidateWindows,
+  weightedIntervalScheduling,
+  mergeAdjacentSameType,
+} from './helpers/event-recognition';
+export type {
+  RecognizeEventsInput,
+} from './helpers/event-recognition';
 
 // Helpers — sensor observation projection
 export { projectDeviceEventsToSensorObservations } from './helpers/sensor-observation';

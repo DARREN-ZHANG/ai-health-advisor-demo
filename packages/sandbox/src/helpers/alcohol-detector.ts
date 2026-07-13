@@ -1,13 +1,17 @@
 import type {
-  DeviceEvent,
   RecognizedEvent,
+  SensorObservation,
 } from '@health-advisor/shared';
 
 // ============================================================
 // 饮酒摄入概率检测器
 // 基于传感器时序响应推导 possible_alcohol_intake
 // 禁止使用 segmentId 或 segment.type 作弊
+// 仅读取 observation 的 measuredAt、metric、value、profileId 字段
 // ============================================================
+
+/** detector 实际依赖的 observation 字段子集 */
+type ObservationLike = Pick<SensorObservation, 'profileId' | 'measuredAt' | 'metric' | 'value'>;
 
 /** 5 分钟时间桶的聚合数据 */
 interface TimeBucket {
@@ -89,7 +93,7 @@ function computeContextScore(hasNearbyMeal: boolean): number {
 }
 
 /** 检查 t0 附近是否存在进餐特征（不使用 segmentId） */
-function hasNearbyMealIntake(allEvents: DeviceEvent[], t0Time: string): boolean {
+function hasNearbyMealIntake(allEvents: ObservationLike[], t0Time: string): boolean {
   const windowStart = addMinutes(t0Time, -30);
   const windowEnd = addMinutes(t0Time, 30);
 
@@ -145,7 +149,7 @@ function avg(values: number[]): number {
 }
 
 /** 将事件按 5 分钟时间桶聚合 */
-function buildTimeBuckets(events: DeviceEvent[], refTime: string): TimeBucket[] {
+function buildTimeBuckets(events: ObservationLike[], refTime: string): TimeBucket[] {
   const bucketMap = new Map<number, TimeBucket>();
 
   for (const e of events) {
@@ -200,7 +204,7 @@ function detectSpo2Drop(baselineAvg: number, responseAvg: number): boolean {
 /** 检查咖啡因重叠（通过传感器模式判断，不使用 segmentId） */
 function detectCaffeineOverlap(
   _responseBuckets: TimeBucket[],
-  allEvents: DeviceEvent[],
+  allEvents: ObservationLike[],
   t0Time: string,
 ): boolean {
   // 检查 t0 ± 90min 窗口内是否存在咖啡因特征模式：高 HR (>85) + 高 stress (>25) + 低 RMSSD (<42)
@@ -254,7 +258,7 @@ function detectSleepOverlap(buckets: TimeBucket[], t0Offset: number): boolean {
  * 返回 confidence >= 0.70 的 possible_alcohol_intake 事件。
  */
 export function detectPossibleAlcoholIntake(
-  events: DeviceEvent[],
+  events: ObservationLike[],
   profileId: string,
   currentTime: string,
 ): RecognizedEvent[] {
@@ -311,7 +315,7 @@ function analyzeCandidate(
   buckets: TimeBucket[],
   t0Offset: number,
   _refTime: string,
-  allEvents: DeviceEvent[],
+  allEvents: ObservationLike[],
 ): CandidateResult | null {
   const t0Time = addMinutes(buckets[0]!.time, t0Offset);
 

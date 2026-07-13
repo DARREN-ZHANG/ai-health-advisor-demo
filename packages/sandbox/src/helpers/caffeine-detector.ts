@@ -1,13 +1,17 @@
 import type {
-  DeviceEvent,
   RecognizedEvent,
+  SensorObservation,
 } from '@health-advisor/shared';
 
 // ============================================================
 // 咖啡因摄入概率检测器
 // 基于传感器时序响应推导 possible_caffeine_intake
 // 禁止使用 segmentId 或 segment.type 作弊
+// 仅读取 observation 的 measuredAt、metric、value、profileId 字段
 // ============================================================
+
+/** detector 实际依赖的 observation 字段子集 */
+type ObservationLike = Pick<SensorObservation, 'profileId' | 'measuredAt' | 'metric' | 'value'>;
 
 /** 5 分钟时间桶的聚合数据 */
 interface TimeBucket {
@@ -146,7 +150,7 @@ function stdDev(values: number[]): number {
 }
 
 /** 将事件按 5 分钟时间桶聚合 */
-function buildTimeBuckets(events: DeviceEvent[], refTime: string): TimeBucket[] {
+function buildTimeBuckets(events: ObservationLike[], refTime: string): TimeBucket[] {
   const bucketMap = new Map<number, TimeBucket>();
 
   for (const e of events) {
@@ -254,7 +258,7 @@ function detectSleepAtT0(buckets: TimeBucket[], t0Offset: number): boolean {
  * - 关键指标完全不可用时不输出 public event
  */
 export function detectPossibleCaffeineIntake(
-  events: DeviceEvent[],
+  events: ObservationLike[],
   profileId: string,
   currentTime: string,
 ): RecognizedEvent[] {

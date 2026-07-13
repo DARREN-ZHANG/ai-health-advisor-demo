@@ -30,6 +30,7 @@ import {
   getSyncedEvents,
   getPendingEvents,
   recognizeEvents,
+  buildRecognizeInputFromDeviceEvents,
   computeDerivedTemporalStates,
 } from '@health-advisor/sandbox';
 
@@ -576,8 +577,14 @@ function buildTimelineSyncContext(
   const syncedEvents = getSyncedEvents(syncState);
   const pendingEvents = getPendingEvents(syncState);
 
-  // 识别事件
-  const recognizedEvents = recognizeEvents(syncedEvents, profileId, currentTime);
+  // 任务 1.2：先建立无标签观察，再调用新签名
+  // 辅助函数内部完成：micro event 分离、sensor event 投影
+  const recognizeInput = buildRecognizeInputFromDeviceEvents(
+    syncedEvents,
+    profileId,
+    currentTime,
+  );
+  const recognizedEvents = recognizeEvents(recognizeInput);
 
   // 计算派生状态
   const derivedTemporalStates = computeDerivedTemporalStates(

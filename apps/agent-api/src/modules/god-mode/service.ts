@@ -4,6 +4,7 @@ import type { RuntimeRegistry } from '../../runtime/registry.js';
 import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
 import {
   recognizeEvents,
+  buildRecognizeInputFromDeviceEvents,
   computeDerivedTemporalStates,
   loadManifest,
   generateHistory,
@@ -242,7 +243,14 @@ export class GodModeService {
     // 从已同步事件计算识别结果和派生状态
     const syncedEvents = this.registry.overrideStore.getSyncedEvents(profileId);
     const currentTime = clock.currentTime ?? new Date().toISOString().slice(0, 16);
-    const recognizedEvents = recognizeEvents(syncedEvents, profileId, currentTime);
+    // 任务 1.2：先建立无标签观察，再调用新签名
+    // 辅助函数内部完成：micro event 分离、sensor event 投影
+    const recognizeInput = buildRecognizeInputFromDeviceEvents(
+      syncedEvents,
+      profileId,
+      currentTime,
+    );
+    const recognizedEvents = recognizeEvents(recognizeInput);
     const derivedStates = computeDerivedTemporalStates(recognizedEvents, currentTime, profileId);
 
     return {
