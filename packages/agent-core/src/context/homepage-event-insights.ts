@@ -111,6 +111,8 @@ export function buildHomepageEventInsights(
       eventId,
       rawEventType: event.type,
       eventType,
+      // 从对应 RecentEventPacket 透传确定性档位
+      certaintyBand: event.certaintyBand,
       priority: index === 0 ? 'high' : 'medium',
       timeRelation: formatTimeRelation(event.end, demoNow),
       headline: buildHeadline(eventType, event.durationMin),

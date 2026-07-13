@@ -739,6 +739,7 @@ describe('renderTaskContextPacket', () => {
             eventId: 'event_deep_focus_2026-04-21T10:00',
             rawEventType: 'micro_deep_breathing',
             eventType: 'work_focus',
+            certaintyBand: 'likely',
             priority: 'high',
             timeRelation: '刚结束约 10 min',
             headline: '连续专注 120 min，身体保持低位移',
@@ -826,6 +827,7 @@ describe('renderTaskContextPacket', () => {
           {
             eventId: 'event_deep_focus_2026-04-21T10:00',
             eventType: 'work_focus',
+            certaintyBand: 'likely',
             priority: 'high',
             timeRelation: '刚结束约 10 min',
             headline: '连续专注 120 min，身体保持低位移',
@@ -913,6 +915,7 @@ describe('renderTaskContextPacket', () => {
             end: '2026-05-31T18:30',
             durationMin: 60,
             confidence: 0.92,
+            certaintyBand: 'likely',
             sourceSegmentId: 'seg-hiit-1',
             recognitionEvidence: ['心率标准差 35, 交替高低强度'],
             eventWindow: {
@@ -955,6 +958,7 @@ describe('renderTaskContextPacket', () => {
           {
             eventId: 'event_hiit',
             eventType: 'hiit_workout',
+            certaintyBand: 'likely',
             priority: 'high',
             timeRelation: '刚结束约 5 min',
             headline: '完成 60 min 训练，身体进入恢复窗口',
@@ -1105,6 +1109,7 @@ describe('renderTaskContextPacket', () => {
             end: '2026-06-01T13:00',
             durationMin: 30,
             confidence: 0.91,
+            certaintyBand: 'likely',
             sourceSegmentId: 'seg-walk-1',
             recognitionEvidence: ['步行 30 min'],
             syncState: {
@@ -1145,6 +1150,7 @@ describe('renderTaskContextPacket', () => {
           {
             eventId: 'event_walk_2026-06-01T12:30',
             eventType: 'cardio_workout',
+            certaintyBand: 'likely',
             priority: 'high',
             timeRelation: '刚结束约 0 min',
             headline: '完成 30 min 训练，身体进入恢复窗口',
@@ -1221,6 +1227,7 @@ describe('renderTaskContextPacket', () => {
             end: '2026-06-01T13:30',
             durationMin: 30,
             confidence: 0.92,
+            certaintyBand: 'likely',
             sourceSegmentId: 'seg-cardio-1',
             recognitionEvidence: ['有氧运动'],
             syncState: {
@@ -1237,6 +1244,7 @@ describe('renderTaskContextPacket', () => {
             end: '2026-06-01T13:00',
             durationMin: 240,
             confidence: 0.9,
+            certaintyBand: 'likely',
             sourceSegmentId: 'seg-sedentary-1',
             recognitionEvidence: ['久坐'],
             syncState: {
@@ -1255,6 +1263,7 @@ describe('renderTaskContextPacket', () => {
           {
             eventId: 'event_cardio',
             eventType: 'cardio_workout',
+            certaintyBand: 'likely',
             priority: 'high',
             timeRelation: '刚结束约 0 min',
             headline: '完成 30 min 训练，身体进入恢复窗口',
@@ -1284,6 +1293,7 @@ describe('renderTaskContextPacket', () => {
           {
             eventId: 'event_sedentary',
             eventType: 'work_sedentary',
+            certaintyBand: 'likely',
             priority: 'medium',
             timeRelation: '约 0 min 前结束',
             headline: '连续静止 240 min，循环和体态需要重置',
@@ -1424,5 +1434,253 @@ describe('renderTaskContextPacket — todayOccurredActivities 区段', () => {
     const output = renderTaskContextPacket(packet, 'zh', '2026-07-08T15:00');
 
     expect(output).not.toContain('今日已发生活动');
+  });
+});
+
+// ────────────────────────────────────────────
+// Task 2.1: EventCertaintyBand 渲染契约
+// ────────────────────────────────────────────
+
+describe('renderTaskContextPacket — EventCertaintyBand 渲染契约', () => {
+  /** 构造最小可用 RecentEventPacket，certaintyBand 必填 */
+  function makeRecentEventPacket(overrides: Partial<{
+    recognizedEventId: string;
+    type: string;
+    start: string;
+    end: string;
+    durationMin: number;
+    confidence: number;
+    certaintyBand: 'possible' | 'likely' | 'reported';
+    evidenceIds: string[];
+  }>) {
+    return {
+      recognizedEventId: 're-test',
+      type: 'meal_intake',
+      start: '2026-07-13T12:00',
+      end: '2026-07-13T12:30',
+      durationMin: 30,
+      confidence: 0.9,
+      certaintyBand: 'likely' as const,
+      recognitionEvidence: [],
+      syncState: {
+        lastSyncedMeasuredAt: '2026-07-13T12:30',
+        pendingEventCount: 0,
+        fromSyncedWindow: true,
+      },
+      evidenceIds: ['event_meal'],
+      ...overrides,
+    };
+  }
+
+  /** 构造最小可用 HomepageEventInsight，certaintyBand 必填 */
+  function makeEventInsight(overrides: Partial<{
+    eventId: string;
+    eventType: string;
+    certaintyBand: 'possible' | 'likely' | 'reported';
+    headline: string;
+    timeRelation: string;
+    mentionPolicy: { summary: 'allowed' | 'forbidden'; actions: 'allowed' | 'forbidden'; reason: string };
+  }>) {
+    return {
+      eventId: 'event_meal',
+      eventType: 'meal',
+      certaintyBand: 'likely' as const,
+      priority: 'high' as const,
+      timeRelation: '刚结束约 5 min',
+      headline: '完成一段约 30 min 的进餐',
+      physiology: [],
+      recoveryContext: [],
+      tension: {
+        level: 'positive' as const,
+        summary: '事件窗口内没有明显冲突信号',
+        reason: 'no tension markers',
+      },
+      recommendedFocus: [],
+      actionIntents: [],
+      evidenceIds: ['event_meal'],
+      mentionPolicy: {
+        summary: 'allowed' as const,
+        actions: 'allowed' as const,
+        reason: 'current_latest_event',
+      },
+      ...overrides,
+    };
+  }
+
+  function makeBasePacket(): TaskContextPacket {
+    return {
+      task: { type: 'homepage_summary', page: 'home' },
+      userContext: {
+        profileId: 'p1',
+        name: 'Test',
+        age: 30,
+        tags: [],
+        baselines: { restingHR: 60, hrv: 60, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
+      },
+      dataWindow: { start: '2026-07-13', end: '2026-07-13', recordCount: 1, completenessPct: 100 },
+      missingData: [],
+      evidence: [],
+      visibleCharts: [],
+    };
+  }
+
+  it('certaintyBand=possible 时，渲染"可能"措辞，且不渲染 confidence 百分比', () => {
+    const packet: TaskContextPacket = {
+      ...makeBasePacket(),
+      homepage: {
+        recentEvents: [
+          makeRecentEventPacket({
+            confidence: 0.79,
+            certaintyBand: 'possible',
+          }),
+        ],
+        latest24h: { date: '2026-07-13', metrics: [] },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+        eventInsights: [
+          makeEventInsight({ certaintyBand: 'possible' }),
+        ],
+      },
+    };
+
+    const output = renderTaskContextPacket(packet, 'zh', '2026-07-13T12:35');
+
+    // 必须包含 certainty band 标注
+    expect(output).toContain('确定性档位');
+    expect(output).toContain('possible');
+    // 必须包含可能的措辞指引
+    expect(output).toContain('可能');
+    // "当前可提及事件"区块内不得出现 confidence 百分比
+    const displayableSection = output.split('## 当前可提及事件')[1]?.split('## ')[0] ?? '';
+    expect(displayableSection).not.toContain('79%');
+    expect(displayableSection).not.toContain('confidence 79%');
+    expect(displayableSection).not.toMatch(/置信度\s*\d/);
+    // 必须显式标注禁止确定性断言（renderer 主动告知 LLM 禁用规则）
+    expect(displayableSection).toContain('禁止');
+  });
+
+  it('certaintyBand=likely 时，渲染"大概率"措辞，且不渲染 confidence 百分比', () => {
+    const packet: TaskContextPacket = {
+      ...makeBasePacket(),
+      homepage: {
+        recentEvents: [
+          makeRecentEventPacket({
+            confidence: 0.98,
+            certaintyBand: 'likely',
+          }),
+        ],
+        latest24h: { date: '2026-07-13', metrics: [] },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+        eventInsights: [
+          makeEventInsight({ certaintyBand: 'likely' }),
+        ],
+      },
+    };
+
+    const output = renderTaskContextPacket(packet, 'zh', '2026-07-13T12:35');
+
+    expect(output).toContain('确定性档位');
+    expect(output).toContain('likely');
+    // likely 对应大概率/很可能 措辞指引
+    expect(output).toContain('大概率');
+    // "当前可提及事件"区块内不得出现 confidence 百分比
+    const displayableSection = output.split('## 当前可提及事件')[1]?.split('## ')[0] ?? '';
+    expect(displayableSection).not.toContain('98%');
+    expect(displayableSection).not.toContain('confidence 98%');
+    expect(displayableSection).not.toMatch(/置信度\s*\d/);
+    // 即使 likely，renderer 也必须显式标注"禁止确定性断言"
+    expect(displayableSection).toContain('禁止');
+  });
+
+  it('certaintyBand=reported 时，渲染"你记录了"措辞', () => {
+    const packet: TaskContextPacket = {
+      ...makeBasePacket(),
+      homepage: {
+        recentEvents: [
+          makeRecentEventPacket({
+            type: 'hydration_intake',
+            confidence: 1.0,
+            certaintyBand: 'reported',
+          }),
+        ],
+        latest24h: { date: '2026-07-13', metrics: [] },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+        eventInsights: [
+          makeEventInsight({
+            eventType: 'unknown',
+            certaintyBand: 'reported',
+            headline: '你记录了一次饮水',
+          }),
+        ],
+      },
+    };
+
+    const output = renderTaskContextPacket(packet, 'zh', '2026-07-13T12:35');
+
+    expect(output).toContain('确定性档位');
+    expect(output).toContain('reported');
+    // reported 对应"你记录了/你完成了"措辞指引
+    expect(output).toContain('你记录了');
+  });
+
+  it('英文 locale 同样渲染 certainty band 与对应措辞', () => {
+    const packet: TaskContextPacket = {
+      ...makeBasePacket(),
+      homepage: {
+        recentEvents: [
+          makeRecentEventPacket({
+            confidence: 0.98,
+            certaintyBand: 'likely',
+          }),
+        ],
+        latest24h: { date: '2026-07-13', metrics: [] },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+        eventInsights: [makeEventInsight({ certaintyBand: 'likely' })],
+      },
+    };
+
+    const output = renderTaskContextPacket(packet, 'en', '2026-07-13T12:35');
+
+    expect(output).toContain('Certainty band');
+    expect(output).toContain('likely');
+    expect(output).toContain('strongly consistent with');
+    // "Current Mentionable Event" 区块内不得出现 confidence 百分比
+    const displayableSection = output.split('## Current Mentionable Event')[1]?.split('## ')[0] ?? '';
+    expect(displayableSection).not.toContain('98%');
+    expect(displayableSection).not.toContain('confidence 98%');
+  });
+
+  it('renderer 不再使用 raw confidence 字段渲染百分比（即使 confidence 字段仍存在）', () => {
+    const packet: TaskContextPacket = {
+      ...makeBasePacket(),
+      homepage: {
+        recentEvents: [
+          makeRecentEventPacket({
+            confidence: 0.85,
+            certaintyBand: 'likely',
+          }),
+        ],
+        latest24h: { date: '2026-07-13', metrics: [] },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+        eventInsights: [makeEventInsight({ certaintyBand: 'likely' })],
+      },
+    };
+
+    const output = renderTaskContextPacket(packet, 'zh', '2026-07-13T12:35');
+
+    // 当前可提及事件区块不应出现 confidence 85% 字样
+    const displayableSection = output.split('## 当前可提及事件')[1]?.split('## ')[0] ?? '';
+    expect(displayableSection).not.toContain('confidence 85%');
+    expect(displayableSection).not.toContain('置信度 85%');
+    expect(displayableSection).not.toContain('85%');
   });
 });

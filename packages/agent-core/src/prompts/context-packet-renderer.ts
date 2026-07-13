@@ -10,6 +10,7 @@ import type {
   ViewSummaryContextPacket,
   AdvisorChatContextPacket,
   MetricSummary,
+  EventCertaintyBand,
 } from '../context/context-packet';
 import type { RecentRecommendedAction } from '../types/memory';
 import { ACTION_SEMANTIC_GROUPS } from '../context/homepage-event-insights';
@@ -18,6 +19,34 @@ import { ChartTokenId, type DataTab, type Locale } from '@health-advisor/shared'
 // ────────────────────────────────────────────
 // 双语标签辅助函数
 // ────────────────────────────────────────────
+
+/**
+ * EventCertaintyBand 对应的客户可见措辞指引（中英双语）。
+ *
+ * renderer 将此作为 LLM 措辞契约输出，禁止 LLM 跨档位使用确定性词汇：
+ * - possible：可能/似乎/may have/may be consistent with
+ * - likely：大概率/很可能/likely/strongly consistent with
+ * - reported：你记录了/你完成了/you logged/you completed
+ */
+const CERTAINTY_BAND_WORDING: Record<EventCertaintyBand, { zh: string; en: string }> = {
+  possible: {
+    zh: '可能、似乎、数据有些像（禁止确定性断言）',
+    en: 'may have, may be consistent with (no deterministic assertions)',
+  },
+  likely: {
+    zh: '大概率、很像、数据显示很可能（仍禁止"刚吃完/完成/确认"等断言）',
+    en: 'likely, strongly consistent with (still no "finished/confirmed" assertions)',
+  },
+  reported: {
+    zh: '你记录了、你刚完成了（允许确定性表达）',
+    en: 'you logged, you completed (deterministic phrasing allowed)',
+  },
+};
+
+/** 根据档位和 locale 返回对应的措辞指引文案 */
+function certaintyWording(band: EventCertaintyBand, locale: Locale): string {
+  return CERTAINTY_BAND_WORDING[band][locale];
+}
 
 function t(locale: Locale, zh: string, en: string): string {
   return locale === 'zh' ? zh : en;
@@ -280,6 +309,24 @@ function renderDisplayableHomepageEvent(homepage: HomepageContextPacket, locale:
   lines.push(
     `  - ${t(locale, '最近事件原始类型', 'Latest raw event type')}${colon(locale)}${current.rawEventType ?? current.eventType}`,
   );
+  // Task 2.1：确定性档位 — 替代 raw confidence 参与文案生成
+  // 禁止显示 confidence 百分比；renderer 只输出语义化档位与措辞指引
+  lines.push(
+    `  - ${t(locale, '确定性档位', 'Certainty band')}${colon(locale)}${current.certaintyBand}`,
+  );
+  lines.push(
+    `    - ${t(locale, '措辞契约', 'Wording contract')}${colon(locale)}${certaintyWording(current.certaintyBand, locale)}`,
+  );
+  if (current.certaintyBand !== 'reported') {
+    // sensor_inference（possible/likely）追加硬约束：禁止确定性断言、禁止百分比
+    lines.push(
+      `    - ${t(
+        locale,
+        '禁止使用"刚吃完/完成/确认"等断言；禁止显示概率百分比',
+        'Do NOT use "finished/completed/confirmed" assertions; do NOT display probability percentage',
+      )}`,
+    );
+  }
   lines.push(`  - ${t(locale, '事件摘要', 'Event summary')}${colon(locale)}${current.headline}`);
   if (current.eventWindow) {
     lines.push(

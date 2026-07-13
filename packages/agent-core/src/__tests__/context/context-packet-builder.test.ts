@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { buildTaskContextPacket } from '../../context/context-packet-builder';
+import { buildTaskContextPacket, toEventCertaintyBand } from '../../context/context-packet-builder';
 import type { AgentContext } from '../../types/agent-context';
 import { AgentTaskType, ChartTokenId } from '@health-advisor/shared';
 import type { RuleEvaluationResult } from '../../rules/types';
-import type { DailyRecord } from '@health-advisor/shared';
+import type { DailyRecord, RecognizedEvent } from '@health-advisor/shared';
 
 function makeRecord(date: string, overrides: Partial<DailyRecord> = {}): DailyRecord {
   return {
@@ -781,5 +781,205 @@ describe('buildHomepagePacket — todayOccurredActivities（futureSuggestions �
 
     expect(packet.homepage?.recentEvents).toHaveLength(2);
     expect(packet.homepage?.todayOccurredActivities).toHaveLength(4);
+  });
+});
+
+// ────────────────────────────────────────────
+// Task 2.1: EventCertaintyBand 与确定性映射
+// ────────────────────────────────────────────
+
+/** 构造最小可用的 RecognizedEvent，避免重复样板 */
+function makeRecognizedEvent(overrides: Partial<RecognizedEvent>): RecognizedEvent {
+  return {
+    recognizedEventId: 're-test',
+    profileId: 'profile-a',
+    type: 'meal_intake',
+    start: '2026-04-10T12:00',
+    end: '2026-04-10T12:30',
+    confidence: 0.5,
+    evidence: [],
+    recognitionSource: 'sensor_inference',
+    calibrationStatus: 'calibrated',
+    ...overrides,
+  };
+}
+
+describe('toEventCertaintyBand — 确定性映射纯函数', () => {
+  it('user_report → reported（无论 confidence 高低）', () => {
+    expect(toEventCertaintyBand(makeRecognizedEvent({
+      recognitionSource: 'user_report',
+      calibrationStatus: 'not_applicable',
+      confidence: 0.5,
+    }))).toBe('reported');
+  });
+
+  it('user_report 即使 confidence 高也 → reported', () => {
+    expect(toEventCertaintyBand(makeRecognizedEvent({
+      recognitionSource: 'user_report',
+      calibrationStatus: 'not_applicable',
+      confidence: 1.0,
+    }))).toBe('reported');
+  });
+
+  it('sensor_inference && confidence >= 0.8 → likely', () => {
+    expect(toEventCertaintyBand(makeRecognizedEvent({
+      recognitionSource: 'sensor_inference',
+      confidence: 0.8,
+    }))).toBe('likely');
+  });
+
+  it('sensor_inference && confidence = 0.98 → likely', () => {
+    expect(toEventCertaintyBand(makeRecognizedEvent({
+      recognitionSource: 'sensor_inference',
+      confidence: 0.98,
+    }))).toBe('likely');
+  });
+
+  it('sensor_inference && confidence < 0.8 → possible', () => {
+    expect(toEventCertaintyBand(makeRecognizedEvent({
+      recognitionSource: 'sensor_inference',
+      confidence: 0.79,
+    }))).toBe('possible');
+  });
+
+  it('sensor_inference && confidence = 0 → possible', () => {
+    expect(toEventCertaintyBand(makeRecognizedEvent({
+      recognitionSource: 'sensor_inference',
+      confidence: 0,
+    }))).toBe('possible');
+  });
+});
+
+describe('RecentEventPacket.certaintyBand — builder 集成', () => {
+  it('sensor_inference 高置信度事件 → certaintyBand = likely', () => {
+    const ctx = makeContext({
+      timelineSync: {
+        recognizedEvents: [
+          {
+            recognizedEventId: 're-meal-likely',
+            profileId: 'profile-a',
+            type: 'meal_intake',
+            start: '2026-04-10T12:00',
+            end: '2026-04-10T12:30',
+            confidence: 0.98,
+            evidence: ['low motion', 'stable posture'],
+            recognitionSource: 'sensor_inference' as const,
+            calibrationStatus: 'calibrated' as const,
+          },
+        ],
+        derivedTemporalStates: [],
+        syncMetadata: { lastSyncedMeasuredAt: '2026-04-10T12:30', pendingEventCount: 0 },
+      },
+    });
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+
+    expect(packet.homepage?.recentEvents).toHaveLength(1);
+    expect(packet.homepage?.recentEvents[0]?.certaintyBand).toBe('likely');
+    // 内部 confidence 字段保留（用于日志/可观测性）
+    expect(packet.homepage?.recentEvents[0]?.confidence).toBe(0.98);
+  });
+
+  it('sensor_inference 低置信度事件 → certaintyBand = possible', () => {
+    const ctx = makeContext({
+      timelineSync: {
+        recognizedEvents: [
+          {
+            recognizedEventId: 're-meal-possible',
+            profileId: 'profile-a',
+            type: 'meal_intake',
+            start: '2026-04-10T12:00',
+            end: '2026-04-10T12:30',
+            confidence: 0.79,
+            evidence: ['low motion'],
+            recognitionSource: 'sensor_inference' as const,
+            calibrationStatus: 'calibrated' as const,
+          },
+        ],
+        derivedTemporalStates: [],
+        syncMetadata: { lastSyncedMeasuredAt: '2026-04-10T12:30', pendingEventCount: 0 },
+      },
+    });
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+
+    expect(packet.homepage?.recentEvents[0]?.certaintyBand).toBe('possible');
+  });
+
+  it('user_report 事件 → certaintyBand = reported', () => {
+    const ctx = makeContext({
+      timelineSync: {
+        recognizedEvents: [
+          {
+            recognizedEventId: 're-water-reported',
+            profileId: 'profile-a',
+            type: 'hydration_intake',
+            start: '2026-04-10T10:00',
+            end: '2026-04-10T10:01',
+            confidence: 1.0,
+            evidence: ['user reported water logging'],
+            recognitionSource: 'user_report' as const,
+            calibrationStatus: 'not_applicable' as const,
+          },
+        ],
+        derivedTemporalStates: [],
+        syncMetadata: { lastSyncedMeasuredAt: '2026-04-10T10:01', pendingEventCount: 0 },
+      },
+    });
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+
+    expect(packet.homepage?.recentEvents[0]?.certaintyBand).toBe('reported');
+  });
+
+  it('无 recognitionSource 的旧事件（向后兼容）→ 按 sensor_inference 处理', () => {
+    // context-packet-builder 应能处理未带 recognitionSource 的事件
+    const ctx = makeContext({
+      timelineSync: {
+        recognizedEvents: [
+          {
+            recognizedEventId: 're-legacy',
+            profileId: 'profile-a',
+            type: 'meal_intake',
+            start: '2026-04-10T12:00',
+            end: '2026-04-10T12:30',
+            confidence: 0.85,
+            evidence: ['legacy event without recognitionSource'],
+          },
+        ],
+        derivedTemporalStates: [],
+        syncMetadata: { lastSyncedMeasuredAt: '2026-04-10T12:30', pendingEventCount: 0 },
+      },
+    });
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+
+    // 默认按 sensor_inference 处理
+    expect(packet.homepage?.recentEvents[0]?.certaintyBand).toBe('likely');
+  });
+});
+
+describe('HomepageEventInsight.certaintyBand — 透传最近事件', () => {
+  it('eventInsights 的 certaintyBand 与对应 recentEvent 一致（likely 场景）', () => {
+    const ctx = makeContext({
+      demoNow: '2026-04-10T12:35',
+      timelineSync: {
+        recognizedEvents: [
+          {
+            recognizedEventId: 're-meal-1',
+            profileId: 'profile-a',
+            type: 'meal_intake',
+            start: '2026-04-10T12:00',
+            end: '2026-04-10T12:30',
+            confidence: 0.92,
+            evidence: ['low motion during meal'],
+            recognitionSource: 'sensor_inference' as const,
+            calibrationStatus: 'calibrated' as const,
+          },
+        ],
+        derivedTemporalStates: [],
+        syncMetadata: { lastSyncedMeasuredAt: '2026-04-10T12:30', pendingEventCount: 0 },
+      },
+    });
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+
+    expect(packet.homepage?.eventInsights).toHaveLength(1);
+    expect(packet.homepage?.eventInsights[0]?.certaintyBand).toBe('likely');
   });
 });

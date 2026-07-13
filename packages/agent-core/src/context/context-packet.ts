@@ -193,13 +193,34 @@ export interface HomepageEventWindowSummary {
   evidenceIds: string[];
 }
 
+/**
+ * 事件确定性档位 — 用于客户可见文案生成的语义化置信度分级。
+ *
+ * 设计意图：替代精确 confidence 参与文案生成，避免向客户展示概率百分比，
+ * 同时为 LLM 提供清晰的措辞边界。
+ *
+ * - `possible`：sensor_inference 且 confidence < 0.8，对应"可能/似乎"
+ * - `likely`：sensor_inference 且 confidence >= 0.8，对应"大概率/很像"
+ * - `reported`：user_report，对应"你记录了/你完成了"
+ *
+ * 映射规则在 `toEventCertaintyBand` 中固化，禁止 renderer 使用 raw confidence。
+ */
+export type EventCertaintyBand = 'possible' | 'likely' | 'reported';
+
 export interface RecentEventPacket {
   recognizedEventId?: string;
   type: string;
   start: string;
   end: string;
   durationMin: number;
+  /** 内部校准概率（保留用于日志/可观测性，renderer 禁止使用） */
   confidence: number;
+  /**
+   * 客户可见文案使用的确定性档位。
+   * 由 `toEventCertaintyBand` 根据 recognitionSource 和 confidence 计算。
+   * renderer 必须基于此字段选择措辞，禁止读取 confidence。
+   */
+  certaintyBand: EventCertaintyBand;
   sourceSegmentId?: string;
   recognitionEvidence: string[];
   eventWindow?: HomepageEventWindowSummary;
@@ -355,6 +376,11 @@ export interface HomepageEventInsight {
   /** 事件识别器输出的原始类型；语义归一化不能丢失用户刚触发的微事件。 */
   rawEventType?: string;
   eventType: HomepageSemanticEventType;
+  /**
+   * 客户可见文案使用的确定性档位，从对应 RecentEventPacket 透传。
+   * renderer 必须基于此字段选择措辞，禁止读取 raw confidence。
+   */
+  certaintyBand: EventCertaintyBand;
   priority: 'high' | 'medium' | 'low';
   timeRelation: string;
   headline: string;

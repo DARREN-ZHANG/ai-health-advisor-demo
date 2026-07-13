@@ -1,5 +1,5 @@
 import { AgentTaskType } from '@health-advisor/shared';
-import type { DailyRecord } from '@health-advisor/shared';
+import type { DailyRecord, RecognizedEvent } from '@health-advisor/shared';
 import type { AgentContext } from '../types/agent-context';
 import type { RuleEvaluationResult } from '../rules/types';
 import type {
@@ -22,6 +22,7 @@ import type {
   MetricName,
   RuleInsightPacket,
   OccurredActivity,
+  EventCertaintyBand,
 } from './context-packet';
 import type { EvidenceCollector } from './evidence-packet';
 import { createEvidenceCollector } from './evidence-packet';
@@ -31,6 +32,31 @@ import { parseQuestionIntent } from './advisor-intent';
 import { buildMetricSummary, buildMetricSummaries } from './metric-summary';
 import { buildHomepageEventInsights } from './homepage-event-insights';
 import { buildHomepageEventWindowSummary } from './homepage-event-window';
+
+// ────────────────────────────────────────────
+// Task 2.1: EventCertaintyBand 映射
+// ────────────────────────────────────────────
+
+/** likely 阈值：sensor_inference 且 confidence >= 0.8 */
+const LIKELY_CONFIDENCE_THRESHOLD = 0.8;
+
+/**
+ * 根据 RecognizedEvent 的 recognitionSource 与 confidence 计算确定性档位。
+ *
+ * 映射规则（固化、纯函数）：
+ * - `recognitionSource === 'user_report'` → `reported`
+ * - `sensor_inference && confidence >= 0.8` → `likely`
+ * - 其余 `sensor_inference` → `possible`
+ *
+ * 当事件未带 `recognitionSource`（向后兼容旧数据）时按 `sensor_inference` 处理。
+ */
+export function toEventCertaintyBand(event: Pick<RecognizedEvent, 'confidence' | 'recognitionSource'>): EventCertaintyBand {
+  if (event.recognitionSource === 'user_report') {
+    return 'reported';
+  }
+  // sensor_inference 或缺失 recognitionSource（旧数据向后兼容）
+  return event.confidence >= LIKELY_CONFIDENCE_THRESHOLD ? 'likely' : 'possible';
+}
 
 // ────────────────────────────────────────────
 // 主入口
@@ -331,6 +357,7 @@ function buildRecentEvents(
         end: ev.end,
         durationMin,
         confidence: ev.confidence,
+        certaintyBand: toEventCertaintyBand(ev),
         sourceSegmentId: ev.sourceSegmentId,
         recognitionEvidence: ev.evidence,
         eventWindow,
@@ -366,6 +393,8 @@ function buildRecentEvents(
         end: eventDate,
         durationMin: 0,
         confidence: 1,
+        // 规则注入事件默认按 sensor_inference + confidence=1 → likely 处理
+        certaintyBand: toEventCertaintyBand({ confidence: 1, recognitionSource: 'sensor_inference' }),
         recognitionEvidence: [],
         syncState: {
           lastSyncedMeasuredAt: null,
