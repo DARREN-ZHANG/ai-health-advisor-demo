@@ -17,6 +17,11 @@ import { buildTaskPrompt } from '../prompts/task-builder';
 import { parseAgentResponse } from '../output/response-parser';
 import { validateChartTokens } from '../output/token-validator';
 import { cleanSafetyIssues } from '../output/safety-cleaner';
+import {
+  enforceCustomerContentPolicy,
+  buildRegenerationFeedback,
+} from '../output/realtime-brief-content-policy';
+import { buildCustomerFacingEvidencePacket } from '../context/customer-facing-evidence';
 import { withTimeout, TimeoutError } from './timeout-controller';
 import { AGENT_SLA_TIMEOUT_MS } from '../constants/limits';
 
@@ -387,7 +392,7 @@ export async function executeAgent(
       safeEnvelope.actions ?? [],
     );
 
-    const result: AgentResponseEnvelope = {
+    const cleanedEnvelope: AgentResponseEnvelope = {
       ...safeEnvelope,
       summary: cleaned.cleaned,
       microTips: cleaned.cleanedTips.length > 0 ? cleaned.cleanedTips : undefined,
@@ -398,8 +403,89 @@ export async function executeAgent(
       },
     };
 
+    // ── Task 3.3: Customer Content Policy（阻断式） ──
+    // 在 memory 写入 / verifier / cache 之前执行。
+    // 违规时允许一次 regeneration；仍失败则 fail-closed typed error。
+    const actionCandidates = collectActionCandidates(packet);
+    const customerEvidencePacket = buildCustomerFacingEvidencePacket(packet, locale);
+
+    const firstPolicyResult = enforceCustomerContentPolicy({
+      envelope: cleanedEnvelope,
+      evidencePacket: customerEvidencePacket,
+      actionCandidates,
+      locale,
+      taskType: context.task.type,
+    });
+
+    // 最终用于后续流程的 envelope（policy 通过的版本）
+    let result: AgentResponseEnvelope;
+    let policyRegenerated = false;
+
+    if (firstPolicyResult.approved) {
+      result = cleanedEnvelope;
+    } else {
+      // 违规 → 尝试一次 regeneration（仅传结构化 violation code + 客户规则，不含内部值）
+      const feedback = buildRegenerationFeedback(firstPolicyResult.violations, locale);
+      const regeneratedTaskPrompt = `${taskPrompt}\n\n${feedback}`;
+      const regeneratedRaw = await deps.agent.invoke({
+        systemPrompt,
+        userPrompt: regeneratedTaskPrompt,
+      });
+      tryNotify(() => observer?.onModelOutput?.(regeneratedRaw.content));
+
+      const regeneratedParsed = parseAgentResponse(regeneratedRaw.content, {
+        taskType: request.taskType,
+        pageContext: request.pageContext,
+        defaultStatusColor: toEnvelopeStatusColor(rulesResult.statusColor),
+        demoNow: context.demoNow,
+      });
+
+      if (!regeneratedParsed.success) {
+        // 重生成解析失败 → fail-closed
+        tryNotify(() => observer?.onFallback?.('invalid_output'));
+        return toCustomerPolicyError(request, locale);
+      }
+
+      const regeneratedTokens = validateChartTokens(
+        regeneratedParsed.envelope.chartTokens,
+        Array.from(allowedTokens),
+      );
+      const regeneratedCleaned = cleanSafetyIssues(
+        regeneratedParsed.envelope.summary,
+        context.dataWindow.missingFields,
+        regeneratedParsed.envelope.microTips ?? [],
+        regeneratedParsed.envelope.actions ?? [],
+      );
+      const regeneratedEnvelope: AgentResponseEnvelope = {
+        ...regeneratedParsed.envelope,
+        chartTokens: regeneratedTokens.valid,
+        summary: regeneratedCleaned.cleaned,
+        microTips: regeneratedCleaned.cleanedTips.length > 0 ? regeneratedCleaned.cleanedTips : undefined,
+        actions: regeneratedCleaned.cleanedActions.length > 0 ? regeneratedCleaned.cleanedActions : undefined,
+        meta: { ...regeneratedParsed.envelope.meta, finishReason: 'complete' },
+      };
+
+      const secondPolicyResult = enforceCustomerContentPolicy({
+        envelope: regeneratedEnvelope,
+        evidencePacket: customerEvidencePacket,
+        actionCandidates,
+        locale,
+        taskType: context.task.type,
+      });
+
+      if (!secondPolicyResult.approved) {
+        // 第二次仍违规 → fail-closed typed error，不写 memory
+        return toCustomerPolicyError(request, locale);
+      }
+
+      result = regeneratedEnvelope;
+      policyRegenerated = true;
+    }
+
     // onParsed: 结构化输出已解析完成（时序: onParsed → onVerified → onSyncGate → onReflected）
     tryNotify(() => observer?.onParsed?.(result));
+    // 标记是否是 policy regeneration 的结果（用于后续流程跳过 sync gate 的二次 regeneration）
+    void policyRegenerated;
 
     // 11. 写回 session memory
     writeSessionMemory(deps, request, result.summary);
@@ -914,6 +1000,53 @@ function toSafetyBoundaryResponse(
     statusColor: 'warning',
     chartTokens: [],
     microTips: ['建议咨询专业医生获取更准确的健康评估'],
+    meta: {
+      taskType: request.taskType,
+      pageContext: request.pageContext,
+      finishReason: 'fallback',
+      sessionId: request.sessionId,
+    },
+  };
+}
+
+/**
+ * Task 3.3: 从当前 displayable event 的 actionIntents 收集 action candidates。
+ * 这些 candidates 用于构建 claim ledger，为数值归因检查提供允许列表。
+ */
+function collectActionCandidates(packet: TaskContextPacket): import('@health-advisor/shared').ActionOption[] {
+  const homepage = packet.homepage;
+  if (!homepage) return [];
+  const current = homepage.eventInsights.find((i) => i.mentionPolicy?.summary === 'allowed');
+  if (!current) return [];
+  return current.actionIntents.map((intent) => ({
+    id: intent.id,
+    emoji: intent.emoji,
+    title: intent.title,
+    description: intent.description,
+    aiPromise: intent.aiPromise,
+    interaction: intent.interaction as any,
+  }));
+}
+
+/**
+ * Task 3.3: Customer Content Policy fail-closed 错误响应。
+ *
+ * 当两次 regeneration 都无法通过 customer content policy 时返回。
+ * 关键约束：
+ * - 不返回任何 LLM 生成的内容（无 fallback brief）
+ * - source 标记为 'customer-policy'，便于观测/区分
+ * - summary 使用固定安全文案，不包含任何模型输出
+ */
+function toCustomerPolicyError(request: AgentRequest, _locale: Locale): AgentResponseEnvelope {
+  return {
+    summary:
+      _locale === 'en'
+        ? 'Unable to generate a response that meets our content policy. Please try again later.'
+        : '当前无法生成符合内容策略的回复，请稍后重试。',
+    source: 'customer-policy',
+    statusColor: 'warning',
+    chartTokens: [],
+    microTips: [],
     meta: {
       taskType: request.taskType,
       pageContext: request.pageContext,

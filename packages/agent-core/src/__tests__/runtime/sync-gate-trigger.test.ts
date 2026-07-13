@@ -148,7 +148,9 @@ function makeDeps(
     agent: {
       invoke: agentOverrides.invoke ?? (async () => ({
         content: JSON.stringify({
-          summary: '您的健康数据分析结果。',
+          // Task 3.3: homepage summary 需满足 zh 220-420 grapheme 区间
+          summary:
+            '今天整体状态良好，各项生理指标处于稳定区间。夜间睡眠时长充足，深睡与浅睡比例合理，晨起恢复状况良好；白天活动量适中，心率与血氧饱和度保持在正常水平，压力负荷处于较低区间。当前没有出现明显的生理异常或需要关注的事件，身体处于稳态。建议继续保持规律的作息安排与均衡饮食结构，适当安排户外散步或轻度运动，以维持当前的稳态并促进长期健康。如出现任何不适或数据异常，请及时咨询专业医疗人员获取准确的评估和指导。今日可关注夜间睡眠质量与明日晨起准备度之间的关联。',
           source: 'llm',
           statusColor: 'good',
           chartTokens: [],

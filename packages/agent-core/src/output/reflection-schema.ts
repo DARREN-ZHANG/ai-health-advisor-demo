@@ -15,7 +15,7 @@ export interface ReflectionReviewInput {
 
 /** Sync reflection 审核结果中的违规项 */
 export interface ReflectionViolation {
-  category: 'safety' | 'accuracy' | 'completeness';
+  category: 'safety' | 'accuracy' | 'completeness' | 'customer_boundary';
   severity: 'high' | 'medium';
   description: string;
   requiredChanges: string;
@@ -31,7 +31,7 @@ export interface ReflectionReviewResult {
 export const ReflectionReviewResultSchema = z.object({
   approved: z.boolean(),
   violations: z.array(z.object({
-    category: z.enum(['safety', 'accuracy', 'completeness']),
+    category: z.enum(['safety', 'accuracy', 'completeness', 'customer_boundary']),
     severity: z.enum(['high', 'medium']),
     description: z.string(),
     requiredChanges: z.string(),

@@ -10,6 +10,10 @@ import { AgentTaskType, ChartTokenId } from '@health-advisor/shared';
 import { InMemorySessionMemoryStore } from '../../memory/session-memory-store';
 import { InMemoryAnalyticalMemoryStore } from '../../memory/analytical-memory-store';
 
+/** Task 3.3: 测试用合规 summary（满足 zh 220-420 grapheme 区间） */
+const COMPLIANT_SUMMARY =
+  '今天整体状态良好，各项生理指标处于稳定区间。夜间睡眠时长充足，深睡与浅睡比例合理，晨起恢复状况良好；白天活动量适中，心率与血氧饱和度保持在正常水平，压力负荷处于较低区间。当前没有出现明显的生理异常或需要关注的事件，身体处于稳态。建议继续保持规律的作息安排与均衡饮食结构，适当安排户外散步或轻度运动，以维持当前的稳态并促进长期健康。如出现任何不适或数据异常，请及时咨询专业医疗人员获取准确的评估和指导。今日可关注夜间睡眠质量与明日晨起准备度之间的关联。';
+
 function makeRecord(date: string, overrides: Partial<DailyRecord> = {}): DailyRecord {
   return {
     date,
@@ -89,7 +93,7 @@ function makeDeps(agent: Partial<HealthAgent> = {}): AgentRuntimeDeps {
     agent: {
       invoke: agent.invoke ?? (async () => ({
         content: JSON.stringify({
-          summary: '整体状态良好。',
+          summary: COMPLIANT_SUMMARY,
           chartTokens: [ChartTokenId.HRV_7DAYS],
           microTips: ['保持规律作息'],
         }),
@@ -104,7 +108,7 @@ describe('executeAgent', () => {
   it('成功执行并返回结构化响应', async () => {
     const result = await executeAgent(makeRequest(), makeDeps());
 
-    expect(result.summary).toBe('整体状态良好。');
+    expect(result.summary).toBe(COMPLIANT_SUMMARY);
     expect(result.chartTokens).toEqual([ChartTokenId.HRV_7DAYS]);
     expect(result.microTips).toEqual(['保持规律作息']);
     expect(result.meta.finishReason).toBe('complete');
@@ -198,7 +202,7 @@ describe('executeAgent', () => {
     const deps = makeDeps({
       invoke: async () => ({
         content: JSON.stringify({
-          summary: '测试',
+          summary: COMPLIANT_SUMMARY,
           chartTokens: [ChartTokenId.HRV_7DAYS, 'INVALID_TOKEN'],
           microTips: [],
         }),
@@ -268,7 +272,7 @@ describe('executeAgent', () => {
   it('homepage summary appends realtime tool evidence packet when caffeine event exists', async () => {
     const invokeMock = vi.fn(async () => ({
       content: JSON.stringify({
-        summary: '林巅峰，检测到一次可能的咖啡因摄入响应，估算咖啡因剩余比例仍可能影响今晚睡眠。',
+        summary: COMPLIANT_SUMMARY,
         chartTokens: [ChartTokenId.HRV_7DAYS],
         microTips: [],
       }),
@@ -316,7 +320,7 @@ describe('executeAgent', () => {
   it('homepage summary stays silent on realtime tools when no trigger policy matches', async () => {
     const invokeMock = vi.fn(async () => ({
       content: JSON.stringify({
-        summary: '整体状态良好。',
+        summary: COMPLIANT_SUMMARY,
         chartTokens: [ChartTokenId.HRV_7DAYS],
         microTips: [],
       }),
@@ -351,7 +355,7 @@ function makeDepsFromRecords(
     agent: {
       invoke: agentOverrides.invoke ?? (async () => ({
         content: JSON.stringify({
-          summary: '整体状态良好。',
+          summary: COMPLIANT_SUMMARY,
           chartTokens: [ChartTokenId.HRV_7DAYS],
           microTips: ['保持规律作息'],
         }),
@@ -398,7 +402,7 @@ describe('executeAgent observer', () => {
     );
 
     expect(parsedEnvelope).toBeTruthy();
-    expect(parsedEnvelope.summary).toBe('整体状态良好。');
+    expect(parsedEnvelope.summary).toBe(COMPLIANT_SUMMARY);
     expect(parsedEnvelope.meta.finishReason).toBe('complete');
   });
 
@@ -507,7 +511,7 @@ describe('executeAgent observer', () => {
       errorObserver,
     );
 
-    expect(result.summary).toBe('整体状态良好。');
+    expect(result.summary).toBe(COMPLIANT_SUMMARY);
     expect(result.meta.finishReason).toBe('complete');
   });
 });

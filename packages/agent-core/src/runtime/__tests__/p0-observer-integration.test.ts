@@ -24,6 +24,10 @@ import type { VerificationReport } from '../../output/verification-report';
 
 // ── 测试辅助函数 ──────────────────────────────────────
 
+/** Task 3.3: 测试用合规 summary（满足 zh 220-420 grapheme 区间） */
+const COMPLIANT_SUMMARY =
+  '今天整体状态良好，各项生理指标处于稳定区间。夜间睡眠时长充足，深睡与浅睡比例合理，晨起恢复状况良好；白天活动量适中，心率与血氧饱和度保持在正常水平，压力负荷处于较低区间。当前没有出现明显的生理异常或需要关注的事件，身体处于稳态。建议继续保持规律的作息安排与均衡饮食结构，适当安排户外散步或轻度运动，以维持当前的稳态并促进长期健康。如出现任何不适或数据异常，请及时咨询专业医疗人员获取准确的评估和指导。今日可关注夜间睡眠质量与明日晨起准备度之间的关联。';
+
 function makeRecord(date: string, overrides: Partial<DailyRecord> = {}): DailyRecord {
   return {
     date,
@@ -103,7 +107,8 @@ function makeDeps(agent: Partial<HealthAgent> = {}): AgentRuntimeDeps {
     agent: {
       invoke: agent.invoke ?? (async () => ({
         content: JSON.stringify({
-          summary: '整体状态良好。',
+          // Task 3.3: summary 长度需在 zh 220-420 grapheme 范围内
+          summary: COMPLIANT_SUMMARY,
           chartTokens: [ChartTokenId.HRV_7DAYS],
           microTips: ['保持规律作息'],
         }),
@@ -154,7 +159,7 @@ describe('P0 Observer 集成测试', () => {
       );
 
       // 主链路输出不变
-      expect(result.summary).toBe('整体状态良好。');
+      expect(result.summary).toBe(COMPLIANT_SUMMARY);
       expect(result.chartTokens).toEqual([ChartTokenId.HRV_7DAYS]);
       expect(result.meta.finishReason).toBe('complete');
 
@@ -226,7 +231,7 @@ describe('P0 Observer 集成测试', () => {
       );
 
       // 主链路不受影响
-      expect(result.summary).toBe('整体状态良好。');
+      expect(result.summary).toBe(COMPLIANT_SUMMARY);
       expect(result.meta.finishReason).toBe('complete');
 
       // 等待异步 reflection 完成
@@ -285,7 +290,7 @@ describe('P0 Observer 集成测试', () => {
       );
 
       // 主链路正常返回
-      expect(result.summary).toBe('整体状态良好。');
+      expect(result.summary).toBe(COMPLIANT_SUMMARY);
       expect(result.meta.finishReason).toBe('complete');
     });
 
@@ -305,7 +310,7 @@ describe('P0 Observer 集成测试', () => {
       );
 
       // 主链路正常返回
-      expect(result.summary).toBe('整体状态良好。');
+      expect(result.summary).toBe(COMPLIANT_SUMMARY);
       expect(result.meta.finishReason).toBe('complete');
     });
 
@@ -328,7 +333,7 @@ describe('P0 Observer 集成测试', () => {
       );
 
       // 主链路正常返回
-      expect(result.summary).toBe('整体状态良好。');
+      expect(result.summary).toBe(COMPLIANT_SUMMARY);
       expect(result.meta.finishReason).toBe('complete');
     });
   });
@@ -482,6 +487,122 @@ describe('P0 Observer 集成测试', () => {
       await vi.waitFor(() => {
         expect(callOrder).toContain('onReflected');
       });
+    });
+  });
+
+  // ──────────────────────────────────────────────────
+  // Task 3.3: Realtime Brief Content Policy 集成测试
+  // 验证阻断式客户内容策略在 runtime 层的执行顺序
+  // ──────────────────────────────────────────────────
+  describe('Task 3.3: Realtime Brief Content Policy', () => {
+    it('两次违规都不写入 session memory', async () => {
+      const sessionMemory = new InMemorySessionMemoryStore();
+      const analyticalMemory = new InMemoryAnalyticalMemoryStore();
+      const badSummary = '今天运动强度 4.2，整体偏高。建议放松。';
+      const invokeMock = vi.fn(async () => ({
+        // 包含 internal_score_disclosed：运动强度 4.2
+        content: JSON.stringify({
+          summary: badSummary,
+          chartTokens: [],
+          microTips: [],
+        }),
+      }));
+
+      const deps: AgentRuntimeDeps = {
+        ...makeDeps({ invoke: invokeMock }),
+        sessionMemory,
+        analyticalMemory,
+      };
+
+      const result = await executeAgent(makeRequest(), deps);
+
+      // 两次都违规 → fail-closed 错误响应
+      expect(result.meta.finishReason).toBe('fallback');
+      expect(result.source).toBe('customer-policy');
+      // 模型被调用两次（首次 + 一次 regeneration）
+      expect(invokeMock).toHaveBeenCalledTimes(2);
+      // session memory 不应有 assistant 写入（fail-closed 时连 session 都不应创建）
+      const session = sessionMemory.get('sess-1');
+      const assistantMsgs = session?.messages.filter((m) => m.role === 'assistant') ?? [];
+      expect(assistantMsgs).toHaveLength(0);
+      // analytical memory 也不应写入违规内容
+      const analytical = analyticalMemory.get('sess-1');
+      expect(analytical?.latestHomepageBrief).toBeUndefined();
+    });
+
+    it('regeneration 通过后只写入通过版本', async () => {
+      const sessionMemory = new InMemorySessionMemoryStore();
+      const analyticalMemory = new InMemoryAnalyticalMemoryStore();
+      const badSummary = '你刚吃完饭，运动强度 4.2。';
+      // Task 3.3: 合规 summary 需满足 zh 220-420 grapheme 区间
+      const goodSummary = COMPLIANT_SUMMARY;
+      const invokeMock = vi.fn();
+      // 两次调用：第一次违规，第二次合规
+      invokeMock.mockResolvedValueOnce({ content: JSON.stringify({ summary: badSummary, chartTokens: [], microTips: [] }) });
+      invokeMock.mockResolvedValueOnce({ content: JSON.stringify({ summary: goodSummary, chartTokens: [], microTips: [] }) });
+
+      const deps: AgentRuntimeDeps = {
+        ...makeDeps({ invoke: invokeMock }),
+        sessionMemory,
+        analyticalMemory,
+      };
+
+      const result = await executeAgent(makeRequest(), deps);
+
+      // 模型被调用两次（初次 + regeneration）
+      expect(invokeMock).toHaveBeenCalledTimes(2);
+      // 最终返回的是通过版本
+      expect(result.summary).toBe(goodSummary);
+      expect(result.meta.finishReason).toBe('complete');
+      // session memory 只有 goodSummary 被写入
+      const session = sessionMemory.get('sess-1');
+      const assistantMsgs = session?.messages.filter((m) => m.role === 'assistant') ?? [];
+      expect(assistantMsgs).toHaveLength(1);
+      expect(assistantMsgs[0]!.text).toBe(goodSummary);
+      // 违规 summary 不得出现在 memory
+      const allText = (session?.messages ?? []).map((m) => m.text).join('');
+      expect(allText).not.toContain(badSummary);
+      // analytical memory 也只保留 goodSummary
+      expect(analyticalMemory.get('sess-1')?.latestHomepageBrief).toBe(goodSummary);
+    });
+
+    it('第二次 regeneration 仍违规 → 返回 typed error，不写 memory', async () => {
+      const sessionMemory = new InMemorySessionMemoryStore();
+      const analyticalMemory = new InMemoryAnalyticalMemoryStore();
+      const badSummary1 = '你刚吃完饭，运动强度 4.2。';
+      const badSummary2 = '本次睡眠评分 95 分，压力负荷 88。';
+      const invokeMock = vi.fn();
+      invokeMock.mockResolvedValueOnce({ content: JSON.stringify({ summary: badSummary1, chartTokens: [], microTips: [] }) });
+      invokeMock.mockResolvedValueOnce({ content: JSON.stringify({ summary: badSummary2, chartTokens: [], microTips: [] }) });
+
+      const deps: AgentRuntimeDeps = {
+        ...makeDeps({ invoke: invokeMock }),
+        sessionMemory,
+        analyticalMemory,
+      };
+
+      const result = await executeAgent(makeRequest(), deps);
+
+      // 两次都违规 → fail-closed typed error
+      expect(invokeMock).toHaveBeenCalledTimes(2);
+      expect(result.meta.finishReason).toBe('fallback');
+      // 两次违规 summary 都不写入 session memory
+      const session = sessionMemory.get('sess-1');
+      const allText = (session?.messages ?? []).map((m) => m.text).join('');
+      expect(allText).not.toContain(badSummary1);
+      expect(allText).not.toContain(badSummary2);
+      // analytical memory 未写入
+      expect(analyticalMemory.get('sess-1')?.latestHomepageBrief).toBeUndefined();
+    });
+
+    it('cleanSafetyIssues 不处理新增的 4 类客户边界', async () => {
+      // 验证：即使 safety-cleaner 能清洗"确诊/诊断"等，它不会把"运动强度 4.2"这类
+      // internal_score_disclosed 视为可清洗问题。
+      const { cleanSafetyIssues } = await import('../../output/safety-cleaner');
+      const cleaned = cleanSafetyIssues('今天运动强度 4.2，整体偏高。', [], [], []);
+      // 原文应当被保留（未被字符串清洗），让 policy 层去 fail-closed
+      expect(cleaned.cleaned).toContain('运动强度 4.2');
+      expect(cleaned.flags).toHaveLength(0);
     });
   });
 });

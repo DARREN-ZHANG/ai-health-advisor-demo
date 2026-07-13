@@ -440,7 +440,9 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
       const plan = makeAnalysisPlan();
       const solverInvoke = vi.fn(async () => ({
         content: JSON.stringify({
-          summary: '整体状态良好。',
+          // Task 3.3: 合规 summary 需满足 zh 220-420 grapheme 区间
+          summary:
+            '今天整体状态良好，各项生理指标处于稳定区间。夜间睡眠时长充足，深睡与浅睡比例合理，晨起恢复状况良好；白天活动量适中，心率与血氧饱和度保持在正常水平，压力负荷处于较低区间。当前没有出现明显的生理异常或需要关注的事件，身体处于稳态。建议继续保持规律的作息安排与均衡饮食结构，适当安排户外散步或轻度运动，以维持当前的稳态并促进长期健康。如出现任何不适或数据异常，请及时咨询专业医疗人员获取准确的评估和指导。今日可关注夜间睡眠质量与明日晨起准备度之间的关联。',
           chartTokens: [ChartTokenId.HRV_7DAYS],
           microTips: ['保持规律作息'],
         }),
@@ -465,7 +467,7 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
       );
 
       // 正常 HOMEPAGE_SUMMARY 结果
-      expect(result.summary).toBe('整体状态良好。');
+      expect(result.summary).toContain('今天整体状态良好');
       expect(result.meta.finishReason).toBe('complete');
 
       // planner observer 不触发
