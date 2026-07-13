@@ -687,7 +687,8 @@ describe('executeAgent streaming', () => {
   it('stream 产出非法 JSON 时不写 memory（extractor.finish 抛错走 fallback）', async () => {
     // stream 产出截断的 JSON：extractor.push 会释放 provisional delta（summary 字符串在推进），
     // 但 extractor.finish() 会抛 StreamingSummaryParseError（字符串未闭合）。
-    // 这个 error 向上抛到 executeAgent 的 catch 块，走 provider_error 分支。
+    // 这个 error 向上抛到 executeAgent 的 catch 块，走 streaming_parse_error 分支
+    // （不是 provider_error，因为 instanceof StreamingSummaryParseError 命中）。
     const truncatedChunks = ['{"summary":"部分内容', '但 JSON 没闭合'];
     const streamMock = vi.fn(() => chunksToStream(truncatedChunks));
     const deps = makeDeps({ stream: streamMock });
@@ -795,5 +796,44 @@ describe('executeAgent streaming', () => {
     expect(streamMock).not.toHaveBeenCalled();
     expect(result.meta.finishReason).toBe('complete');
     expect(result.summary).toBe('向后兼容');
+  });
+
+  it('onSummaryDelta 抛错时走 fallback（provider_error），memory 不写入', async () => {
+    // 回归保护：onSummaryDelta callback 抛 Error 时（消费端 bug），
+    // runtime 不能静默吞错，必须走 fallback 路径（finishReason 非 complete），
+    // 且 memory 不写入（因为抛错点在 obtainRawOutput 内，没到 writeSessionMemory 步骤）。
+    // callback 抛的是普通 Error，不是 StreamingSummaryParseError，
+    // 因此 catch 块的 instanceof 判断不命中，走 provider_error 分支（非 streaming_parse_error）。
+    const chunks = [
+      '{"summary":"',
+      '第一段',
+      '"}',
+    ];
+    const streamMock = vi.fn(() => chunksToStream(chunks));
+    const deps = makeDeps({ stream: streamMock });
+
+    const onFallback = vi.fn();
+    const result = await executeAgent(
+      makeRequest(),
+      deps,
+      undefined,
+      { onFallback },
+      undefined,
+      {
+        // 第一次调用就抛错（模拟 callback bug）
+        onSummaryDelta: () => { throw new Error('callback bug'); },
+      },
+    );
+
+    // finishReason 非 complete（走 fallback）
+    expect(result.meta.finishReason).not.toBe('complete');
+    // observer.onFallback 收到 provider_error（普通 Error 不是 StreamingSummaryParseError）
+    expect(onFallback).toHaveBeenCalledWith('provider_error');
+    // session memory 不应被写入
+    const messages = deps.sessionMemory.getRecentMessages('sess-1');
+    expect(messages.length).toBe(0);
+    // analytical memory 也不应被写入
+    const analytical = deps.analyticalMemory.get('sess-1');
+    expect(analytical?.latestHomepageBrief).toBeUndefined();
   });
 });

@@ -24,7 +24,7 @@ import {
 import { buildCustomerFacingEvidencePacket } from '../context/customer-facing-evidence';
 import { withTimeout, TimeoutError } from './timeout-controller';
 import { AGENT_SLA_TIMEOUT_MS } from '../constants/limits';
-import { StreamingSummaryExtractor } from '../output/streaming-summary-extractor';
+import { StreamingSummaryExtractor, StreamingSummaryParseError } from '../output/streaming-summary-extractor';
 
 /** H-10: ReAct 最大步骤数（设计文档要求固定为 3） */
 const MAX_REACT_STEPS = 3;
@@ -109,7 +109,9 @@ export interface AgentRuntimeObserver {
     violationCodes: string[];
   }): void;
   onParsed?(envelope: AgentResponseEnvelope): void;
-  onFallback?(reason: 'low_data' | 'invalid_output' | 'timeout' | 'provider_error'): void;
+  onFallback?(
+    reason: 'low_data' | 'invalid_output' | 'timeout' | 'provider_error' | 'streaming_parse_error',
+  ): void;
   /** P0 新增：确定性验证完成后触发 */
   onVerified?(report: VerificationReport): void;
   /** P0 新增：异步 reflection 完成后触发 */
@@ -740,9 +742,12 @@ export async function executeAgent(
       return toTimeoutFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
     }
     // StreamingSummaryParseError 是流式提取器的协议违规（截断、重复 key、类型错误等），
-    // 不当作 timeout，走 provider_error 分支：返回 fallback envelope（finishReason 非 complete），
+    // 与 provider error 区分开：返回 fallback envelope（finishReason 非 complete），
     // SSE adapter 会据此转为 failed terminal。memory 不写入（因为没到达写 memory 步骤）。
-    tryNotify(() => observer?.onFallback?.('provider_error'));
+    const fallbackReason = error instanceof StreamingSummaryParseError
+      ? 'streaming_parse_error'
+      : 'provider_error';
+    tryNotify(() => observer?.onFallback?.(fallbackReason));
     return toFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
   }
 }
@@ -750,13 +755,58 @@ export async function executeAgent(
 /**
  * 获取模型的完整 raw 输出。
  *
+ * ## 分支选择
+ *
  * - `HOMEPAGE_SUMMARY + onSummaryDelta`：走 stream 分支，用 StreamingSummaryExtractor
  *   从增量 JSON 中实时释放 `$.summary` 文本 delta，每个 delta 都 `await onSummaryDelta`
- *   以传递 backpressure。stream 分支自己管理 timeout（setTimeout + AbortController +
- *   AbortSignal.any 合并外部 signal），不通过 withTimeout。
- * - 其他情况：走 invoke 分支（原逻辑，withTimeout 包装单次 invoke）。
+ *   以传递 backpressure。
+ * - 其他情况：走 invoke 分支（原逻辑，`withTimeout` 包装单次 invoke）。
  *
  * 两个分支都返回 `{ content: string }`（完整 raw）给后续 parseAgentResponse。
+ *
+ * ## 超时机制差异（stream 分支 vs invoke 分支）⚠️
+ *
+ * 两个分支的超时机制**不等价**，实现者（尤其是任务 2.2 SSE adapter）必须理解差异：
+ *
+ * **invoke 分支：** `withTimeout` 用 `Promise.race` 实现，超时直接 reject
+ * `TimeoutError`。executeAgent 的 catch 块按 `TimeoutError` 处理 → 走 timeout 分支
+ * → `toTimeoutFallback`（`finishReason: 'timeout'`）。
+ *
+ * **stream 分支：** 不用 `withTimeout`，改用 `setTimeout + AbortController +
+ * AbortSignal.any`。超时触发 `timeoutController.abort()`，合并 signal 传给
+ * `deps.agent.stream`。LangChain 兼容的 provider iterator 在下一个 yield 点检查
+ * signal.aborted，抛 `AbortError`（DOMException 或类似）。这个 AbortError **不是**
+ * `TimeoutError`，因此 executeAgent catch 块走 provider_error 分支（对非
+ * StreamingSummaryParseError 的错误）→ `toFallback`（`finishReason: 'fallback'`）。
+ *
+ * 注意：stream 超时**不会**走 TimeoutError → timeout 路径。如果 SSE adapter
+ * 需要区分"超时导致的 fallback"和"provider 真实错误"，不能只看 finishReason，
+ * 需要通过 observer 或 log 额外区分（或后续任务再统一改造）。
+ *
+ * ## onSummaryDelta 背压对超时的延迟影响 ⚠️
+ *
+ * stream 分支的 timeout 定时器在 `await onSummaryDelta(delta)` 期间继续计时，
+ * 但 timeout 的"生效"（即 abort 信号被传递给 iterator）需要 iterator 重新进入
+ * `for await` 循环才能被检查。如果 `onSummaryDelta` callback 慢（SSE 背压、
+ * 网络拥塞、消费端处理重），timeout 只能在当前 callback resolve 后、iterator
+ * 回到循环顶部时才生效。实际超时时间可能略大于 `timeoutMs`，超出量约等于
+ * 最后一个 `onSummaryDelta` 调用的执行时间。
+ *
+ * 这是有意为之：保留 backpressure 语义，避免在 callback 中途 abort 导致半写状态。
+ * 若对超时精度敏感，需要在 SSE adapter 层自己管理 timer（如响应式 flush + heartbeat）。
+ *
+ * ## 为什么选方案 B（AbortSignal.any）而非 Promise.race
+ *
+ * 方案 B（当前实现）的优势：
+ * - 保留 `AbortSignal.any` 合并外部 request signal（HTTP 断开、上层取消等）的能力；
+ * - 单一 signal 通道贯穿 provider iterator，provider 内部可以在任何 await 点检查 abort；
+ * - 不需要在 stream 外再包一层 `Promise.race`，避免双 timeout 路径（race reject +
+ *   iterator abort）导致的竞态。
+ *
+ * 方案 A（用 withTimeout 包 stream 迭代）的劣势：
+ * - `Promise.race` 只能 reject 外层 Promise，不会自动 abort 底层 iterator，
+ *   provider iterator 会继续在后台消费直到自然结束（资源泄漏）；
+ * - 外部 request signal（options.signal）需要二次合并逻辑，复杂度上升。
  */
 async function obtainRawOutput(
   deps: AgentRuntimeDeps,
@@ -780,8 +830,12 @@ async function obtainRawOutput(
   }
 
   // stream 分支：StreamingSummaryExtractor 从增量 JSON 释放 summary delta
-  // useStream 已保证 onSummaryDelta 存在，用局部变量提取避免循环内重复非空断言
-  const onSummaryDelta = options!.onSummaryDelta!;
+  // useStream 已保证 onSummaryDelta 存在；这里用防御性 if 守卫再次确认，
+  // 避免双重非空断言（!）在类型变更时静默失败。
+  if (!options?.onSummaryDelta) {
+    throw new Error('unreachable: onSummaryDelta missing in stream branch');
+  }
+  const onSummaryDelta = options.onSummaryDelta;
   const extractor = new StreamingSummaryExtractor();
   let rawContent = '';
 
