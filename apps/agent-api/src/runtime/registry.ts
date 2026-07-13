@@ -34,6 +34,7 @@ import {
   applyOverrides,
   mergeEvents,
   recognizeEvents,
+  buildRecognizeInputFromDeviceEvents,
   computeDerivedTemporalStates,
   aggregateCurrentDayRecord,
   mergeCurrentDayRecord,
@@ -234,8 +235,14 @@ export function createRuntimeRegistry(
     const syncState = overrideStore.getSyncState(profileId);
     const pendingEvents = overrideStore.getPendingEvents(profileId);
 
-    // 从已同步事件计算识别结果
-    const recognizedEvents = recognizeEvents(syncedEvents, profileId, clock.currentTime);
+    // 任务 1.2：先建立无标签观察，再调用新签名
+    // 辅助函数内部完成：micro event 分离、sensor event 投影
+    const recognizeInput = buildRecognizeInputFromDeviceEvents(
+      syncedEvents,
+      profileId,
+      clock.currentTime,
+    );
+    const recognizedEvents = recognizeEvents(recognizeInput);
     // 从识别结果计算派生状态
     const derivedTemporalStates = computeDerivedTemporalStates(recognizedEvents, clock.currentTime, profileId);
 
