@@ -67,6 +67,16 @@ export type {
   FutureSuggestion,
 } from './types/agent';
 
+// Types — brief-stream
+export type {
+  BriefStartedEvent,
+  BriefSummaryDeltaEvent,
+  BriefCompletedEvent,
+  BriefFailedEvent,
+  BriefStreamErrorCode,
+  BriefStreamEvent,
+} from './types/brief-stream';
+
 // Types — god-mode
 export type {
   // 时间轴动作载荷
@@ -160,6 +170,12 @@ export {
   MemoryCandidateConfirmationSchema,
   FutureSuggestionSchema,
 } from './schemas/agent';
+
+// Schemas — brief-stream
+export {
+  BriefStreamEventSchema,
+  isBriefStreamTerminalEvent,
+} from './schemas/brief-stream';
 
 export { ChartTokenIdSchema, isValidChartTokenId } from './schemas/chart-token';
 
