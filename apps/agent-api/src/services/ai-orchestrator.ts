@@ -21,6 +21,14 @@ export interface AiOrchestratorDeps {
 /**
  * 单个 AI 请求的关键阶段耗时。所有值单位均为毫秒，未执行的阶段省略。
  * 该结构会写入 Render 的 request completed 日志，便于直接定位慢点。
+ *
+ * 流式传输新增字段（仅 cache miss 且传入 onSummaryDelta 时填充）：
+ * - `llmFirstTokenMs`：从 agent 开始到首个 summary delta 的时间。
+ * - `streamChunkCount`：onSummaryDelta 被调用的总次数。
+ * - `streamDurationMs`：从 agent 开始到 executeAgent 返回的时间（与 agentMs 等价，
+ *   独立命名以便日志层区分流式与非流式）。
+ *
+ * cache hit 时这三个字段均为 undefined。
  */
 export interface AiExecutionTimings {
   routePreparationMs?: number;
@@ -41,10 +49,28 @@ export interface AiExecutionTimings {
   agentMs?: number;
   cacheWriteMs?: number;
   orchestrationMs: number;
+  /** 流式首 token 时延（从 agent 开始到首个 delta） */
+  llmFirstTokenMs?: number;
+  /** onSummaryDelta 调用次数 */
+  streamChunkCount?: number;
+  /** 流式总时长（从 agent 开始到 executeAgent 返回） */
+  streamDurationMs?: number;
 }
 
 export interface AiOrchestratorExecuteOptions {
   onTimings?(timings: AiExecutionTimings): void;
+  /**
+   * 外部取消信号（如 HTTP 请求断开）。透传给 executeAgent，与 runtime 内部
+   * timeout signal 合并，任一触发即终止底层 provider iterator。
+   *
+   * 仅 cache miss 时有效；cache hit 直接返回，不消耗 signal。
+   */
+  signal?: AbortSignal;
+  /**
+   * summary 增量回调。仅 cache miss 时透传给 executeAgent（每个 delta 都 await），
+   * 用于把 runtime delta 推送到 SSE writer；cache hit 不调用（不伪造 delta）。
+   */
+  onSummaryDelta?(delta: string): void | Promise<void>;
 }
 
 function cacheableTask(taskType: AgentTaskType): boolean {
@@ -92,14 +118,40 @@ export class AiOrchestrator {
 
       const phaseTimings = createRuntimeTimingObserver(startedAt);
       const agentStartedAt = performance.now();
+
+      // 流式计时：只在 cache miss + 传了 onSummaryDelta 时记录
+      // llmFirstTokenMs 在首个 delta 到达时计算；streamChunkCount 每次 delta 自增；
+      // streamDurationMs 在 executeAgent 返回后计算。
+      const onSummaryDelta = options?.onSummaryDelta;
+      const streamEnabled = typeof onSummaryDelta === 'function';
+      let firstTokenRecorded = false;
+      const wrappedOnSummaryDelta: ((delta: string) => void | Promise<void>) | undefined =
+        streamEnabled
+          ? (delta: string) => {
+              if (!firstTokenRecorded) {
+                timings.llmFirstTokenMs = Math.round(performance.now() - agentStartedAt);
+                firstTokenRecorded = true;
+              }
+              timings.streamChunkCount = (timings.streamChunkCount ?? 0) + 1;
+              return onSummaryDelta(delta);
+            }
+          : undefined;
+
       const result = await executeAgent(
         request,
         this.deps.registry,
         this.deps.timeoutMs,
         phaseTimings.observer,
         locale,
+        {
+          ...(options?.signal ? { signal: options.signal } : {}),
+          ...(wrappedOnSummaryDelta ? { onSummaryDelta: wrappedOnSummaryDelta } : {}),
+        },
       );
       timings.agentMs = Math.round(performance.now() - agentStartedAt);
+      if (streamEnabled) {
+        timings.streamDurationMs = timings.agentMs;
+      }
       Object.assign(timings, phaseTimings.snapshot());
 
       if (result.meta.finishReason === 'timeout') {

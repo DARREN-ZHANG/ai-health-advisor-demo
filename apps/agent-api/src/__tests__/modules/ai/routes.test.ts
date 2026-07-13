@@ -256,6 +256,215 @@ describe('AI Routes', () => {
     });
   });
 
+  describe('POST /ai/morning-brief/stream', () => {
+    /**
+     * 解析 SSE 文本为事件数组。每个事件是 { event, data }。
+     * SSE 帧格式：`event: <type>\ndata: <json>\n\n`
+     */
+    function parseSseFrames(text: string): Array<{ event: string; data: unknown }> {
+      const frames: Array<{ event: string; data: unknown }> = [];
+      const blocks = text.split('\n\n');
+      for (const block of blocks) {
+        if (!block.trim()) continue;
+        let eventType = '';
+        let dataLine = '';
+        for (const line of block.split('\n')) {
+          if (line.startsWith('event: ')) eventType = line.slice(7);
+          else if (line.startsWith('data: ')) dataLine = line.slice(6);
+        }
+        if (eventType && dataLine) {
+          frames.push({ event: eventType, data: JSON.parse(dataLine) });
+        }
+      }
+      return frames;
+    }
+
+    test('cache miss 多 delta：started → delta* → completed', async () => {
+      mockedExecuteAgent.mockReset();
+      app.briefCache.clearAll();
+      app.runtime.overrideStore.reset('all');
+
+      // executeAgent 收到 options.onSummaryDelta，调用模拟 delta
+      mockedExecuteAgent.mockImplementationOnce(
+        async (_req, _deps, _timeout, _observer, _locale, options) => {
+          const onDelta = options?.onSummaryDelta;
+          if (onDelta) {
+            await onDelta('健康');
+            await onDelta('状态');
+            await onDelta('良好');
+          }
+          return mockResponse;
+        },
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief/stream',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          bustCache: true,
+        },
+        headers: { 'x-session-id': 'sess-stream-1' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['content-type']).toContain('text/event-stream');
+      expect(response.headers['cache-control']).toBe('no-cache, no-transform');
+      expect(response.headers['x-accel-buffering']).toBe('no');
+      expect(response.headers['x-session-id']).toBe('sess-stream-1');
+
+      const frames = parseSseFrames(response.body);
+      const types = frames.map((f) => f.event);
+      expect(types[0]).toBe('brief.started');
+      // 中间 3 个都是 delta
+      expect(types.slice(1, 4)).toEqual([
+        'brief.summary.delta',
+        'brief.summary.delta',
+        'brief.summary.delta',
+      ]);
+      // 最后一个是 completed
+      expect(types[types.length - 1]).toBe('brief.completed');
+
+      // delta 内容顺序
+      const deltas = frames
+        .filter((f) => f.event === 'brief.summary.delta')
+        .map((f) => (f.data as { delta: string }).delta);
+      expect(deltas).toEqual(['健康', '状态', '良好']);
+
+      // completed 事件含完整 response
+      const completed = frames.find((f) => f.event === 'brief.completed');
+      expect(completed).toBeDefined();
+      expect((completed!.data as { response: { summary: string } }).response.summary).toBe('健康状态良好');
+
+      // 只有一个终态
+      const terminals = frames.filter((f) => f.event === 'brief.completed' || f.event === 'brief.failed');
+      expect(terminals).toHaveLength(1);
+    });
+
+    test('cache hit 直达 completed（无 delta）', async () => {
+      mockedExecuteAgent.mockReset();
+      app.runtime.overrideStore.reset('all');
+
+      // 第一次调用产生缓存
+      mockedExecuteAgent.mockResolvedValueOnce(mockResponse);
+      await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief',
+        payload: { profileId: 'profile-a', pageContext: defaultPageContext },
+        headers: { 'x-session-id': 'sess-cache-fill' },
+      });
+
+      // 第二次 stream 调用应命中缓存，不调用 executeAgent
+      mockedExecuteAgent.mockClear();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief/stream',
+        payload: { profileId: 'profile-a', pageContext: defaultPageContext },
+        headers: { 'x-session-id': 'sess-stream-2' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const frames = parseSseFrames(response.body);
+      const types = frames.map((f) => f.event);
+
+      // 只有 started + completed，无 delta
+      expect(types).toEqual(['brief.started', 'brief.completed']);
+      expect(types).not.toContain('brief.summary.delta');
+      expect(mockedExecuteAgent).not.toHaveBeenCalled();
+
+      // completed 的 finishReason 保留 cached
+      const completed = frames.find((f) => f.event === 'brief.completed');
+      expect(
+        (completed!.data as { response: { meta: { finishReason: string } } }).response.meta.finishReason,
+      ).toBe('cached');
+    });
+
+    test('invalid output（fallback）发 failed terminal', async () => {
+      mockedExecuteAgent.mockReset();
+      app.briefCache.clearAll();
+      app.runtime.overrideStore.reset('all');
+
+      const fallbackResponse: AgentResponseEnvelope = {
+        ...mockResponse,
+        source: 'fallback',
+        statusColor: 'warning',
+        meta: { ...mockResponse.meta, finishReason: 'fallback' },
+      };
+      mockedExecuteAgent.mockResolvedValueOnce(fallbackResponse);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief/stream',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          bustCache: true,
+        },
+        headers: { 'x-session-id': 'sess-stream-3' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const frames = parseSseFrames(response.body);
+      const types = frames.map((f) => f.event);
+
+      // started → failed（无 completed）
+      expect(types[0]).toBe('brief.started');
+      expect(types[types.length - 1]).toBe('brief.failed');
+      expect(types).not.toContain('brief.completed');
+
+      // failed 含错误码
+      const failed = frames.find((f) => f.event === 'brief.failed');
+      expect((failed!.data as { error: { code: string } }).error.code).toBe('BRIEF_GENERATION_FAILED');
+    });
+
+    test('provider exception 发 failed terminal', async () => {
+      mockedExecuteAgent.mockReset();
+      app.briefCache.clearAll();
+      app.runtime.overrideStore.reset('all');
+
+      mockedExecuteAgent.mockRejectedValueOnce(new Error('connection failed'));
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief/stream',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          bustCache: true,
+        },
+        headers: { 'x-session-id': 'sess-stream-4' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const frames = parseSseFrames(response.body);
+      const types = frames.map((f) => f.event);
+
+      // started → failed
+      expect(types[0]).toBe('brief.started');
+      expect(types[types.length - 1]).toBe('brief.failed');
+      expect(types).not.toContain('brief.completed');
+    });
+
+    test('无效 pageContext 返回 400 JSON（不是 SSE）', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief/stream',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: { invalid: true },
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      // 仍是 JSON error，不是 SSE
+      expect(response.headers['content-type']).toContain('application/json');
+      const body = response.json();
+      expect(body.success).toBe(false);
+    });
+  });
+
   describe('POST /ai/view-summary', () => {
     test('返回视图总结响应', async () => {
       const viewResponse: AgentResponseEnvelope = {
