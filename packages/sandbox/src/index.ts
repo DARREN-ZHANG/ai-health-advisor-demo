@@ -96,6 +96,9 @@ export {
 // Helpers — event recognition
 export { recognizeEvents } from './helpers/event-recognition';
 
+// Helpers — sensor observation projection
+export { projectDeviceEventsToSensorObservations } from './helpers/sensor-observation';
+
 // Helpers — derived temporal state
 export { computeDerivedTemporalStates } from './helpers/derived-temporal-state';
 

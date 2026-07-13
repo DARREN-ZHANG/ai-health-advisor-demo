@@ -32,6 +32,9 @@ import {
   SyncSessionSchema,
   RecognizedEventTypeSchema,
   RecognizedEventSchema,
+  RecognitionSourceSchema,
+  CalibrationStatusSchema,
+  SensorObservationSchema,
   DerivedTemporalStateTypeSchema,
   DerivedTemporalStateSchema,
   ImuSampleSchema,
@@ -655,6 +658,8 @@ describe('RecognizedEventSchema', () => {
     end: '2026-04-21T07:30',
     confidence: 0.95,
     evidence: ['heart_rate_spike', 'motion_detected'],
+    recognitionSource: 'sensor_inference' as const,
+    calibrationStatus: 'calibrated' as const,
   };
 
   it('accepts valid recognized event', () => {
@@ -695,6 +700,109 @@ describe('RecognizedEventSchema', () => {
       ...validEvent,
       confidence: 1,
     });
+  });
+
+  it('rejects missing recognitionSource (required field)', () => {
+    const { recognitionSource: _omit, ...withoutSource } = validEvent;
+    expect(() => RecognizedEventSchema.parse(withoutSource)).toThrow();
+  });
+
+  it('rejects missing calibrationStatus (required field)', () => {
+    const { calibrationStatus: _omit, ...withoutStatus } = validEvent;
+    expect(() => RecognizedEventSchema.parse(withoutStatus)).toThrow();
+  });
+
+  it('accepts user_report recognitionSource with not_applicable calibration', () => {
+    // 用户主动上报的事件不经过传感器推理，因此校准状态为 not_applicable
+    const event = {
+      ...validEvent,
+      recognitionSource: 'user_report' as const,
+      calibrationStatus: 'not_applicable' as const,
+    };
+    expect(RecognizedEventSchema.parse(event)).toEqual(event);
+  });
+
+  it('rejects invalid recognitionSource value', () => {
+    expect(() =>
+      RecognizedEventSchema.parse({ ...validEvent, recognitionSource: 'guessed' }),
+    ).toThrow();
+  });
+
+  it('rejects invalid calibrationStatus value', () => {
+    expect(() =>
+      RecognizedEventSchema.parse({ ...validEvent, calibrationStatus: 'pending' }),
+    ).toThrow();
+  });
+});
+
+describe('RecognitionSourceSchema', () => {
+  it('accepts sensor_inference', () => {
+    expect(RecognitionSourceSchema.parse('sensor_inference')).toBe('sensor_inference');
+  });
+
+  it('accepts user_report', () => {
+    expect(RecognitionSourceSchema.parse('user_report')).toBe('user_report');
+  });
+
+  it('rejects invalid value', () => {
+    expect(() => RecognitionSourceSchema.parse('machine_guess')).toThrow();
+  });
+});
+
+describe('CalibrationStatusSchema', () => {
+  it('accepts calibrated', () => {
+    expect(CalibrationStatusSchema.parse('calibrated')).toBe('calibrated');
+  });
+
+  it('accepts not_applicable', () => {
+    expect(CalibrationStatusSchema.parse('not_applicable')).toBe('not_applicable');
+  });
+
+  it('rejects invalid value', () => {
+    expect(() => CalibrationStatusSchema.parse('in_progress')).toThrow();
+  });
+});
+
+describe('SensorObservationSchema', () => {
+  const validObservation = {
+    observationId: 'obs-a1b2c3d4',
+    profileId: 'profile-a',
+    measuredAt: '2026-04-21T09:30',
+    metric: 'heartRate' as const,
+    value: 72,
+  };
+
+  it('accepts valid observation with numeric value', () => {
+    expect(SensorObservationSchema.parse(validObservation)).toEqual(validObservation);
+  });
+
+  it('accepts valid observation with string value', () => {
+    const obs = { ...validObservation, metric: 'sleepStage' as const, value: 'deep' };
+    expect(SensorObservationSchema.parse(obs)).toEqual(obs);
+  });
+
+  it('accepts valid observation with boolean value', () => {
+    const obs = { ...validObservation, metric: 'wearState' as const, value: true };
+    expect(SensorObservationSchema.parse(obs)).toEqual(obs);
+  });
+
+  it('rejects missing observationId', () => {
+    const { observationId: _omit, ...without } = validObservation;
+    expect(() => SensorObservationSchema.parse(without)).toThrow();
+  });
+
+  it('rejects empty observationId', () => {
+    expect(() => SensorObservationSchema.parse({ ...validObservation, observationId: '' })).toThrow();
+  });
+
+  it('rejects invalid measuredAt format', () => {
+    expect(() =>
+      SensorObservationSchema.parse({ ...validObservation, measuredAt: '2026-04-21 09:30' }),
+    ).toThrow();
+  });
+
+  it('rejects invalid metric', () => {
+    expect(() => SensorObservationSchema.parse({ ...validObservation, metric: 'calories' })).toThrow();
   });
 });
 

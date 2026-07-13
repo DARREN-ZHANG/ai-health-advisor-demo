@@ -93,6 +93,26 @@ export type RecognizedEventType =
   | 'possible_caffeine_intake'
   | 'possible_alcohol_intake';
 
+/** 识别来源：传感器推理 或 用户主动上报 */
+export type RecognitionSource = 'sensor_inference' | 'user_report';
+
+/** 校准状态：已校准 或 不适用（用户上报无需校准） */
+export type CalibrationStatus = 'calibrated' | 'not_applicable';
+
+/**
+ * 传感器观察 — 仅包含设备可观测量，不含任何语义信息
+ * 识别器只能基于此流推导事件，不得访问 segment.type / segmentId / eventId
+ */
+export interface SensorObservation {
+  /** 由 profile、时间、metric 和同分钟序号生成的稳定 opaque hash */
+  observationId: string;
+  profileId: string;
+  /** YYYY-MM-DDTHH:mm */
+  measuredAt: string;
+  metric: DeviceMetric;
+  value: number | string | boolean;
+}
+
 /** 已识别事件 */
 export interface RecognizedEvent {
   recognizedEventId: string;
@@ -105,6 +125,10 @@ export interface RecognizedEvent {
   confidence: number;
   evidence: string[];
   sourceSegmentId?: string;
+  /** 识别来源：传感器推理 或 用户主动上报 */
+  recognitionSource: RecognitionSource;
+  /** 校准状态：已校准 或 不适用（用户上报无需校准） */
+  calibrationStatus: CalibrationStatus;
 }
 
 /** 派生状态类型 */

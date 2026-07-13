@@ -90,6 +90,18 @@ export const RecognizedEventTypeSchema = z.union([
   z.literal('possible_alcohol_intake'),
 ]);
 
+export const RecognitionSourceSchema = z.enum(['sensor_inference', 'user_report']);
+
+export const CalibrationStatusSchema = z.enum(['calibrated', 'not_applicable']);
+
+export const SensorObservationSchema = z.object({
+  observationId: z.string().min(1),
+  profileId: z.string().min(1),
+  measuredAt: z.string().regex(timestampPattern),
+  metric: DeviceMetricSchema,
+  value: z.union([z.number(), z.string(), z.boolean()]),
+});
+
 export const RecognizedEventSchema = z.object({
   recognizedEventId: z.string().min(1),
   profileId: z.string().min(1),
@@ -99,6 +111,8 @@ export const RecognizedEventSchema = z.object({
   confidence: z.number().min(0).max(1),
   evidence: z.array(z.string().min(1)),
   sourceSegmentId: z.string().min(1).optional(),
+  recognitionSource: RecognitionSourceSchema,
+  calibrationStatus: CalibrationStatusSchema,
 });
 
 export const DerivedTemporalStateTypeSchema = z.literal('recent_meal_30m');
