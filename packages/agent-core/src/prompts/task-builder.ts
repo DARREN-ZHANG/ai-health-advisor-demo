@@ -7,6 +7,8 @@ import { buildCustomerFacingEvidencePacket } from '../context/customer-facing-ev
 import { renderTaskContextPacket } from './context-packet-renderer';
 import { renderDurableMemoryFacts } from '../memory/durable-memory-context';
 import { TASK_ROUTES } from '../routing/task-router';
+// Task 4.1：homepage summary 长度的唯一来源
+import { getHomepageLengthConfig } from '../policies/homepage-length-policy';
 
 const TASK_PROMPT_MAP: Record<string, PromptName> = {
   [AgentTaskType.HOMEPAGE_SUMMARY]: 'homepage',
@@ -56,11 +58,13 @@ export function buildTaskPrompt(
     );
   }
   if (taskType === AgentTaskType.HOMEPAGE_SUMMARY) {
+    // Task 4.1：长度数字来自唯一策略模块，避免与 verifier/scorer 漂移
+    const lengthConfig = getHomepageLengthConfig(locale);
     sections.push(
       t(
         locale,
-        '- 摘要长度控制在 220-420 字之间；完整卡片由 summary + actions 组成，整体阅读量约 300-500 字',
-        '- Summary length must be between 150-300 words',
+        `- 摘要长度控制在 ${lengthConfig.min}-${lengthConfig.max} 字之间；完整卡片由 summary + actions 组成`,
+        `- Summary length must be between ${lengthConfig.min}-${lengthConfig.max} words`,
       ),
     );
     sections.push(

@@ -7,9 +7,20 @@ import { verifyOutput } from '../../output/verifier';
 
 // ── 测试夹具 ──────────────────────────────────────────
 
+/**
+ * 构造合法长度的中文 summary（满足 homepage 长度策略 220-420 grapheme）。
+ * Task 4.1：verifier 把长度升级为 hard violation 后，所有"无 hard violation"
+ * 相关测试的夹具 summary 必须落在合法范围内，否则会被长度检查误伤。
+ */
+function makeValidZhSummary(graphemes = 250): string {
+  return Array.from({ length: graphemes }, (_, i) =>
+    String.fromCodePoint(0x4e00 + (i % 0x1000)),
+  ).join('');
+}
+
 function makeEnvelope(overrides: Partial<AgentResponseEnvelope> = {}): AgentResponseEnvelope {
   return {
-    summary: '您的心率数据显示整体正常。',
+    summary: makeValidZhSummary(),
     source: 'llm',
     statusColor: 'good',
     chartTokens: [],
@@ -230,7 +241,8 @@ describe('verifyOutput', () => {
     });
 
     expect(report.context.missingData).toEqual(['sleep', 'activity']);
-    expect(report.envelope.summary).toBe('您的心率数据显示整体正常。');
+    // makeEnvelope 默认 summary 为合法长度的占位文本
+    expect(report.envelope.summary).toBe(makeValidZhSummary());
   });
 
   it('summary 字段包含 passed/failed/hardFailures 汇总', () => {
@@ -246,9 +258,13 @@ describe('verifyOutput', () => {
     expect(report.summary.hardFailures).toBeGreaterThanOrEqual(0);
   });
 
-  // MEDIUM-10 补充覆盖：checkTaskRedlines - homepage 字数红线
-  it('homepage summary 超过 500 字 → checkTaskRedlines 报告 soft violation', () => {
-    const longSummary = '这是一段很长的健康摘要。'.repeat(50); // 11 * 50 = 550 > 500
+  // Task 4.1：homepage summary 长度由共享策略强制（hard violation）
+  // 旧的 summary.length > 500 soft check 已删除
+  it('homepage summary 超过 zh 上限 420 grapheme → task:homepage_length 报告 hard violation', () => {
+    // 构造 421 个汉字（每个为 1 个 grapheme cluster）
+    const longSummary = Array.from({ length: 421 }, (_, i) =>
+      String.fromCodePoint(0x4e00 + (i % 0x1000)),
+    ).join('');
     const envelope = makeEnvelope({ summary: longSummary });
     const report = verifyOutput({
       envelope,
@@ -261,7 +277,42 @@ describe('verifyOutput', () => {
     const lengthViolation = report.violations.find((v) => v.ruleId === 'task:homepage_length');
     expect(lengthViolation).toBeDefined();
     expect(lengthViolation!.passed).toBe(false);
-    expect(lengthViolation!.severity).toBe('soft');
+    expect(lengthViolation!.severity).toBe('hard');
+  });
+
+  it('homepage summary 在 zh 范围内（220-420 grapheme）→ task:homepage_length 通过', () => {
+    // 构造 300 个汉字，落在 220-420 范围内
+    const validSummary = Array.from({ length: 300 }, (_, i) =>
+      String.fromCodePoint(0x4e00 + (i % 0x1000)),
+    ).join('');
+    const envelope = makeEnvelope({ summary: validSummary });
+    const report = verifyOutput({
+      envelope,
+      context: makeContext(),
+      rulesResult: makeRulesResult(),
+      packet: makePacket(),
+      parseResult: { success: true },
+    });
+
+    const lengthViolation = report.violations.find((v) => v.ruleId === 'task:homepage_length');
+    expect(lengthViolation).toBeDefined();
+    expect(lengthViolation!.passed).toBe(true);
+  });
+
+  it('homepage summary 低于 zh 下限 220 grapheme → task:homepage_length hard violation', () => {
+    const envelope = makeEnvelope({ summary: '这是一段很短的摘要。' });
+    const report = verifyOutput({
+      envelope,
+      context: makeContext(),
+      rulesResult: makeRulesResult(),
+      packet: makePacket(),
+      parseResult: { success: true },
+    });
+
+    const lengthViolation = report.violations.find((v) => v.ruleId === 'task:homepage_length');
+    expect(lengthViolation).toBeDefined();
+    expect(lengthViolation!.passed).toBe(false);
+    expect(lengthViolation!.severity).toBe('hard');
   });
 
   // MEDIUM-10 补充覆盖：checkTaskRedlines - parse failure

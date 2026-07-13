@@ -18,6 +18,11 @@ import type {
   PublicFact,
   PublicHomepageEventInsight,
 } from '../context/customer-facing-evidence';
+// Task 4.1：长度策略与计数器的唯一来源
+import {
+  HOMEPAGE_SUMMARY_LENGTH,
+  countHomepageSummaryLength,
+} from '../policies/homepage-length-policy';
 
 // ──────────────────────────────────────────────────
 // 违规类型：封闭判别联合
@@ -42,15 +47,9 @@ export type RealtimeBriefBoundaryViolation =
 // ──────────────────────────────────────────────────
 // 长度策略常量
 // ──────────────────────────────────────────────────
-
-/** en summary 词数下限（含） */
-const EN_MIN_WORDS = 90;
-/** en summary 词数上限（含） */
-const EN_MAX_WORDS = 180;
-/** zh summary grapheme 下限（含）— 仅 homepage_summary 强制下限 */
-const ZH_MIN_GRAPHEMES = 220;
-/** zh summary grapheme 上限（含） */
-const ZH_MAX_GRAPHEMES = 420;
+// Task 4.1：常量与计数器已迁移至唯一策略模块 homepage-length-policy.ts
+// 本文件不得再维护本地长度常量，避免与 prompt / verifier / scorer 漂移。
+// 长度边界通过 HOMEPAGE_SUMMARY_LENGTH 引用，计数通过 countHomepageSummaryLength 引用。
 
 // ──────────────────────────────────────────────────
 // 内部评分指标黑名单（与 customer-facing-evidence 的 SCORE_METRICS 对齐）
@@ -448,8 +447,9 @@ function isNumberAllowed(value: number, ledger: ClaimLedger): boolean {
 /**
  * 检查 summary 长度是否在 locale 对应范围内。
  *
- * - zh：以 grapheme 数计（code point 计），220-420
- * - en：以空格分割的 word 数计，90-180
+ * Task 4.1：边界数字与计数器全部来自共享策略 homepage-length-policy。
+ * - zh：以 Intl.Segmenter grapheme cluster 数计，220-420
+ * - en：以 Intl.Segmenter isWordLike segment 数计，90-180
  *
  * 超长一律触发；下限仅在 homepage_summary 任务时严格按 spec 触发，
  * 其他任务（view_summary / advisor_chat）不强制下限，避免对短回复误报。
@@ -460,25 +460,16 @@ function checkSummaryLength(
   taskType?: string,
 ): RealtimeBriefBoundaryViolation[] {
   const enforceLowerBound = taskType === 'homepage_summary';
+  const normalizedLocale =
+    typeof locale === 'string' && locale.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  const config = HOMEPAGE_SUMMARY_LENGTH[normalizedLocale];
+  const actual = countHomepageSummaryLength(summary, normalizedLocale);
 
-  if (locale === 'en') {
-    const words = summary.trim().split(/\s+/).filter(Boolean).length;
-    if (words > EN_MAX_WORDS) {
-      return [{ code: 'summary_length_out_of_range', actual: words }];
-    }
-    if (enforceLowerBound && words < EN_MIN_WORDS) {
-      return [{ code: 'summary_length_out_of_range', actual: words }];
-    }
-    return [];
+  if (actual > config.max) {
+    return [{ code: 'summary_length_out_of_range', actual }];
   }
-
-  // zh：grapheme 数（用 Array.from 处理 surrogate pair）
-  const graphemes = Array.from(summary).length;
-  if (graphemes > ZH_MAX_GRAPHEMES) {
-    return [{ code: 'summary_length_out_of_range', actual: graphemes }];
-  }
-  if (enforceLowerBound && graphemes < ZH_MIN_GRAPHEMES) {
-    return [{ code: 'summary_length_out_of_range', actual: graphemes }];
+  if (enforceLowerBound && actual < config.min) {
+    return [{ code: 'summary_length_out_of_range', actual }];
   }
   return [];
 }
@@ -539,8 +530,8 @@ export function buildRegenerationFeedback(
       case 'summary_length_out_of_range':
         sections.push(
           locale === 'zh'
-            ? `- [summary_length_out_of_range] summary 长度 ${v.actual} 超出范围（${ZH_MIN_GRAPHEMES}-${ZH_MAX_GRAPHEMES} 字符）。`
-            : `- [summary_length_out_of_range] summary length ${v.actual} out of range (${EN_MIN_WORDS}-${EN_MAX_WORDS} words).`,
+            ? `- [summary_length_out_of_range] summary 长度 ${v.actual} 超出范围（${HOMEPAGE_SUMMARY_LENGTH.zh.min}-${HOMEPAGE_SUMMARY_LENGTH.zh.max} 字符）。`
+            : `- [summary_length_out_of_range] summary length ${v.actual} out of range (${HOMEPAGE_SUMMARY_LENGTH.en.min}-${HOMEPAGE_SUMMARY_LENGTH.en.max} words).`,
         );
         break;
     }

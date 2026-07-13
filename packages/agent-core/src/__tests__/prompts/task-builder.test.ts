@@ -225,4 +225,52 @@ describe('buildTaskPrompt', () => {
     expect(prompt).toContain('事件窗口指标优先于 raw latest24h');
     expect(prompt).toContain('actions 应优先从 actionIntents 转写');
   });
+
+  // ── Task 4.1：长度策略来自共享模块 ──────────────────────
+
+  it('homepage 中文 prompt 使用共享策略的 220-420 grapheme 数字', () => {
+    const prompt = buildTaskPrompt(makeContext({ locale: 'zh' }), mockLoader, emptyRules);
+
+    // 来自 HOMEPAGE_SUMMARY_LENGTH.zh
+    expect(prompt).toContain('220');
+    expect(prompt).toContain('420');
+    // 旧的硬编码数字（150-300 words）必须消失
+    expect(prompt).not.toContain('150-300');
+    expect(prompt).not.toContain('300-500');
+  });
+
+  it('homepage 英文 prompt 使用共享策略的 90-180 word 数字', () => {
+    const ctx = makeContext({
+      locale: 'en',
+      task: {
+        type: AgentTaskType.HOMEPAGE_SUMMARY,
+        pageContext: { profileId: 'profile-a', page: 'homepage', timeframe: 'week' },
+      },
+    });
+    const prompt = buildTaskPrompt(ctx, mockLoader, emptyRules);
+
+    // 来自 HOMEPAGE_SUMMARY_LENGTH.en
+    expect(prompt).toContain('90');
+    expect(prompt).toContain('180');
+    // 旧的硬编码数字必须消失
+    expect(prompt).not.toContain('150-300');
+  });
+
+  it('homepage prompt 不再包含旧的 150-300 字符串（任何 locale）', () => {
+    const zhPrompt = buildTaskPrompt(makeContext({ locale: 'zh' }), mockLoader, emptyRules);
+    const enPrompt = buildTaskPrompt(
+      makeContext({
+        locale: 'en',
+        task: {
+          type: AgentTaskType.HOMEPAGE_SUMMARY,
+          pageContext: { profileId: 'profile-a', page: 'homepage', timeframe: 'week' },
+        },
+      }),
+      mockLoader,
+      emptyRules,
+    );
+
+    expect(zhPrompt).not.toContain('150-300 words');
+    expect(enPrompt).not.toContain('150-300 words');
+  });
 });

@@ -338,6 +338,111 @@ describe('lengthScorer', () => {
     expect(lengthCheck!.details?.max).toBe(420);
   });
 
+  // ── Task 4.1：scorer 默认范围来自共享策略 ────────────────
+
+  it('homepage en 默认使用共享策略的 90-180 词范围', () => {
+    // 5 个英文词，远低于 min 90
+    const envelope = createValidEnvelope({ summary: 'This is a short summary.' });
+    const evalCase = createValidCase({
+      expectations: { summary: {} },
+    });
+    const input = createScorerInput({
+      evalCase: evalCase as any,
+      envelope,
+      artifacts: createValidArtifacts({
+        context: { locale: 'en' } as any,
+      }) as any,
+    });
+    const results = lengthScorer.score(input);
+
+    const lengthCheck = results.find((r) => r.checkId.includes('summary_length'));
+    expect(lengthCheck).toBeDefined();
+    expect(lengthCheck!.passed).toBe(false);
+    // 数字必须来自共享策略 HOMEPAGE_SUMMARY_LENGTH.en
+    expect(lengthCheck!.details?.min).toBe(90);
+    expect(lengthCheck!.details?.max).toBe(180);
+    expect(lengthCheck!.details?.unit).toBe('word');
+  });
+
+  it('homepage zh 默认范围与共享策略一致（220-420 grapheme）', () => {
+    const envelope = createValidEnvelope({ summary: '短摘要。' });
+    const evalCase = createValidCase({
+      expectations: { summary: {} },
+    });
+    const input = createScorerInput({
+      evalCase: evalCase as any,
+      envelope,
+      artifacts: createValidArtifacts({
+        context: { locale: 'zh' } as any,
+      }) as any,
+    });
+    const results = lengthScorer.score(input);
+
+    const lengthCheck = results.find((r) => r.checkId.includes('summary_length'));
+    expect(lengthCheck).toBeDefined();
+    expect(lengthCheck!.details?.min).toBe(220);
+    expect(lengthCheck!.details?.max).toBe(420);
+    expect(lengthCheck!.details?.unit).toBe('grapheme');
+  });
+
+  it('homepage en 边界：90 词通过、181 词失败', () => {
+    const buildWords = (n: number) =>
+      Array.from({ length: n }, (_, i) => `word${i}`).join(' ');
+
+    // 90 词通过
+    const okEnvelope = createValidEnvelope({ summary: buildWords(90) });
+    const okInput = createScorerInput({
+      evalCase: createValidCase({ expectations: { summary: {} } }) as any,
+      envelope: okEnvelope,
+      artifacts: createValidArtifacts({ context: { locale: 'en' } as any }) as any,
+    });
+    const okResult = lengthScorer.score(okInput).find((r) =>
+      r.checkId.includes('summary_length'),
+    );
+    expect(okResult?.passed).toBe(true);
+
+    // 181 词失败
+    const overEnvelope = createValidEnvelope({ summary: buildWords(181) });
+    const overInput = createScorerInput({
+      evalCase: createValidCase({ expectations: { summary: {} } }) as any,
+      envelope: overEnvelope,
+      artifacts: createValidArtifacts({ context: { locale: 'en' } as any }) as any,
+    });
+    const overResult = lengthScorer.score(overInput).find((r) =>
+      r.checkId.includes('summary_length'),
+    );
+    expect(overResult?.passed).toBe(false);
+  });
+
+  it('homepage zh 边界：220 grapheme 通过、421 grapheme 失败', () => {
+    const buildGraphemes = (n: number) =>
+      Array.from({ length: n }, (_, i) => String.fromCodePoint(0x4e00 + (i % 0x1000))).join('');
+
+    // 220 grapheme 通过
+    const okEnvelope = createValidEnvelope({ summary: buildGraphemes(220) });
+    const okInput = createScorerInput({
+      evalCase: createValidCase({ expectations: { summary: {} } }) as any,
+      envelope: okEnvelope,
+      artifacts: createValidArtifacts({ context: { locale: 'zh' } as any }) as any,
+    });
+    const okResult = lengthScorer.score(okInput).find((r) =>
+      r.checkId.includes('summary_length'),
+    );
+    expect(okResult?.passed).toBe(true);
+
+    // 421 grapheme 失败
+    const overEnvelope = createValidEnvelope({ summary: buildGraphemes(421) });
+    const overInput = createScorerInput({
+      evalCase: createValidCase({ expectations: { summary: {} } }) as any,
+      envelope: overEnvelope,
+      artifacts: createValidArtifacts({ context: { locale: 'zh' } as any }) as any,
+    });
+    const overResult = lengthScorer.score(overInput).find((r) =>
+      r.checkId.includes('summary_length'),
+    );
+    expect(overResult?.passed).toBe(false);
+  });
+
   it('非 homepage 且无显式配置时跳过长度检查', () => {
     const envelope = createValidEnvelope({ summary: '短' });
     const evalCase = createValidCase({

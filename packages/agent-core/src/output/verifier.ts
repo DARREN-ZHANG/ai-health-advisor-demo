@@ -3,6 +3,8 @@ import type { AgentContext } from '../types/agent-context';
 import type { RuleEvaluationResult } from '../rules/types';
 import type { TaskContextPacket } from '../context/context-packet';
 import type { QualityViolation, VerificationReport, ViolationSeverity } from './verification-report';
+// Task 4.1：homepage summary 长度的唯一来源
+import { validateHomepageSummaryLength } from '../policies/homepage-length-policy';
 
 export interface VerifierInput {
   envelope: AgentResponseEnvelope;
@@ -217,16 +219,35 @@ function checkTaskRedlines(input: VerifierInput): QualityViolation[] {
   const violations: QualityViolation[] = [];
   const taskType = input.context.task.type;
 
-  // Homepage 字数红线
+  // Task 4.1：homepage summary 长度由共享策略强制（hard violation）
+  // 旧的 summary.length > 500 soft check 已删除，改为 locale-aware 计数与边界
   if (taskType === 'homepage_summary') {
     const summary = input.envelope.summary;
-    if (summary.length > 500) {
+    const locale = input.context.locale;
+    const result = validateHomepageSummaryLength(summary, locale);
+    if (result.ok) {
       violations.push({
         ruleId: 'task:homepage_length',
-        severity: 'soft',
+        severity: 'hard',
+        passed: true,
+        message: `Homepage summary 长度合法（${result.actual} ${result.unit}）`,
+        details: { length: result.actual, unit: result.unit, min: result.min, max: result.max },
+      });
+    } else {
+      const reasonZh =
+        result.reason === 'too_short' ? '低于下限' : '超过上限';
+      violations.push({
+        ruleId: 'task:homepage_length',
+        severity: 'hard',
         passed: false,
-        message: `Homepage summary 超过 500 字（${summary.length}）`,
-        details: { length: summary.length },
+        message: `Homepage summary 长度${reasonZh}：${result.actual} ${result.unit}，合法范围 ${result.min}-${result.max}`,
+        details: {
+          length: result.actual,
+          unit: result.unit,
+          min: result.min,
+          max: result.max,
+          reason: result.reason,
+        },
       });
     }
   }
