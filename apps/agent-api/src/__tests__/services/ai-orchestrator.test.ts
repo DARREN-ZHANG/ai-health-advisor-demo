@@ -209,4 +209,133 @@ describe('AiOrchestrator', () => {
     // 不应调用 LLM
     expect(mockedExecuteAgent).not.toHaveBeenCalled();
   });
+
+  // ── Task 4.2：客户边界集成验收 ────────────────────────
+
+  it('成功的 envelope 不含内部字段（confidence / sourceSegmentId / internalScore）', async () => {
+    mockedExecuteAgent.mockResolvedValueOnce(completeResponse);
+    const orchestrator = new AiOrchestrator({
+      registry: makeRegistry(),
+      metrics: makeMetrics(),
+      timeoutMs: 60000,
+      memoryServices: makeMemoryServices(),
+      modelVersion: 'gpt-test',
+    });
+
+    const result = await orchestrator.execute({
+      requestId: 'req-envelope',
+      sessionId: 'sess-1',
+      profileId: 'profile-a',
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: defaultPageContext,
+    });
+
+    // 客户可见 envelope 不得出现内部字段
+    expect(result).not.toHaveProperty('confidence');
+    expect(result).not.toHaveProperty('sourceSegmentId');
+    expect(result).not.toHaveProperty('internalScore');
+    expect(result).not.toHaveProperty('evidencePacket');
+    expect(result).not.toHaveProperty('analysisPlan');
+    // meta 中也不得出现内部字段
+    expect(result.meta).not.toHaveProperty('confidence');
+    expect(result.meta).not.toHaveProperty('sourceSegmentId');
+  });
+
+  it('content policy 失败时（finishReason=fallback）不缓存结果', async () => {
+    // 模拟 content policy 失败场景：executeAgent 返回 fallback finishReason
+    //（正常路径下 content policy 失败会被 runtime 转为 fallback envelope）
+    const policyFailedResponse: AgentResponseEnvelope = {
+      ...completeResponse,
+      source: 'fallback',
+      statusColor: 'warning',
+      summary: '抱歉，刚才的回复未通过内容策略校验，已为你回退到安全回复。',
+      meta: { ...completeResponse.meta, finishReason: 'fallback' },
+    };
+    mockedExecuteAgent.mockResolvedValueOnce(policyFailedResponse);
+
+    const cacheSet = vi.fn().mockResolvedValue(undefined);
+    const memoryServices = makeMemoryServices();
+    memoryServices.cache.set = cacheSet;
+
+    const orchestrator = new AiOrchestrator({
+      registry: makeRegistry(),
+      metrics: makeMetrics(),
+      timeoutMs: 60000,
+      memoryServices,
+      modelVersion: 'gpt-test',
+    });
+
+    const result = await orchestrator.execute({
+      requestId: 'req-policy-fail',
+      sessionId: 'sess-1',
+      profileId: 'profile-a',
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: defaultPageContext,
+    });
+
+    // finishReason 应为 fallback，不是 complete
+    expect(result.meta.finishReason).toBe('fallback');
+    // 关键断言：cache.set 不得被调用（content policy 失败的结果不可缓存）
+    expect(cacheSet).not.toHaveBeenCalled();
+  });
+
+  it('content policy 失败时（finishReason=timeout）也不缓存结果', async () => {
+    const timeoutResponse: AgentResponseEnvelope = {
+      ...completeResponse,
+      source: 'fallback',
+      statusColor: 'warning',
+      meta: { ...completeResponse.meta, finishReason: 'timeout' },
+    };
+    mockedExecuteAgent.mockResolvedValueOnce(timeoutResponse);
+
+    const cacheSet = vi.fn().mockResolvedValue(undefined);
+    const memoryServices = makeMemoryServices();
+    memoryServices.cache.set = cacheSet;
+
+    const orchestrator = new AiOrchestrator({
+      registry: makeRegistry(),
+      metrics: makeMetrics(),
+      timeoutMs: 60000,
+      memoryServices,
+      modelVersion: 'gpt-test',
+    });
+
+    await orchestrator.execute({
+      requestId: 'req-policy-timeout',
+      sessionId: 'sess-1',
+      profileId: 'profile-a',
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: defaultPageContext,
+    });
+
+    // 非 complete finishReason 一律不缓存
+    expect(cacheSet).not.toHaveBeenCalled();
+  });
+
+  it('成功的 complete envelope 会被缓存', async () => {
+    mockedExecuteAgent.mockResolvedValueOnce(completeResponse);
+
+    const cacheSet = vi.fn().mockResolvedValue(undefined);
+    const memoryServices = makeMemoryServices();
+    memoryServices.cache.set = cacheSet;
+
+    const orchestrator = new AiOrchestrator({
+      registry: makeRegistry(),
+      metrics: makeMetrics(),
+      timeoutMs: 60000,
+      memoryServices,
+      modelVersion: 'gpt-test',
+    });
+
+    await orchestrator.execute({
+      requestId: 'req-cache-write',
+      sessionId: 'sess-1',
+      profileId: 'profile-a',
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: defaultPageContext,
+    });
+
+    // 成功的 complete 应触发 cache.set
+    expect(cacheSet).toHaveBeenCalledTimes(1);
+  });
 });

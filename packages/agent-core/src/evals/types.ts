@@ -206,6 +206,30 @@ export interface AgentEvalExpectations {
       requireWeeklyTrendOptional?: boolean;
       forbidSummaryPatterns?: string[];
       forbidActionPatterns?: string[];
+      /**
+       * Task 4.2：要求对 sensor-inferred 事件使用概率性措辞。
+       * summary 必须命中 probabilisticPatterns 中的一个，
+       * 并且不得命中 deterministicForbiddenPatterns。
+       */
+      requireProbabilisticEventLanguage?: {
+        probabilisticPatterns: string[];
+        deterministicForbiddenPatterns: string[];
+        forbidConfidencePercentage?: boolean;
+      };
+      /**
+       * Task 4.2：禁止在客户文本中披露内部派生评分。
+       * 若未提供 scorePatterns，scorer 使用内置通用黑名单。
+       */
+      forbidInternalDerivedScores?: {
+        scorePatterns?: string[];
+      };
+      /**
+       * Task 4.2：禁止披露系统能力、算法机制或设备限制。
+       * 若未提供 capabilityPatterns，scorer 使用内置通用黑名单。
+       */
+      forbidCapabilityDisclosure?: {
+        capabilityPatterns?: string[];
+      };
     };
     viewSummary?: {
       requiredTab?: string;

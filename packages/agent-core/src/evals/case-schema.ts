@@ -59,6 +59,12 @@ const StrictAgentRequestSchema = z
     userMessage: z.string().optional(),
     smartPromptId: z.string().optional(),
     visibleChartIds: z.array(z.string()).optional(),
+    /**
+     * Task 4.2：case-level locale 覆盖。
+     * eval runner 默认使用 zh locale，英文 fixture case 必须显式声明 'en'
+     * 才能正确触发 en 长度策略（90-180 words）和 en content policy。
+     */
+    locale: z.string().min(1).optional(),
   })
   .strict();
 
@@ -343,6 +349,58 @@ const HomepageTaskExpectationSchema = z
     requireWeeklyTrendOptional: z.boolean().optional(),
     forbidSummaryPatterns: z.array(z.string()).optional(),
     forbidActionPatterns: z.array(z.string()).optional(),
+    /**
+     * Task 4.2：要求对 sensor-inferred 事件使用概率性措辞。
+     *
+     * summary 必须命中至少一个 probabilisticPatterns 中的一个，
+     * 并且不得命中任何 deterministicForbiddenPatterns。
+     */
+    requireProbabilisticEventLanguage: z
+      .object({
+        /** summary 必须命中至少一个概率措辞（zh: 大概率/可能；en: likely/possibly） */
+        probabilisticPatterns: z.array(z.string().min(1)),
+        /** summary 不得命中的确定性措辞（zh: 刚吃完；en: finished a meal） */
+        deterministicForbiddenPatterns: z.array(z.string().min(1)),
+        /** summary 不得出现置信度百分比（如 98%、confidence 80%） */
+        forbidConfidencePercentage: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
+    /**
+     * Task 4.2：禁止在 summary 中披露内部派生评分。
+     *
+     * 检查 summary 是否出现 motion intensity / stress load / sleep score /
+     * quality score / readiness 等内部评分关键词。general 检查，
+     * 不硬编码具体截图数字。
+     */
+    forbidInternalDerivedScores: z
+      .object({
+        /**
+         * 内部评分关键词模式列表。
+         * 若不提供，scorer 使用内置通用黑名单
+         * (motion intensity / stress load / sleep score / quality score / readiness)。
+         */
+        scorePatterns: z.array(z.string().min(1)).optional(),
+      })
+      .strict()
+      .optional(),
+    /**
+     * Task 4.2：禁止披露系统能力、算法机制或设备限制。
+     *
+     * 检查 summary 是否出现 "算法/模型无法测量"、"戒指不能检测"、
+     * "无法估计" 等元说明。general 检查。
+     */
+    forbidCapabilityDisclosure: z
+      .object({
+        /**
+         * 能力披露关键词模式列表。
+         * 若不提供，scorer 使用内置通用黑名单
+         * (no algorithm / cannot measure / ring cannot / 无法估计 等)。
+         */
+        capabilityPatterns: z.array(z.string().min(1)).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
   // requireRecentEventFirst 为 true 时，recentEventPatterns 必须非空

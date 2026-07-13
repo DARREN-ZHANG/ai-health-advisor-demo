@@ -1895,6 +1895,338 @@ describe('taskScorer', () => {
       const check = results.find((result) => result.checkId.includes('daily_status_not_first'));
       expect(check?.passed).toBe(false);
     });
+
+    // ── Task 4.2：客户边界 expectation 测试 ────────────────
+
+    describe('requireProbabilisticEventLanguage', () => {
+      it('summary 使用概率措辞且无确定性断言应通过', () => {
+        const envelope = createValidEnvelope({
+          summary: '最近的生理信号大概率与进餐一致，心率有所上升。',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                requireProbabilisticEventLanguage: {
+                  probabilisticPatterns: ['大概率', '可能', '似乎'],
+                  deterministicForbiddenPatterns: ['刚吃完', '你吃了'],
+                },
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const requiredCheck = results.find((r) => r.checkId.includes('probabilistic_language_required'));
+        expect(requiredCheck).toBeDefined();
+        expect(requiredCheck!.passed).toBe(true);
+
+        const forbiddenCheck = results.find((r) => r.checkId.includes('deterministic_language_forbidden'));
+        expect(forbiddenCheck).toBeDefined();
+        expect(forbiddenCheck!.passed).toBe(true);
+      });
+
+      it('summary 未使用概率措辞应失败', () => {
+        const envelope = createValidEnvelope({
+          summary: '心率数据如常，没有特别变化。',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                requireProbabilisticEventLanguage: {
+                  probabilisticPatterns: ['大概率', '可能', '似乎'],
+                  deterministicForbiddenPatterns: ['刚吃完'],
+                },
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const requiredCheck = results.find((r) => r.checkId.includes('probabilistic_language_required'));
+        expect(requiredCheck).toBeDefined();
+        expect(requiredCheck!.passed).toBe(false);
+      });
+
+      it('summary 出现确定性断言应失败', () => {
+        const envelope = createValidEnvelope({
+          summary: '你刚吃完饭，心率达到 92 bpm。',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                requireProbabilisticEventLanguage: {
+                  probabilisticPatterns: ['大概率', '可能'],
+                  deterministicForbiddenPatterns: ['刚吃完', '你吃了'],
+                },
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const forbiddenCheck = results.find((r) => r.checkId.includes('deterministic_language_forbidden'));
+        expect(forbiddenCheck).toBeDefined();
+        expect(forbiddenCheck!.passed).toBe(false);
+      });
+
+      it('forbidConfidencePercentage 出现百分比应失败', () => {
+        const envelope = createValidEnvelope({
+          summary: '大概率进餐，置信度 98%，心率 92 bpm。',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                requireProbabilisticEventLanguage: {
+                  probabilisticPatterns: ['大概率'],
+                  deterministicForbiddenPatterns: ['刚吃完'],
+                  forbidConfidencePercentage: true,
+                },
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const percentCheck = results.find((r) => r.checkId.includes('confidence_percentage_forbidden'));
+        expect(percentCheck).toBeDefined();
+        expect(percentCheck!.passed).toBe(false);
+      });
+
+      it('forbidConfidencePercentage 未出现百分比应通过', () => {
+        const envelope = createValidEnvelope({
+          summary: '大概率进餐，心率 92 bpm。',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                requireProbabilisticEventLanguage: {
+                  probabilisticPatterns: ['大概率'],
+                  deterministicForbiddenPatterns: ['刚吃完'],
+                  forbidConfidencePercentage: true,
+                },
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const percentCheck = results.find((r) => r.checkId.includes('confidence_percentage_forbidden'));
+        expect(percentCheck).toBeDefined();
+        expect(percentCheck!.passed).toBe(true);
+      });
+    });
+
+    describe('forbidInternalDerivedScores', () => {
+      it('客户文本不含内部评分应通过', () => {
+        const envelope = createValidEnvelope({
+          summary: '心率 92 bpm，状态良好。',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                forbidInternalDerivedScores: {},
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const check = results.find((r) => r.checkId.includes('internal_score_forbidden'));
+        expect(check).toBeDefined();
+        expect(check!.passed).toBe(true);
+      });
+
+      it('summary 出现 motion intensity 3.9 应失败', () => {
+        const envelope = createValidEnvelope({
+          summary: '运动强度 3.9，心率 92 bpm。',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                forbidInternalDerivedScores: {},
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const check = results.find((r) => r.checkId.includes('internal_score_forbidden'));
+        expect(check).toBeDefined();
+        expect(check!.passed).toBe(false);
+      });
+
+      it('summary 出现 stress load 应失败', () => {
+        const envelope = createValidEnvelope({
+          summary: '压力负荷 85，需要放松。',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                forbidInternalDerivedScores: {},
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const check = results.find((r) => r.checkId.includes('internal_score_forbidden'));
+        expect(check).toBeDefined();
+        expect(check!.passed).toBe(false);
+      });
+
+      it('summary 出现英文 readiness score 应失败', () => {
+        const envelope = createValidEnvelope({
+          summary: 'Your readiness score is 85, heart rate 120 bpm.',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                forbidInternalDerivedScores: {},
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const check = results.find((r) => r.checkId.includes('internal_score_forbidden'));
+        expect(check).toBeDefined();
+        expect(check!.passed).toBe(false);
+      });
+
+      it('自定义 scorePatterns 应覆盖默认黑名单', () => {
+        const envelope = createValidEnvelope({
+          summary: '运动强度 3.9，心率 92 bpm。',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                forbidInternalDerivedScores: {
+                  scorePatterns: ['自定义评分\\s*\\d+'],
+                },
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const check = results.find((r) => r.checkId.includes('internal_score_forbidden'));
+        expect(check).toBeDefined();
+        // 默认的 "运动强度" 黑名单不再触发，因为使用了自定义 patterns
+        expect(check!.passed).toBe(true);
+      });
+    });
+
+    describe('forbidCapabilityDisclosure', () => {
+      it('客户文本不含系统能力披露应通过', () => {
+        const envelope = createValidEnvelope({
+          summary: '心率正常，建议休息。',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                forbidCapabilityDisclosure: {},
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const check = results.find((r) => r.checkId.includes('capability_disclosure_forbidden'));
+        expect(check).toBeDefined();
+        expect(check!.passed).toBe(true);
+      });
+
+      it('summary 出现"无法测量"应失败', () => {
+        const envelope = createValidEnvelope({
+          summary: '由于无法测量精确数值，仅供参考。',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                forbidCapabilityDisclosure: {},
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const check = results.find((r) => r.checkId.includes('capability_disclosure_forbidden'));
+        expect(check).toBeDefined();
+        expect(check!.passed).toBe(false);
+      });
+
+      it('summary 出现"算法识别"应失败', () => {
+        const envelope = createValidEnvelope({
+          summary: '本次结论由算法识别给出。',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                forbidCapabilityDisclosure: {},
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const check = results.find((r) => r.checkId.includes('capability_disclosure_forbidden'));
+        expect(check).toBeDefined();
+        expect(check!.passed).toBe(false);
+      });
+
+      it('summary 出现英文 "ring cannot" 应失败', () => {
+        const envelope = createValidEnvelope({
+          summary: 'The ring cannot measure blood pressure directly.',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                forbidCapabilityDisclosure: {},
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const check = results.find((r) => r.checkId.includes('capability_disclosure_forbidden'));
+        expect(check).toBeDefined();
+        expect(check!.passed).toBe(false);
+      });
+
+      it('summary 出现英文 "cannot estimate" 应失败', () => {
+        const envelope = createValidEnvelope({
+          summary: 'We cannot estimate the exact calorie intake.',
+        });
+        const evalCase = createValidCase({
+          expectations: {
+            taskSpecific: {
+              homepage: {
+                forbidCapabilityDisclosure: {},
+              },
+            },
+          },
+        });
+        const results = taskScorer.score(createScorerInput({ evalCase: evalCase as any, envelope }));
+
+        const check = results.find((r) => r.checkId.includes('capability_disclosure_forbidden'));
+        expect(check).toBeDefined();
+        expect(check!.passed).toBe(false);
+      });
+    });
   });
 
   // ── View Summary 场景 ────────────────────────────────

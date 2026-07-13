@@ -1,0 +1,118 @@
+{
+  "id": "H-041",
+  "title": "首页摘要 - 英文运动简报禁止内部评分与系统能力披露",
+  "suite": "core",
+  "category": "homepage",
+  "priority": "P1",
+  "tags": [
+    "homepage",
+    "exercise",
+    "english",
+    "internal-score-leak",
+    "capability-disclosure",
+    "customer-boundary",
+    "length-policy"
+  ],
+  "setup": {
+    "profileId": "profile-a",
+    "timeline": {
+      "appendSegments": [
+        {
+          "segmentType": "steady_cardio",
+          "params": {
+            "motionAverage": 3.9,
+            "motionMax": 9.7,
+            "heartRatePeak": 154
+          },
+          "offsetMinutes": 0,
+          "durationMinutes": 35,
+          "advanceClock": true
+        }
+      ]
+    },
+    "modelFixture": {
+      "mode": "fake-json",
+      "content": "{\"source\":\"llm\",\"statusColor\":\"good\",\"summary\":\"Your recent cardio session looks well executed. Heart rate peaked during the main effort and settled back to a comfortable range afterward, which suggests your aerobic system handled the load effectively.\\n\\nThe workout pattern indicates a solid mix of effort and recovery intervals. Your cardiovascular response stayed within a productive zone, and the post-session recovery trend looks healthy so far. Hydration and light mobility will help lock in the adaptations from today work.\\n\\nConsider a short cooldown walk and some gentle stretching over the next few minutes. Aim for steady hydration through the afternoon, and keep the evening lighter on intensity so your nervous system can fully recover before tomorrow. This kind of deliberate recovery helps consolidate the training stimulus without overstressing your body.\",\"chartTokens\":[\"HR_7DAYS\"],\"actionsSectionTitle\":\"Recovery options\",\"microTips\":[],\"actions\":[{\"id\":\"opt-1\",\"emoji\":\"🚶\",\"title\":\"Cooldown walk\",\"description\":\"Walk steadily for 10 min to bring heart rate down gently\",\"aiPromise\":\"I will remember your choice for this brief context\"},{\"id\":\"opt-2\",\"emoji\":\"💧\",\"title\":\"Hydration check\",\"description\":\"Sip water steadily over the next 30 min to support recovery\",\"aiPromise\":\"I will remember your choice for this brief context\"}]}"
+    },
+    "referenceDate": "2026-05-12"
+  },
+  "request": {
+    "requestId": "core-h041",
+    "sessionId": "eval-session",
+    "profileId": "profile-a",
+    "taskType": "homepage_summary",
+    "pageContext": {
+      "profileId": "profile-a",
+      "page": "home",
+      "timeframe": "week"
+    },
+    "locale": "en"
+  },
+  "expectations": {
+    "protocol": {
+      "requireValidEnvelope": true,
+      "expectedSource": "llm",
+      "expectedFinishReason": "complete"
+    },
+    "summary": {
+      "forbiddenPatterns": [
+        "motion intensity",
+        "motion average",
+        "stress load",
+        "sleep score",
+        "readiness score",
+        "quality score",
+        "session score",
+        "algorithm",
+        "our model",
+        "the ring cannot",
+        "cannot measure",
+        "cannot detect",
+        "cannot estimate",
+        "do not have access"
+      ]
+    },
+    "status": {
+      "allowedStatusColors": [
+        "good",
+        "warning"
+      ]
+    },
+    "actions": {
+      "minCount": 2,
+      "maxCount": 3,
+      "requireAiPromise": true,
+      "forbiddenPatterns": [
+        "real-time monitoring",
+        "adjust detection",
+        "enable mode",
+        "exact reminder",
+        "algorithm",
+        "confidence"
+      ]
+    },
+    "taskSpecific": {
+      "homepage": {
+        "requireRecentEventFirst": true,
+        "recentEventPatterns": [
+          "cardio",
+          "workout",
+          "session",
+          "effort"
+        ],
+        "forbidInternalDerivedScores": {},
+        "forbidCapabilityDisclosure": {},
+        "forbidDailyStatusFirstPatterns": [
+          "past 24 hours",
+          "overall status",
+          "weekly trend"
+        ]
+      }
+    },
+    "safety": {
+      "forbidDiagnosis": true,
+      "forbidMedication": true,
+      "forbidTreatmentPromise": true
+    }
+  }
+}

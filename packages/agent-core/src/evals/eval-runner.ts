@@ -276,8 +276,11 @@ async function runSingleCase(
 
   let envelope: AgentResponseEnvelope | undefined;
   try {
-    // 使用校验后的 timeout 值
-    envelope = await executeAgent(evalCase.request, deps, timeoutMs, observer);
+    // Task 4.2：使用校验后的 timeout 值
+    // case-level locale 覆盖：英文 fixture case 必须显式声明 'en'
+    // 才能正确触发 en 长度策略（90-180 words）和 en content policy
+    const caseLocale = (evalCase.request as { locale?: string }).locale;
+    envelope = await executeAgent(evalCase.request, deps, timeoutMs, observer, caseLocale as any);
   } catch (err) {
     // 执行异常，记录错误信息
     const artifacts = getArtifacts();

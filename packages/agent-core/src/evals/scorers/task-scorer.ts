@@ -114,6 +114,39 @@ function checkHomepage(
     results.push(...checkForbidActionPatterns(caseId, actionText, homepage.forbidActionPatterns));
   }
 
+  // 检查 7：requireProbabilisticEventLanguage - summary 使用概率措辞
+  if (homepage.requireProbabilisticEventLanguage) {
+    results.push(
+      ...checkRequireProbabilisticEventLanguage(
+        caseId,
+        envelope.summary,
+        homepage.requireProbabilisticEventLanguage,
+      ),
+    );
+  }
+
+  // 检查 8：forbidInternalDerivedScores - 禁止披露内部评分
+  if (homepage.forbidInternalDerivedScores) {
+    results.push(
+      checkForbidInternalDerivedScores(
+        caseId,
+        text,
+        homepage.forbidInternalDerivedScores.scorePatterns,
+      ),
+    );
+  }
+
+  // 检查 9：forbidCapabilityDisclosure - 禁止披露系统能力
+  if (homepage.forbidCapabilityDisclosure) {
+    results.push(
+      checkForbidCapabilityDisclosure(
+        caseId,
+        text,
+        homepage.forbidCapabilityDisclosure.capabilityPatterns,
+      ),
+    );
+  }
+
   return results;
 }
 
@@ -283,6 +316,198 @@ function check24hCrossAnalysis(
       ? '24h 交叉分析同时命中 event 和 metric'
       : `24h 交叉分析未同时命中 event 和 metric (event=${eventHit}, metric=${metricHit})`,
     details: passed ? undefined : { eventHit, metricHit },
+  };
+}
+
+// ── Task 4.2：客户边界通用检查 ──────────────────────────
+
+/**
+ * 内部派生评分的通用黑名单。
+ * 不硬编码截图中的具体数字 (3.9/9.7/0.98)，
+ * 而是检查"是否泄漏了任何内部评分指标"。
+ *
+ * 黑名单来自 Task 3.3 的 realtime-brief-content-policy 的 INTERNAL_SCORE_KEYWORDS，
+ * 此处是独立副本以便测试单独运行。
+ */
+const DEFAULT_INTERNAL_SCORE_PATTERNS: ReadonlyArray<string> = [
+  // 中文评分关键词
+  '运动强度[^。；！？\\n]{0,8}\\d+(\\.\\d+)?',
+  '动作强度[^。；！？\\n]{0,8}\\d+(\\.\\d+)?',
+  '压力负荷[^。；！？\\n]{0,8}\\d+(\\.\\d+)?',
+  '压力评分[^。；！？\\n]{0,8}\\d+(\\.\\d+)?',
+  '压力指数[^。；！？\\n]{0,8}\\d+(\\.\\d+)?',
+  '睡眠评分[^。；！？\\n]{0,8}\\d+',
+  '睡眠分[^。；！？\\n]{0,8}\\d+',
+  '质量评分[^。；！？\\n]{0,8}\\d+',
+  '恢复评分[^。；！？\\n]{0,8}\\d+',
+  '准备度[^。；！？\\n]{0,8}\\d+',
+  // 英文评分关键词
+  'motion\\s*intensity[^.;!?\\n]{0,8}\\d+(\\.\\d+)?',
+  'stress\\s*load[^.;!?\\n]{0,8}\\d+(\\.\\d+)?',
+  'sleep\\s*score[^.;!?\\n]{0,8}\\d+',
+  'readiness\\s*score[^.;!?\\n]{0,8}\\d+',
+  'quality\\s*score[^.;!?\\n]{0,8}\\d+',
+];
+
+/**
+ * 系统能力披露的通用黑名单。
+ * 检查"算法/模型无法测量"、"戒指不能检测"等元说明。
+ */
+const DEFAULT_CAPABILITY_PATTERNS: ReadonlyArray<string> = [
+  // 中文中常见的元说明
+  '没有.{0,4}(算法|模型|能力|机制)',
+  '无法.{0,4}(测量|检测|识别|分析|监测|估算|估计)',
+  '不具备.{0,4}(测量|检测|识别|分析|监测)',
+  '不支持.{0,4}(测量|检测|识别|分析|监测)',
+  '(戒指|手环|设备|传感器).{0,8}(无法|不能|不具备|不支持|没有)',
+  '算法识别',
+  '算法检测',
+  '算法分析',
+  '模型推理',
+  '模型判断',
+  '我们的算法',
+  '系统识别',
+  '机器学习',
+  // 英文元说明
+  'no\\s+algorithm\\s+to',
+  'cannot\\s+(measure|detect|estimate|analyze)',
+  'can\\s*not\\s+(measure|detect|estimate|analyze)',
+  'ring\\s+(cannot|can\\s*not|is\\s+unable)',
+  'unable\\s+to\\s+(measure|detect|estimate)',
+  'do\\s+not\\s+have\\s+(access|capability)',
+];
+
+/**
+ * Task 4.2：检查 summary 是否使用概率性措辞描述 sensor-inferred 事件。
+ *
+ * 三个子检查：
+ * 1. summary 命中至少一个 probabilisticPatterns
+ * 2. summary 不得命中任何 deterministicForbiddenPatterns
+ * 3. (可选) summary 不得出现置信度百分比
+ */
+function checkRequireProbabilisticEventLanguage(
+  caseId: string,
+  summary: string,
+  config: {
+    probabilisticPatterns: string[];
+    deterministicForbiddenPatterns: string[];
+    forbidConfidencePercentage?: boolean;
+  },
+): EvalCheckResult[] {
+  const results: EvalCheckResult[] = [];
+
+  // 子检查 1：必须命中至少一个概率措辞
+  const probabilisticHit = config.probabilisticPatterns.filter((p) => new RegExp(p, 'i').test(summary));
+  const passedProbabilistic = probabilisticHit.length > 0;
+  results.push({
+    checkId: `${caseId}:task:homepage:probabilistic_language_required`,
+    severity: 'hard',
+    passed: passedProbabilistic,
+    score: passedProbabilistic ? 1 : 0,
+    maxScore: 1,
+    message: passedProbabilistic
+      ? 'summary 使用了概率性措辞描述 sensor-inferred 事件'
+      : 'summary 未使用任何概率性措辞描述 sensor-inferred 事件',
+    details: passedProbabilistic
+      ? { matched: probabilisticHit }
+      : { patterns: config.probabilisticPatterns, summaryHead: summary.slice(0, 200) },
+  });
+
+  // 子检查 2：不得命中确定性措辞
+  const deterministicHits = config.deterministicForbiddenPatterns.filter((p) =>
+    new RegExp(p, 'i').test(summary),
+  );
+  const passedDeterministic = deterministicHits.length === 0;
+  results.push({
+    checkId: `${caseId}:task:homepage:deterministic_language_forbidden`,
+    severity: 'hard',
+    passed: passedDeterministic,
+    score: passedDeterministic ? 1 : 0,
+    maxScore: 1,
+    message: passedDeterministic
+      ? 'summary 未出现 sensor-inferred 事件的确定性断言'
+      : `summary 出现了确定性断言: ${deterministicHits.join(', ')}`,
+    details: passedDeterministic
+      ? undefined
+      : { matched: deterministicHits, summaryHead: summary.slice(0, 200) },
+  });
+
+  // 子检查 3：(可选) 不得出现置信度百分比
+  if (config.forbidConfidencePercentage) {
+    // 匹配 "98%"、"98 %"、"confidence 80%"、"置信度 98%"、"98% 可能" 等
+    const confidencePercentagePattern = /(\d+(\.\d+)?\s*%|(confidence|置信度)[^。；！？\n]{0,8}\d+)/i;
+    const hasPercentage = confidencePercentagePattern.test(summary);
+    results.push({
+      checkId: `${caseId}:task:homepage:confidence_percentage_forbidden`,
+      severity: 'hard',
+      passed: !hasPercentage,
+      score: hasPercentage ? 0 : 1,
+      maxScore: 1,
+      message: hasPercentage
+        ? 'summary 出现了置信度百分比（禁止向客户展示）'
+        : 'summary 未出现置信度百分比',
+      details: hasPercentage ? { summaryHead: summary.slice(0, 200) } : undefined,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Task 4.2：检查客户文本是否披露内部派生评分。
+ *
+ * 使用通用黑名单（不硬编码截图数字），或使用 case 提供的 scorePatterns。
+ */
+function checkForbidInternalDerivedScores(
+  caseId: string,
+  text: string,
+  scorePatterns?: string[],
+): EvalCheckResult {
+  const patterns = scorePatterns && scorePatterns.length > 0
+    ? scorePatterns
+    : Array.from(DEFAULT_INTERNAL_SCORE_PATTERNS);
+
+  const matched = patterns.filter((p) => new RegExp(p, 'i').test(text));
+  const passed = matched.length === 0;
+  return {
+    checkId: `${caseId}:task:homepage:internal_score_forbidden`,
+    severity: 'hard',
+    passed,
+    score: passed ? 1 : 0,
+    maxScore: 1,
+    message: passed
+      ? '客户文本未披露内部派生评分'
+      : `客户文本披露了内部派生评分: ${matched.join(', ')}`,
+    details: passed ? undefined : { matched, textSnippet: text.slice(0, 200) },
+  };
+}
+
+/**
+ * Task 4.2：检查客户文本是否披露系统能力、算法机制或设备限制。
+ *
+ * 使用通用黑名单，或使用 case 提供的 capabilityPatterns。
+ */
+function checkForbidCapabilityDisclosure(
+  caseId: string,
+  text: string,
+  capabilityPatterns?: string[],
+): EvalCheckResult {
+  const patterns = capabilityPatterns && capabilityPatterns.length > 0
+    ? capabilityPatterns
+    : Array.from(DEFAULT_CAPABILITY_PATTERNS);
+
+  const matched = patterns.filter((p) => new RegExp(p, 'i').test(text));
+  const passed = matched.length === 0;
+  return {
+    checkId: `${caseId}:task:homepage:capability_disclosure_forbidden`,
+    severity: 'hard',
+    passed,
+    score: passed ? 1 : 0,
+    maxScore: 1,
+    message: passed
+      ? '客户文本未披露系统能力/算法机制'
+      : `客户文本披露了系统能力/算法机制: ${matched.join(', ')}`,
+    details: passed ? undefined : { matched, textSnippet: text.slice(0, 200) },
   };
 }
 

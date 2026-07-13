@@ -221,7 +221,9 @@ describe('buildTaskPrompt', () => {
     }), createPromptLoader(undefined, '../../data/sandbox/prompts'), emptyRules);
 
     expect(prompt).toContain('eventInsights');
-    expect(prompt).toContain('事件生理摘要');
+    // Task 2.1：prompt template 从 `## 事件生理摘要（优先引用）` 改为
+    // `## 当前可提及事件`，但 eventInsights 使用规则段仍保留
+    expect(prompt).toContain('当前可提及事件');
     expect(prompt).toContain('事件窗口指标优先于 raw latest24h');
     expect(prompt).toContain('actions 应优先从 actionIntents 转写');
   });
