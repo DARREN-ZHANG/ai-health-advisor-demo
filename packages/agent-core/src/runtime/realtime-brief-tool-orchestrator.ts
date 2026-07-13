@@ -6,6 +6,10 @@ import {
   type CaffeineSleepImpactOutput,
 } from '../tools/estimate-caffeine-sleep-impact';
 
+// ────────────────────────────────────────────
+// 内部：触发策略与执行 artifact（保留完整信息，供可观测性使用）
+// ────────────────────────────────────────────
+
 export interface RealtimeBriefToolTriggerPolicy {
   id: string;
   toolName: string;
@@ -39,6 +43,12 @@ export interface RealtimeBriefToolEvidenceItem {
   error?: string;
 }
 
+/**
+ * 内部观测 artifact：保留工具执行的全部信息（含 toolName、policyId、status、error）。
+ *
+ * 仅用于日志/调试/可观测性，禁止渲染到 solver prompt。
+ * 公开侧请使用 `buildPublicToolClaimsFromEvidence` 投影出的 `PublicToolClaim`。
+ */
 export interface RealtimeBriefToolEvidencePacket {
   items: RealtimeBriefToolEvidenceItem[];
 }
@@ -90,6 +100,13 @@ export function buildRealtimeBriefToolInvocationPlan(
   return { invocations };
 }
 
+/**
+ * 内部执行函数：按 plan 调用工具，产出完整 artifact。
+ *
+ * 此函数保留 success/error 的全部内部信息（包括 toolName、policyId、error message），
+ * 供可观测性与调试使用。任何对 solver prompt 的渲染必须经由 `buildPublicToolClaimsFromEvidence`
+ * 投影后再使用 `projectRealtimeBriefToolEvidenceForPrompt`。
+ */
 export async function executeRealtimeBriefToolPlan(
   plan: RealtimeBriefToolInvocationPlan,
   packet: TaskContextPacket,
@@ -155,68 +172,136 @@ export async function executeRealtimeBriefToolPlan(
   return { items };
 }
 
-export function appendRealtimeBriefToolEvidenceToPrompt(
-  taskPrompt: string,
-  evidencePacket: RealtimeBriefToolEvidencePacket,
-): string {
-  if (evidencePacket.items.length === 0) return taskPrompt;
+// ────────────────────────────────────────────
+// 公开：PublicToolClaim 投影（客户可见的工具结论）
+// ────────────────────────────────────────────
 
-  const lines = [taskPrompt, '', '## 工具证据包'];
-  lines.push('以下结果来自实时简报 Tool Orchestrator。只能引用 status=success 的工具结果；不得编造未出现的工具结果。');
-
-  for (const item of evidencePacket.items) {
-    lines.push('');
-    lines.push(`### ${item.toolName}`);
-    lines.push(`- policyId: ${item.policyId}`);
-    lines.push(`- status: ${item.status}`);
-    lines.push(`- priority: ${item.priority}`);
-    lines.push(`- reason: ${item.reason}`);
-    if (item.evidenceIds.length > 0) {
-      lines.push(`- evidenceIds: ${item.evidenceIds.join(', ')}`);
-    }
-
-    if (item.status === 'success') {
-      lines.push(...renderSuccessfulToolEvidence(item.toolName, item.data));
-    } else {
-      lines.push(`- error: ${item.error ?? 'unknown tool error'}`);
-      lines.push('- 写作要求: 不要引用失败工具的结果。');
-    }
-  }
-
-  return lines.join('\n');
+/**
+ * 公开工具结论：客户可见的工具产出的最小投影。
+ *
+ * 设计意图：
+ * 1. 只包含成功工具产出的"客户可用结论"。
+ * 2. 不携带 toolName、policyId、priority、reason、status、error 等内部执行元数据。
+ * 3. 不携带 halfLifeHours、eliminationRateK、measuredChemically 等算法常量。
+ * 4. 当工具失败、未调用或成功但无可用数据时，不产出任何 claim。
+ *
+ * `summary` 是 LLM 唯一可见的字段，文案使用"估算"等概率性措辞，
+ * 不追加"戒指无法测量/没有专业算法"等元说明。
+ */
+export interface PublicToolClaim {
+  claimId: string;
+  kind: 'estimated_caffeine_sleep_impact';
+  summary: string;
+  evidenceIds: string[];
 }
 
-function renderSuccessfulToolEvidence(toolName: string, data: unknown): string[] {
-  if (toolName === estimateCaffeineSleepImpactTool.name && isCaffeineSleepImpactOutput(data)) {
-    return renderCaffeineSleepImpact(data);
+/**
+ * 从内部 evidence packet 投影出公开 claim 列表。
+ *
+ * 规则：
+ * - status !== 'success' 的 item 完全静默
+ * - success 但无可用数据（如 hasCaffeineEvent=false）也完全静默
+ * - 仅 success with data 产出 claim
+ *
+ * 纯函数：不修改输入。
+ */
+export function buildPublicToolClaimsFromEvidence(
+  evidence: RealtimeBriefToolEvidencePacket,
+): PublicToolClaim[] {
+  const claims: PublicToolClaim[] = [];
+
+  for (const item of evidence.items) {
+    if (item.status !== 'success') continue;
+    const claim = projectItemToClaim(item);
+    if (claim) claims.push(claim);
   }
 
-  return [
-    `- data: ${JSON.stringify(data)}`,
-    '- 写作要求: 只引用 data 中明确存在的字段，不得补充工具未返回的数字。',
-  ];
+  return claims;
 }
 
-function renderCaffeineSleepImpact(data: CaffeineSleepImpactOutput): string[] {
+function projectItemToClaim(item: RealtimeBriefToolEvidenceItem): PublicToolClaim | undefined {
+  if (item.toolName === estimateCaffeineSleepImpactTool.name && isCaffeineSleepImpactOutput(item.data)) {
+    return projectCaffeineSleepImpactClaim(item);
+  }
+  return undefined;
+}
+
+function projectCaffeineSleepImpactClaim(
+  item: RealtimeBriefToolEvidenceItem,
+): PublicToolClaim | undefined {
+  const data = item.data as CaffeineSleepImpactOutput;
+  // 成功但无可用数据：完全静默
   if (!data.hasCaffeineEvent || !data.event || !data.estimatedCaffeineLoad || !data.sleepImpact || !data.advice) {
-    return ['- 工具结果: 没有足够证据估算咖啡因对今晚睡眠的影响。'];
+    return undefined;
   }
 
-  const load = data.estimatedCaffeineLoad;
-  const percent = Math.round(load.remainingRatioAtSleep * 100);
-  return [
-    `- 事件: possible_caffeine_intake, start=${data.event.start}, confidence=${Math.round(data.event.confidence * 100)}%`,
-    `- 估算咖啡因剩余比例: ${percent}%`,
-    `- 估算依据: ${load.basis}, measuredChemically=${load.measuredChemically}`,
-    `- 半衰期模型: halfLifeHours=${load.halfLifeHours}, hoursUntilSleep=${load.hoursUntilSleep}, eliminationRateK=${load.eliminationRateK}`,
-    `- 睡眠影响等级: ${data.sleepImpact.riskLevel}`,
-    `- 睡眠影响解释: ${data.sleepImpact.rationale}`,
-    `- 支持型建议: ${data.advice.message}`,
-    '- 写作要求: 如果 summary 提到该结果，必须说"估算咖啡因剩余比例"或"估算体内咖啡因负荷"，并说明这不是血液化学实测。不得说确认摄入咖啡因、血液咖啡因浓度、一定失眠。',
-  ];
+  const percent = Math.round(data.estimatedCaffeineLoad.remainingRatioAtSleep * 100);
+  const impactByLevel: Record<typeof data.sleepImpact.riskLevel, string> = {
+    low: '对今晚睡眠的影响预计较低',
+    moderate: '可能轻度影响入睡与深睡比例',
+    high: '对入睡和深睡的影响可能偏高',
+  };
+  const impact = impactByLevel[data.sleepImpact.riskLevel];
+
+  // 客户可用结论：只保留"估算"语义，不暴露算法常量、toolName 或任何执行元数据
+  const summary = `估算约 ${percent}% 的咖啡因负荷可能持续到今晚入睡时间，${impact}。${data.advice.message}`;
+
+  return {
+    claimId: `claim-${item.policyId}`,
+    kind: 'estimated_caffeine_sleep_impact',
+    summary,
+    evidenceIds: [...item.evidenceIds],
+  };
 }
 
 function isCaffeineSleepImpactOutput(value: unknown): value is CaffeineSleepImpactOutput {
   if (typeof value !== 'object' || value === null) return false;
   return typeof (value as { hasCaffeineEvent?: unknown }).hasCaffeineEvent === 'boolean';
+}
+
+// ────────────────────────────────────────────
+// 公开 projection 渲染到 solver prompt
+// ────────────────────────────────────────────
+
+/**
+ * 将公开 claim 列表渲染到 solver prompt。
+ *
+ * 不变性：
+ * 1. claims 为空时返回原始 taskPrompt（完全静默）
+ * 2. 仅渲染 claim.summary，不渲染任何内部字段
+ * 3. 章节标题使用客户语言（"## 工具结论"），不出现 toolName
+ */
+export function projectRealtimeBriefToolEvidenceForPrompt(
+  taskPrompt: string,
+  claims: PublicToolClaim[],
+): string {
+  if (claims.length === 0) return taskPrompt;
+
+  const lines = [taskPrompt, '', '## 工具结论'];
+  lines.push('以下是当前可用的工具结论，可直接转写到 summary。');
+
+  for (const claim of claims) {
+    lines.push('');
+    lines.push(`- ${claim.summary}`);
+  }
+
+  return lines.join('\n');
+}
+
+// ────────────────────────────────────────────
+// 向后兼容入口：直接从 evidence 投影并渲染
+// ────────────────────────────────────────────
+
+/**
+ * 从内部 evidence 投影公开 claim 并渲染到 prompt。
+ *
+ * 等价于 `projectRealtimeBriefToolEvidenceForPrompt(taskPrompt, buildPublicToolClaimsFromEvidence(evidence))`。
+ * 保留此入口以便 agent-runtime 单点调用，且无需感知 projection 内部细节。
+ */
+export function appendRealtimeBriefToolEvidenceToPrompt(
+  taskPrompt: string,
+  evidence: RealtimeBriefToolEvidencePacket,
+): string {
+  const claims = buildPublicToolClaimsFromEvidence(evidence);
+  return projectRealtimeBriefToolEvidenceForPrompt(taskPrompt, claims);
 }

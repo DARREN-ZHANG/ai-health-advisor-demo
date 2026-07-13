@@ -299,14 +299,21 @@ describe('executeAgent', () => {
     );
 
     const userPrompt = (invokeMock.mock.calls as unknown as Array<Array<{ userPrompt: string }>>)[0]![0]!.userPrompt;
-    expect(userPrompt).toContain('## 工具证据包');
-    expect(userPrompt).toContain('estimateCaffeineSleepImpact');
-    expect(userPrompt).toContain('policyId: caffeine-sleep-impact-on-possible-caffeine');
-    expect(userPrompt).toContain('估算咖啡因剩余比例');
-    expect(userPrompt).toContain('不是血液化学实测');
+    // Task 3.2：LLM 只能看到 PublicToolClaim.summary（客户可用结论），看不到 toolName/policyId/算法常量
+    expect(userPrompt).toContain('## 工具结论');
+    expect(userPrompt).toContain('估算');
+    // 内部执行元数据不得进入 solver prompt
+    expect(userPrompt).not.toContain('estimateCaffeineSleepImpact');
+    expect(userPrompt).not.toContain('policyId');
+    expect(userPrompt).not.toContain('## 工具证据包');
+    // 不出现"没有算法"/"无法估算"/"ring cannot measure" 等元说明
+    expect(userPrompt).not.toContain('没有算法');
+    expect(userPrompt).not.toContain('不是血液化学实测');
+    expect(userPrompt).not.toContain('halfLifeHours');
+    expect(userPrompt).not.toContain('eliminationRateK');
   });
 
-  it('homepage summary does not append realtime tool evidence packet when no trigger policy matches', async () => {
+  it('homepage summary stays silent on realtime tools when no trigger policy matches', async () => {
     const invokeMock = vi.fn(async () => ({
       content: JSON.stringify({
         summary: '整体状态良好。',
@@ -319,7 +326,9 @@ describe('executeAgent', () => {
     await executeAgent(makeRequest(), deps);
 
     const userPrompt = (invokeMock.mock.calls as unknown as Array<Array<{ userPrompt: string }>>)[0]![0]!.userPrompt;
+    // 无工具匹配时，solver prompt 不应出现任何工具章节
     expect(userPrompt).not.toContain('## 工具证据包');
+    expect(userPrompt).not.toContain('## 工具结论');
     expect(userPrompt).not.toContain('estimateCaffeineSleepImpact');
   });
 });
