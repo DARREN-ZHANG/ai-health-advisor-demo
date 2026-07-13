@@ -12,6 +12,8 @@ function makeEvent(overrides: Partial<RecentEventPacket> = {}): RecentEventPacke
     end: '2026-05-19T18:00',
     durationMin: 120,
     confidence: 0.84,
+    // sensor_inference + confidence 0.84 (≥0.8) → likely
+    certaintyBand: 'likely',
     sourceSegmentId: 'seg-caffeine-1',
     recognitionEvidence: ['心率标准差 12, 轻微上升'],
     syncState: {

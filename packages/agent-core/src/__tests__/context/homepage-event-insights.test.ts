@@ -34,6 +34,8 @@ describe('homepage event insights', () => {
         end: '2026-04-21T12:03',
         durationMin: 3,
         confidence: 1,
+        // 用户主动触发的微事件 → reported
+        certaintyBand: 'reported',
         sourceSegmentId: 'seg-micro-deep-breathing',
         recognitionEvidence: ['用户选择触发微事件 micro_deep_breathing'],
         syncState: { lastSyncedMeasuredAt: '2026-04-21T12:03', pendingEventCount: 0, fromSyncedWindow: true },
@@ -79,6 +81,8 @@ it('builds a high-tension work focus insight from event-window HRV compressed an
         end: '2026-04-21T12:00',
         durationMin: 120,
         confidence: 0.91,
+        // sensor_inference + confidence 0.91 (≥0.8) → likely
+        certaintyBand: 'likely',
         sourceSegmentId: 'seg-focus-1',
         recognitionEvidence: ['平均心率 72, 低运动, 深度专注'],
         eventWindow: {
@@ -128,6 +132,8 @@ it('marks SpO2 critical context as critical tension', () => {
         end: '2026-04-21T07:00',
         durationMin: 480,
         confidence: 0.95,
+        // sensor_inference + confidence 0.95 (≥0.8) → likely
+        certaintyBand: 'likely',
         sourceSegmentId: 'seg-sleep-1',
         recognitionEvidence: ['低运动, 心率平稳, 睡眠模式'],
         syncState: { lastSyncedMeasuredAt: '2026-04-21T07:00', pendingEventCount: 0, fromSyncedWindow: true },
@@ -152,6 +158,8 @@ it('uses only supported product capabilities in action intents', () => {
         end: '2026-04-21T16:00',
         durationMin: 180,
         confidence: 0.88,
+        // sensor_inference + confidence 0.88 (≥0.8) → likely
+        certaintyBand: 'likely',
         sourceSegmentId: 'seg-sedentary-1',
         recognitionEvidence: ['低运动, 心率平稳, 久坐模式'],
         syncState: { lastSyncedMeasuredAt: '2026-04-21T16:00', pendingEventCount: 0, fromSyncedWindow: true },
@@ -177,6 +185,8 @@ it('creates event-appropriate action categories for post-workout recovery', () =
         end: '2026-04-21T18:10',
         durationMin: 40,
         confidence: 0.92,
+        // sensor_inference + confidence 0.92 (≥0.8) → likely
+        certaintyBand: 'likely',
         sourceSegmentId: 'seg-cardio-1',
         recognitionEvidence: ['心率标准差 20, 持续有氧运动'],
         syncState: { lastSyncedMeasuredAt: '2026-04-21T18:10', pendingEventCount: 0, fromSyncedWindow: true },
@@ -209,6 +219,8 @@ it('does not attach sleep recovery context or sleep evidence to a midday walk in
         end: '2026-06-01T13:00',
         durationMin: 30,
         confidence: 0.91,
+        // sensor_inference + confidence 0.91 (≥0.8) → likely
+        certaintyBand: 'likely',
         sourceSegmentId: 'seg-walk-1',
         recognitionEvidence: ['步行 30 min, 心率均值 100'],
         eventWindow: {
@@ -250,6 +262,8 @@ it('does not recommend sleep protection for a 13:00 walk', () => {
         end: '2026-06-01T13:00',
         durationMin: 30,
         confidence: 0.91,
+        // sensor_inference + confidence 0.91 (≥0.8) → likely
+        certaintyBand: 'likely',
         sourceSegmentId: 'seg-walk-1',
         recognitionEvidence: ['步行 30 min'],
         syncState: { lastSyncedMeasuredAt: '2026-06-01T13:00', pendingEventCount: 0, fromSyncedWindow: true },
@@ -273,6 +287,8 @@ it('keeps sleep protection for evening high intensity workouts', () => {
         end: '2026-06-01T19:30',
         durationMin: 30,
         confidence: 0.92,
+        // sensor_inference + confidence 0.92 (≥0.8) → likely
+        certaintyBand: 'likely',
         sourceSegmentId: 'seg-hiit-1',
         recognitionEvidence: ['间歇训练 30 min'],
         syncState: { lastSyncedMeasuredAt: '2026-06-01T19:30', pendingEventCount: 0, fromSyncedWindow: true },
@@ -302,6 +318,8 @@ it('keeps sleep recovery context for an evening HIIT event when sleep is attenti
         end: '2026-06-01T19:30',
         durationMin: 30,
         confidence: 0.92,
+        // sensor_inference + confidence 0.92 (≥0.8) → likely
+        certaintyBand: 'likely',
         sourceSegmentId: 'seg-hiit-1',
         recognitionEvidence: ['间歇训练 30 min'],
         syncState: { lastSyncedMeasuredAt: '2026-06-01T19:30', pendingEventCount: 0, fromSyncedWindow: true },
@@ -330,6 +348,8 @@ it('attaches deep breathing micro event interaction for breathing reset', () => 
         end: '2026-06-01T12:00',
         durationMin: 120,
         confidence: 0.9,
+        // sensor_inference + confidence 0.9 (≥0.8) → likely
+        certaintyBand: 'likely',
         sourceSegmentId: 'seg-sedentary-1',
         recognitionEvidence: ['久坐'],
         syncState: { lastSyncedMeasuredAt: '2026-06-01T12:00', pendingEventCount: 0, fromSyncedWindow: true },
@@ -355,6 +375,8 @@ it('keeps hydration action without timeline interaction', () => {
         end: '2026-06-01T18:10',
         durationMin: 40,
         confidence: 0.92,
+        // sensor_inference + confidence 0.92 (≥0.8) → likely
+        certaintyBand: 'likely',
         sourceSegmentId: 'seg-cardio-1',
         recognitionEvidence: ['有氧运动'],
         syncState: { lastSyncedMeasuredAt: '2026-06-01T18:10', pendingEventCount: 0, fromSyncedWindow: true },
@@ -379,6 +401,8 @@ it('attaches calendar interaction for future sleep protection', () => {
         end: '2026-06-01T19:30',
         durationMin: 30,
         confidence: 0.92,
+        // sensor_inference + confidence 0.92 (≥0.8) → likely
+        certaintyBand: 'likely',
         sourceSegmentId: 'seg-hiit-1',
         recognitionEvidence: ['间歇训练'],
         syncState: { lastSyncedMeasuredAt: '2026-06-01T19:30', pendingEventCount: 0, fromSyncedWindow: true },
@@ -409,6 +433,8 @@ it('adds a bedtime hot shower calendar action for caffeine intake after 17:00', 
         end: '2026-06-01T17:40',
         durationMin: 20,
         confidence: 0.92,
+        // sensor_inference + confidence 0.92 (≥0.8) → likely
+        certaintyBand: 'likely',
         sourceSegmentId: 'seg-caffeine-1',
         recognitionEvidence: ['咖啡因摄入'],
         syncState: { lastSyncedMeasuredAt: '2026-06-01T17:40', pendingEventCount: 0, fromSyncedWindow: true },
@@ -444,6 +470,8 @@ it('marks the latest event displayable and the prior event analysis-only', () =>
           end: '2026-06-01T13:30',
           durationMin: 30,
           confidence: 0.92,
+          // sensor_inference + confidence 0.92 (≥0.8) → likely
+          certaintyBand: 'likely',
           sourceSegmentId: 'seg-cardio-1',
           recognitionEvidence: ['有氧运动'],
           syncState: { lastSyncedMeasuredAt: '2026-06-01T13:30', pendingEventCount: 0, fromSyncedWindow: true },
@@ -456,6 +484,8 @@ it('marks the latest event displayable and the prior event analysis-only', () =>
           end: '2026-06-01T13:00',
           durationMin: 240,
           confidence: 0.9,
+          // sensor_inference + confidence 0.9 (≥0.8) → likely
+          certaintyBand: 'likely',
           sourceSegmentId: 'seg-sedentary-1',
           recognitionEvidence: ['久坐'],
           syncState: { lastSyncedMeasuredAt: '2026-06-01T13:30', pendingEventCount: 0, fromSyncedWindow: true },
@@ -500,6 +530,8 @@ it('suppresses walk-like and repeat-exercise actions after a current cardio even
         end: '2026-06-01T13:30',
         durationMin: 30,
         confidence: 0.91,
+        // sensor_inference + confidence 0.91 (≥0.8) → likely
+        certaintyBand: 'likely',
         sourceSegmentId: 'seg-walk-1',
         recognitionEvidence: ['步行 30 min'],
         syncState: { lastSyncedMeasuredAt: '2026-06-01T13:30', pendingEventCount: 0, fromSyncedWindow: true },
@@ -530,6 +562,8 @@ it('suppresses repeated same-category actions for consecutive current and prior 
           end: '2026-06-01T18:30',
           durationMin: 30,
           confidence: 0.92,
+          // sensor_inference + confidence 0.92 (≥0.8) → likely
+          certaintyBand: 'likely',
           sourceSegmentId: 'seg-cardio-2',
           recognitionEvidence: ['有氧运动'],
           syncState: { lastSyncedMeasuredAt: '2026-06-01T18:30', pendingEventCount: 0, fromSyncedWindow: true },
@@ -542,6 +576,8 @@ it('suppresses repeated same-category actions for consecutive current and prior 
           end: '2026-06-01T17:50',
           durationMin: 30,
           confidence: 0.9,
+          // sensor_inference + confidence 0.9 (≥0.8) → likely
+          certaintyBand: 'likely',
           sourceSegmentId: 'seg-cardio-1',
           recognitionEvidence: ['有氧运动'],
           syncState: { lastSyncedMeasuredAt: '2026-06-01T18:30', pendingEventCount: 0, fromSyncedWindow: true },
@@ -673,6 +709,8 @@ describe('history-based suppression in buildHomepageEventInsights', () => {
           end: '2026-06-01T08:40',
           durationMin: 20,
           confidence: 0.9,
+          // sensor_inference + confidence 0.9 (≥0.8) → likely
+          certaintyBand: 'likely',
           recognitionEvidence: ['进餐'],
           syncState: { lastSyncedMeasuredAt: null, pendingEventCount: 0, fromSyncedWindow: false },
           evidenceIds: ['event_meal'],
@@ -703,6 +741,8 @@ describe('history-based suppression in buildHomepageEventInsights', () => {
           end: '2026-06-01T12:50',
           durationMin: 20,
           confidence: 0.9,
+          // sensor_inference + confidence 0.9 (≥0.8) → likely
+          certaintyBand: 'likely',
           recognitionEvidence: ['进餐'],
           syncState: { lastSyncedMeasuredAt: null, pendingEventCount: 0, fromSyncedWindow: false },
           evidenceIds: ['event_meal'],
@@ -731,6 +771,8 @@ describe('history-based suppression in buildHomepageEventInsights', () => {
           end: '2026-06-01T16:00',
           durationMin: 120,
           confidence: 0.9,
+          // sensor_inference + confidence 0.9 (≥0.8) → likely
+          certaintyBand: 'likely',
           recognitionEvidence: ['久坐'],
           syncState: { lastSyncedMeasuredAt: null, pendingEventCount: 0, fromSyncedWindow: false },
           evidenceIds: ['event_sedentary'],
@@ -755,6 +797,8 @@ describe('history-based suppression in buildHomepageEventInsights', () => {
           end: '2026-06-01T12:00',
           durationMin: 120,
           confidence: 0.9,
+          // sensor_inference + confidence 0.9 (≥0.8) → likely
+          certaintyBand: 'likely',
           recognitionEvidence: ['久坐'],
           syncState: { lastSyncedMeasuredAt: null, pendingEventCount: 0, fromSyncedWindow: false },
           evidenceIds: ['event_sedentary'],

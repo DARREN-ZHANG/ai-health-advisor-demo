@@ -57,6 +57,8 @@ function makeEvent(overrides?: Partial<RecentEventPacket>): RecentEventPacket {
     end: '2025-06-05T09:00:00Z',
     durationMin: 60,
     confidence: 0.95,
+    // sensor_inference + confidence 0.95 (≥0.8) → likely
+    certaintyBand: 'likely',
     sourceSegmentId: 'seg-exercise-1',
     recognitionEvidence: ['心率标准差 25, 运动模式'],
     syncState: {

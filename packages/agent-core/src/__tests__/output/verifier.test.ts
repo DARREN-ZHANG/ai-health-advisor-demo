@@ -402,6 +402,8 @@ describe('verifyOutput', () => {
             {
               eventId: 'event_cardio',
               eventType: 'cardio_workout',
+              // 对应 RecentEventPacket 为 sensor_inference + 高置信度 → likely
+              certaintyBand: 'likely',
               priority: 'high',
               timeRelation: '刚结束约 0 min',
               headline: '完成 30 min 训练，身体进入恢复窗口',
@@ -426,6 +428,8 @@ describe('verifyOutput', () => {
             {
               eventId: 'event_sedentary',
               eventType: 'work_sedentary',
+              // 对应 RecentEventPacket 为 sensor_inference + 高置信度 → likely
+              certaintyBand: 'likely',
               priority: 'medium',
               timeRelation: '约 30 min 前结束',
               headline: '连续静止 240 min，循环和体态需要重置',

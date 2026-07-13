@@ -18,6 +18,8 @@ function makeEvent(type: string, confidence = 0.84): RecentEventPacket {
     end: '2026-05-19T18:00',
     durationMin: 120,
     confidence,
+    // 默认 sensor_inference + confidence 0.84 (≥0.8) → likely；调用方传更低 confidence 时由 toEventCertaintyBand 逻辑应映射到 possible，但此处工厂只产出 fixture 默认值
+    certaintyBand: confidence >= 0.8 ? 'likely' : 'possible',
     sourceSegmentId: `seg-${type}-1`,
     recognitionEvidence: ['测试识别证据'],
     syncState: {
