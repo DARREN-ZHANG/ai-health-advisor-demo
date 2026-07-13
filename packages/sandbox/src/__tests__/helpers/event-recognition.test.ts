@@ -105,7 +105,10 @@ describe('event-recognition', () => {
   });
 
   describe('稳态有氧识别', () => {
-    it('应识别有氧运动片段为 steady_cardio 类型', () => {
+    it('任务 1.3：steady_cardio 因与 intermittent_exercise 混淆而 publishable=false，不进入输出', () => {
+      // 校准 artifact 显示 steady_cardio 在验证集上达不到 0.95 precision
+      // （intermittent_exercise 活跃期被误分类为 steady_cardio）
+      // 因此 steady_cardio 一律不发布
       const segment = makeSegment({
         segmentId: 'seg-cardio-1',
         type: 'steady_cardio',
@@ -116,26 +119,8 @@ describe('event-recognition', () => {
       const results = recognizeEvents(events, profileId, currentTime);
 
       const cardioEvent = results.find((r) => r.type === 'steady_cardio');
-      expect(cardioEvent).toBeDefined();
-      expect(cardioEvent!.type).toBe('steady_cardio');
-      expect(cardioEvent!.confidence).toBeGreaterThan(0);
-      expect(cardioEvent!.confidence).toBeLessThanOrEqual(1);
-    });
-
-    it('有氧运动时间范围应正确', () => {
-      const segment = makeSegment({
-        segmentId: 'seg-cardio-2',
-        type: 'steady_cardio',
-        start: '2026-04-16T09:00',
-        end: '2026-04-16T09:30',
-      });
-      const events = generateEventsForSegment(segment);
-      const results = recognizeEvents(events, profileId, currentTime);
-      const cardioEvent = results.find((r) => r.type === 'steady_cardio');
-
-      // 任务 1.2：边界由 PELT 变化点估算，最后有数据的分钟为 09:29（09:30 只有 wearState）
-      expect(cardioEvent!.start).toBe('2026-04-16T09:00');
-      expect(cardioEvent!.end).toBe('2026-04-16T09:29');
+      // 不应出现在输出中（publishable=false）
+      expect(cardioEvent).toBeUndefined();
     });
   });
 
@@ -250,12 +235,14 @@ describe('event-recognition', () => {
       const allEvents = generateAllEvents(segments);
       const results = recognizeEvents(allEvents, profileId, currentTime);
 
-      // 应该识别出 3 个不同类型
+      // 任务 1.3：steady_cardio 在校准后 publishable=false，不进入输出
+      // 应该识别出 sleep 和 meal_intake
       const types = new Set(results.map((r) => r.type));
       expect(types.has('sleep')).toBe(true);
       expect(types.has('meal_intake')).toBe(true);
-      expect(types.has('steady_cardio')).toBe(true);
-      expect(results.length).toBe(3);
+      // steady_cardio 因混淆不发布
+      expect(types.has('steady_cardio')).toBe(false);
+      expect(results.length).toBe(2);
     });
   });
 
@@ -337,7 +324,7 @@ describe('event-recognition', () => {
       expect(caffeineEvent!.evidence[0]).toContain('caffeine');
     });
 
-    it('high_or_sensitive confidence 应高于 moderate', () => {
+    it('high_or_sensitive 与 moderate 均应识别为 possible_caffeine_intake（任务 1.3：校准后概率分布）', () => {
       const { events: modEvents } = generateCaffeineScenario('moderate');
       const { events: highEvents } = generateCaffeineScenario('high_or_sensitive');
 
@@ -349,7 +336,10 @@ describe('event-recognition', () => {
 
       expect(modCaffeine).toBeDefined();
       expect(highCaffeine).toBeDefined();
-      expect(highCaffeine!.confidence).toBeGreaterThan(modCaffeine!.confidence);
+      // 任务 1.3：校准后 confidence 是 isotonic 概率
+      // moderate 和 high_or_sensitive 都满足发布阈值，校准概率均 >= publishThreshold(0.77)
+      expect(modCaffeine!.confidence).toBeGreaterThanOrEqual(0.77);
+      expect(highCaffeine!.confidence).toBeGreaterThanOrEqual(0.77);
     });
 
     it('light 默认不应生成 public event（或 confidence 较低）', () => {
@@ -602,7 +592,7 @@ describe('event-recognition', () => {
       expect(alcoholEvent!.evidence[0]).toContain('alcohol');
     });
 
-    it('heavy confidence 应高于 moderate', () => {
+    it('heavy 与 moderate 均应识别为 possible_alcohol_intake（任务 1.3：校准后概率分布）', () => {
       const { events: modEvents } = generateAlcoholScenario('moderate');
       const { events: heavyEvents } = generateAlcoholScenario('heavy');
 
@@ -614,7 +604,10 @@ describe('event-recognition', () => {
 
       expect(modAlcohol).toBeDefined();
       expect(heavyAlcohol).toBeDefined();
-      expect(heavyAlcohol!.confidence).toBeGreaterThan(modAlcohol!.confidence);
+      // 任务 1.3：校准后 confidence 是 isotonic 概率
+      // moderate 和 heavy 都满足发布阈值，校准概率均 >= publishThreshold(0.85)
+      expect(modAlcohol!.confidence).toBeGreaterThanOrEqual(0.85);
+      expect(heavyAlcohol!.confidence).toBeGreaterThanOrEqual(0.85);
     });
 
     it('light 默认不应生成 public event（或 confidence 较低）', () => {
@@ -957,7 +950,7 @@ describe('event-recognition', () => {
       }
     });
 
-    it('相同观察序列配上 god-mode 风格 segmentId 不得获得 confidence=1.0', () => {
+    it('相同观察序列配上 god-mode 风格 segmentId 不应因 segmentId 获得特权识别', () => {
       const events = generateMixedScenario();
       // 注入 god-mode 风格 segmentId
       const godModeEvents = events.map((e) => ({
@@ -965,9 +958,12 @@ describe('event-recognition', () => {
         segmentId: e.segmentId ? `seg-gm-walk-${Date.now()}` : e.segmentId,
       }));
       const results = recognizeEvents(godModeEvents, profileId, currentTime);
-      // 不应有任何事件的 confidence 为 1.0（god-mode 直读已删除）
-      const perfect = results.filter((r) => r.confidence >= 1.0 && r.recognitionSource === 'sensor_inference');
-      expect(perfect).toEqual([]);
+      // 任务 1.3：校准后 confidence 可以达到 1.0（isotonic 完美分离）
+      // 但所有事件必须来自 sensor_inference 路径，且没有 sourceSegmentId 泄漏
+      for (const r of results) {
+        expect(r.recognitionSource).toBe('sensor_inference');
+        expect(r.sourceSegmentId).toBeUndefined();
+      }
     });
   });
 
@@ -1212,6 +1208,140 @@ describe('event-recognition', () => {
       const sensor = results.find((r) => r.type === 'meal_intake');
       expect(sensor).toBeDefined();
       expect(sensor!.recognitionSource).toBe('sensor_inference');
+    });
+  });
+
+  // ============================================================
+  // 任务 1.3：校准发布阈值行为测试
+  // ============================================================
+  describe('任务 1.3：校准发布阈值', () => {
+    it('高于 publishThreshold 的 meal_intake 应返回 calibrationStatus=calibrated', () => {
+      const segment = makeSegment({
+        segmentId: 'seg-meal-calib',
+        type: 'meal_intake',
+        start: '2026-04-16T08:00',
+        end: '2026-04-16T08:25',
+      });
+      const events = generateEventsForSegment(segment);
+      const results = recognizeEvents(events, profileId, currentTime);
+
+      const meal = results.find((r) => r.type === 'meal_intake');
+      expect(meal).toBeDefined();
+      expect(meal!.recognitionSource).toBe('sensor_inference');
+      // 任务 1.3：返回的事件必须为 calibrated 状态
+      expect(meal!.calibrationStatus).toBe('calibrated');
+      // 校准后 confidence 应在 [0, 1] 范围内
+      expect(meal!.confidence).toBeGreaterThanOrEqual(0);
+      expect(meal!.confidence).toBeLessThanOrEqual(1);
+    });
+
+    it('高于 publishThreshold 的 possible_caffeine_intake 应返回 calibrationStatus=calibrated', () => {
+      // moderate 咖啡因场景（需要前置基线）
+      const baselineSegment = makeSegment({
+        segmentId: 'seg-baseline-calib',
+        type: 'prolonged_sedentary',
+        start: '2026-04-16T07:00',
+        end: '2026-04-16T08:00',
+      });
+      const caffeineSegment = makeSegment({
+        segmentId: 'seg-caffeine-calib',
+        type: 'caffeine_intake',
+        start: '2026-04-16T08:00',
+        end: '2026-04-16T12:00',
+        params: { dose: 'moderate' },
+      });
+      const events = [
+        ...generateEventsForSegment(baselineSegment),
+        ...generateEventsForSegment(caffeineSegment),
+      ];
+      const results = recognizeEvents(events, profileId, currentTime);
+
+      const caffeine = results.find((r) => r.type === 'possible_caffeine_intake');
+      expect(caffeine).toBeDefined();
+      expect(caffeine!.calibrationStatus).toBe('calibrated');
+    });
+
+    it('高于 publishThreshold 的 possible_alcohol_intake 应返回 calibrationStatus=calibrated', () => {
+      const baselineSegment = makeSegment({
+        segmentId: 'seg-baseline-alcohol',
+        type: 'prolonged_sedentary',
+        start: '2026-04-16T07:00',
+        end: '2026-04-16T08:00',
+      });
+      const alcoholSegment = makeSegment({
+        segmentId: 'seg-alcohol-calib',
+        type: 'alcohol_intake',
+        start: '2026-04-16T08:00',
+        end: '2026-04-16T11:00',
+        params: { amount: 'moderate' },
+      });
+      const events = [
+        ...generateEventsForSegment(baselineSegment),
+        ...generateEventsForSegment(alcoholSegment),
+      ];
+      const results = recognizeEvents(events, profileId, currentTime);
+
+      const alcohol = results.find((r) => r.type === 'possible_alcohol_intake');
+      expect(alcohol).toBeDefined();
+      expect(alcohol!.calibrationStatus).toBe('calibrated');
+    });
+
+    it('高于 publishThreshold 的 strength_training 应返回 calibrationStatus=calibrated', () => {
+      const segment = makeSegment({
+        segmentId: 'seg-strength-calib',
+        type: 'strength_training',
+        start: '2026-04-16T10:00',
+        end: '2026-04-16T10:30',
+        params: { setMinutes: 1, restMinutes: 2 },
+      });
+      const events = generateEventsForSegment(segment);
+      const results = recognizeEvents(events, profileId, currentTime);
+
+      const strength = results.find((r) => r.type === 'strength_training');
+      expect(strength).toBeDefined();
+      expect(strength!.calibrationStatus).toBe('calibrated');
+    });
+
+    it('steady_cardio 因 publishable=false 一律不进入输出', () => {
+      // 校准 artifact 中 steady_cardio 因 intermittent_exercise 混淆而 publishable=false
+      const segment = makeSegment({
+        segmentId: 'seg-cardio-filtered',
+        type: 'steady_cardio',
+        start: '2026-04-16T09:00',
+        end: '2026-04-16T09:30',
+      });
+      const events = generateEventsForSegment(segment);
+      const results = recognizeEvents(events, profileId, currentTime);
+
+      const cardio = results.find((r) => r.type === 'steady_cardio');
+      expect(cardio).toBeUndefined();
+    });
+
+    it('所有返回的 sensor_inference 事件都应有 calibrationStatus=calibrated', () => {
+      // 混合场景：sleep + meal
+      const segments = [
+        makeSegment({
+          segmentId: 'seg-mix-calib-sleep',
+          type: 'sleep',
+          start: '2026-04-16T22:00',
+          end: '2026-04-17T06:00',
+        }),
+        makeSegment({
+          segmentId: 'seg-mix-calib-meal',
+          type: 'meal_intake',
+          start: '2026-04-16T08:00',
+          end: '2026-04-16T08:25',
+        }),
+      ];
+      const allEvents = segments.flatMap((seg) => generateEventsForSegment(seg));
+      const results = recognizeEvents(allEvents, profileId, currentTime);
+
+      // 所有 sensor_inference 事件必须为 calibrated
+      const sensorEvents = results.filter((r) => r.recognitionSource === 'sensor_inference');
+      expect(sensorEvents.length).toBeGreaterThan(0);
+      for (const e of sensorEvents) {
+        expect(e.calibrationStatus).toBe('calibrated');
+      }
     });
   });
 });

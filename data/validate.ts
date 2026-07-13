@@ -638,6 +638,172 @@ function validatePrompts(): { errors: string[]; hasErrors: boolean } {
   return { errors, hasErrors: errors.length > 0 };
 }
 
+// --- Event Calibration 校验（任务 1.3）---
+
+/** 所有 sensor-inferred 事件类型必须有校准配置 */
+const REQUIRED_CALIBRATION_TYPES = [
+  'meal_intake',
+  'steady_cardio',
+  'prolonged_sedentary',
+  'intermittent_exercise',
+  'walk',
+  'sleep',
+  'strength_training',
+  'possible_caffeine_intake',
+  'possible_alcohol_intake',
+] as const;
+
+/** 单条校准配置的结构 */
+interface EventCalibrationEntry {
+  eventType: string;
+  publishable: boolean;
+  publishThreshold: number;
+  likelyThreshold: number;
+  isotonicBuckets: Array<{ minRawScore: number; probability: number }>;
+  validationPrecision: number;
+  validationRecall: number;
+}
+
+/**
+ * 校验事件校准 artifact 的合法性
+ *
+ * 规则：
+ * 1. 文件存在
+ * 2. 每个 sensor-inferred 类型都有配置项
+ * 3. isotonicBuckets 的 minRawScore 严格递增
+ * 4. isotonicBuckets 的 probability 单调非递减
+ * 5. publishThreshold / likelyThreshold 在 [0, 1] 范围内
+ * 6. publishable=true 时 validationPrecision >= 0.95
+ * 7. publishable=false 时 publishThreshold 必须为 1（保守策略）
+ */
+function validateEventCalibration(): { errors: string[]; hasErrors: boolean } {
+  const errors: string[] = [];
+  // artifact 位于 sandbox 包内（不在 data/ 下），因为它属于识别器运行时配置
+  const artifactPath = join(__dirname, '..', 'packages', 'sandbox', 'src', 'calibration', 'event-recognition.json');
+
+  if (!existsSync(artifactPath)) {
+    errors.push(`[calibration] Missing artifact: packages/sandbox/src/calibration/event-recognition.json`);
+    return { errors, hasErrors: true };
+  }
+
+  let configs: EventCalibrationEntry[];
+  try {
+    configs = readJson<EventCalibrationEntry[]>(artifactPath);
+  } catch (e) {
+    errors.push(`[calibration] Invalid JSON: ${(e as Error).message}`);
+    return { errors, hasErrors: true };
+  }
+
+  if (!Array.isArray(configs)) {
+    errors.push(`[calibration] Root must be an array`);
+    return { errors, hasErrors: true };
+  }
+
+  // 收集所有 eventType
+  const presentTypes = new Set(configs.map((c) => c.eventType));
+
+  // 规则 2：所有 sensor-inferred 类型必须有配置
+  for (const required of REQUIRED_CALIBRATION_TYPES) {
+    if (!presentTypes.has(required)) {
+      errors.push(`[calibration] Missing config for required type "${required}"`);
+    }
+  }
+
+  // 逐条校验
+  for (const cfg of configs) {
+    const label = cfg.eventType ?? '<unknown>';
+
+    // 必填字段
+    if (!cfg.eventType || typeof cfg.eventType !== 'string') {
+      errors.push(`[calibration] Entry missing eventType`);
+      continue;
+    }
+    if (typeof cfg.publishable !== 'boolean') {
+      errors.push(`[calibration] ${label}: publishable must be boolean`);
+    }
+    if (!Array.isArray(cfg.isotonicBuckets)) {
+      errors.push(`[calibration] ${label}: isotonicBuckets must be array`);
+      continue;
+    }
+
+    // 规则 3：minRawScore 严格递增
+    for (let i = 1; i < cfg.isotonicBuckets.length; i++) {
+      const prev = cfg.isotonicBuckets[i - 1]!;
+      const curr = cfg.isotonicBuckets[i]!;
+      if (!(curr.minRawScore > prev.minRawScore)) {
+        errors.push(
+          `[calibration] ${label}: isotonicBuckets[${i}].minRawScore (${curr.minRawScore}) must be strictly greater than [${i - 1}] (${prev.minRawScore})`,
+        );
+      }
+    }
+
+    // 规则 4：probability 单调非递减
+    for (let i = 1; i < cfg.isotonicBuckets.length; i++) {
+      const prev = cfg.isotonicBuckets[i - 1]!;
+      const curr = cfg.isotonicBuckets[i]!;
+      if (!(curr.probability >= prev.probability)) {
+        errors.push(
+          `[calibration] ${label}: isotonicBuckets[${i}].probability (${curr.probability}) must be >= [${i - 1}] (${prev.probability})`,
+        );
+      }
+    }
+
+    // 每条 bucket 数值范围
+    for (let i = 0; i < cfg.isotonicBuckets.length; i++) {
+      const b = cfg.isotonicBuckets[i]!;
+      if (typeof b.minRawScore !== 'number' || typeof b.probability !== 'number') {
+        errors.push(`[calibration] ${label}: isotonicBuckets[${i}] must have numeric fields`);
+      }
+      if (b.probability < 0 || b.probability > 1) {
+        errors.push(
+          `[calibration] ${label}: isotonicBuckets[${i}].probability (${b.probability}) out of [0, 1]`,
+        );
+      }
+    }
+
+    // 规则 5：阈值范围
+    if (
+      typeof cfg.publishThreshold !== 'number' ||
+      cfg.publishThreshold < 0 ||
+      cfg.publishThreshold > 1
+    ) {
+      errors.push(
+        `[calibration] ${label}: publishThreshold (${cfg.publishThreshold}) out of [0, 1]`,
+      );
+    }
+    if (
+      typeof cfg.likelyThreshold !== 'number' ||
+      cfg.likelyThreshold < 0 ||
+      cfg.likelyThreshold > 1
+    ) {
+      errors.push(
+        `[calibration] ${label}: likelyThreshold (${cfg.likelyThreshold}) out of [0, 1]`,
+      );
+    }
+
+    // 规则 6：publishable=true 时 precision >= 0.95
+    if (cfg.publishable === true) {
+      if (
+        typeof cfg.validationPrecision !== 'number' ||
+        cfg.validationPrecision < 0.95
+      ) {
+        errors.push(
+          `[calibration] ${label}: publishable=true but validationPrecision (${cfg.validationPrecision}) < 0.95`,
+        );
+      }
+    }
+
+    // 规则 7：publishable=false 时 publishThreshold 应为 1（保守策略）
+    if (cfg.publishable === false && cfg.publishThreshold !== 1) {
+      errors.push(
+        `[calibration] ${label}: publishable=false should have publishThreshold=1 (got ${cfg.publishThreshold})`,
+      );
+    }
+  }
+
+  return { errors, hasErrors: errors.length > 0 };
+}
+
 // --- main ---
 
 function validate(): void {
@@ -717,8 +883,19 @@ function validate(): void {
     }
   }
 
+  // 7. Event Calibration 校验（任务 1.3）
+  console.log('\n=== Event Calibration Validation ===');
+  const { errors: calibrationErrors, hasErrors: calibrationHasErrors } = validateEventCalibration();
+  if (calibrationErrors.length === 0) {
+    console.log('[~] Event calibration artifact passed');
+  } else {
+    for (const error of calibrationErrors) {
+      console.log(`[x] ${error}`);
+    }
+  }
+
   // 汇总
-  totalErrors = profileErrors || historyHasErrors || timelineHasErrors || fallbackHasErrors || scenarioHasErrors || promptHasErrors;
+  totalErrors = profileErrors || historyHasErrors || timelineHasErrors || fallbackHasErrors || scenarioHasErrors || promptHasErrors || calibrationHasErrors;
 
   console.log('\n===');
   if (totalErrors) {

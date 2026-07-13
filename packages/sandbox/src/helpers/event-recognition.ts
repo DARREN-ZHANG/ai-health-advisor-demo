@@ -9,6 +9,45 @@ import type {
 } from '@health-advisor/shared';
 import { detectPossibleCaffeineIntake } from './caffeine-detector';
 import { detectPossibleAlcoholIntake } from './alcohol-detector';
+import { calibrateProbability, type EventCalibrationConfig } from './event-calibration';
+import calibrationArtifact from '../calibration/event-recognition.json';
+
+// ============================================================
+// 校准 artifact 加载与查找
+//
+// 在模块加载时构建 eventType → config 的 Map，供 recognizeEvents 使用。
+// publishable=false 或概率 < publishThreshold 的候选事件不进入输出。
+// ============================================================
+
+const calibrationByType = new Map<RecognizedEventType, EventCalibrationConfig>(
+  (calibrationArtifact as EventCalibrationConfig[]).map((c) => [c.eventType, c]),
+);
+
+/**
+ * 对单个候选事件应用校准
+ *
+ * 1. 查找该类型的校准配置
+ * 2. 若 publishable=false → 返回 null（丢弃）
+ * 3. 计算校准概率
+ * 4. 若 < publishThreshold → 返回 null
+ * 5. 返回更新了 confidence/calibrationStatus 的新对象（immutable）
+ */
+function applyCalibration(candidate: RecognizedEvent): RecognizedEvent | null {
+  const config = calibrationByType.get(candidate.type);
+  if (!config) {
+    // 未配置的类型不发布（保守策略）
+    return null;
+  }
+  if (!config.publishable) return null;
+  const probability = calibrateProbability(candidate.confidence, config);
+  if (probability < config.publishThreshold) return null;
+  // immutable update：保留 rawScore 在 evidence 中供日志，写回校准概率到 confidence
+  return {
+    ...candidate,
+    confidence: probability,
+    calibrationStatus: 'calibrated',
+  };
+}
 
 // ============================================================
 // 事件识别器（任务 1.2 重写版）
@@ -17,8 +56,10 @@ import { detectPossibleAlcoholIntake } from './alcohol-detector';
 // 1. 输入为无标签 SensorObservation 流 + 用户上报事件
 // 2. 识别器不得访问 segmentId、eventId、segment.type 等语义字段
 // 3. 传感器路径固定算法：
-//    一分钟标准化 → PELT 变化点 → 候选窗口分类 → 加权区间调度
+//    一分钟标准化 → optimal partitioning 变化点 → 候选窗口分类 → 加权区间调度
 // 4. 用户上报事件（micro event）原样合并，不参与传感器推断
+// 5. 任务 1.3：所有传感器推断事件经过离线校准（isotonic + threshold），
+//    低置信度候选不返回。用户上报事件不经校准。
 // ============================================================
 
 /** 一分钟聚合后的标准化多维时序点 */
@@ -33,7 +74,7 @@ interface MinuteSample {
   raw: RawAggregates;
 }
 
-/** 用于 PELT 代价函数的多维特征 */
+/** 用于变化点代价函数的多维特征 */
 interface FeatureVector {
   heartRate: number;
   hrv: number;
@@ -54,7 +95,7 @@ interface RawAggregates {
   sleepStages: string[];
 }
 
-/** PELT 检测出的候选窗口 */
+/** 变化点检测出的候选窗口 */
 interface CandidateWindow {
   /** YYYY-MM-DDTHH:mm */
   start: string;
@@ -151,11 +192,11 @@ function recognizeEventsNew(input: RecognizeEventsInput): RecognizedEvent[] {
     return [...userReportedEvents];
   }
 
-  // 1.1 不做分钟级平滑——PELT 在原始 z-score 上运行
+  // 1.1 不做分钟级平滑——变化点检测在原始 z-score 上运行
   // 平滑会模糊段边界，导致相邻活动段被误合并
   const samples = rawSamples;
 
-  // 2. PELT 变化点检测生成候选窗口
+  // 2. optimal partitioning 变化点检测生成候选窗口
   const windows = detectCandidateWindows(samples);
   if (windows.length === 0) {
     return [...userReportedEvents];
@@ -171,7 +212,7 @@ function recognizeEventsNew(input: RecognizeEventsInput): RecognizedEvent[] {
   }
 
   // 3.1 合并相邻同类候选窗口
-  // PELT 可能在稳定段内产生过细的变化点（同一活动被切成多个窗口），
+  // OP 可能在稳定段内产生过细的变化点（同一活动被切成多个窗口），
   // 合并相邻且同类的窗口，时间范围取并集，原始聚合合并后重新计算 confidence
   const mergedCandidates = mergeAdjacentSameType(sensorCandidates, samples, profileId, currentTime);
 
@@ -199,18 +240,28 @@ function recognizeEventsNew(input: RecognizeEventsInput): RecognizedEvent[] {
     return !significantOverlap;
   });
 
-  // 5. 加权区间调度：在 PELT 窗口候选中选择非重叠最优集合
+  // 5. 加权区间调度：在变化点窗口候选中选择非重叠最优集合
   // caffeine/alcohol 是概率推导事件，与活动事件语义独立，不参与调度，直接合并
-  const peltCandidates: Array<{ event: RecognizedEvent; start: string; end: string }> =
+  const windowCandidates: Array<{ event: RecognizedEvent; start: string; end: string }> =
     mergedCandidates.map((c) => ({ event: c.event, start: c.window.start, end: c.window.end }));
 
-  const selected = weightedIntervalScheduling(peltCandidates);
+  const selected = weightedIntervalScheduling(windowCandidates);
 
   // 6. 合并 detector 事件（咖啡因/饮酒）和用户上报事件
-  return [...selected, ...caffeineResults, ...filteredAlcohol, ...userReportedEvents];
+  //    传感器推断事件应用校准（过滤低置信度）
+  //    用户上报事件原样保留（recognitionSource=user_report）
+  const calibratedSensorEvents = [
+    ...selected,
+    ...caffeineResults,
+    ...filteredAlcohol,
+  ]
+    .map((e) => applyCalibration(e))
+    .filter((e): e is RecognizedEvent => e !== null);
+
+  return [...calibratedSensorEvents, ...userReportedEvents];
 }
 
-/** 合并同类候选窗口的最大间隔（分钟）——PELT 可能产生过细变化点 */
+/** 合并同类候选窗口的最大间隔（分钟）——OP 可能产生过细变化点 */
 const MERGE_GAP_THRESHOLD_MIN = 5;
 /** 单次合并后窗口的最大时长（分钟）——防止跨活动段错误合并 */
 const MERGE_MAX_DURATION_MIN = 180;
@@ -218,7 +269,7 @@ const MERGE_MAX_DURATION_MIN = 180;
 /**
  * 合并相邻候选窗口（不论类型），重新分类
  *
- * PELT 可能在稳定段内产生过细的变化点，导致同一活动被切成多个相邻窗口
+ * OP 可能在稳定段内产生过细的变化点，导致同一活动被切成多个相邻窗口
  * （如 cardio 段心率周期性波动让某些子窗口被误判为 walk）。
  *
  * 此函数采用贪心策略：对时间上间隔 ≤ MERGE_GAP_THRESHOLD_MIN 分钟的相邻窗口，
@@ -302,36 +353,6 @@ function mergeRawAggregates(a: RawAggregates, b: RawAggregates): RawAggregates {
     stressLoads: [...a.stressLoads, ...b.stressLoads],
     sleepStages: [...a.sleepStages, ...b.sleepStages],
   };
-}
-
-/** 对特征向量做窗口为 windowSize 的居中移动平均（保留原始 raw 不变） */
-export function smoothFeatures(samples: MinuteSample[], windowSize: number): MinuteSample[] {
-  if (samples.length === 0 || windowSize <= 1) return [...samples];
-  const half = Math.floor(windowSize / 2);
-  const featureKeys: (keyof FeatureVector)[] = [
-    'heartRate',
-    'hrv',
-    'motion',
-    'stepRate',
-    'spo2',
-    'stressLoad',
-  ];
-
-  return samples.map((s, idx) => {
-    const start = Math.max(0, idx - half);
-    const end = Math.min(samples.length - 1, idx + half);
-    const smoothedFeatures: FeatureVector = { ...s.features };
-    for (const key of featureKeys) {
-      let sum = 0;
-      let count = 0;
-      for (let k = start; k <= end; k++) {
-        sum += samples[k]!.features[key];
-        count += 1;
-      }
-      smoothedFeatures[key] = count > 0 ? sum / count : s.features[key];
-    }
-    return { ...s, features: smoothedFeatures };
-  });
 }
 
 /** 传感器候选窗口分类后的中间结构 */
@@ -474,18 +495,24 @@ function zScore(value: number, mean: number, std: number): number {
 }
 
 // ============================================================
-// 步骤 2：PELT 变化点检测 → 候选窗口
+// 步骤 2：optimal partitioning 变化点检测 → 候选窗口
+//
+// 注意：此实现是 optimal partitioning (OP)，复杂度 O(n²)。
+// 原注释误称为 PELT (Pruned Exact Linear Time) —— PELT 通过不等式剪枝
+// 将期望复杂度降到 O(n)，但本实现未实现剪枝（保留所有候选）。
+// 函数名 detectCandidateWindows 保持不变以兼容调用方。
 // ============================================================
 
 /** 多维特征向量维度数（用于 BIC penalty） */
 const FEATURE_COUNT = 6;
 
 /**
- * 使用 multivariate PELT 变化点检测生成候选窗口
+ * 使用 multivariate optimal partitioning (OP) 变化点检测生成候选窗口
  *
  * 算法：
  * - 代价函数：各维度 squared-error 之和
  * - penalty：BIC = featureCount * log(sampleCount)
+ * - 对每个 tau 枚举所有可能的前驱 tau'，复杂度 O(n²)
  * - 对检测到的变化点列表切分连续窗口
  *
  * 导出以便单元测试
@@ -508,7 +535,7 @@ export function detectCandidateWindows(samples: MinuteSample[]): CandidateWindow
   // BIC penalty
   const penalty = FEATURE_COUNT * Math.log(n);
 
-  // PELT 动态规划
+  // optimal partitioning 动态规划
   // cost[i] = min cost to segment samples[0..i-1]
   // changePoints 记录最优解的变化点
   const cost = new Array<number>(n + 1).fill(0);
@@ -544,8 +571,7 @@ export function detectCandidateWindows(samples: MinuteSample[]): CandidateWindow
     return total;
   };
 
-  // PELT 主体：对每个 tau，寻找最佳前驱 tau'
-  // 用集合保留可能的最优前驱（PELT pruning）
+  // OP 主体：对每个 tau，枚举所有前驱 tau'（不剪枝，复杂度 O(n²)）
   const candidates: number[] = [0];
 
   for (let tau = 1; tau <= n; tau++) {
@@ -559,8 +585,7 @@ export function detectCandidateWindows(samples: MinuteSample[]): CandidateWindow
         bestCost = totalCost;
         bestPrev = cand;
       }
-      // PELT pruning：保留可能在未来成为最优的前驱
-      // 这里简化处理，保留所有当前候选（数据规模小）
+      // 不做剪枝：保留所有候选（PELT 才会通过不等式剪枝）
       nextCandidates.push(cand);
     }
     cost[tau] = bestCost;

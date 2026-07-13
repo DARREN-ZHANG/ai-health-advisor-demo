@@ -1,0 +1,180 @@
+[
+  {
+    "eventType": "meal_intake",
+    "publishable": true,
+    "publishThreshold": 0.85,
+    "likelyThreshold": 0.68,
+    "isotonicBuckets": [
+      {
+        "minRawScore": 0,
+        "probability": 0
+      },
+      {
+        "minRawScore": 0.85,
+        "probability": 1
+      }
+    ],
+    "validationPrecision": 1,
+    "validationRecall": 1
+  },
+  {
+    "eventType": "steady_cardio",
+    "publishable": false,
+    "publishThreshold": 1,
+    "likelyThreshold": 0.833337723841848,
+    "isotonicBuckets": [
+      {
+        "minRawScore": 0,
+        "probability": 0
+      },
+      {
+        "minRawScore": 0.9191224895314499,
+        "probability": 0.8823529411764706
+      }
+    ],
+    "validationPrecision": 0,
+    "validationRecall": 0
+  },
+  {
+    "eventType": "prolonged_sedentary",
+    "publishable": true,
+    "publishThreshold": 0.9,
+    "likelyThreshold": 0.7200000000000001,
+    "isotonicBuckets": [
+      {
+        "minRawScore": 0,
+        "probability": 0
+      },
+      {
+        "minRawScore": 0.9,
+        "probability": 1
+      }
+    ],
+    "validationPrecision": 1,
+    "validationRecall": 1
+  },
+  {
+    "eventType": "intermittent_exercise",
+    "publishable": true,
+    "publishThreshold": 0.85,
+    "likelyThreshold": 0.65875,
+    "isotonicBuckets": [
+      {
+        "minRawScore": 0,
+        "probability": 0.1111111111111111
+      },
+      {
+        "minRawScore": 0.85,
+        "probability": 1
+      }
+    ],
+    "validationPrecision": 1,
+    "validationRecall": 0.6
+  },
+  {
+    "eventType": "walk",
+    "publishable": true,
+    "publishThreshold": 0.8333333333333333,
+    "likelyThreshold": 0.7999999999999999,
+    "isotonicBuckets": [
+      {
+        "minRawScore": 0,
+        "probability": 0
+      },
+      {
+        "minRawScore": 0.6666666666666666,
+        "probability": 0
+      },
+      {
+        "minRawScore": 0.8333333333333333,
+        "probability": 1
+      },
+      {
+        "minRawScore": 0.8999999999999999,
+        "probability": 1
+      }
+    ],
+    "validationPrecision": 1,
+    "validationRecall": 1
+  },
+  {
+    "eventType": "sleep",
+    "publishable": true,
+    "publishThreshold": 0.95,
+    "likelyThreshold": 0.76,
+    "isotonicBuckets": [
+      {
+        "minRawScore": 0,
+        "probability": 0
+      },
+      {
+        "minRawScore": 0.95,
+        "probability": 1
+      }
+    ],
+    "validationPrecision": 1,
+    "validationRecall": 1
+  },
+  {
+    "eventType": "strength_training",
+    "publishable": true,
+    "publishThreshold": 0.85,
+    "likelyThreshold": 0.68,
+    "isotonicBuckets": [
+      {
+        "minRawScore": 0,
+        "probability": 0
+      },
+      {
+        "minRawScore": 0.85,
+        "probability": 1
+      }
+    ],
+    "validationPrecision": 1,
+    "validationRecall": 1
+  },
+  {
+    "eventType": "possible_caffeine_intake",
+    "publishable": true,
+    "publishThreshold": 0.77,
+    "likelyThreshold": 0.6160000000000001,
+    "isotonicBuckets": [
+      {
+        "minRawScore": 0,
+        "probability": 0
+      },
+      {
+        "minRawScore": 0.77,
+        "probability": 1
+      },
+      {
+        "minRawScore": 0.86,
+        "probability": 1
+      }
+    ],
+    "validationPrecision": 1,
+    "validationRecall": 1
+  },
+  {
+    "eventType": "possible_alcohol_intake",
+    "publishable": true,
+    "publishThreshold": 0.85,
+    "likelyThreshold": 0.68,
+    "isotonicBuckets": [
+      {
+        "minRawScore": 0,
+        "probability": 0
+      },
+      {
+        "minRawScore": 0.85,
+        "probability": 1
+      },
+      {
+        "minRawScore": 0.95,
+        "probability": 1
+      }
+    ],
+    "validationPrecision": 1,
+    "validationRecall": 1
+  }
+]
