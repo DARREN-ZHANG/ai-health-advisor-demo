@@ -28,6 +28,8 @@ export interface HealthHeroProps {
   state: HealthVisualState;
   /** LLM 正在生成简报；临时展示最佳准备配色的思考态 */
   isLoading?: boolean;
+  /** 当前简报由 fallback 引擎生成；圆心显示 Offline */
+  isOffline?: boolean;
   /** 圆环点击：打开 Switch Status 弹窗 */
   onOpenSwitchStatus: () => void;
   /** 圆环是否处于 expanded 态（弹窗已打开），驱动 aria-expanded */
@@ -51,6 +53,7 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
     {
       state,
       isLoading = false,
+      isOffline = false,
       onOpenSwitchStatus,
       isSwitchStatusOpen = false,
       switchStatusDialogId,
@@ -61,10 +64,12 @@ export const HealthHero = forwardRef<HTMLButtonElement, HealthHeroProps>(
     const t = useTranslations('health');
     const visualState = isLoading ? 'prime-readiness' : state;
     const meta = HEALTH_STATE_METADATA[visualState];
-    // loading 时圆心由 <ThinkingText /> 接管，stateLabel 留空
-    const stateLabel = isLoading
-      ? null
-      : t(`state.${state}` as const);
+    // fallback 优先显示 Offline；loading 时圆心由 <ThinkingText /> 接管。
+    const stateLabel = isOffline
+      ? 'Offline'
+      : isLoading
+        ? null
+        : t(`state.${state}` as const);
     const ringLabel = t('switchStatus.ringLabel');
 
     return (

@@ -130,6 +130,19 @@ describe('HealthHero', () => {
     expect(screen.queryByText('糖原耗尽')).not.toBeInTheDocument();
   });
 
+  it('fallback 模式在圆心显示 Offline', () => {
+    renderWithIntl(
+      <HealthHero
+        state="active-recovery"
+        isOffline
+        onOpenSwitchStatus={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(screen.queryByText('积极恢复')).not.toBeInTheDocument();
+  });
+
   it('LLM loading 时标记圆环和 Canvas 的忙碌及动画状态', () => {
     renderWithIntl(
       <HealthHero

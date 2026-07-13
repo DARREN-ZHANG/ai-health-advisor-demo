@@ -64,6 +64,8 @@ export default function HomePage() {
 
   const apiStatus = data?.statusColor;
   const visualState = mapApiStatusToVisualState(apiStatus, !!data);
+  const isOffline =
+    data?.source === 'fallback' || data?.meta.finishReason === 'fallback';
 
   useEffect(() => {
     if (data) {
@@ -133,6 +135,7 @@ export default function HomePage() {
           ref={ringRef}
           state={activeState}
           isLoading={briefIsLoading}
+          isOffline={isOffline}
           onOpenSwitchStatus={handleOpenSwitchStatus}
           isSwitchStatusOpen={isSwitchStatusOpen}
           switchStatusDialogId="switch-status-dialog"
