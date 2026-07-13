@@ -1,5 +1,7 @@
 import type {
+  CalibrationStatus,
   DeviceEvent,
+  RecognitionSource,
   RecognizedEvent,
   RecognizedEventType,
 } from '@health-advisor/shared';
@@ -220,12 +222,21 @@ function classifySegment(stats: SegmentStats): RecognizedEvent | null {
   const durationMin = diffMinutes(stats.start, stats.end);
 
   // 微事件片段：直接从 segmentId 提取类型
+  // 微事件为用户显式上报，来源标记为 user_report / not_applicable（非传感器推断）
   const microEventType = extractMicroEventType(stats.segmentId);
   if (microEventType) {
-    return buildRecognized(stats, microEventType, durationMin, evidence, () => {
-      evidence.push(`用户选择触发微事件 ${microEventType}，持续 ${durationMin} 分钟`);
-      return 1.0;
-    });
+    return buildRecognized(
+      stats,
+      microEventType,
+      durationMin,
+      evidence,
+      () => {
+        evidence.push(`用户选择触发微事件 ${microEventType}，持续 ${durationMin} 分钟`);
+        return 1.0;
+      },
+      'user_report',
+      'not_applicable',
+    );
   }
 
   // god-mode 片段：直接从 segmentId 提取类型，跳过生理特征分类
@@ -380,13 +391,20 @@ function recognizeWithWindow(
 // 辅助工具函数
 // ============================================================
 
-/** 构建已识别事件（统一入口） */
+/**
+ * 构建已识别事件（统一入口）
+ *
+ * 默认来源为传感器推断（sensor_inference / calibrated）。
+ * 微事件等用户显式上报路径应传 'user_report' / 'not_applicable'。
+ */
 function buildRecognized(
   stats: SegmentStats,
   type: RecognizedEventType,
   durationMin: number,
   evidence: string[],
   computeConfidence: () => number,
+  recognitionSource: RecognitionSource = 'sensor_inference',
+  calibrationStatus: CalibrationStatus = 'calibrated',
 ): RecognizedEvent {
   evidence.unshift(`检测到 ${type} 活动, 持续 ${durationMin} 分钟`);
   return {
@@ -398,8 +416,8 @@ function buildRecognized(
     confidence: computeConfidence(),
     evidence,
     sourceSegmentId: stats.segmentId,
-    recognitionSource: 'sensor_inference',
-    calibrationStatus: 'calibrated',
+    recognitionSource,
+    calibrationStatus,
   };
 }
 

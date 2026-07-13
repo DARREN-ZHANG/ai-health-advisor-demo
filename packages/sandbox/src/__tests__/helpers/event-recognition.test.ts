@@ -823,4 +823,74 @@ describe('event-recognition', () => {
     expect(recognized[0]!.sourceSegmentId).toBe(result.segmentId);
     expect(recognized[0]!.evidence.join('\n')).toContain('用户选择触发微事件 micro_deep_breathing');
   });
+
+  // ============================================================
+  // 微事件双通道语义：用户上报来源标记
+  // ============================================================
+
+  describe('微事件用户上报来源', () => {
+    it('微事件应标记为 recognitionSource=user_report 且 calibrationStatus=not_applicable', () => {
+      const result = appendMicroEvent(
+        '2026-06-01T09:00',
+        'micro_deep_breathing',
+        'profile-a',
+        { _baselineRestingHr: 58, _baselineHrv: 72, _baselineSpo2: 97 },
+      );
+
+      const recognized = recognizeEvents(result.events, 'profile-a', result.newCurrentTime);
+
+      expect(recognized).toHaveLength(1);
+      // 关键断言：用户显式上报路径，非传感器推断
+      expect(recognized[0]!.recognitionSource).toBe('user_report');
+      expect(recognized[0]!.calibrationStatus).toBe('not_applicable');
+    });
+
+    it('微事件不应继承默认的 sensor_inference / calibrated', () => {
+      const result = appendMicroEvent(
+        '2026-06-01T10:00',
+        'micro_cool_shower',
+        'profile-a',
+      );
+
+      const recognized = recognizeEvents(result.events, 'profile-a', result.newCurrentTime);
+
+      expect(recognized).toHaveLength(1);
+      expect(recognized[0]!.recognitionSource).not.toBe('sensor_inference');
+      expect(recognized[0]!.calibrationStatus).not.toBe('calibrated');
+    });
+
+    it('混合场景：微事件为 user_report，传感器事件保持 sensor_inference', () => {
+      // 传感器推断片段（进餐）— profileId 与微事件一致以便在同一识别调用中处理
+      const mealSegment = makeSegment({
+        segmentId: 'seg-meal-mixed',
+        type: 'meal_intake',
+        profileId: 'profile-a',
+        start: '2026-06-01T08:00',
+        end: '2026-06-01T08:25',
+      });
+      const sensorEvents = generateEventsForSegment(mealSegment);
+
+      // 用户上报的微事件
+      const microResult = appendMicroEvent(
+        '2026-06-01T09:00',
+        'micro_deep_breathing',
+        'profile-a',
+        { _baselineRestingHr: 58, _baselineHrv: 72, _baselineSpo2: 97 },
+      );
+
+      const allEvents = [...sensorEvents, ...microResult.events];
+      const recognized = recognizeEvents(allEvents, 'profile-a', microResult.newCurrentTime);
+
+      const micro = recognized.find((r) => r.type === 'micro_deep_breathing');
+      const sensor = recognized.find((r) => r.type === 'meal_intake');
+
+      expect(micro).toBeDefined();
+      expect(sensor).toBeDefined();
+      // 双通道语义隔离
+      expect(micro!.recognitionSource).toBe('user_report');
+      expect(micro!.calibrationStatus).toBe('not_applicable');
+      expect(sensor!.recognitionSource).toBe('sensor_inference');
+      expect(sensor!.calibrationStatus).toBe('calibrated');
+    });
+  });
 });
