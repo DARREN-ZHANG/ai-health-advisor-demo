@@ -65,14 +65,21 @@ export type HomepageLengthValidationResult =
   | HomepageLengthValidationOk
   | HomepageLengthValidationFail;
 
-// ── 内部工具：locale 归一化 ──────────────────────────────
+// ── 公开工具：locale 归一化 ──────────────────────────────
 
 /**
  * 把外部 locale（可能是 'zh-CN'、'en-US' 等变种）归一化为策略支持的二选一。
  * - 任何以 'zh' 开头的 locale → 'zh'
- * - 其他（含 'en'、'en-US' 等）→ 'en'
+ * - 其他（含 'en'、'en-US'、undefined、未知 locale）→ 'en'
+ *
+ * 这是 locale 归一化的唯一来源（single source of truth）。
+ * 所有消费方（scorer / verifier / realtime-brief-content-policy）
+ * 必须消费本函数，不得各自维护 inline 副本。
+ *
+ * 注意：未知 locale 默认归为 'en'。若调用方需要不同的默认值
+ * （例如 eval scorer 默认中文），应在调用本函数前显式处理。
  */
-function normalizeLocale(locale: string): HomepageLengthLocale {
+export function normalizeHomepageLocale(locale: string | undefined): HomepageLengthLocale {
   if (typeof locale === 'string' && locale.toLowerCase().startsWith('zh')) {
     return 'zh';
   }
@@ -113,7 +120,7 @@ export function countHomepageSummaryLength(
   text: string,
   locale: HomepageLengthLocale | Locale | string,
 ): number {
-  const normalized = normalizeLocale(typeof locale === 'string' ? locale : String(locale));
+  const normalized = normalizeHomepageLocale(typeof locale === 'string' ? locale : String(locale));
   const segmenter = getSegmenter(normalized);
 
   if (normalized === 'en') {
@@ -142,7 +149,7 @@ export function validateHomepageSummaryLength(
   text: string,
   locale: HomepageLengthLocale | Locale | string,
 ): HomepageLengthValidationResult {
-  const normalized = normalizeLocale(typeof locale === 'string' ? locale : String(locale));
+  const normalized = normalizeHomepageLocale(typeof locale === 'string' ? locale : String(locale));
   const config = HOMEPAGE_SUMMARY_LENGTH[normalized];
   const actual = countHomepageSummaryLength(text, normalized);
 
@@ -169,6 +176,6 @@ export function validateHomepageSummaryLength(
 export function getHomepageLengthConfig(
   locale: HomepageLengthLocale | Locale | string,
 ): HomepageLengthConfig {
-  const normalized = normalizeLocale(typeof locale === 'string' ? locale : String(locale));
+  const normalized = normalizeHomepageLocale(typeof locale === 'string' ? locale : String(locale));
   return HOMEPAGE_SUMMARY_LENGTH[normalized];
 }

@@ -5,6 +5,7 @@ import {
   HOMEPAGE_SUMMARY_LENGTH,
   countHomepageSummaryLength,
   getHomepageLengthConfig,
+  normalizeHomepageLocale,
 } from '../../policies/homepage-length-policy';
 
 // ── Length Scorer ────────────────────────────────────────
@@ -46,12 +47,15 @@ export const lengthScorer = {
 
 /**
  * 把 AgentContext.locale（可能是 'zh-CN' 等变种）归一化为共享策略支持的 locale。
- * 共享策略内部也会做一次归一化，这里提前做是为了取 config。
+ *
+ * locale 归一化逻辑统一委托给 normalizeHomepageLocale（唯一来源）。
+ * eval 场景下 context.locale 可能缺失，eval case 默认按中文处理，
+ * 因此在调用共享函数前显式把 undefined → 'zh'，再交给共享函数做前缀归一化。
  */
 function normalizeLocale(locale: Locale | string | undefined): Locale {
-  if (typeof locale === 'string' && locale.toLowerCase().startsWith('zh')) return 'zh';
-  if (typeof locale === 'string' && locale.toLowerCase().startsWith('en')) return 'en';
-  return 'zh';
+  // eval 默认中文：context.locale 缺失时按 'zh' 处理
+  const effective = typeof locale === 'string' ? locale : 'zh';
+  return normalizeHomepageLocale(effective);
 }
 
 /**

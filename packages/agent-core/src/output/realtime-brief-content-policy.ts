@@ -22,6 +22,7 @@ import type {
 import {
   HOMEPAGE_SUMMARY_LENGTH,
   countHomepageSummaryLength,
+  normalizeHomepageLocale,
 } from '../policies/homepage-length-policy';
 
 // ──────────────────────────────────────────────────
@@ -460,8 +461,7 @@ function checkSummaryLength(
   taskType?: string,
 ): RealtimeBriefBoundaryViolation[] {
   const enforceLowerBound = taskType === 'homepage_summary';
-  const normalizedLocale =
-    typeof locale === 'string' && locale.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  const normalizedLocale = normalizeHomepageLocale(locale);
   const config = HOMEPAGE_SUMMARY_LENGTH[normalizedLocale];
   const actual = countHomepageSummaryLength(summary, normalizedLocale);
 

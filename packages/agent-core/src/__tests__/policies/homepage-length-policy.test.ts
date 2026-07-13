@@ -83,7 +83,7 @@ describe('countHomepageSummaryLength', () => {
 
   it('zh-CN 也归为 zh 计数（locale 归一化）', () => {
     const text = buildZhGraphemes(220);
-    expect(countHomepageSummaryLength(text, 'zh-CN' as any)).toBe(220);
+    expect(countHomepageSummaryLength(text, 'zh-CN')).toBe(220);
   });
 });
 
