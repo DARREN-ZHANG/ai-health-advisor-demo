@@ -19,9 +19,9 @@ import { useUIStore } from '@/stores/ui.store';
  *   - 其他（calendar / 无 interaction） → 仅记录选择，不刷新简报
  * - Timer 完成（自然或立即）：appendMicroEvent + refetchBrief（仅一次）
  * - 需要刷新简报的操作从提交开始到 LLM 返回期间设置 isBriefRefreshing，
- *   统一驱动首页 Hero 思考态和简报 skeleton。
+ *   统一驱动首页 Hero 思考态和简报更新指示。
  * - Timer Stop：关闭，不提交
- * - Not Now：仅收起，不记录
+ * - Not Now：从当前建议列表移除，不记录
  * - Calendar action：打开 Appointment sheet，确认后仅记录（不调用外部日历）
  *
  * 单个 Timer / Appointment 同时至多一个，避免同时追踪多个浮层。
@@ -30,24 +30,18 @@ export function useActionInteractions(profileId: string | undefined) {
   const { showToast } = useUIStore();
   const refetchBrief = useRefetchBrief(profileId);
   const { appendMicroEvent, isAppendingMicroEvent } = useGodModeActions();
-  const setIsBriefRefreshing = useGodModeStore(
-    (state) => state.setIsBriefRefreshing,
-  );
+  const setIsBriefRefreshing = useGodModeStore((state) => state.setIsBriefRefreshing);
   const t = useTranslations('homepage.action');
 
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
-  const [selectedActionIds, setSelectedActionIds] = useState<Set<string>>(
-    () => new Set(),
-  );
-  const [calendarActionIds, setCalendarActionIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [selectedActionIds, setSelectedActionIds] = useState<Set<string>>(() => new Set());
+  const [calendarActionIds, setCalendarActionIds] = useState<Set<string>>(() => new Set());
+  const [dismissedActionIds, setDismissedActionIds] = useState<Set<string>>(() => new Set());
 
   /** 当前打开 Timer 的 action（同一时间最多一个） */
   const [timerAction, setTimerAction] = useState<ActionOption | null>(null);
   /** 当前打开 Appointment 的 action */
-  const [appointmentAction, setAppointmentAction] =
-    useState<ActionOption | null>(null);
+  const [appointmentAction, setAppointmentAction] = useState<ActionOption | null>(null);
 
   /** 立即提交：appendMicroEvent + refetchBrief（用于无 duration 的 micro_event） */
   const submitMicroEventNow = useCallback(
@@ -66,21 +60,14 @@ export function useActionInteractions(profileId: string | undefined) {
         showToast(t('toastRecorded'), 'success');
         await refetchBrief.mutateAsync();
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : t('toastFailed');
+        const message = error instanceof Error ? error.message : t('toastFailed');
         showToast(message, 'error');
       } finally {
         setPendingActionId(null);
         setIsBriefRefreshing(false);
       }
     },
-    [
-      appendMicroEvent,
-      refetchBrief,
-      setIsBriefRefreshing,
-      showToast,
-      t,
-    ],
+    [appendMicroEvent, refetchBrief, setIsBriefRefreshing, showToast, t],
   );
 
   /** Yes 按钮：根据 action.interaction 决定立即提交或打开 Timer */
@@ -107,19 +94,14 @@ export function useActionInteractions(profileId: string | undefined) {
 
       // 非 micro_event / 非 calendar（传感器不可识别的动作）→ 仅记录选择
       setSelectedActionIds((prev) => new Set(prev).add(action.id));
-      showToast(
-        t('toastUnverifiable', { title: action.title }),
-        'success',
-      );
+      showToast(t('toastUnverifiable', { title: action.title }), 'success');
     },
     [submitMicroEventNow, showToast, t],
   );
 
-  /** Not Now 按钮：仅收起，不记录 */
+  /** Not Now 按钮：从当前列表移除，不记录 */
   const handleNotNow = useCallback((action: ActionOption) => {
-    // 仅由 ActionCard 内部 collapse 处理；这里保留接口对称。
-    // 引用 action 避免 unused-vars，便于未来按需埋点。
-    void action;
+    setDismissedActionIds((prev) => new Set(prev).add(action.id));
   }, []);
 
   /** Timer 自然/立即完成：appendMicroEvent + refetchBrief（仅一次） */
@@ -154,6 +136,7 @@ export function useActionInteractions(profileId: string | undefined) {
     pendingActionId,
     selectedActionIds,
     calendarActionIds,
+    dismissedActionIds,
     isBusy: isAppendingMicroEvent || refetchBrief.isPending,
     // Timer
     timerAction,

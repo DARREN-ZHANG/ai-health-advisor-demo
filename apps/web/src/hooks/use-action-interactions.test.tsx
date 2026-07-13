@@ -117,19 +117,13 @@ describe('useActionInteractions', () => {
   });
 
   it('初始无 timerAction / appointmentAction', () => {
-    const { result } = renderHook(
-      () => useActionInteractions('p1'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useActionInteractions('p1'), { wrapper: createWrapper() });
     expect(result.current.timerAction).toBeNull();
     expect(result.current.appointmentAction).toBeNull();
   });
 
   it('handleYes 对带 duration 的 micro_event 打开 Timer', async () => {
-    const { result } = renderHook(
-      () => useActionInteractions('p1'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useActionInteractions('p1'), { wrapper: createWrapper() });
     await act(async () => {
       await result.current.handleYes(makeMicroAction(5));
     });
@@ -138,10 +132,7 @@ describe('useActionInteractions', () => {
   });
 
   it('handleYes 对无 duration 的 micro_event 立即提交（pending → null）', async () => {
-    const { result } = renderHook(
-      () => useActionInteractions('p1'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useActionInteractions('p1'), { wrapper: createWrapper() });
     await act(async () => {
       await result.current.handleYes(makeMicroAction(undefined));
     });
@@ -158,10 +149,7 @@ describe('useActionInteractions', () => {
     });
     mocks.refetchBrief.mockReturnValueOnce(briefRequest);
 
-    const { result } = renderHook(
-      () => useActionInteractions('p1'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useActionInteractions('p1'), { wrapper: createWrapper() });
 
     let submitPromise: Promise<void> | undefined;
     act(() => {
@@ -183,10 +171,7 @@ describe('useActionInteractions', () => {
   });
 
   it('handleYes 对 calendar action 打开 Appointment', async () => {
-    const { result } = renderHook(
-      () => useActionInteractions('p1'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useActionInteractions('p1'), { wrapper: createWrapper() });
     await act(async () => {
       await result.current.handleYes(makeCalendarAction());
     });
@@ -195,21 +180,27 @@ describe('useActionInteractions', () => {
   });
 
   it('handleYes 对 plain action 仅记录选择', async () => {
-    const { result } = renderHook(
-      () => useActionInteractions('p1'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useActionInteractions('p1'), { wrapper: createWrapper() });
     await act(async () => {
       await result.current.handleYes(makePlainAction());
     });
     expect(result.current.selectedActionIds.has('a-plain')).toBe(true);
   });
 
+  it('handleNotNow 将 action 加入已忽略集合', () => {
+    const { result } = renderHook(() => useActionInteractions('p1'), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => {
+      result.current.handleNotNow(makePlainAction());
+    });
+
+    expect(result.current.dismissedActionIds.has('a-plain')).toBe(true);
+  });
+
   it('handleTimerStop 关闭 Timer，不提交', async () => {
-    const { result } = renderHook(
-      () => useActionInteractions('p1'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useActionInteractions('p1'), { wrapper: createWrapper() });
     await act(async () => {
       await result.current.handleYes(makeMicroAction(5));
     });
@@ -220,10 +211,7 @@ describe('useActionInteractions', () => {
   });
 
   it('handleAppointmentConfirm 记录 calendarActionIds', async () => {
-    const { result } = renderHook(
-      () => useActionInteractions('p1'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useActionInteractions('p1'), { wrapper: createWrapper() });
     await act(async () => {
       await result.current.handleYes(makeCalendarAction());
     });
@@ -235,10 +223,7 @@ describe('useActionInteractions', () => {
   });
 
   it('handleAppointmentClose 关闭 Appointment 不记录', async () => {
-    const { result } = renderHook(
-      () => useActionInteractions('p1'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useActionInteractions('p1'), { wrapper: createWrapper() });
     await act(async () => {
       await result.current.handleYes(makeCalendarAction());
     });
@@ -249,24 +234,13 @@ describe('useActionInteractions', () => {
     expect(result.current.calendarActionIds.has('a-cal')).toBe(false);
   });
 
-  it('handleNotNow 是无操作函数', () => {
-    const { result } = renderHook(
-      () => useActionInteractions('p1'),
-      { wrapper: createWrapper() },
-    );
-    expect(() =>
-      result.current.handleNotNow(makePlainAction()),
-    ).not.toThrow();
-  });
-
   it('handleTimerComplete 在无 timerAction 时安全返回', async () => {
-    const { result } = renderHook(
-      () => useActionInteractions('p1'),
-      { wrapper: createWrapper() },
-    );
-    await expect(act(async () => {
-      await result.current.handleTimerComplete();
-    })).resolves.toBeUndefined();
+    const { result } = renderHook(() => useActionInteractions('p1'), { wrapper: createWrapper() });
+    await expect(
+      act(async () => {
+        await result.current.handleTimerComplete();
+      }),
+    ).resolves.toBeUndefined();
     expect(result.current.timerAction).toBeNull();
   });
 });

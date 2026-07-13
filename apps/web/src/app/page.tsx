@@ -14,10 +14,8 @@ import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
 import { LifeLogPanel } from '@/components/life-log/LifeLogPanel';
 import { useProfileStore } from '@/stores/profile.store';
 import { useGodModeStore } from '@/stores/god-mode.store';
-import {
-  useHealthStatusStore,
-  selectActiveVisualState,
-} from '@/stores/health-status.store';
+import { useGodModeState } from '@/hooks/use-god-mode-actions';
+import { useHealthStatusStore, selectActiveVisualState } from '@/stores/health-status.store';
 import { mapApiStatusToVisualState } from '@/lib/health-visual-state';
 import { useMorningBrief, useRefetchBrief } from '@/hooks/use-ai-query';
 import { useActionInteractions } from '@/hooks/use-action-interactions';
@@ -37,7 +35,7 @@ import type { ActionOption } from '@health-advisor/shared';
  *
  * 简报区（I3.2）：
  *  - BriefTimeline 渲染 summary + microTips（非交互）
- *  - ActionCard 渲染 Yes / Not Now（collapse after interact）
+ *  - ActionCard 渲染 Yes / Not Now（确认后收起，稍后则直接消失）
  *  - micro_event 带 durationMinutes 打开 ActionTimerSheet
  *  - calendar 互动打开 AppointmentSheet（仅记录，不调用外部日历）
  *  - 下午/晚间为 Figma 静态双语示例文案，不归属 Agent 输出。
@@ -45,9 +43,9 @@ import type { ActionOption } from '@health-advisor/shared';
 export default function HomePage() {
   const { currentProfileId } = useProfileStore();
   const { showToast } = useUIStore();
-  const { data, isLoading, error, isFetching, dataUpdatedAt } =
-    useMorningBrief(currentProfileId);
+  const { data, isLoading, error, isFetching, dataUpdatedAt } = useMorningBrief(currentProfileId);
   const refetchBrief = useRefetchBrief(currentProfileId);
+  const { data: godModeState } = useGodModeState();
   const t = useTranslations('homepage');
 
   const interactions = useActionInteractions(currentProfileId);
@@ -55,8 +53,9 @@ export default function HomePage() {
   // 解决 useRefetchBrief 在不同组件实例间 mutation state 不共享的问题——
   // 抽屉 hook 和首页各自独立的 mutation 实例，isPending 不互通，用 store flag 桥接。
   const isBriefRefreshing = useGodModeStore((s) => s.isBriefRefreshing);
-  const briefIsLoading =
-    isLoading || isFetching || refetchBrief.isPending || isBriefRefreshing;
+  const briefIsLoading = isLoading || isFetching || refetchBrief.isPending || isBriefRefreshing;
+  const isInitialBriefLoading = briefIsLoading && !data;
+  const isBriefUpdating = briefIsLoading && !!data;
 
   // —— Hero 状态管理 ——
   const activeState = useHealthStatusStore(selectActiveVisualState);
@@ -88,9 +87,7 @@ export default function HomePage() {
   useEffect(() => {
     if (error) {
       const isTimeout =
-        error instanceof Error &&
-        'code' in error &&
-        (error as { code: string }).code === 'TIMEOUT';
+        error instanceof Error && 'code' in error && (error as { code: string }).code === 'TIMEOUT';
       if (!isTimeout) {
         showToast(
           t('briefFetchFailed', {
@@ -102,14 +99,10 @@ export default function HomePage() {
     }
   }, [error, showToast, t]);
 
-  // 刷新期间视同无数据：隐藏旧简报内容，显示 skeleton（与首次进入页面一致）
-  const effectiveData = isBriefRefreshing ? null : data;
-  const summary =
-    effectiveData?.summary ||
-    (error ? t('briefNetworkError') : t('briefPreparing'));
-  const actions = effectiveData?.actions ?? [];
+  const summary = data?.summary || (error ? t('briefNetworkError') : t('briefPreparing'));
+  const actions = data?.actions ?? [];
   // 未来时间点建议：LLM 基于今日已发生活动推断，缺失时降级为静态 Figma 文案
-  const futureSuggestions = effectiveData?.futureSuggestions ?? [];
+  const futureSuggestions = data?.futureSuggestions ?? [];
 
   // 已记录/已加入日历/正在 Timer 或 Appointment 中 的 action 不再渲染为可交互卡片，
   // 避免用户在浮层打开期间重复点击 Yes。
@@ -117,6 +110,7 @@ export default function HomePage() {
     (a) =>
       !interactions.selectedActionIds.has(a.id) &&
       !interactions.calendarActionIds.has(a.id) &&
+      !interactions.dismissedActionIds.has(a.id) &&
       a.id !== interactions.timerAction?.id &&
       a.id !== interactions.appointmentAction?.id,
   );
@@ -126,10 +120,7 @@ export default function HomePage() {
     interactions.timerAction?.interaction?.kind === 'micro_event'
       ? Math.max(
           1,
-          Math.round(
-            (interactions.timerAction.interaction.microEvent.durationMinutes ??
-              0) * 60,
-          ),
+          Math.round((interactions.timerAction.interaction.microEvent.durationMinutes ?? 0) * 60),
         )
       : 0;
 
@@ -167,14 +158,13 @@ export default function HomePage() {
 
             <BriefTimeline
               summary={summary}
-              isLoading={briefIsLoading && !effectiveData}
+              currentTime={godModeState?.currentDemoTime ?? undefined}
+              isLoading={isInitialBriefLoading}
+              isUpdating={isBriefUpdating}
             />
 
             {visibleActions.length > 0 ? (
-              <div
-                className="-mt-2 ml-8 overflow-hidden"
-                data-valo-action-tips-viewport=""
-              >
+              <div className="-mt-2 ml-8 overflow-hidden" data-valo-action-tips-viewport="">
                 <ul
                   className="flex list-none gap-3 overflow-x-auto overscroll-x-none p-0 pb-1 after:block after:w-5 after:shrink-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                   data-valo-action-tips=""
@@ -195,15 +185,10 @@ export default function HomePage() {
             {/* 下午/晚间：LLM futureSuggestions 优先；响应到达后仍缺失才降级到 Figma 静态文案 */}
             {futureSuggestions.length > 0 ? (
               futureSuggestions.map((suggestion) => (
-                <FutureTimelineBlock
-                  key={suggestion.action.id}
-                  suggestion={suggestion}
-                />
+                <FutureTimelineBlock key={suggestion.action.id} suggestion={suggestion} />
               ))
-            ) : briefIsLoading && !effectiveData ? (
-              // LLM 响应中：暂不展示静态降级，避免响应到达后被替换造成闪烁
-              null
-            ) : (
+            ) : isInitialBriefLoading ? // LLM 响应中：暂不展示静态降级，避免响应到达后被替换造成闪烁
+            null : (
               <>
                 <StaticTimelineBlock title={t('afternoon.title')} time="15:00 PM">
                   {t('afternoon.body')}

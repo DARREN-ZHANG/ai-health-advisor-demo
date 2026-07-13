@@ -38,7 +38,7 @@ import type { TimelineSegmentConfig } from '@/components/demo-control/types';
  * isBriefRefreshing 跨组件桥接：
  * - useDemoControlActions 和 page.tsx 各自调用 useRefetchBrief 得到的是
  *   独立的 mutation 实例，isPending 不互通。用 store flag 让 page.tsx
- *   能感知 demo-control 发起的刷新，从而显示 skeleton。
+ *   能感知 demo-control 发起的刷新，从而显示更新指示并保留已有简报。
  *
  * 失败处理：抽屉已关闭（乐观），通过 toast 提示；isBriefRefreshing 和
  * pendingSegmentType 在 finally 中始终清空，确保 UI 不卡死。
@@ -87,7 +87,7 @@ export function useDemoControlActions() {
           setPendingProbabilisticAction(pending);
           // 概率事件不刷新简报：用户在 Banner 二次确认前不应更新简报内容
         } else {
-          // isBriefRefreshing 驱动首页 skeleton（与首次进入页面一致）
+          // isBriefRefreshing 驱动首页更新指示，同时保留已有简报内容
           setIsBriefRefreshing(true);
           await appendTimeline({
             segmentType: segment.type,
@@ -121,7 +121,7 @@ export function useDemoControlActions() {
 
   const handleResetTimeline = useCallback(async () => {
     // reset 与添加普通事件一样会改变简报上下文；在后端重置和 LLM 刷新期间
-    // 维持全局标志，使首页隐藏旧简报并展示 skeleton。
+    // 维持全局标志，使首页保留旧简报并展示更新指示。
     setIsBriefRefreshing(true);
     try {
       await resetTimeline({ profileId: currentProfileId });

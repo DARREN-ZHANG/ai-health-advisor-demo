@@ -26,56 +26,55 @@ export function MyScreen() {
   const [languageOpen, setLanguageOpen] = useState(false);
 
   return (
-    <section
-      className="relative isolate h-[calc(100svh-118px)] overflow-y-auto overflow-x-hidden px-5 pb-2 pt-[54px]"
-      data-valo-my="root"
-    >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-full max-w-[402px] -translate-x-1/2"
-        style={{
-          background:
-            'radial-gradient(ellipse 150px 230px at 360px 265px, rgba(86, 80, 171, 0.44) 0, rgba(86, 80, 171, 0.22) 32%, rgba(86, 80, 171, 0.08) 52%, transparent 72%), radial-gradient(ellipse 230px 190px at 150px 810px, rgba(104, 56, 174, 0.44) 0, rgba(104, 56, 174, 0.18) 42%, transparent 74%), var(--valo-canvas)',
-        }}
-      />
+    <>
+      <section
+        className="relative isolate h-[calc(100svh-118px)] overflow-y-auto overflow-x-hidden px-5 pb-2 pt-[54px]"
+        data-valo-my="root"
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-full max-w-[402px] -translate-x-1/2"
+          style={{
+            background:
+              'radial-gradient(ellipse 150px 230px at 360px 265px, rgba(86, 80, 171, 0.44) 0, rgba(86, 80, 171, 0.22) 32%, rgba(86, 80, 171, 0.08) 52%, transparent 72%), radial-gradient(ellipse 230px 190px at 150px 810px, rgba(104, 56, 174, 0.44) 0, rgba(104, 56, 174, 0.18) 42%, transparent 74%), var(--valo-canvas)',
+          }}
+        />
 
-      <h1 className="mb-[38px] text-center text-[15px] font-semibold leading-none text-[var(--valo-text-primary)]">
-        {t('title')}
-      </h1>
+        <h1 className="mb-[38px] text-center text-[15px] font-semibold leading-none text-[var(--valo-text-primary)]">
+          {t('title')}
+        </h1>
 
-      <div className="mx-auto flex w-full max-w-[358px] flex-col gap-[26px]">
-        {GROUP_KEYS.map((groupKey) => (
-          <section key={groupKey} aria-labelledby={`my-${groupKey}-heading`}>
-            <h2
-              id={`my-${groupKey}-heading`}
-              className="mb-[13px] text-[15px] font-semibold leading-none text-[rgba(153,153,153,0.42)]"
-            >
-              {t(`groups.${groupKey}`)}
-            </h2>
-            <ul>
-              {ROW_KEYS[groupKey].map((rowKey) =>
-                rowKey === 'language' ? (
-                  <MenuButton
-                    key={rowKey}
-                    label={t(`items.${rowKey}`)}
-                    dataValoMy={rowKey}
-                    onClick={() => setLanguageOpen(true)}
-                  />
-                ) : (
-                  <MenuRow
-                    key={rowKey}
-                    label={t(`items.${rowKey}`)}
-                    dataValoMy={rowKey}
-                  />
-                ),
-              )}
-            </ul>
-          </section>
-        ))}
-      </div>
+        <div className="mx-auto flex w-full max-w-[358px] flex-col gap-[26px]">
+          {GROUP_KEYS.map((groupKey) => (
+            <section key={groupKey} aria-labelledby={`my-${groupKey}-heading`}>
+              <h2
+                id={`my-${groupKey}-heading`}
+                className="mb-[13px] text-[15px] font-semibold leading-none text-[rgba(153,153,153,0.42)]"
+              >
+                {t(`groups.${groupKey}`)}
+              </h2>
+              <ul>
+                {ROW_KEYS[groupKey].map((rowKey) =>
+                  rowKey === 'language' ? (
+                    <MenuButton
+                      key={rowKey}
+                      label={t(`items.${rowKey}`)}
+                      dataValoMy={rowKey}
+                      onClick={() => setLanguageOpen(true)}
+                    />
+                  ) : (
+                    <MenuRow key={rowKey} label={t(`items.${rowKey}`)} dataValoMy={rowKey} />
+                  ),
+                )}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </section>
 
+      {/* 脱离 MyScreen 的 isolate/overflow stacking context，确保移动端 Sheet 覆盖 BottomNav。 */}
       <LanguageSheet open={languageOpen} onClose={() => setLanguageOpen(false)} />
-    </section>
+    </>
   );
 }
 
@@ -108,10 +107,7 @@ interface MenuButtonProps {
 
 function MenuButton({ label, dataValoMy, onClick }: MenuButtonProps) {
   return (
-    <li
-      data-valo-my={dataValoMy}
-      className="border-b border-white/[0.06] last:border-b-0"
-    >
+    <li data-valo-my={dataValoMy} className="border-b border-white/[0.06] last:border-b-0">
       <button
         type="button"
         onClick={onClick}

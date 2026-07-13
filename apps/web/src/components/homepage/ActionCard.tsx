@@ -9,7 +9,7 @@ import type { ActionOption } from '@health-advisor/shared';
  * ActionCard —— Yes / Not Now 单卡。
  *
  * 行为契约（来自 I3.2）：
- * - 任一按钮点击后，卡片收起为一行摘要（不卸载，保留可访问性）。
+ * - Yes 点击后卡片收起为一行摘要；Not Now 点击后卡片直接消失。
  * - `pending=true` 时禁用按钮，Yes 按钮显示 spinner。
  * - 仅引用 `--valo-*` token；不出现硬编码颜色。
  *
@@ -35,38 +35,27 @@ export function ActionCard({
 }: ActionCardProps) {
   const t = useTranslations('homepage.action');
   const [collapsed, setCollapsed] = useState(false);
-  const [outcome, setOutcome] = useState<'recorded' | 'dismissed' | null>(null);
 
   function handleYes() {
     if (pending) return;
     if (collapseOnInteract) {
       setCollapsed(true);
-      setOutcome('recorded');
     }
     onYes(action);
   }
 
   function handleNotNow() {
     if (pending) return;
-    if (collapseOnInteract) {
-      setCollapsed(true);
-      setOutcome('dismissed');
-    }
     onNotNow(action);
   }
 
   if (collapsed) {
     return (
       <li className="rounded-lg bg-[var(--valo-surface)] px-4 py-3">
-        <p
-          className="text-sm text-[var(--valo-text-secondary)] truncate"
-          aria-live="polite"
-        >
-          <span className="font-medium text-[var(--valo-text-primary)]">
-            {action.title}
-          </span>
+        <p className="text-sm text-[var(--valo-text-secondary)] truncate" aria-live="polite">
+          <span className="font-medium text-[var(--valo-text-primary)]">{action.title}</span>
           {' — '}
-          {outcome === 'recorded' ? t('recorded') : t('dismissed')}
+          {t('recorded')}
         </p>
       </li>
     );

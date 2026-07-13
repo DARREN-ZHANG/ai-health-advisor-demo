@@ -28,6 +28,7 @@ const ZH_MESSAGES = {
     sourceLLM: '智能健康顾问',
     sourceFallback: '离线受限模式',
     now: '现在',
+    updating: '更新中',
     microTipsTitle: '提示',
     predictionBody: '基于{rationale}，{predictedState}。建议{actionTitle}：{actionDescription}',
     morning: { title: '上午' },
@@ -37,7 +38,6 @@ const ZH_MESSAGES = {
       yes: '确认',
       notNow: '稍后',
       recorded: '已记录',
-      dismissed: '已忽略',
     },
     timer: {
       title: '行动计时',

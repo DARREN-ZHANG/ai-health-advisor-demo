@@ -74,7 +74,7 @@ describe('useDemoControlActions', () => {
 
   afterEach(() => vi.restoreAllMocks());
 
-  it('普通事件：立即关抽屉 + skeleton + 刷新简报 + 清空 pending', async () => {
+  it('普通事件：立即关抽屉 + 更新状态 + 刷新简报 + 清空 pending', async () => {
     const appendTimeline = vi.fn().mockResolvedValue({});
     const refetchBrief = vi.fn().mockResolvedValue(null);
     const toggleSpy = vi.spyOn(useGodModeStore.getState(), 'toggleOpen');
@@ -85,12 +85,12 @@ describe('useDemoControlActions', () => {
     expect(refetchBrief).toHaveBeenCalled();
     // 乐观关闭：点击即刻关抽屉（不等 mutation 完成）
     expect(toggleSpy).toHaveBeenCalledWith(false);
-    // 完成后清空 pending 和 skeleton flag
+    // 完成后清空 pending 和更新状态 flag
     expect(useGodModeStore.getState().pendingSegmentType).toBeNull();
     expect(useGodModeStore.getState().isBriefRefreshing).toBe(false);
   });
 
-  it('概率事件：立即关抽屉 + injectEvent + 不刷新简报不显示 skeleton', async () => {
+  it('概率事件：立即关抽屉 + injectEvent + 不刷新简报不显示更新状态', async () => {
     const injectEvent = vi.fn().mockResolvedValue({});
     const refetchBrief = vi.fn().mockResolvedValue(null);
     const toggleSpy = vi.spyOn(useGodModeStore.getState(), 'toggleOpen');
@@ -110,7 +110,7 @@ describe('useDemoControlActions', () => {
     expect(toggleSpy).toHaveBeenCalledWith(false);
     // 概率事件不刷新简报：用户在 Banner 二次确认前简报内容不应改变
     expect(refetchBrief).not.toHaveBeenCalled();
-    // isBriefRefreshing 全程为 false（概率事件不需要 skeleton）
+    // isBriefRefreshing 全程为 false（概率事件不需要更新简报）
     expect(useGodModeStore.getState().isBriefRefreshing).toBe(false);
     expect(useGodModeStore.getState().pendingSegmentType).toBeNull();
   });
@@ -133,12 +133,13 @@ describe('useDemoControlActions', () => {
     expect(useGodModeStore.getState().isBriefRefreshing).toBe(false);
   });
 
-  it('重置时间轴期间展示 skeleton，完成简报刷新后清除 loading 状态', async () => {
+  it('重置时间轴期间展示更新状态，完成简报刷新后清除 loading 状态', async () => {
     let resolveReset: (() => void) | undefined;
     const resetTimeline = vi.fn(
-      () => new Promise<void>((resolve) => {
-        resolveReset = resolve;
-      }),
+      () =>
+        new Promise<void>((resolve) => {
+          resolveReset = resolve;
+        }),
     );
     const refetchBrief = vi.fn().mockResolvedValue(null);
     const { result } = await setup({ resetTimeline, refetchBrief });

@@ -20,6 +20,11 @@ describe('BriefTimeline', () => {
     expect(screen.getByText('现在')).toBeInTheDocument();
   });
 
+  it('Now 标题显示当前模拟时间与时段', () => {
+    renderWithIntl(<BriefTimeline summary="x" currentTime="2026-07-13T15:08" />);
+    expect(screen.getByText('现在 - 15:08 PM')).toBeInTheDocument();
+  });
+
   it('Now 左侧箭头使用标题行高居中容器', () => {
     renderWithIntl(<BriefTimeline summary="x" />);
     const arrow = document.querySelector('[data-valo-now-arrow]');
@@ -35,9 +40,7 @@ describe('BriefTimeline', () => {
   });
 
   it('isLoading=true 渲染骨架而非内容', () => {
-    renderWithIntl(
-      <BriefTimeline summary="x" isLoading />,
-    );
+    renderWithIntl(<BriefTimeline summary="x" isLoading />);
     expect(screen.queryByText('x')).not.toBeInTheDocument();
   });
 
@@ -45,6 +48,13 @@ describe('BriefTimeline', () => {
     renderWithIntl(<BriefTimeline summary="x" isLoading />);
     const busy = document.querySelector('[aria-busy="true"]');
     expect(busy).not.toBeNull();
+  });
+
+  it('已有内容更新时保留 summary 并显示更新状态', () => {
+    renderWithIntl(<BriefTimeline summary="保留的简报" isUpdating />);
+    expect(screen.getByText('保留的简报')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('更新中');
+    expect(document.querySelector('[data-valo-brief-updating="true"]')).not.toBeNull();
   });
 
   it('summary 支持多行（whitespace-pre-line）', () => {

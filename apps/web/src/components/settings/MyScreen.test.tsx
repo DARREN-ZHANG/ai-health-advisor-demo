@@ -91,4 +91,13 @@ describe('MyScreen', () => {
     const dialogs = screen.getAllByRole('dialog');
     expect(dialogs.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('语言弹窗脱离 My 页面滚动与层叠上下文', () => {
+    renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: 'Language' }));
+
+    const myScreen = document.querySelector('[data-valo-my="root"]');
+    const mobileViewport = document.querySelector<HTMLElement>('[data-valo-viewport="mobile"]');
+    expect(myScreen).not.toContainElement(mobileViewport);
+  });
 });
