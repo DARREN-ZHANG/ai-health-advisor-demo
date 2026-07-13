@@ -19,7 +19,8 @@ import { useUIStore } from '@/stores/ui.store';
  *   - 其他（calendar / 无 interaction） → 仅记录选择，不刷新简报
  * - Timer 完成（自然或立即）：appendMicroEvent + refetchBrief（仅一次）
  * - 需要刷新简报的操作从提交开始到 LLM 返回期间设置 isBriefRefreshing，
- *   统一驱动首页 Hero 思考态和简报更新指示。
+ *   统一驱动首页 Hero 思考态与 briefIsLoading；summary 区域显示流式 draft，
+ *   结构化字段保持旧值直到 completed。
  * - Timer Stop：关闭，不提交
  * - Not Now：从当前建议列表移除，不记录
  * - Calendar action：打开 Appointment sheet，确认后仅记录（不调用外部日历）

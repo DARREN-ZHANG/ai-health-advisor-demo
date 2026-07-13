@@ -134,7 +134,7 @@ export default function HomePage() {
   // 规则 5：completed → cache 替换，effectiveData.summary 变新
   // 规则 6：failed → draft 清除；首次加载 error，刷新失败保留旧 effectiveData
   const displayedSummary = hasDraft
-    ? draftSummary!
+    ? draftSummary
     : effectiveData?.summary ||
       (error && !effectiveData ? t('briefNetworkError') : t('briefPreparing'));
 

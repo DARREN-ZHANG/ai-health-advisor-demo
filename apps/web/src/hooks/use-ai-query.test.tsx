@@ -335,13 +335,25 @@ describe('useMorningBrief / useRefetchBrief —— 流式改造', () => {
     expect(useBriefStreamStore.getState().getEntry('p1')).toBeUndefined();
   });
 
-  it('profile switch stale event：profileA 的 delta 不污染 profileB', async () => {
-    // profileA 的流：发一个 delta 后挂起（模拟慢流）
+  it('profile switch stale event：profileA 的 delta 不污染 profileB 进行中的流', async () => {
+    // 验证 store 的 requestId 守护在 B 流仍 streaming、B entry 仍存在时
+    // 拒绝 A 的 stale 事件（不同 requestId）。
+    //
+    // 与"对不存在的 entry append 是 no-op"不同（store.test.ts 已覆盖），
+    // 这里覆盖真正的 race：A 和 B 两个流都挂起、两个 entry 都在 store 里，
+    // B 的 draftSummary 累积中。此时用 A 的 requestId 给 B 的 profileId
+    // append A 的 stale 片段，store 必须拒绝（B 持有 req-1，req-0 不匹配）。
+    // 随后 B 完成，验证 B 终态干净。
+    //
+    // 用两个 hook 实例并行渲染不同 profileId，避免 unmount/abort 信号路径
+    // 复杂化。streamMorningBrief 都挂起，让两个 entry 同时 streaming。
+
+    // A 流：发一个 delta 后挂起
     const envelopeA = makeEnvelope('profile A 终态');
     let resolveStreamA: (value: AgentResponseEnvelope) => void = () => {};
     mocks.streamMorningBrief.mockImplementationOnce(
       (_payload: unknown, options: { onEvent: (e: BriefStreamEvent) => void }) => {
-        // req-0：profileA 的 requestId
+        // req-0：A 的 requestId（crypto.randomUUID 被 stub，第一次调用返回 req-0）
         options.onEvent({
           type: 'brief.summary.delta',
           requestId: 'req-0',
@@ -353,46 +365,55 @@ describe('useMorningBrief / useRefetchBrief —— 流式改造', () => {
       },
     );
 
-    // profileB 的流：正常完成，requestId = req-1
-    const envelopeB = { ...makeEnvelope('profile B 终态') };
+    // B 流：发一个 delta 后挂起
+    const envelopeB = makeEnvelope('profile B 终态');
     envelopeB.meta.pageContext.profileId = 'p2';
+    let resolveStreamB: (value: AgentResponseEnvelope) => void = () => {};
     mocks.streamMorningBrief.mockImplementationOnce(
-      makeStreamMock({
-        deltas: ['B 的片段'],
-        envelope: envelopeB,
-        requestId: 'req-1',
-      }),
+      (_payload: unknown, options: { onEvent: (e: BriefStreamEvent) => void }) => {
+        // req-1：B 的 requestId（第二次调用返回 req-1）
+        options.onEvent({
+          type: 'brief.summary.delta',
+          requestId: 'req-1',
+          delta: 'B 的片段',
+        });
+        return new Promise<AgentResponseEnvelope>((resolve) => {
+          resolveStreamB = resolve;
+        });
+      },
     );
 
     const { Wrapper } = createWrapper();
-    const { result: resultA, unmount: unmountA } = renderHook(
-      () => useMorningBrief('p1'),
-      { wrapper: Wrapper },
-    );
-    // 等 A 的 delta 进 store
+    // 并行渲染两个 hook（不同 profileId，模拟 profile 切换后两个流并存）
+    renderHook(() => useMorningBrief('p1'), { wrapper: Wrapper });
+    renderHook(() => useMorningBrief('p2'), { wrapper: Wrapper });
+
+    // 等两个流各自的 delta 累积进 store
     await waitFor(() => {
       expect(useBriefStreamStore.getState().getEntry('p1')?.draftSummary).toBe('A 的片段');
+      expect(useBriefStreamStore.getState().getEntry('p2')?.draftSummary).toBe('B 的片段');
     });
 
-    // 切换到 profileB（卸载 A，挂载 B —— 模拟 profile 切换）
-    unmountA();
-    const { result: resultB } = renderHook(() => useMorningBrief('p2'), {
-      wrapper: Wrapper,
-    });
+    // B entry 仍 streaming（B 流未 resolve）；requestId 应为 req-1
+    const entryB = useBriefStreamStore.getState().getEntry('p2');
+    expect(entryB?.phase).toBe('streaming');
+    expect(entryB?.requestId).toBe('req-1');
 
-    // B 完成后，B 的 entry 清除
-    await waitFor(() => expect(resultB.current.isSuccess).toBe(true));
-    expect(resultB.current.data).toEqual(envelopeB);
-
-    // 关键断言：即使现在手动用 store.append 注入 profileA 的 stale 事件（req-0），
-    // 也不应污染 profileB 的 entry（已被 complete 清除）或任何现存 entry。
-    // 这里测试 store 层的 requestId 校验：profileA 的 req-0 事件
-    // 不会再有对应 entry（A 已被卸载，且 store 里 p1 的 entry 仍存在 —— 因为
-    // A 的 stream 没 resolve，complete 没调用）。
-    // 真正的风险：profileB 的 append 收到 req-0 的 delta 应被拒绝。
+    // 关键步骤：B 流仍进行中（B entry 仍存在）时，手动用 A 的 stale requestId（req-0）
+    // 给 p2 append A 的 stale 片段——模拟 A 的延迟事件被误 dispatch 给 B 的 profileId。
     useBriefStreamStore.getState().append('p2', 'req-0', 'stale A 的片段');
-    // profileB 的 entry 已被 complete 清除（resultB 已 success），append 到不存在的 entry 是 no-op
-    expect(useBriefStreamStore.getState().getEntry('p2')).toBeUndefined();
+
+    // 核心断言：B 的 draftSummary 没有被 A 的 stale requestId 污染。
+    // store 的 requestId 守护拒绝 req-0（B 持有 req-1）。
+    expect(useBriefStreamStore.getState().getEntry('p2')?.draftSummary).toBe('B 的片段');
+
+    // 让 B 完成，验证 B 终态干净、entry 清除
+    await act(async () => {
+      resolveStreamB(envelopeB);
+    });
+    await waitFor(() => {
+      expect(useBriefStreamStore.getState().getEntry('p2')).toBeUndefined();
+    });
 
     // 清理 A 的挂起流，避免 unhandled rejection 警告
     await act(async () => {
