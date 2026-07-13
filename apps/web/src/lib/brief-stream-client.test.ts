@@ -476,8 +476,9 @@ describe('streamMorningBrief', () => {
   });
 
   // ---- BriefStreamError 类型守卫 ----
-  it('BriefStreamError 暴露 code 字段以便消费方区分', () => {
-    const err = new BriefStreamError('VALIDATION_ERROR', 'msg', 422);
+  it('BriefStreamError 暴露 code/status 字段以便消费方区分', () => {
+    // 参数顺序与 ApiError 对齐:(status, code, message)
+    const err = new BriefStreamError(422, 'VALIDATION_ERROR', 'msg');
     expect(err.code).toBe('VALIDATION_ERROR');
     expect(err.status).toBe(422);
     expect(err.name).toBe('BriefStreamError');
@@ -485,8 +486,8 @@ describe('streamMorningBrief', () => {
     expect(err instanceof Error).toBe(true);
   });
 
-  // ---- 区分 BriefStreamError 与 ApiError(消费方可能联合判断) ----
-  it('BriefStreamError 不与 ApiError 混淆(独立的类)', async () => {
+  // ---- BriefStreamError 继承 ApiError(便于 catch 统一处理) ----
+  it('BriefStreamError 继承 ApiError,instanceof ApiError 命中', async () => {
     const events = [makeStarted(), makeFailed('BRIEF_GENERATION_FAILED', 'fail')];
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(createSSEResponse(events));
 
@@ -494,14 +495,76 @@ describe('streamMorningBrief', () => {
       await streamMorningBrief(makePayload(), makeOptions(() => {}));
       expect.fail('应抛 BriefStreamError');
     } catch (e) {
+      // 既是 BriefStreamError 也是 ApiError(便于任务 3.2 的 hook 统一处理)
       expect(e).toBeInstanceOf(BriefStreamError);
-      // 不应是 ApiError 的实例
       const { ApiError } = await import('./api-client');
-      expect(e instanceof (ApiError as unknown as { new (): Error })).toBe(false);
-      // 但满足 ApiError 的形状兼容性(用于 catch 联合类型)
+      expect(e).toBeInstanceOf(ApiError);
+      // 字段形状一致
       const apiErrShape = e as ApiError;
       expect(typeof apiErrShape.code).toBe('string');
       expect(typeof apiErrShape.status).toBe('number');
     }
+  });
+
+  // ---- reader.cancel 在协议违规时被调用(避免读完长流) ----
+  it('协议违规后 reader.cancel 被调用,后续 chunk 不再消费', async () => {
+    // 构造可控时序的流:先推一个 requestId 不匹配的 chunk,触发 rejection;
+    // 再推一个合法 delta chunk。验证:rejection 后 reader.cancel 被调用,
+    // 且第二个 chunk(合法 delta)不被消费。
+    const wrongStarted: BriefStartedEvent = {
+      type: 'brief.started',
+      requestId: 'req-different',
+    };
+    const validDelta = makeDelta('should-not-be-seen');
+
+    // 用 pull-based ReadableStream 控制时序:只在被 read() 时推下一个 chunk,
+    // 这样 rejection 后 cancel 会阻止第二个 chunk 被 read。
+    let pushedCount = 0;
+    const pendingChunks = [sseFrame(wrongStarted), sseFrame(validDelta)];
+    const controlledStream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (pushedCount < pendingChunks.length) {
+          controller.enqueue(new TextEncoder().encode(pendingChunks[pushedCount]!));
+          pushedCount += 1;
+        } else {
+          controller.close();
+        }
+      },
+    });
+
+    // spy 原型上的 cancel:consumeStream 调 reader.cancel() 会命中此 spy
+    const cancelCalls: unknown[][] = [];
+    const protoSpy = vi
+      .spyOn(ReadableStreamDefaultReader.prototype, 'cancel')
+      .mockImplementation(function (this: ReadableStreamDefaultReader, ...args: unknown[]) {
+        cancelCalls.push(args);
+        // 不真正 cancel(避免破坏后续断言),只记录调用
+        return Promise.resolve();
+      });
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(controlledStream, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'X-Session-Id': 'sess-from-server',
+        },
+      }),
+    );
+
+    const received: BriefStreamEvent[] = [];
+    await expect(
+      streamMorningBrief(makePayload(), makeOptions((e) => received.push(e))),
+    ).rejects.toMatchObject({
+      name: 'BriefStreamError',
+      code: 'STREAM_REQUEST_ID_MISMATCH',
+    });
+
+    // reader.cancel 被调用(避免读完整个流)
+    expect(cancelCalls.length).toBeGreaterThanOrEqual(1);
+    // 后续合法 delta 未被消费
+    expect(received.find((e) => e.type === 'brief.summary.delta')).toBeUndefined();
+
+    protoSpy.mockRestore();
   });
 });

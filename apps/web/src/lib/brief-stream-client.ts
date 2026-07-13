@@ -28,7 +28,7 @@ import {
   type BriefStreamEvent,
   type PageContext,
 } from '@health-advisor/shared';
-import { buildApiHeaders, createApiUrl, setSessionId } from './api-client';
+import { ApiError, buildApiHeaders, createApiUrl, setSessionId } from './api-client';
 
 /** morning brief 请求体;从现有 useMorningBrief/useRefetchBrief 调用结构提取 */
 export interface MorningBriefRequest {
@@ -48,8 +48,17 @@ export interface StreamMorningBriefOptions {
   onEvent(event: BriefStreamEvent): void;
 }
 
-/** 协议违规错误码,供消费方 UI 区分展示 */
-export type BriefStreamErrorCode =
+/**
+ * client 私有的协议违规错误码,供消费方 UI 区分展示。
+ *
+ * 命名刻意区分于 shared 的 BriefStreamErrorCode:
+ * - shared 的 BriefStreamErrorCode 仅约束 brief.failed 事件的 error.code 字段,
+ *   由 BriefStreamEventSchema 强制,取值 'BRIEF_GENERATION_FAILED' | 'STREAM_ABORTED'。
+ * - 这里的 BriefStreamClientErrorCode 是 client 侧协议违规码集合,除透传后端
+ *   failed/HTTP code 外还包含本地违规(STREAM_INVALID_EVENT 等)。两者同名但语义不同,
+ *   命名加 Client 后缀避免维护者混淆。
+ */
+export type BriefStreamClientErrorCode =
   | 'STREAM_INVALID_EVENT'
   | 'STREAM_REQUEST_ID_MISMATCH'
   | 'STREAM_UNEXPECTED_EVENT_AFTER_TERMINAL'
@@ -62,17 +71,24 @@ export type BriefStreamErrorCode =
   | (string & {});
 
 /**
- * 流式消费错误。形状与 ApiError 兼容(都含 status/code/message),
- * 以便消费方在 catch 联合类型中统一处理;但通过独立的类名便于精确分类。
+ * 流式消费错误。
+ *
+ * 继承 ApiError 以统一参数顺序为 (status, code, message),消除两个类之间的
+ * 形状兼容但构造器不兼容陷阱;同时让 catch 里 instanceof ApiError 也能命中
+ * 流式错误,便于上层 hook(任务 3.2)统一处理。
+ *
+ * 注意:brief.failed 事件的 error.code 仍由 shared 的 BriefStreamErrorCode
+ * 约束,client 把它透传进 BriefStreamClientErrorCode 的联合兜底分支。
  */
-export class BriefStreamError extends Error {
+export class BriefStreamError extends ApiError {
   constructor(
-    public code: BriefStreamErrorCode,
-    message: string,
     /** HTTP 非 2xx 时为响应状态码;协议违规/EOF 时为 0 */
-    public status: number = 0,
+    status: number,
+    code: BriefStreamClientErrorCode,
+    message: string,
   ) {
-    super(message);
+    super(status, code, message);
+    // 覆盖父类 name,便于 instanceof BriefStreamError 精确分类
     this.name = 'BriefStreamError';
   }
 }
@@ -119,9 +135,9 @@ export async function streamMorningBrief(
 
   if (!response.body) {
     throw new BriefStreamError(
+      response.status,
       'STREAM_NO_BODY',
       '流式响应缺少 body',
-      response.status,
     );
   }
 
@@ -137,7 +153,8 @@ export async function streamMorningBrief(
  * 不使用 Promise executor + 异步 reject 的模式,以避免"已 resolved 后再 reject"
  * 的死锁——同一 chunk 内可能含 terminal + 其后的事件,必须全部解析后才能决定。
  *
- * 抽成内部函数便于测试:测试可直接构造 ReadableStream<Uint8Array> 验证任意 chunk 边界。
+ * 抽成内部函数便于单文件内复用与关注点分离(streamMorningBrief 只负责
+ * HTTP 握手与 session-id,consumeStream 专注 SSE 协议解析)。
  */
 async function consumeStream(
   stream: ReadableStream<Uint8Array>,
@@ -176,6 +193,7 @@ async function consumeStream(
       if (terminalReceived) {
         reject(
           new BriefStreamError(
+            0,
             'STREAM_UNEXPECTED_EVENT_AFTER_TERMINAL',
             `terminal 之后收到额外事件: ${parsedEvent.type}`,
           ),
@@ -197,6 +215,7 @@ async function consumeStream(
         terminalReceived = true;
         reject(
           new BriefStreamError(
+            0,
             parsedEvent.error.code,
             parsedEvent.error.message,
           ),
@@ -209,7 +228,15 @@ async function consumeStream(
     // 读流循环:每个 chunk 喂给 parser,parser 触发 onEvent 回调
     // 关键:不要在 settled 时提前 break —— 同一 chunk 内可能还有 terminal 后事件,
     // 必须让 parser 全部处理完才能发现"terminal 后事件"违规。
+    //
+    // 但 rejection 已在上一轮 chunk 处理后确认:此时不再有"同 chunk 内后续事件"
+    // 需要观察,直接 cancel 并 break,避免读完整个长流浪费带宽与 CPU。
     while (true) {
+      if (rejectionError !== null) {
+        // .catch 兜底:cancel 本身可能抛(流已结束/reader 已释放),忽略即可
+        await reader.cancel().catch(() => {});
+        break;
+      }
       const { done, value } = await reader.read();
       if (done) break;
       if (value) {
@@ -233,6 +260,7 @@ async function consumeStream(
   }
   // 流读完但既无 rejection 也无 envelope → EOF 无 terminal
   throw new BriefStreamError(
+    0,
     'STREAM_EOF_WITHOUT_TERMINAL',
     '流结束前未收到 terminal 事件',
   );
@@ -252,6 +280,7 @@ function parseAndValidate(
     parsed = JSON.parse(sseMessage.data);
   } catch {
     return new BriefStreamError(
+      0,
       'STREAM_INVALID_EVENT',
       `SSE data 非合法 JSON: ${truncate(sseMessage.data)}`,
     );
@@ -260,6 +289,7 @@ function parseAndValidate(
   const result = BriefStreamEventSchema.safeParse(parsed);
   if (!result.success) {
     return new BriefStreamError(
+      0,
       'STREAM_INVALID_EVENT',
       `SSE 事件未通过 schema 校验: ${result.error.message}`,
     );
@@ -268,6 +298,7 @@ function parseAndValidate(
   const event = result.data;
   if (event.requestId !== expectedRequestId) {
     return new BriefStreamError(
+      0,
       'STREAM_REQUEST_ID_MISMATCH',
       `事件 requestId "${event.requestId}" 与期望 "${expectedRequestId}" 不一致`,
     );
@@ -295,7 +326,7 @@ async function buildHttpError(response: Response): Promise<BriefStreamError> {
     // JSON 解析失败,保留兜底 code/message
   }
 
-  return new BriefStreamError(code, message, response.status);
+  return new BriefStreamError(response.status, code, message);
 }
 
 /** 截断超长字符串,避免错误信息把整段 SSE data 打进日志/堆栈 */

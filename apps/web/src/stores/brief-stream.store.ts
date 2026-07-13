@@ -62,15 +62,17 @@ export const useBriefStreamStore = create<BriefStreamState>((set, get) => ({
     })),
 
   append: (profileId, requestId, delta) => {
+    // 快速路径:常见 stale 情况(get() 与 set() 之间状态可能变化,但 Zustand set
+    // 同步执行、JS 单线程无真正竞态)。这里提前返回只是省一次 set 回调构造,
+    // 真正的校验仍以下方 set 回调内的判断为准。
     const current = get().entries[profileId];
-    // 无 entry 或 stale 请求,静默忽略
     if (!current || current.requestId !== requestId) {
       return;
     }
     set((state) => {
       const entry = state.entries[profileId];
+      // 权威校验:set 回调内拿到最新 state,以此为准决定是否写入
       if (!entry || entry.requestId !== requestId) {
-        // 双重校验:set 回调里再确认一次,避免并发更新竞态
         return state;
       }
       return {
