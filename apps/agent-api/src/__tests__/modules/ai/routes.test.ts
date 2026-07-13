@@ -463,6 +463,105 @@ describe('AI Routes', () => {
       const body = response.json();
       expect(body.success).toBe(false);
     });
+
+    /**
+     * 覆盖 routes.ts 的 onDisconnect → abortController.abort() 链路。
+     *
+     * routes.ts 注册了 request.raw.on('aborted', onDisconnect) 和
+     * reply.raw.on('close', onDisconnect)。其余 5 个 stream 测试都用
+     * app.inject 正常完成，从不触发断连路径。
+     *
+     * inject 模式下 request.raw 是 light-my-request 的 Request（继承自
+     * Readable + EventEmitter），支持手动 emit。本测试通过 preHandler
+     * 捕获 request.raw，在 mock executeAgent 的第一次 onSummaryDelta 之后
+     * emit 'aborted'，验证：
+     *   1. onDisconnect 被触发并调用 abortController.abort()
+     *      （证据：options.signal.aborted === true）
+     *   2. SSE 流仍以合法终端结束（exactly-one-terminal 不变）
+     *
+     * 真实场景下 abort 后底层 provider 会抛 AbortError，routes 走 catch
+     * 发 failed；这里 mock executeAgent 不监听 signal，直接返回
+     * mockResponse，因此走 completed 终态——验证的是 abort 链路注册正确，
+     * 不验证 provider 取消语义（由 agent-core 单测覆盖）。
+     *
+     * 独立 app 实例避免 preHandler hook 污染全局 app 的其他测试。
+     */
+    test('客户端断连触发 abortController.abort()（onDisconnect 链路）', async () => {
+      const localApp = await buildApp({
+        env: {
+          FALLBACK_ONLY_MODE: 'true',
+          ENABLE_GOD_MODE: 'true',
+          NODE_ENV: 'test',
+          DATA_DIR: dataDir,
+        },
+      });
+
+      // 捕获 stream 路由的 request.raw，供 mock 在 delta 之间 emit 'aborted'
+      let capturedRaw: NodeJS.EventEmitter | undefined;
+      localApp.addHook('preHandler', async (request) => {
+        if (request.url.includes('/ai/morning-brief/stream')) {
+          capturedRaw = request.raw as unknown as NodeJS.EventEmitter;
+        }
+      });
+
+      mockedExecuteAgent.mockReset();
+      localApp.briefCache.clearAll();
+      localApp.runtime.overrideStore.reset('all');
+
+      let signalAfterAbort: boolean | undefined;
+      let deltaCountAfterAbort = 0;
+      mockedExecuteAgent.mockImplementationOnce(
+        async (_req, _deps, _timeout, _observer, _locale, options) => {
+          const onDelta = options?.onSummaryDelta;
+          const signal = options?.signal;
+          if (onDelta) {
+            await onDelta('健康');
+            // 模拟客户端断连：触发 request.raw 的 'aborted' 事件。
+            // EventEmitter.emit 是同步的，onDisconnect 立即调用
+            // abortController.abort()，signal.aborted 立即变 true。
+            capturedRaw?.emit('aborted');
+            signalAfterAbort = signal?.aborted;
+            // 第二次 delta：真实 provider 此时已收到 abort 会抛
+            // AbortError；mock 不监听 signal，继续推送以验证 writer
+            // 守卫不会因 abort 误关闭（isClosed 仍为 false，delta 写入）。
+            await onDelta('状态');
+            deltaCountAfterAbort++;
+          }
+          return mockResponse;
+        },
+      );
+
+      const response = await localApp.inject({
+        method: 'POST',
+        url: '/ai/morning-brief/stream',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          bustCache: true,
+        },
+        headers: { 'x-session-id': 'sess-stream-abort' },
+      });
+
+      // 断言 1：emit('aborted') 后 onDisconnect 调用了 abortController.abort()
+      expect(signalAfterAbort).toBe(true);
+      // mock 在 emit 后继续推送了一次 delta
+      expect(deltaCountAfterAbort).toBe(1);
+
+      expect(response.statusCode).toBe(200);
+      const frames = parseSseFrames(response.body);
+      const types = frames.map((f) => f.event);
+
+      // 断言 2：SSE 流仍以合法终端结束（started → delta* → completed）
+      expect(types[0]).toBe('brief.started');
+      expect(types[types.length - 1]).toBe('brief.completed');
+      // 只有一个终态
+      const terminals = frames.filter(
+        (f) => f.event === 'brief.completed' || f.event === 'brief.failed',
+      );
+      expect(terminals).toHaveLength(1);
+
+      await localApp.close();
+    });
   });
 
   describe('POST /ai/view-summary', () => {
