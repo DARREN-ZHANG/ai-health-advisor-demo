@@ -336,10 +336,26 @@ describe('event-recognition', () => {
 
       expect(modCaffeine).toBeDefined();
       expect(highCaffeine).toBeDefined();
-      // 任务 1.3：校准后 confidence 是 isotonic 概率
-      // moderate 和 high_or_sensitive 都满足发布阈值，校准概率均 >= publishThreshold(0.77)
+      // 任务 1.3：校准后 confidence 是 isotonic 概率，不是 rawScore。
+      // 历史断言 "high_or_sensitive confidence 应高于 moderate" 在 rawScore 域成立
+      // （detector 给 high_or_sensitive 打 0.86，给 moderate 打 0.77），但 isotonic
+      // 回归会把所有满足精度要求的正例区间折叠到 probability=1——两个 rawScore 都
+      // 落在"发布区间"内，校准后概率都是 1，无法区分强度。
+      // 因此这里只断言两者都达到 publishThreshold（当前为 1.0），不再比较高低。
+      // rawScore 仍然保留在 evidence 中（任务 1.3 fix），供内部日志按强度排序。
       expect(modCaffeine!.confidence).toBeGreaterThanOrEqual(0.77);
       expect(highCaffeine!.confidence).toBeGreaterThanOrEqual(0.77);
+      // 任务 1.3 fix：rawScore 应保留在 evidence 中，可用来比较强度
+      const extractRawScore = (e: RecognizedEvent): number | null => {
+        const m = e.evidence.find((s) => s.startsWith('rawScore='));
+        return m ? parseFloat(m.replace('rawScore=', '')) : null;
+      };
+      const modRaw = extractRawScore(modCaffeine!);
+      const highRaw = extractRawScore(highCaffeine!);
+      expect(modRaw).not.toBeNull();
+      expect(highRaw).not.toBeNull();
+      // rawScore 域保留强度排序：high_or_sensitive > moderate
+      expect(highRaw!).toBeGreaterThan(modRaw!);
     });
 
     it('light 默认不应生成 public event（或 confidence 较低）', () => {
@@ -604,10 +620,26 @@ describe('event-recognition', () => {
 
       expect(modAlcohol).toBeDefined();
       expect(heavyAlcohol).toBeDefined();
-      // 任务 1.3：校准后 confidence 是 isotonic 概率
-      // moderate 和 heavy 都满足发布阈值，校准概率均 >= publishThreshold(0.85)
+      // 任务 1.3：校准后 confidence 是 isotonic 概率，不是 rawScore。
+      // 历史断言 "heavy confidence 应高于 moderate" 在 rawScore 域成立
+      // （detector 给 heavy 打 0.95，给 moderate 打 0.85），但 isotonic 回归会把
+      // 所有满足精度要求的正例区间折叠到 probability=1——两个 rawScore 都落在
+      // "发布区间"内，校准后概率都是 1，无法区分强度。
+      // 因此这里只断言两者都达到 publishThreshold（当前为 1.0），不再比较高低。
+      // rawScore 仍然保留在 evidence 中（任务 1.3 fix），供内部日志按强度排序。
       expect(modAlcohol!.confidence).toBeGreaterThanOrEqual(0.85);
       expect(heavyAlcohol!.confidence).toBeGreaterThanOrEqual(0.85);
+      // 任务 1.3 fix：rawScore 应保留在 evidence 中，可用来比较强度
+      const extractRawScore = (e: RecognizedEvent): number | null => {
+        const m = e.evidence.find((s) => s.startsWith('rawScore='));
+        return m ? parseFloat(m.replace('rawScore=', '')) : null;
+      };
+      const modRaw = extractRawScore(modAlcohol!);
+      const heavyRaw = extractRawScore(heavyAlcohol!);
+      expect(modRaw).not.toBeNull();
+      expect(heavyRaw).not.toBeNull();
+      // rawScore 域保留强度排序：heavy > moderate
+      expect(heavyRaw!).toBeGreaterThan(modRaw!);
     });
 
     it('light 默认不应生成 public event（或 confidence 较低）', () => {
@@ -951,6 +983,15 @@ describe('event-recognition', () => {
     });
 
     it('相同观察序列配上 god-mode 风格 segmentId 不应因 segmentId 获得特权识别', () => {
+      // 历史断言用 "confidence != 1.0" 作为 god-mode 快速路径复活的代理指标，
+      // 但任务 1.3 的校准会让完美分离的数据得到 probability=1.0——confidence=1.0
+      // 不再是 god-mode 路径的可靠信号。
+      //
+      // 真正要保护的不变量：
+      // 1. 没有任何事件走 user_report 通道（seg-micro- 前缀才会触发 micro 路径，
+      //    seg-gm-walk-* 不应触发）
+      // 2. 没有任何事件携带 sourceSegmentId（传感器推断路径不暴露语义 ID）
+      // 3. 输出与使用无关 segmentId 时完全一致（标签不变量）
       const events = generateMixedScenario();
       // 注入 god-mode 风格 segmentId
       const godModeEvents = events.map((e) => ({
@@ -958,11 +999,25 @@ describe('event-recognition', () => {
         segmentId: e.segmentId ? `seg-gm-walk-${Date.now()}` : e.segmentId,
       }));
       const results = recognizeEvents(godModeEvents, profileId, currentTime);
-      // 任务 1.3：校准后 confidence 可以达到 1.0（isotonic 完美分离）
-      // 但所有事件必须来自 sensor_inference 路径，且没有 sourceSegmentId 泄漏
-      for (const r of results) {
+
+      // 对比基线：使用普通 segmentId 的同一观察序列
+      const baselineResults = recognizeEvents(events, profileId, currentTime);
+
+      // 标签不变量：god-mode segmentId 不改变识别结果数量
+      expect(results.length).toBe(baselineResults.length);
+
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i]!;
+        const baseline = baselineResults[i]!;
+        // 1. 没有事件走 user_report 通道
         expect(r.recognitionSource).toBe('sensor_inference');
+        // 2. 没有事件携带 sourceSegmentId（语义 ID 不泄漏）
         expect(r.sourceSegmentId).toBeUndefined();
+        // 3. 与基线完全一致（confidence、type、时间都不因 segmentId 变化）
+        expect(r.type).toBe(baseline.type);
+        expect(r.confidence).toBeCloseTo(baseline.confidence, 5);
+        expect(r.start).toBe(baseline.start);
+        expect(r.end).toBe(baseline.end);
       }
     });
   });

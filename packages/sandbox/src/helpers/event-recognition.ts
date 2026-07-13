@@ -30,13 +30,22 @@ const calibrationByType = new Map<RecognizedEventType, EventCalibrationConfig>(
  * 2. 若 publishable=false → 返回 null（丢弃）
  * 3. 计算校准概率
  * 4. 若 < publishThreshold → 返回 null
- * 5. 返回更新了 confidence/calibrationStatus 的新对象（immutable）
+ * 5. 返回更新了 confidence/calibrationStatus 的新对象（immutable），保留 rawScore 到 evidence
+ *
+ * 安全检查：若传感器推断候选事件的类型在 artifact 中没有配置，
+ * 抛出错误而不是静默丢弃——这是 artifact 不完整的不变量违反
+ * （spec: "所有 sensor-inferred 类型均有配置"）。
  */
 function applyCalibration(candidate: RecognizedEvent): RecognizedEvent | null {
   const config = calibrationByType.get(candidate.type);
   if (!config) {
-    // 未配置的类型不发布（保守策略）
-    return null;
+    // 不变量违反：传感器推断类型必须有显式配置（即使 publishable=false）
+    // 静默 return null 会让 nap 等类型被无声吞掉，难以诊断
+    throw new Error(
+      `[event-recognition] sensor-inferred event type "${candidate.type}" has no calibration config. ` +
+        `Add an explicit entry (publishable=false is acceptable) to ` +
+        `packages/sandbox/src/calibration/event-recognition.json.`,
+    );
   }
   if (!config.publishable) return null;
   const probability = calibrateProbability(candidate.confidence, config);
@@ -46,6 +55,7 @@ function applyCalibration(candidate: RecognizedEvent): RecognizedEvent | null {
     ...candidate,
     confidence: probability,
     calibrationStatus: 'calibrated',
+    evidence: [...candidate.evidence, `rawScore=${candidate.confidence.toFixed(3)}`],
   };
 }
 

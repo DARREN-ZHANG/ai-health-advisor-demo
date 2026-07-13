@@ -640,7 +640,13 @@ function validatePrompts(): { errors: string[]; hasErrors: boolean } {
 
 // --- Event Calibration 校验（任务 1.3）---
 
-/** 所有 sensor-inferred 事件类型必须有校准配置 */
+/**
+ * 所有 sensor-inferred 事件类型必须有校准配置
+ *
+ * 注意：nap 是 classifySleep 在 durationMin<120 时输出的类型（见 event-recognition.ts）。
+ * 即使最终决定不发布 nap（publishable=false），artifact 中也必须有显式条目，
+ * 否则 applyCalibration 会静默丢弃——违反 "所有 sensor-inferred 类型均有配置" 的不变量。
+ */
 const REQUIRED_CALIBRATION_TYPES = [
   'meal_intake',
   'steady_cardio',
@@ -648,6 +654,7 @@ const REQUIRED_CALIBRATION_TYPES = [
   'intermittent_exercise',
   'walk',
   'sleep',
+  'nap',
   'strength_training',
   'possible_caffeine_intake',
   'possible_alcohol_intake',
