@@ -24,6 +24,7 @@ import {
 import { buildCustomerFacingEvidencePacket } from '../context/customer-facing-evidence';
 import { withTimeout, TimeoutError } from './timeout-controller';
 import { AGENT_SLA_TIMEOUT_MS } from '../constants/limits';
+import { StreamingSummaryExtractor } from '../output/streaming-summary-extractor';
 
 /** H-10: ReAct 最大步骤数（设计文档要求固定为 3） */
 const MAX_REACT_STEPS = 3;
@@ -136,6 +137,21 @@ export interface AgentRuntimeObserver {
 }
 
 /**
+ * executeAgent 的可选执行参数（第 6 个参数）。
+ *
+ * 用于首页实时简报流式传输：
+ * - `signal`：外部取消信号（如 HTTP 请求断开），与 runtime 超时 signal 合并，
+ *   任一触发都会终止底层 LangChain 迭代器。
+ * - `onSummaryDelta`：summary 文本增量回调。仅在 `taskType === HOMEPAGE_SUMMARY`
+ *   且提供该回调时进入 stream 分支；每个 delta 都会 `await`，用于传递 HTTP
+ *   backpressure（消费端慢时阻塞迭代）。
+ */
+export interface AgentExecutionOptions {
+  signal?: AbortSignal;
+  onSummaryDelta?: (delta: string) => void | Promise<void>;
+}
+
+/**
  * 安全执行 observer 回调，observer 抛错不影响生产流程。
  */
 function tryNotify(fn: (() => void) | undefined): void {
@@ -157,6 +173,7 @@ export async function executeAgent(
   timeoutMs: number = AGENT_SLA_TIMEOUT_MS,
   observer?: AgentRuntimeObserver,
   locale: Locale = DEFAULT_LOCALE,
+  options?: AgentExecutionOptions,
 ): Promise<AgentResponseEnvelope> {
   const fallbackKey: FallbackLookupKey = {
     profileId: request.profileId,
@@ -354,10 +371,16 @@ export async function executeAgent(
 
     tryNotify(() => observer?.onPromptBuilt?.({ systemPrompt, taskPrompt }));
 
-    // 7. 带超时调用 LLM，超时时通过 AbortSignal 真正中断底层调用
-    const raw = await withTimeout(
-      (signal) => deps.agent.invoke({ systemPrompt, userPrompt: taskPrompt, signal }),
+    // 7. 获取模型完整 raw 输出。
+    // HOMEPAGE_SUMMARY 且提供 onSummaryDelta 时走 stream 分支（边收集边推送 summary delta），
+    // 否则走 invoke 分支（带超时的单次调用）。两个分支都返回完整 raw 供后续 parser 处理。
+    const raw = await obtainRawOutput(
+      deps,
+      systemPrompt,
+      taskPrompt,
       timeoutMs,
+      options,
+      request.taskType,
     );
     tryNotify(() => observer?.onModelOutput?.(raw.content));
 
@@ -716,9 +739,83 @@ export async function executeAgent(
       tryNotify(() => observer?.onFallback?.('timeout'));
       return toTimeoutFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
     }
+    // StreamingSummaryParseError 是流式提取器的协议违规（截断、重复 key、类型错误等），
+    // 不当作 timeout，走 provider_error 分支：返回 fallback envelope（finishReason 非 complete），
+    // SSE adapter 会据此转为 failed terminal。memory 不写入（因为没到达写 memory 步骤）。
     tryNotify(() => observer?.onFallback?.('provider_error'));
     return toFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
   }
+}
+
+/**
+ * 获取模型的完整 raw 输出。
+ *
+ * - `HOMEPAGE_SUMMARY + onSummaryDelta`：走 stream 分支，用 StreamingSummaryExtractor
+ *   从增量 JSON 中实时释放 `$.summary` 文本 delta，每个 delta 都 `await onSummaryDelta`
+ *   以传递 backpressure。stream 分支自己管理 timeout（setTimeout + AbortController +
+ *   AbortSignal.any 合并外部 signal），不通过 withTimeout。
+ * - 其他情况：走 invoke 分支（原逻辑，withTimeout 包装单次 invoke）。
+ *
+ * 两个分支都返回 `{ content: string }`（完整 raw）给后续 parseAgentResponse。
+ */
+async function obtainRawOutput(
+  deps: AgentRuntimeDeps,
+  systemPrompt: string,
+  taskPrompt: string,
+  timeoutMs: number,
+  options: AgentExecutionOptions | undefined,
+  taskType: AgentTaskType,
+): Promise<{ content: string }> {
+  // 仅 HOMEPAGE_SUMMARY 且提供了 onSummaryDelta 时才走流式分支
+  const useStream =
+    taskType === AgentTaskType.HOMEPAGE_SUMMARY && Boolean(options?.onSummaryDelta);
+
+  if (!useStream) {
+    // invoke 分支：保持原有行为，带超时
+    const raw = await withTimeout(
+      (signal) => deps.agent.invoke({ systemPrompt, userPrompt: taskPrompt, signal }),
+      timeoutMs,
+    );
+    return { content: raw.content };
+  }
+
+  // stream 分支：StreamingSummaryExtractor 从增量 JSON 释放 summary delta
+  // useStream 已保证 onSummaryDelta 存在，用局部变量提取避免循环内重复非空断言
+  const onSummaryDelta = options!.onSummaryDelta!;
+  const extractor = new StreamingSummaryExtractor();
+  let rawContent = '';
+
+  // stream 分支自己管理 timeout：合并内部 timeout signal + 外部 request signal
+  const timeoutController = new AbortController();
+  const timer = setTimeout(() => timeoutController.abort(), timeoutMs);
+  const signals: AbortSignal[] = [timeoutController.signal];
+  if (options?.signal) {
+    signals.push(options.signal);
+  }
+  // AbortSignal.any：任一 signal abort 即合并 signal abort。Node 20+ 原生支持。
+  const mergedSignal = AbortSignal.any(signals);
+
+  try {
+    for await (const chunk of deps.agent.stream({
+      systemPrompt,
+      userPrompt: taskPrompt,
+      signal: mergedSignal,
+    })) {
+      rawContent += chunk.content;
+      // 把 chunk 喂给 extractor，获取本次新产生的 summary delta
+      const deltas = extractor.push(chunk.content);
+      for (const delta of deltas) {
+        // await 每个回调，传递 backpressure（慢消费端会阻塞迭代）
+        await onSummaryDelta(delta);
+      }
+    }
+    // 通知 extractor 输入结束；JSON 不完整/重复 key/类型错误会抛 StreamingSummaryParseError
+    extractor.finish();
+  } finally {
+    clearTimeout(timer);
+  }
+
+  return { content: rawContent };
 }
 
 function evaluateRules(context: AgentContext): RuleEvaluationResult {
