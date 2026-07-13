@@ -205,6 +205,10 @@ export type { TokenValidationResult } from './output/token-validator';
 export { cleanSafetyIssues } from './output/safety-cleaner';
 export type { SafetyCleanResult, SafetyFlag } from './output/safety-cleaner';
 
+// Output - Streaming Summary Extractor（首页实时简报流式传输）
+// 从模型流式输出的增量 JSON 中只释放 $.summary 字段的文本 delta
+export { StreamingSummaryExtractor, StreamingSummaryParseError } from './output/streaming-summary-extractor';
+
 // Verification (P0)
 export { verifyOutput } from './output/verifier';
 export type { VerifierInput } from './output/verifier';

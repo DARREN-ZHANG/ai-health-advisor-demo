@@ -32,6 +32,21 @@ describe('initializeAgent', () => {
     expect(typeof agent.invoke).toBe('function');
   });
 
+  it('返回的 agent 具有 stream 方法', () => {
+    const agent = initializeAgent({
+      provider: 'openai',
+      model: 'gpt-4o-mini',
+      apiKey: 'test-key',
+      baseUrl: '',
+      timeoutMs: 60000,
+      temperature: 0,
+      maxRetries: 0,
+    });
+
+    expect(agent).toHaveProperty('stream');
+    expect(typeof agent.stream).toBe('function');
+  });
+
   it('不同 config 产生不同 agent 实例', () => {
     const agent1 = initializeAgent({
       provider: 'openai',
@@ -81,6 +96,9 @@ describe('initializeAgents', () => {
     expect(typeof solverAgent.invoke).toBe('function');
     expect(typeof plannerAgent.invoke).toBe('function');
     expect(typeof reviewerAgent.invoke).toBe('function');
+    expect(typeof solverAgent.stream).toBe('function');
+    expect(typeof plannerAgent.stream).toBe('function');
+    expect(typeof reviewerAgent.stream).toBe('function');
   });
 
   it('三个 agent 是不同实例', () => {

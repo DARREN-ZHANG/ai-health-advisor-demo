@@ -187,6 +187,9 @@ importers:
       '@langchain/tavily':
         specifier: ^1.2.0
         version: 1.2.0(@langchain/core@0.3.80(openai@4.104.0(ws@8.20.0)(zod@3.25.76)))
+      '@streamparser/json':
+        specifier: ^0.0.22
+        version: 0.0.22
       zod:
         specifier: ^3.24.0
         version: 3.25.76
@@ -1141,6 +1144,9 @@ packages:
 
   '@schummar/icu-type-parser@1.21.5':
     resolution: {integrity: sha512-bXHSaW5jRTmke9Vd0h5P7BtWZG9Znqb8gSDxZnxaGSJnGwPLDPfS+3g0BKzeWqzgZPsIVZkM7m2tbo18cm5HBw==}
+
+  '@streamparser/json@0.0.22':
+    resolution: {integrity: sha512-b6gTSBjJ8G8SuO3Gbbj+zXbVx8NSs1EbpbMKpzGLWMdkR+98McH9bEjSz3+0mPJf68c5nxa3CrJHp5EQNXM6zQ==}
 
   '@swc/core-darwin-arm64@1.15.32':
     resolution: {integrity: sha512-/YWMvJDPu+AAwuUsM2G+DNQ/7zhodURGzdQyewEqcvgklAdDHs3LwQmLLnyn6SJl8DT8UOxkbzK+D1PmPeelRg==}
@@ -3639,6 +3645,8 @@ snapshots:
     optional: true
 
   '@schummar/icu-type-parser@1.21.5': {}
+
+  '@streamparser/json@0.0.22': {}
 
   '@swc/core-darwin-arm64@1.15.32':
     optional: true
