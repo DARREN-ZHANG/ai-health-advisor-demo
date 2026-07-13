@@ -20,8 +20,9 @@ import { AgentTaskType } from '@health-advisor/shared';
  * - routes.test.ts 是模块级单测，mock executeAgent，验证 route handler 的
  *   SSE 帧序列、cache hit、校验失败等路由层逻辑。
  * - 本文件是集成测试，重点验证完整协议契约：
- *   1. 后端产出的 SSE body 能被标准 SSE 分帧规则（与 Web 端
- *      eventsource-parser 一致的 `event:` + `data:` + 空行）正确解析。
+ *   1. 后端产出的 SSE body 能被标准 SSE 分帧规则（`event:` + `data:` +
+ *      空行分隔）正确解析（覆盖后端 SseWriter 当前输出格式的最小分帧实现；
+ *      不处理多行 data 拼接、注释行、CRLF、retry/id 字段）。
  *   2. 每个帧的 data 通过 BriefStreamEventSchema（与前端共享的 Zod 契约）。
  *   3. completed 帧的 response 通过 AgentResponseEnvelopeSchema。
  *   4. 跨场景的 protocol invariant：started → delta* → 恰好一个 terminal。
@@ -79,8 +80,8 @@ const validEnvelope: AgentResponseEnvelope = {
 /**
  * 解析 SSE 文本为事件数组。
  *
- * 使用与 Web 端 eventsource-parser 一致的标准 SSE 分帧规则：
- * 帧之间用空行（`\n\n`）分隔；每帧含 `event: <type>` 和 `data: <json>` 行。
+ * 覆盖后端 SseWriter 当前输出格式（单行 data + 单行 event + 空行分隔）的
+ * 最小分帧实现；不处理多行 data 拼接、注释行、CRLF、retry/id 字段。
  * 这一步验证后端产出的 body 能被标准 SSE parser 正确分帧。
  */
 function parseSseFrames(text: string): Array<{ event: string; data: unknown }> {
@@ -230,6 +231,10 @@ describe('Morning Brief Stream 集成测试', () => {
   /**
    * 场景 2：cache hit 直达 completed —— 预填缓存，验证 SSE 只有
    * started → completed（无 delta），finishReason 为 'cached'。
+   *
+   * 跨 endpoint 缓存共享：JSON 与 stream 共享 briefCache
+   *（key = profileId + pageContext + promptVersion + modelVersion + locale），
+   * 故先用 JSON route 填充缓存，再用 stream route 验证命中。
    */
   test('cache hit 直达 completed（无 delta），finishReason=cached', async () => {
     mockedExecuteAgent.mockReset();
@@ -455,5 +460,87 @@ describe('Morning Brief Stream 集成测试', () => {
     expect(response.headers['content-type']).toContain('application/json');
     const body = response.json();
     expect(body.success).toBe(false);
+  });
+
+  /**
+   * 场景 7：客户端 X-Request-Id header 决定 SSE 帧的 requestId。
+   *
+   * 任务 4.1 的核心 bug 是「client 没发 X-Request-Id 导致前后端 requestId
+   * 不一致」。client 单测验证了 client 发 header；本场景是集成层唯一能锁定
+   *「Fastify request-context 会采纳客户端 X-Request-Id header 并透传到每个
+   * SSE 帧」这条契约的地方 —— 若删掉 request-context.ts 的 header 读取或
+   * app.ts 的 requestIdHeader 配置，本场景会红。
+   *
+   * 显式发 X-Request-Id: req-explicit-001，断言：
+   * - started / 每个 delta / completed 的 requestId 全等于 'req-explicit-001'
+   */
+  test('客户端 X-Request-Id header 决定 SSE 帧的 requestId（端到端契约）', async () => {
+    mockedExecuteAgent.mockReset();
+    app.briefCache.clearAll();
+    app.runtime.overrideStore.reset('all');
+
+    // fake streaming agent：推送 2 个 delta，验证每个 delta 帧都带客户端 requestId
+    mockedExecuteAgent.mockImplementationOnce(
+      async (_req, _deps, _timeout, _observer, _locale, options) => {
+        const onDelta = options?.onSummaryDelta;
+        if (onDelta) {
+          await onDelta('你的身体');
+          await onDelta('恢复良好');
+        }
+        return validEnvelope;
+      },
+    );
+
+    const explicitRequestId = 'req-explicit-001';
+    const response = await app.inject({
+      method: 'POST',
+      url: '/ai/morning-brief/stream',
+      payload: {
+        profileId: 'profile-a',
+        pageContext: defaultPageContext,
+        bustCache: true,
+      },
+      headers: {
+        'x-session-id': 'sess-int-reqid',
+        'x-request-id': explicitRequestId,
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const frames = parseSseFrames(response.body);
+    const events = frames.map(validateFrameSchema);
+    const types = events.map((e) => e.type);
+
+    // 序列正确：started → 2× delta → completed
+    expect(types[0]).toBe('brief.started');
+    expect(types[types.length - 1]).toBe('brief.completed');
+    expect(types.filter((t) => t === 'brief.summary.delta')).toHaveLength(2);
+
+    // 核心契约：每个帧的 requestId 都等于客户端 X-Request-Id header
+    // 锁定「Fastify request-context 用客户端 header」+「SseWriter/routes 透传 ctx.requestId」
+    for (const event of events) {
+      expect(event.requestId).toBe(explicitRequestId);
+    }
+
+    // 显式抽样三处关键帧，便于失败时快速定位是哪一类帧漏透传
+    const started = events.find(
+      (e): e is Extract<BriefStreamEvent, { type: 'brief.started' }> =>
+        e.type === 'brief.started',
+    );
+    expect(started?.requestId).toBe(explicitRequestId);
+
+    const delta = events.find(
+      (e): e is Extract<BriefStreamEvent, { type: 'brief.summary.delta' }> =>
+        e.type === 'brief.summary.delta',
+    );
+    expect(delta?.requestId).toBe(explicitRequestId);
+
+    const completed = events.find(
+      (e): e is Extract<BriefStreamEvent, { type: 'brief.completed' }> =>
+        e.type === 'brief.completed',
+    );
+    expect(completed?.requestId).toBe(explicitRequestId);
+
+    assertExactlyOneTerminal(frames);
   });
 });
