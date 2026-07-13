@@ -68,13 +68,15 @@ export type {
 } from './types/agent';
 
 // Types — brief-stream
+// 运行时常量（BRIEF_STREAM_ERROR_CODES）放 types 区，沿用 micro-event 先例
+export { BRIEF_STREAM_ERROR_CODES } from './types/brief-stream';
 export type {
   BriefStartedEvent,
   BriefSummaryDeltaEvent,
   BriefCompletedEvent,
   BriefFailedEvent,
-  BriefStreamErrorCode,
   BriefStreamEvent,
+  BriefStreamErrorCode, // failed 事件允许的错误码
 } from './types/brief-stream';
 
 // Types — god-mode

@@ -29,8 +29,16 @@ export interface BriefCompletedEvent {
   response: AgentResponseEnvelope;
 }
 
-/** 失败事件允许的错误码 —— 与 schema 中的 enum 保持同步 */
-export type BriefStreamErrorCode = 'BRIEF_GENERATION_FAILED' | 'STREAM_ABORTED';
+/**
+ * 失败事件允许的错误码 —— 单点定义，schema 的 z.enum 直接消费此常量，
+ * 避免双处写字符串字面量造成漂移（micro-event 的 MICRO_EVENT_TYPES 同模式）。
+ */
+export const BRIEF_STREAM_ERROR_CODES = [
+  'BRIEF_GENERATION_FAILED',
+  'STREAM_ABORTED',
+] as const;
+
+export type BriefStreamErrorCode = (typeof BRIEF_STREAM_ERROR_CODES)[number];
 
 export interface BriefFailedEvent {
   type: 'brief.failed';

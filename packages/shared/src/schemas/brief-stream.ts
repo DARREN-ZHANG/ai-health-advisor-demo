@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AgentResponseEnvelopeSchema } from './agent';
+import { BRIEF_STREAM_ERROR_CODES } from '../types/brief-stream';
 import type { BriefStreamEvent } from '../types/brief-stream';
 
 /**
@@ -39,7 +40,7 @@ const BriefFailedEventSchema = z.object({
   requestId: requestIdSchema,
   error: z.object({
     // 只允许受控错误码，避免把任意内部错误码透出给前端
-    code: z.enum(['BRIEF_GENERATION_FAILED', 'STREAM_ABORTED']),
+    code: z.enum(BRIEF_STREAM_ERROR_CODES),
     message: z.string().min(1),
   }),
 });
@@ -56,6 +57,11 @@ export const BriefStreamEventSchema = z.discriminatedUnion('type', [
  *
  * 流协议 invariant：started → delta* → (completed | failed)。
  * 终态后不再有后续事件，消费方据此关闭流并清理订阅。
+ *
+ * 前置条件：调用方必须先通过 `BriefStreamEventSchema.parse` 校验原始事件，
+ * 不要直接把未经校验的 SSE data 传入本函数。参数类型 `BriefStreamEvent`
+ * 是已解析的判别联合，TS 会阻止裸 unknown 传入，但结构匹配的任意对象
+ * 不会被运行时校验，可能绕过 schema 约束。
  */
 export function isBriefStreamTerminalEvent(event: BriefStreamEvent): boolean {
   return event.type === 'brief.completed' || event.type === 'brief.failed';
