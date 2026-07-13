@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:llm:stream": "node src/scripts/test-llm-stream.mjs --role solver",
     "clean": "rimraf dist node_modules"
   },
   "dependencies": {

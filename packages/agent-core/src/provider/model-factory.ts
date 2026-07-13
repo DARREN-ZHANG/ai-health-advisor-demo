@@ -6,6 +6,8 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 export function createChatModel(config: ResolvedProviderConfig): BaseChatModel {
   switch (config.provider) {
     case 'openai':
+      // streamUsage 默认为 true，会在流式时注入 stream_options: { include_usage: true }。
+      // 部分中转站不支持 stream_options 会返回 400，这里显式关闭以保证流式兼容性。
       return new ChatOpenAI({
         modelName: config.model,
         openAIApiKey: config.apiKey,
@@ -15,6 +17,7 @@ export function createChatModel(config: ResolvedProviderConfig): BaseChatModel {
         temperature: config.temperature,
         maxRetries: config.maxRetries,
         timeout: config.timeoutMs,
+        streamUsage: false,
       });
     case 'gemini':
       return new ChatGoogleGenerativeAI({
