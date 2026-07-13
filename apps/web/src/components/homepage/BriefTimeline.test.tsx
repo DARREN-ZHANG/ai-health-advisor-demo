@@ -59,10 +59,12 @@ describe('BriefTimeline', () => {
     expect(status.className).toContain('leading-5');
     expect(status.className).toContain('var(--valo-text-primary)_86%');
     expect(document.querySelector('[data-valo-brief-updating="true"]')).not.toBeNull();
-    const ring = document.querySelector<HTMLElement>('[data-valo-brief-updating-ring="true"]');
-    expect(ring?.style.backgroundImage).toContain('var(--valo-active)');
-    expect(ring?.style.backgroundImage).toContain('var(--valo-prime)');
-    expect(ring?.className).toContain('animate-spin');
+    const ring = document.querySelector<SVGElement>('[data-valo-brief-updating-ring="true"]');
+    expect(ring?.tagName).toBe('svg');
+    expect(ring?.querySelectorAll('stop')).toHaveLength(4);
+    expect(ring?.querySelector('circle')?.getAttribute('stroke')).toContain('url(#brief-updating-');
+    expect(ring?.getAttribute('class')).toContain('animate-spin');
+    expect(status.querySelector('[class*="valo-brief-update-breathe"]')).not.toBeNull();
   });
 
   it('summary 支持多行（whitespace-pre-line）', () => {

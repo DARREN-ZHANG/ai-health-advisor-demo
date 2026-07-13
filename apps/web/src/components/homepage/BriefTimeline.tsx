@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   HERO_LOADING_ROTATION_DURATION_SECONDS,
@@ -28,7 +29,9 @@ export function BriefTimeline({
   isUpdating = false,
 }: BriefTimelineProps) {
   const t = useTranslations('homepage');
+  const ringGradientId = `brief-updating-${useId().replace(/:/g, '')}`;
   const formattedTime = formatTimelineTime(currentTime);
+  const ringStops = HERO_RING_STOPS['prime-readiness'];
 
   if (isLoading) {
     return (
@@ -69,23 +72,38 @@ export function BriefTimeline({
               className="inline-flex shrink-0 items-center gap-1.5 text-sm leading-5 text-[color-mix(in_srgb,var(--valo-text-primary)_86%,transparent)]"
               data-valo-brief-updating="true"
             >
-              <span
+              <svg
                 aria-hidden="true"
-                className="h-4 w-4 shrink-0 animate-spin rounded-full drop-shadow-[0_0_5px_var(--valo-prime)]"
+                viewBox="0 0 16 16"
+                fill="none"
+                className="h-4 w-4 shrink-0 animate-spin overflow-visible drop-shadow-[0_0_5px_var(--valo-prime)]"
                 data-valo-brief-updating-ring="true"
                 style={{
-                  backgroundImage: `conic-gradient(${[
-                    ...HERO_RING_STOPS['prime-readiness'],
-                    HERO_RING_STOPS['prime-readiness'][0],
-                  ].join(', ')})`,
                   animationDuration: `${HERO_LOADING_ROTATION_DURATION_SECONDS}s`,
-                  WebkitMaskImage:
-                    'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0)',
-                  maskImage:
-                    'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0)',
                 }}
-              />
-              {t('updating')}
+              >
+                <defs>
+                  <linearGradient id={ringGradientId} x1="1" y1="2" x2="15" y2="14">
+                    {ringStops.map((color, index) => (
+                      <stop
+                        key={color}
+                        offset={`${(index / (ringStops.length - 1)) * 100}%`}
+                        stopColor={color}
+                      />
+                    ))}
+                  </linearGradient>
+                </defs>
+                <circle
+                  cx="8"
+                  cy="8"
+                  r="6"
+                  stroke={`url(#${ringGradientId})`}
+                  strokeWidth="2"
+                />
+              </svg>
+              <span className="animate-[valo-brief-update-breathe_2.4s_ease-in-out_infinite]">
+                {t('updating')}
+              </span>
             </span>
           ) : null}
         </div>

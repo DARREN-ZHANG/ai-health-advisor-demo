@@ -150,6 +150,17 @@ textarea:focus-visible,
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+@keyframes valo-brief-update-breathe {
+  0%,
+  100% {
+    opacity: 0.56;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 /* ---------- 滚动行为：尊重用户动效偏好 ---------- */
 @media (prefers-reduced-motion: reduce) {
   *,
