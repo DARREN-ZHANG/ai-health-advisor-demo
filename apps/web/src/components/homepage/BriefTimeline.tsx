@@ -1,11 +1,14 @@
 'use client';
 
-import { useId } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   HERO_LOADING_ROTATION_DURATION_SECONDS,
   HERO_RING_STOPS,
 } from './hero-ring';
+
+const COMPACT_RING_RADIUS = 6;
+const COMPACT_RING_CIRCUMFERENCE = 2 * Math.PI * COMPACT_RING_RADIUS;
+const COMPACT_RING_SEGMENT_LENGTH = 7.2;
 
 /**
  * BriefTimeline —— Now 区段。
@@ -29,7 +32,6 @@ export function BriefTimeline({
   isUpdating = false,
 }: BriefTimelineProps) {
   const t = useTranslations('homepage');
-  const ringGradientId = `brief-updating-${useId().replace(/:/g, '')}`;
   const formattedTime = formatTimelineTime(currentTime);
   const ringStops = HERO_RING_STOPS['prime-readiness'];
 
@@ -82,24 +84,22 @@ export function BriefTimeline({
                   animationDuration: `${HERO_LOADING_ROTATION_DURATION_SECONDS}s`,
                 }}
               >
-                <defs>
-                  <linearGradient id={ringGradientId} x1="1" y1="2" x2="15" y2="14">
-                    {ringStops.map((color, index) => (
-                      <stop
-                        key={color}
-                        offset={`${(index / (ringStops.length - 1)) * 100}%`}
-                        stopColor={color}
-                      />
-                    ))}
-                  </linearGradient>
-                </defs>
-                <circle
-                  cx="8"
-                  cy="8"
-                  r="6"
-                  stroke={`url(#${ringGradientId})`}
-                  strokeWidth="2"
-                />
+                {ringStops.map((color, index) => (
+                  <circle
+                    key={`${color}-${index}`}
+                    cx="8"
+                    cy="8"
+                    r={COMPACT_RING_RADIUS}
+                    stroke={color}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray={`${COMPACT_RING_SEGMENT_LENGTH} ${
+                      COMPACT_RING_CIRCUMFERENCE - COMPACT_RING_SEGMENT_LENGTH
+                    }`}
+                    strokeDashoffset={-(COMPACT_RING_CIRCUMFERENCE / ringStops.length) * index}
+                    data-valo-brief-updating-segment="true"
+                  />
+                ))}
               </svg>
               <span className="animate-[valo-brief-update-breathe_2.4s_ease-in-out_infinite]">
                 {t('updating')}

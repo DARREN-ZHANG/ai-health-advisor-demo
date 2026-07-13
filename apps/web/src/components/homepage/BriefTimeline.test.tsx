@@ -61,8 +61,15 @@ describe('BriefTimeline', () => {
     expect(document.querySelector('[data-valo-brief-updating="true"]')).not.toBeNull();
     const ring = document.querySelector<SVGElement>('[data-valo-brief-updating-ring="true"]');
     expect(ring?.tagName).toBe('svg');
-    expect(ring?.querySelectorAll('stop')).toHaveLength(4);
-    expect(ring?.querySelector('circle')?.getAttribute('stroke')).toContain('url(#brief-updating-');
+    const segments = ring?.querySelectorAll('[data-valo-brief-updating-segment="true"]');
+    expect(segments).toHaveLength(4);
+    expect(Array.from(segments ?? []).map((segment) => segment.getAttribute('stroke'))).toEqual([
+      'var(--valo-active)',
+      'var(--valo-accent-cool)',
+      'var(--valo-prime)',
+      'var(--valo-accent-warm)',
+    ]);
+    expect(segments?.[0]?.getAttribute('stroke-dasharray')).not.toBeNull();
     expect(ring?.getAttribute('class')).toContain('animate-spin');
     expect(status.querySelector('[class*="valo-brief-update-breathe"]')).not.toBeNull();
   });
