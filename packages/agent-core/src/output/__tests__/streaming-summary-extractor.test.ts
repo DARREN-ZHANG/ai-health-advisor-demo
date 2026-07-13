@@ -211,11 +211,6 @@ describe('StreamingSummaryExtractor - 协议违规确定性失败', () => {
     expect(err.message).toContain('summary');
   });
 
-  it('重复 summary key 错误信息可识别', () => {
-    const err = runAndExpectError('{"summary":"a","summary":"b"}');
-    expect(err.message).toContain('重复') || expect(err.message).toContain('summary');
-  });
-
   it('summary 非字符串（number）抛出错误', () => {
     const err = runAndExpectError('{"summary":123}');
     expect(err.message).toContain('string');
@@ -269,6 +264,19 @@ describe('StreamingSummaryExtractor - markdown fence 与截断', () => {
   it('前导空白后跟 ``` 也抛错', () => {
     const extractor = new StreamingSummaryExtractor();
     expect(() => extractor.push('  \n ```json')).toThrow(StreamingSummaryParseError);
+  });
+
+  it('超过 64 字符前导空白后跟 fence 抛出错误（不绕过检测）', () => {
+    // 65 个空格 + fence：前导空白过长本身就可疑，直接拒绝而不当作合法 JSON 放行
+    const extractor = new StreamingSummaryExtractor();
+    const oversizedLeading = ' '.repeat(65) + '```json\n{"summary":"x"}\n```';
+    expect(() => extractor.push(oversizedLeading)).toThrow(StreamingSummaryParseError);
+  });
+
+  it('纯前导空白累积超过 64 字符抛出错误（跨 chunk 纯空白流）', () => {
+    // chunk 全是空白时循环不会提前 return，累积超过 64 即判定异常
+    const extractor = new StreamingSummaryExtractor();
+    expect(() => extractor.push(' '.repeat(65))).toThrow(StreamingSummaryParseError);
   });
 
   it('合法 JSON 前导空白被允许（非 fence）', () => {

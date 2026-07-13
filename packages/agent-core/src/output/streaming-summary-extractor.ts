@@ -318,7 +318,7 @@ export class StreamingSummaryExtractor {
           '输入以 markdown code fence（```）开头，期望纯 JSON 流',
         );
       }
-      // 合法 JSON 起始字符，清空缓冲释放给 parser（parser 已在 push 主流程收到完整 chunk）
+      // 合法 JSON 起始字符，清空检测缓冲（parser 在 push 主流程已收到原始 chunk）
       this.leadingWhitespaceBuffer = '';
       return;
     }
@@ -326,10 +326,11 @@ export class StreamingSummaryExtractor {
     // 整个 chunk 都是前导空白，尚未遇到实质字符。
     // 此时不能判定，但也不应让 parser 处理缓冲过的内容两次——
     // 实际 chunk 已经原样传给 parser（见 push），这里只做检测。
-    // 为避免下一轮重复扫描已处理字符，截断缓冲长度。
+    // 前导空白过长本身就可疑（合法 JSON 不会这样），作为异常输入直接拒绝。
     if (this.leadingWhitespaceBuffer.length > 64) {
-      // 防止恶意超长空白消耗内存
-      this.leadingCheckDone = true;
+      throw new StreamingSummaryParseError(
+        '前导空白过长（>64 字符），疑似异常输入',
+      );
     }
   }
 }
