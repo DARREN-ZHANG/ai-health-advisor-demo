@@ -333,6 +333,8 @@ function classifySleep(
     confidence,
     evidence,
     sourceSegmentId: stats.segmentId,
+    recognitionSource: 'sensor_inference',
+    calibrationStatus: 'calibrated',
   };
 }
 
@@ -396,6 +398,8 @@ function buildRecognized(
     confidence: computeConfidence(),
     evidence,
     sourceSegmentId: stats.segmentId,
+    recognitionSource: 'sensor_inference',
+    calibrationStatus: 'calibrated',
   };
 }
 

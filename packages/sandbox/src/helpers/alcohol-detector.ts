@@ -499,5 +499,7 @@ function buildAlcoholEvent(
     confidence: Math.round(candidate.score * 100) / 100,
     evidence,
     sourceSegmentId: undefined, // 不暴露 segmentId
+    recognitionSource: 'sensor_inference',
+    calibrationStatus: 'calibrated',
   };
 }
