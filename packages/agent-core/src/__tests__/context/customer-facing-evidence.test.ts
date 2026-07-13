@@ -292,6 +292,13 @@ describe('CustomerFacingEvidencePacket 类型契约', () => {
     expect(numeric.kind).toBe('numeric');
     expect(qualitative.kind).toBe('qualitative');
   });
+
+  it('latest24h.metrics[].unit 类型为 PublicMetricUnit | undefined（非 string）', () => {
+    // 类型级测试：homepage.latest24h.metrics[].unit 必须是封闭集合，而非开放 string
+    // 若回退为 string，则 unit: 'score' 可被构造，违反封闭集合保证
+    expectTypeOf<CustomerFacingEvidencePacket['homepage']['latest24h']['metrics'][number]['unit']>()
+      .toEqualTypeOf<PublicMetricUnit | undefined>();
+  });
 });
 
 // ────────────────────────────────────────────

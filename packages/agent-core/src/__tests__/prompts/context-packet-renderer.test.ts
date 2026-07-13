@@ -1099,6 +1099,116 @@ describe('renderTaskContextPacket', () => {
     expect(output).not.toContain('其余指标正常：hrv 93ms, resting_hr 48bpm, spo2 99%');
   });
 
+  it('event-window metric label reflects valueRole (max/latest/average) in zh and en', () => {
+    // HR → max, HRV → latest, steps → average（通过 default 分支用 average）
+    const packet: TaskContextPacket = {
+      task: { type: 'homepage_summary', page: 'home' },
+      userContext: {
+        profileId: 'p-label',
+        name: 'Label Test',
+        age: 30,
+        tags: [],
+        baselines: { restingHR: 60, hrv: 60, spo2: 98, avgSleepMinutes: 420, avgSteps: 8000 },
+      },
+      dataWindow: { start: '2026-05-26', end: '2026-06-01', recordCount: 7, completenessPct: 100 },
+      missingData: [],
+      evidence: [],
+      visibleCharts: [],
+      homepage: {
+        recentEvents: [],
+        latest24h: { date: '2026-05-31', metrics: [] },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+        eventInsights: [
+          {
+            eventId: 'evt-label',
+            eventType: 'hiit_workout',
+            certaintyBand: 'likely',
+            priority: 'high',
+            timeRelation: '刚结束',
+            headline: '训练结束',
+            eventWindow: {
+              source: 'synced_device_samples',
+              coverage: 'complete',
+              recognizedEventId: 're-label',
+              sourceSegmentId: 'seg-label',
+              start: '2026-05-31T17:30',
+              end: '2026-05-31T18:30',
+              durationMin: 60,
+              sampleCount: 9,
+              evidenceIds: ['ew_label'],
+              metrics: [
+                {
+                  // heart_rate → valueRole 'max'，值取 max
+                  metric: 'heart_rate',
+                  unit: 'bpm',
+                  sampleCount: 3,
+                  latest: 92,
+                  min: 92,
+                  max: 150,
+                  average: 120,
+                  qualifier: 'elevated',
+                  interpretation: '心率峰值 150bpm',
+                  evidenceId: 'ew_label',
+                },
+                {
+                  // hrv_rmssd → valueRole 'latest'，值取 latest
+                  metric: 'hrv_rmssd',
+                  unit: 'ms',
+                  sampleCount: 3,
+                  latest: 45,
+                  min: 40,
+                  max: 80,
+                  average: 60,
+                  qualifier: 'compressed',
+                  interpretation: 'HRV 末段 45ms',
+                  evidenceId: 'ew_label',
+                },
+                {
+                  // 未知 metric（走 default 分支）：average 存在 → 'average'
+                  metric: 'resp_rate',
+                  unit: 'min',
+                  sampleCount: 3,
+                  latest: 16,
+                  min: 12,
+                  max: 30,
+                  average: 18,
+                  qualifier: 'normal',
+                  interpretation: '呼吸频率均值 18min',
+                  evidenceId: 'ew_label',
+                },
+              ],
+            },
+            physiology: [],
+            recoveryContext: [],
+            tension: { level: 'watch', summary: '恢复中', reason: 'markers' },
+            recommendedFocus: [],
+            actionIntents: [],
+            evidenceIds: ['ew_label'],
+            mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'current' },
+          },
+        ],
+      },
+    };
+
+    // 中文：max→峰值，latest→最新，average→平均
+    const zh = render(packet, 'zh', '2026-05-31T18:35');
+    expect(zh).toContain('峰值：150bpm');
+    expect(zh).toContain('最新：45ms');
+    expect(zh).toContain('平均：18min');
+    // 不应把 latest/average 误标为峰值
+    expect(zh).not.toContain('峰值：45ms');
+    expect(zh).not.toContain('峰值：18min');
+
+    // 英文：max/latest/average
+    const en = render(packet, 'en', '2026-05-31T18:35');
+    expect(en).toContain('max: 150bpm');
+    expect(en).toContain('latest: 45ms');
+    expect(en).toContain('average: 18min');
+    expect(en).not.toContain('max: 45ms');
+  });
+
   it('does not render sleep latest24h or tonight sleep action context for a 13:00 walk event', () => {
     const packet: TaskContextPacket = {
       task: { type: 'homepage_summary', page: 'home' },

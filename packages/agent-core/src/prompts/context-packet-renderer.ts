@@ -376,14 +376,30 @@ function renderPublicEventWindowMetric(metric: PublicEventWindowMetric, locale: 
   const c = colon(locale);
   // 物理单位指标：保留代表性数值（max/latest/average）
   if (metric.unit && metric.value !== undefined) {
-    const roleLabel = metric.valueRole
-      ? t(locale, `峰值${c}`, `max${c}`)
-      : '';
+    const roleLabel = valueRoleLabel(metric.valueRole, locale);
     // 事件窗口指标：heart_rate elevated — 峰值：172bpm — interpretation
     return `  - ${t(locale, '事件窗口指标', 'Event-window metric')}${c}${metric.metric} ${metric.qualifier}, ${roleLabel}${metric.value}${metric.unit} — ${metric.interpretation}`;
   }
   // score 类指标：仅展示 qualifier
   return `  - ${t(locale, '事件窗口指标', 'Event-window metric')}${c}${metric.metric} ${metric.qualifier} — ${metric.interpretation}`;
+}
+
+/** 根据 valueRole 生成对应语言的数值角色标签（含分隔符） */
+function valueRoleLabel(
+  valueRole: 'max' | 'latest' | 'average' | undefined,
+  locale: Locale,
+): string {
+  // undefined 默认按 max 处理（向后兼容历史数据）
+  switch (valueRole) {
+    case 'latest':
+      return t(locale, '最新：', 'latest: ');
+    case 'average':
+      return t(locale, '平均：', 'average: ');
+    case 'max':
+    case undefined:
+    default:
+      return t(locale, '峰值：', 'max: ');
+  }
 }
 
 /** 渲染公开生理特征 — score 类指标无数值 */

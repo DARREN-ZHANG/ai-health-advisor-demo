@@ -48,6 +48,32 @@ import type { RecentRecommendedAction } from '../types/memory';
  */
 export type PublicMetricUnit = 'bpm' | 'ms' | '%' | 'steps' | 'min';
 
+/**
+ * 投影后的 latest24h 指标 — unit 收紧为 PublicMetricUnit 封闭集合。
+ *
+ * 设计意图：原 Latest24hMetric.unit 为开放 string，存在 `unit: 'score'`
+ * 被序列化到公开 packet 的风险。此类型将 unit 限定为 PublicMetricUnit，
+ * score 类指标（无数值物理单位）以 undefined 表达，从类型层面消除泄漏。
+ */
+export interface PublicLatest24hMetric {
+  metric: string;
+  value?: number;
+  /** 仅保留物理单位；score 类指标此处为 undefined */
+  unit: PublicMetricUnit | undefined;
+  baseline?: number;
+  deltaPctVsBaseline?: number;
+  status: 'normal' | 'attention' | 'critical' | 'missing';
+  /** 临床严重程度说明（如 SpO2 绝对阈值触发的分级描述） */
+  clinicalNote?: string;
+  evidenceId?: string;
+}
+
+/** 投影后的 latest24h 包 — metrics 使用收紧后的 PublicLatest24hMetric */
+export interface PublicLatest24hPacket {
+  date: string;
+  metrics: PublicLatest24hMetric[];
+}
+
 /** 数值事实：带有物理单位的客户可见指标 */
 export interface PublicNumericFact {
   kind: 'numeric';
@@ -161,7 +187,7 @@ export interface PublicHomepageEventInsight {
 }
 
 export interface PublicHomepageContextPacket {
-  latest24h: Latest24hPacket;
+  latest24h: PublicLatest24hPacket;
   trend7d: PublicMetricSummary[];
   rulesInsights: RuleInsightPacket[];
   suggestedChartTokens: ChartTokenId[];
@@ -481,21 +507,31 @@ function projectEventInsight(insight: HomepageEventInsight): PublicHomepageEvent
   };
 }
 
-function projectLatest24hMetric(metric: Latest24hMetric): Latest24hMetric {
-  // score 类指标：移除 value/baseline/deltaPctVsBaseline，仅保留 status/qualifier
+function projectLatest24hMetric(metric: Latest24hMetric): PublicLatest24hMetric {
+  // score 类指标：移除 value/baseline/deltaPctVsBaseline，unit 置为 undefined
   if (isScoreMetric(metric.metric)) {
     return {
       metric: metric.metric,
-      unit: metric.unit,
+      unit: undefined,
       status: metric.status,
       evidenceId: metric.evidenceId,
       clinicalNote: metric.clinicalNote,
     };
   }
-  return metric;
+  // 物理单位指标：投影 unit 到封闭集合
+  return {
+    metric: metric.metric,
+    value: metric.value,
+    unit: projectUnit(metric.unit),
+    baseline: metric.baseline,
+    deltaPctVsBaseline: metric.deltaPctVsBaseline,
+    status: metric.status,
+    evidenceId: metric.evidenceId,
+    clinicalNote: metric.clinicalNote,
+  };
 }
 
-function projectLatest24h(packet: Latest24hPacket): Latest24hPacket {
+function projectLatest24h(packet: Latest24hPacket): PublicLatest24hPacket {
   return {
     date: packet.date,
     metrics: packet.metrics.map(projectLatest24hMetric),
