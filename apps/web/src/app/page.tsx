@@ -20,6 +20,7 @@ import { mapApiStatusToVisualState } from '@/lib/health-visual-state';
 import { useMorningBrief, useRefetchBrief } from '@/hooks/use-ai-query';
 import { useActionInteractions } from '@/hooks/use-action-interactions';
 import { useUIStore } from '@/stores/ui.store';
+import { useBriefStreamStore } from '@/stores/brief-stream.store';
 import { useTranslations } from 'next-intl';
 import type { ActionOption } from '@health-advisor/shared';
 
@@ -53,7 +54,26 @@ export default function HomePage() {
   // 解决 useRefetchBrief 在不同组件实例间 mutation state 不共享的问题——
   // 抽屉 hook 和首页各自独立的 mutation 实例，isPending 不互通，用 store flag 桥接。
   const isBriefRefreshing = useGodModeStore((s) => s.isBriefRefreshing);
-  const briefIsLoading = isLoading || isFetching || refetchBrief.isPending || isBriefRefreshing;
+
+  // —— brief-stream store 订阅（任务 3.2）——
+  // 订阅当前 profile 的 draft entry；流式期间 draftSummary 逐步增长，
+  // completed/failed 后 entry 清除。直接从 s.entries 取值（而非 s.getEntry()），
+  // 让 Zustand selector 的 snapshot 语义生效：begin/append 产生新对象引用触发 re-render，
+  // complete/fail 删除 key 返回 undefined 也触发。
+  const draftEntry = useBriefStreamStore((s) =>
+    currentProfileId ? s.entries[currentProfileId] : undefined,
+  );
+  const draftSummary = draftEntry?.draftSummary;
+  const hasDraft = typeof draftSummary === 'string' && draftSummary.length > 0;
+
+  // briefIsLoading 语义扩展：终态前（draft 期间或刷新中）保持 true。
+  // 驱动 Hero/LifeLog disabled，确保结构化字段（status/actions）终态前不可交互。
+  const briefIsLoading =
+    isLoading ||
+    isFetching ||
+    refetchBrief.isPending ||
+    isBriefRefreshing ||
+    hasDraft;
   const isInitialBriefLoading = briefIsLoading && !data;
   const isBriefUpdating = briefIsLoading && !!data;
 
@@ -101,10 +121,27 @@ export default function HomePage() {
     }
   }, [error, showToast, t]);
 
-  const summary = data?.summary || (error ? t('briefNetworkError') : t('briefPreparing'));
-  const actions = data?.actions ?? [];
+  // —— 简报显示规则（任务 3.2 六条规则）——
+  // effectiveData 始终保留旧 cache（draft 期间 actions/statusColor/futureSuggestions
+  // 来自旧 data，completed 后 React Query cache 原子替换）。
+  // 规则 4：draft 期间旧结构化字段保留到 completed。
+  const effectiveData = data;
+
+  // displayedSummary 优先级：draft > data.summary > fallback
+  // 规则 1：无旧数据、无 draft → skeleton（briefIsLoading && !effectiveData && !hasDraft）
+  // 规则 2：有 draft → 显示 draftSummary（aria-busy=true 由 BriefTimeline isStreaming 处理）
+  // 规则 3：有旧数据、刷新中、无 draft → 保留旧 summary + updating indicator
+  // 规则 5：completed → cache 替换，effectiveData.summary 变新
+  // 规则 6：failed → draft 清除；首次加载 error，刷新失败保留旧 effectiveData
+  const displayedSummary = hasDraft
+    ? draftSummary!
+    : effectiveData?.summary ||
+      (error && !effectiveData ? t('briefNetworkError') : t('briefPreparing'));
+
+  // actions/futureSuggestions 始终来自 effectiveData（旧值），终态后原子替换
+  const actions = effectiveData?.actions ?? [];
   // 未来时间点建议：LLM 基于今日已发生活动推断，缺失时降级为静态 Figma 文案
-  const futureSuggestions = data?.futureSuggestions ?? [];
+  const futureSuggestions = effectiveData?.futureSuggestions ?? [];
 
   // 已记录/已加入日历/正在 Timer 或 Appointment 中 的 action 不再渲染为可交互卡片，
   // 避免用户在浮层打开期间重复点击 Yes。
@@ -160,10 +197,11 @@ export default function HomePage() {
             />
 
             <BriefTimeline
-              summary={summary}
+              summary={displayedSummary}
               currentTime={godModeState?.currentDemoTime ?? undefined}
-              isLoading={isInitialBriefLoading}
+              isLoading={briefIsLoading && !effectiveData && !hasDraft}
               isUpdating={isBriefUpdating}
+              isStreaming={hasDraft}
             />
 
             {visibleActions.length > 0 ? (
