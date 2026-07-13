@@ -711,4 +711,95 @@ describe('P3 Sync Gate 集成测试', () => {
       expect(onSafetyBoundary).toHaveBeenCalledTimes(1);
     });
   });
+
+  // ──────────────────────────────────────────────────
+  // Task 3.3 (I-1): Sync gate 重生成路径的 Customer Policy 兜底
+  // 验证：sync gate rejected → 重生成 → sync gate approved，
+  // 但重生成结果违反客户内容策略 → 返回 customer-policy typed error，不写 memory
+  // ──────────────────────────────────────────────────
+  describe('Sync gate 重生成违反 customer policy（I-1 回归）', () => {
+    it('重生成通过 sync gate 但违反 customer content policy → 返回 customer-policy 错误，不写 memory', async () => {
+      const sessionMemory = new InMemorySessionMemoryStore();
+      const analyticalMemory = new InMemoryAnalyticalMemoryStore();
+      const { reviewer, reviewInvoke } = makeSyncReviewer([
+        makeRejectedResult(), // 第一次审核 rejected → 触发重生成
+        makeApprovedResult(), // 重生成后 sync gate approved
+      ]);
+
+      let invokeCount = 0;
+      const solverInvoke = vi.fn(async () => {
+        invokeCount++;
+        if (invokeCount === 1) {
+          // 首次：通过 customer policy（无内部评分/确定性断言等违规）
+          return {
+            content: JSON.stringify({
+              summary: '根据当前数据，建议适当调整运动计划。',
+              chartTokens: [],
+              microTips: [],
+            }),
+          };
+        }
+        // 第二次（sync gate 重生成）：sync gate 通过，但引入 internal_score_disclosed
+        // "运动强度 4.2" 是确定性 policy 会拦截的客户边界违规
+        return {
+          content: JSON.stringify({
+            summary: '本次运动强度 4.2 偏高，建议降低强度再运动。',
+            chartTokens: [],
+            microTips: [],
+          }),
+        };
+      });
+
+      const deps: AgentRuntimeDeps = {
+        ...makeDeps({ invoke: solverInvoke }, reviewer),
+        sessionMemory,
+        analyticalMemory,
+      };
+      const onSyncGate = vi.fn();
+      const onSafetyBoundary = vi.fn();
+
+      const result = await executeAgent(
+        highRiskRequest,
+        deps,
+        undefined,
+        { onSyncGate, onSafetyBoundary },
+      );
+
+      // 返回 customer-policy typed error（不是 sync-gate safety boundary）
+      expect(result.source).toBe('customer-policy');
+      expect(result.meta.finishReason).toBe('fallback');
+
+      // solver 调用两次（原始 + sync gate 重生成）
+      expect(solverInvoke).toHaveBeenCalledTimes(2);
+      // sync gate review 调用两次（首次 rejected + 重生成 approved）
+      expect(reviewInvoke).toHaveBeenCalledTimes(2);
+
+      // 关键回归点：即使 sync gate 第二次 approved，onSyncGate approved 不应被通知
+      // （因为 policy 在 approved 通知前 fail-closed）
+      // 只通知了第一次 rejected
+      expect(onSyncGate).toHaveBeenCalledTimes(1);
+      expect(onSyncGate.mock.calls[0]![0].approved).toBe(false);
+
+      // onSafetyBoundary 不应触发（policy 拦截优先于 safety boundary）
+      expect(onSafetyBoundary).not.toHaveBeenCalled();
+
+      // session memory 只应有首次（通过 customer policy）的 summary 被写入，
+      // 不应包含 sync gate 重生成的违规 summary（fail-closed：违规内容不得落地）
+      const session = sessionMemory.get('sess-sync-1');
+      const assistantMsgs = session?.messages.filter((m) => m.role === 'assistant') ?? [];
+      expect(assistantMsgs).toHaveLength(1);
+      const allText = (session?.messages ?? []).map((m) => m.text).join('');
+      // 首次 summary 存在
+      expect(allText).toContain('根据当前数据，建议适当调整运动计划。');
+      // 重生成的违规 summary 不得出现
+      expect(allText).not.toContain('运动强度 4.2');
+
+      // analytical memory：应保留首次通过 policy 的 summary，
+      // 不应被重生成的违规 summary 覆盖（取决于写回时机，此处只验证不含违规内容）
+      const latest = analyticalMemory.get('sess-sync-1')?.latestHomepageBrief;
+      if (latest !== undefined) {
+        expect(latest).not.toContain('运动强度 4.2');
+      }
+    });
+  });
 });

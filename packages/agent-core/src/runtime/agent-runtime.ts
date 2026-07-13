@@ -419,7 +419,6 @@ export async function executeAgent(
 
     // 最终用于后续流程的 envelope（policy 通过的版本）
     let result: AgentResponseEnvelope;
-    let policyRegenerated = false;
 
     if (firstPolicyResult.approved) {
       result = cleanedEnvelope;
@@ -479,13 +478,10 @@ export async function executeAgent(
       }
 
       result = regeneratedEnvelope;
-      policyRegenerated = true;
     }
 
     // onParsed: 结构化输出已解析完成（时序: onParsed → onVerified → onSyncGate → onReflected）
     tryNotify(() => observer?.onParsed?.(result));
-    // 标记是否是 policy regeneration 的结果（用于后续流程跳过 sync gate 的二次 regeneration）
-    void policyRegenerated;
 
     // 11. 写回 session memory
     writeSessionMemory(deps, request, result.summary);
@@ -606,7 +602,24 @@ export async function executeAgent(
             );
 
             if (reGateResult!.approved) {
-              // 重生成通过
+              // Task 3.3 (I-1): Sync gate 重生成通过后，仍需通过客户内容策略。
+              // sync gate 关注安全/医疗边界，customer policy 关注客户可见措辞边界，
+              // 二者正交。重生成的 envelope 可能引入 internal_score_disclosed 等违规，
+              // 必须在 memory 写入前 fail-closed。
+              const regeneratedPolicyResult = enforceCustomerContentPolicy({
+                envelope: regenerated,
+                evidencePacket: customerEvidencePacket,
+                actionCandidates,
+                locale,
+                taskType: context.task.type,
+              });
+              if (!regeneratedPolicyResult.approved) {
+                // 重生成虽通过 sync gate，但违反客户内容策略 → fail-closed typed error
+                // 不通知 onSyncGate approved（避免误导观察者），不写 memory
+                return toCustomerPolicyError(request, locale);
+              }
+
+              // 重生成通过 sync gate + customer policy
               tryNotify(() => observer?.onSyncGate?.(reGateResult!));
               tryNotify(() => observer?.onParsed?.(regenerated));
               // C-3: 对重生成的结果补充 verifier observer

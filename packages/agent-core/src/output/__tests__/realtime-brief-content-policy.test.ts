@@ -316,6 +316,187 @@ describe('realtime-brief-content-policy', () => {
       const result = enforceCustomerContentPolicy(input);
       expect(result.violations.find((x) => x.code === 'inferred_event_asserted_as_fact')).toBeUndefined();
     });
+
+    // ── 英文路径测试（覆盖 DETERMINISTIC_VERB_PATTERNS_EN / PROBABILISTIC_CUE_PATTERNS_EN） ──
+
+    it('EN: deterministic assertion "just finished" on likely meal event → violation', () => {
+      const packet = makePacket([], [
+        {
+          eventId: 'ev1',
+          eventType: 'meal',
+          certaintyBand: 'likely',
+          priority: 'high',
+          timeRelation: 'recent',
+          headline: 'Likely just had a meal',
+          physiology: [],
+          recoveryContext: [],
+          tension: { level: 'positive', summary: 'normal' },
+          recommendedFocus: [],
+          actionIntents: [],
+          mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'test' },
+        },
+      ]);
+      // 注意：summary 需满足 en 90-180 词长度区间（仅 homepage_summary 强制下限，
+      // 但任何任务都校验上限；这里构造合规长度的英文 summary）
+      const filler =
+        'Your overnight recovery looks solid and daytime metrics stay within a healthy band. ';
+      const summary =
+        `You just finished a meal, and your heart rate reflects that. ${filler}`.repeat(2) +
+        'Keep up the balanced routine.';
+      const envelope = makeEnvelope({ summary });
+      const input: RealtimeBriefPolicyInput = {
+        envelope,
+        evidencePacket: packet,
+        actionCandidates: [],
+        locale: 'en',
+      };
+      const result = enforceCustomerContentPolicy(input);
+      const v = result.violations.find((x) => x.code === 'inferred_event_asserted_as_fact');
+      expect(v).toBeDefined();
+      expect(v!.code === 'inferred_event_asserted_as_fact' && v!.eventType).toBe('meal');
+      expect(result.approved).toBe(false);
+    });
+
+    it('EN: probabilistic wording "likely had" on likely meal event → no violation', () => {
+      const packet = makePacket([], [
+        {
+          eventId: 'ev1',
+          eventType: 'meal',
+          certaintyBand: 'likely',
+          priority: 'high',
+          timeRelation: 'recent',
+          headline: 'Likely had a meal',
+          physiology: [],
+          recoveryContext: [],
+          tension: { level: 'positive', summary: 'normal' },
+          recommendedFocus: [],
+          actionIntents: [],
+          mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'test' },
+        },
+      ]);
+      const filler =
+        'Your overnight recovery looks solid and daytime metrics stay within a healthy band. ';
+      const summary =
+        `You likely had a meal in the past hour, heart rate appears elevated. ${filler}`.repeat(2) +
+        'Keep up the balanced routine.';
+      const envelope = makeEnvelope({ summary });
+      const input: RealtimeBriefPolicyInput = {
+        envelope,
+        evidencePacket: packet,
+        actionCandidates: [],
+        locale: 'en',
+      };
+      const result = enforceCustomerContentPolicy(input);
+      expect(result.violations.find((x) => x.code === 'inferred_event_asserted_as_fact')).toBeUndefined();
+    });
+
+    it('EN: deterministic verb "started" on possible cardio workout → violation', () => {
+      const packet = makePacket([], [
+        {
+          eventId: 'ev1',
+          eventType: 'cardio_workout',
+          certaintyBand: 'possible',
+          priority: 'high',
+          timeRelation: 'recent',
+          headline: 'Possibly started cardio',
+          physiology: [],
+          recoveryContext: [],
+          tension: { level: 'positive', summary: 'normal' },
+          recommendedFocus: [],
+          actionIntents: [],
+          mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'test' },
+        },
+      ]);
+      const filler =
+        'Your overnight recovery looks solid and daytime metrics stay within a healthy band. ';
+      const summary =
+        `You started a cardio workout recently, and the run signature is visible. ${filler}`.repeat(
+          2,
+        ) + 'Keep up the balanced routine.';
+      const envelope = makeEnvelope({ summary });
+      const input: RealtimeBriefPolicyInput = {
+        envelope,
+        evidencePacket: packet,
+        actionCandidates: [],
+        locale: 'en',
+      };
+      const result = enforceCustomerContentPolicy(input);
+      const v = result.violations.find((x) => x.code === 'inferred_event_asserted_as_fact');
+      expect(v).toBeDefined();
+      expect(v!.code === 'inferred_event_asserted_as_fact' && v!.eventType).toBe('cardio_workout');
+    });
+
+    it('EN: reported cardio event with deterministic verb → no violation', () => {
+      const packet = makePacket([], [
+        {
+          eventId: 'ev1',
+          eventType: 'cardio_workout',
+          certaintyBand: 'reported',
+          priority: 'high',
+          timeRelation: 'recent',
+          headline: 'Completed cardio workout',
+          physiology: [],
+          recoveryContext: [],
+          tension: { level: 'positive', summary: 'normal' },
+          recommendedFocus: [],
+          actionIntents: [],
+          mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'test' },
+        },
+      ]);
+      const filler =
+        'Your overnight recovery looks solid and daytime metrics stay within a healthy band. ';
+      const summary =
+        `You completed a cardio workout today, recovery trend is positive. ${filler}`.repeat(2) +
+        'Keep up the balanced routine.';
+      const envelope = makeEnvelope({ summary });
+      const input: RealtimeBriefPolicyInput = {
+        envelope,
+        evidencePacket: packet,
+        actionCandidates: [],
+        locale: 'en',
+      };
+      const result = enforceCustomerContentPolicy(input);
+      expect(result.violations.find((x) => x.code === 'inferred_event_asserted_as_fact')).toBeUndefined();
+    });
+
+    it('EN (Issue I-2 edge): probabilistic cue elsewhere + deterministic assertion → current global-exempt behavior', () => {
+      // 当前实现：只要 summary 任意位置出现概率措辞 → 整体豁免所有 inferred 事件。
+      // 这是 Issue I-2 标记的 "global exemption" 已知边界，此处锁定当前行为作为回归基线。
+      // 若未来收紧为句子级判定，本测试需相应更新。
+      const packet = makePacket([], [
+        {
+          eventId: 'ev1',
+          eventType: 'meal',
+          certaintyBand: 'likely',
+          priority: 'high',
+          timeRelation: 'recent',
+          headline: 'Likely had a meal',
+          physiology: [],
+          recoveryContext: [],
+          tension: { level: 'positive', summary: 'normal' },
+          recommendedFocus: [],
+          actionIntents: [],
+          mentionPolicy: { summary: 'allowed', actions: 'allowed', reason: 'test' },
+        },
+      ]);
+      const filler =
+        'Your overnight recovery looks solid and daytime metrics stay within a healthy band. ';
+      // 同时包含确定性断言 "You just ate" 和概率措辞 "may"
+      const summary =
+        `You just ate a meal. Stress may also be a factor in the elevated reading. ${filler}`.repeat(
+          2,
+        ) + 'Keep up the balanced routine.';
+      const envelope = makeEnvelope({ summary });
+      const input: RealtimeBriefPolicyInput = {
+        envelope,
+        evidencePacket: packet,
+        actionCandidates: [],
+        locale: 'en',
+      };
+      const result = enforceCustomerContentPolicy(input);
+      // 当前 global-exempt 行为：概率措辞存在 → 豁免（不违规）
+      expect(result.violations.find((x) => x.code === 'inferred_event_asserted_as_fact')).toBeUndefined();
+    });
   });
 
   describe('enforceCustomerContentPolicy - internal_score_disclosed', () => {
