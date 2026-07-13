@@ -66,9 +66,13 @@ function resolveRoleConfig(role) {
   const timeout = process.env.LLM_TIMEOUT_MS
     ? parseInt(process.env.LLM_TIMEOUT_MS, 10)
     : STREAM_TIMEOUT_MS;
+  // 默认值须与 packages/agent-core/src/constants/defaults.ts 的
+  // ROLE_DEFAULTS.solver.temperature 保持一致（当前为 0.3）。
+  // 当 .env 未设置 LLM_TEMPERATURE 时，探针和生产代码用相同 temperature
+  // 调用模型，否则探针结果无法反映真实生产环境。
   const temperature = process.env.LLM_TEMPERATURE
     ? parseFloat(process.env.LLM_TEMPERATURE)
-    : 0;
+    : 0.3;
 
   return { provider, model, apiKey, baseUrl, timeout, temperature };
 }
@@ -186,11 +190,23 @@ async function runStreamProbe(chatModel) {
   let nonEmptyChunkCount = 0;
   let totalContentLength = 0;
   let finishReason = null;
+  let timedOut = false;
 
   try {
     const stream = await chatModel.stream([new HumanMessage(PROBE_PROMPT)]);
 
     for await (const chunk of stream) {
+      // 整体超时保护：ChatOpenAI 的 timeout 只覆盖单次 HTTP 请求建立，
+      // 不保护整个流式迭代。若上游 SSE 建立后无限慢速发 chunk，
+      // for await 会无限阻塞导致探针挂死。这里在循环内累计检查
+      // 已用时间，超过 STREAM_TIMEOUT_MS 就 break。
+      // 不用 AbortController（避免与后续 runAbortTest 的 abort 语义混淆）。
+      const now = Date.now();
+      if (now - start > STREAM_TIMEOUT_MS) {
+        timedOut = true;
+        break;
+      }
+
       const contentLen = extractContentLength(chunk);
 
       // 第一个非空 content chunk 记录 first-token latency
@@ -224,6 +240,20 @@ async function runStreamProbe(chatModel) {
   }
 
   const elapsed = Date.now() - start;
+  if (timedOut) {
+    // 超时不算成功，给主流程明确的 timeout 标记让其打印
+    // "stream probe timed out after Nms" 而不是假装成功。
+    return {
+      ok: false,
+      timeout: true,
+      elapsed,
+      firstTokenLatency,
+      nonEmptyChunkCount,
+      totalContentLength,
+      finishReason,
+      error: `stream probe timed out after ${elapsed}ms`,
+    };
+  }
   return {
     ok: true,
     elapsed,
@@ -238,7 +268,9 @@ async function runStreamProbe(chatModel) {
  * AbortSignal 取消测试
  *
  * 启动流后立即 abort，验证迭代器在超时预算内停止。
- * 返回停止耗时（ms）；若超时未停止则返回 null。
+ * 返回 `{ stoppedWithinBudget, elapsed }`：
+ *   - `stoppedWithinBudget`：是否在 ABORT_TEST_TIMEOUT_MS 内停止（含正常结束与 abort 抛错两种情况）
+ *   - `elapsed`：实际停止耗时（ms）
  */
 async function runAbortTest(chatModel) {
   const controller = new AbortController();

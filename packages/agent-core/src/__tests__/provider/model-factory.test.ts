@@ -38,11 +38,11 @@ describe('createChatModel', () => {
   it('openai provider 流式 invocation params 的 stream 字段由调用方覆盖', () => {
     // invocationParams 本身读取 this.streaming（默认 false）；
     // 真正的 stream:true 由 _streamResponseChunks 在拿到 params 后覆盖。
-    // 这里只验证 invocationParams 不会反向把 stream 锁死成 false。
+    // 这里验证 invocationParams 默认返回 stream:false，不会被反向锁死成 true，
+    // 同时锚定"真正的 stream:true 由 _streamResponseChunks 覆盖"这一行为，防止回归。
     const model = createChatModel(baseConfig) as ChatOpenAI;
     const params = model.invocationParams(undefined, { streaming: true });
-    // stream 字段存在（具体值由上层覆盖为 true）
-    expect(params).toHaveProperty('stream');
+    expect(params.stream).toBe(false);
   });
 });
 
