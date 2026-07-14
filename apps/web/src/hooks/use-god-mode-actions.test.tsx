@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
 import { useGodModeActions } from './use-god-mode-actions';
 import { queryKeys } from '@/lib/query-keys';
@@ -35,7 +36,9 @@ function createWrapper() {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        {children}
+        <NextIntlClientProvider locale="en" messages={{}}>
+          {children}
+        </NextIntlClientProvider>
       </QueryClientProvider>
     );
   }

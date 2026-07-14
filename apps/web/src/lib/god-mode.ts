@@ -1,21 +1,31 @@
 import type { ActiveSensingState } from '@health-advisor/shared';
 import type { ActiveSensingBanner } from '@/stores/active-sensing.store';
 
-const EVENT_TRANSLATIONS: Record<string, string> = {
-  sport_detected: '检测到运动',
-  late_night_work: '您可能在熬夜工作',
-  high_stress: '您当前的压力水平较高',
-  poor_sleep: '您昨晚的睡眠质量欠佳',
-  sedentary: '您已经久坐不动较长时间了',
-  possible_alcohol_intake: '可能的饮酒摄入',
-  possible_caffeine_intake: '可能的咖啡因摄入',
-};
+/** banner 翻译函数：来自 next-intl 的 useTranslations('advisor.activeSensing.banner') */
+export type BannerTranslator = (
+  key: string,
+  values?: Record<string, string | number | Date>,
+) => string;
 
-function humanizeEventType(eventType: string): string {
-  if (EVENT_TRANSLATIONS[eventType]) {
-    return EVENT_TRANSLATIONS[eventType];
+/** 已知的 active sensing 事件类型（messages 中有对应翻译键） */
+const KNOWN_EVENTS = new Set([
+  'sport_detected',
+  'late_night_work',
+  'high_stress',
+  'poor_sleep',
+  'sedentary',
+  'possible_alcohol_intake',
+  'possible_caffeine_intake',
+]);
+
+/** 需要用户确认的概率事件 */
+const PROBABILISTIC_EVENTS = new Set(['possible_alcohol_intake', 'possible_caffeine_intake']);
+
+function humanizeEventType(eventType: string, t: BannerTranslator): string {
+  if (KNOWN_EVENTS.has(eventType)) {
+    return t(`events.${eventType}`);
   }
-
+  // 未知事件：回退为 Title Case，避免 next-intl 抛出 MISSING_MESSAGE
   return eventType
     .split('_')
     .filter(Boolean)
@@ -23,10 +33,10 @@ function humanizeEventType(eventType: string): string {
     .join(' ');
 }
 
-function formatSensingDate(dateStr: string): string {
+function formatSensingDate(dateStr: string, locale: string): string {
   try {
     const date = new Date(dateStr);
-    return new Intl.DateTimeFormat('zh-CN', {
+    return new Intl.DateTimeFormat(locale, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -40,22 +50,19 @@ function formatSensingDate(dateStr: string): string {
   }
 }
 
-/** 需要用户确认的概率事件 */
-const PROBABILISTIC_EVENTS = new Set(['possible_alcohol_intake', 'possible_caffeine_intake']);
-
-function getBannerTitle(events: string[]): string {
+function getBannerTitle(events: string[], t: BannerTranslator): string {
   if (events.some((e) => PROBABILISTIC_EVENTS.has(e))) {
-    return '需要确认一下';
+    return t('titleConfirm');
   }
-  return 'Active Sensing 已触发';
+  return t('titleTriggered');
 }
 
-function getBannerContent(activeSensing: ActiveSensingState): string {
-  const eventSummary = activeSensing.events.length > 0
-    ? activeSensing.events.map(humanizeEventType).join(' 且 ')
-    : '未知事件';
-  const formattedDate = formatSensingDate(activeSensing.date);
-
+function getBannerContent(
+  activeSensing: ActiveSensingState,
+  t: BannerTranslator,
+  locale: string,
+): string {
+  const formattedDate = formatSensingDate(activeSensing.date, locale);
   const hasProbabilistic = activeSensing.events.some((e) => PROBABILISTIC_EVENTS.has(e));
 
   if (hasProbabilistic) {
@@ -63,25 +70,31 @@ function getBannerContent(activeSensing: ActiveSensingState): string {
     const isCaffeine = activeSensing.events.includes('possible_caffeine_intake');
 
     if (isAlcohol && isCaffeine) {
-      return `${formattedDate}，检测到您的心率和 HRV 出现了一些变化，这和饮酒后或摄入咖啡因后的生理反应有些相似。想确认一下，您最近有喝酒或摄入咖啡因吗？`;
+      return t('contentBoth', { date: formattedDate });
     }
     if (isAlcohol) {
-      return `${formattedDate}，检测到您的心率和 HRV 出现了一些变化，这和饮酒后常见的生理反应有些相似。想确认一下，您最近有摄入酒精吗？`;
+      return t('contentAlcohol', { date: formattedDate });
     }
-    return `${formattedDate}，注意到您的生理指标有些波动，模式上和我们观察到的咖啡因摄入后有点像。请问您最近有喝咖啡或其他含咖啡因的饮料吗？`;
+    return t('contentCaffeine', { date: formattedDate });
   }
 
-  // 运动类事件：将 "间歇运动" 展示为 "HIIT 运动"
-  const displaySummary = eventSummary.replace('检测到运动', '检测到 HIIT 运动');
-  return `${formattedDate} ${displaySummary}，需要我为您提供一些建议吗？`;
+  const eventSummary = activeSensing.events.length > 0
+    ? activeSensing.events.map((e) => humanizeEventType(e, t)).join(t('eventJoiner'))
+    : t('unknownEvent');
+
+  return t('contentGeneric', { date: formattedDate, summary: eventSummary });
 }
 
-export function mapActiveSensingToBanner(activeSensing: ActiveSensingState): ActiveSensingBanner {
+export function mapActiveSensingToBanner(
+  activeSensing: ActiveSensingState,
+  t: BannerTranslator,
+  locale: string,
+): ActiveSensingBanner {
   return {
     id: `active-sensing:${activeSensing.date}:${activeSensing.events.join('|')}`,
     type: activeSensing.priority === 'high' ? 'alert' : 'event',
-    title: getBannerTitle(activeSensing.events),
-    content: getBannerContent(activeSensing),
+    title: getBannerTitle(activeSensing.events, t),
+    content: getBannerContent(activeSensing, t, locale),
     priority: activeSensing.priority === 'high' ? 100 : 50,
     events: activeSensing.events,
   };

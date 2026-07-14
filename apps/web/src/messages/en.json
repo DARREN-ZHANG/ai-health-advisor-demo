@@ -281,7 +281,26 @@
       "sedentary": "I've been sitting for a long time. What exercises or stretches should I do?",
       "possibleAlcoholIntake": "I confirm I recently had alcohol. Can you give me some personalized health advice based on my data?",
       "possibleCaffeineIntake": "Yes, I recently had a caffeinated drink. I'd like to understand how this might affect my health.",
-      "genericPrompt": "I need some advice about \"{title}\"."
+      "genericPrompt": "I need some advice about \"{title}\".",
+      "banner": {
+        "titleConfirm": "Need a quick confirmation",
+        "titleTriggered": "Active Sensing triggered",
+        "unknownEvent": "unknown event",
+        "eventJoiner": " and ",
+        "contentBoth": "{date}, we noticed changes in your heart rate and HRV that resemble the response after drinking alcohol or consuming caffeine. Could you confirm — have you had alcohol or caffeine recently?",
+        "contentAlcohol": "{date}, we noticed changes in your heart rate and HRV that look similar to a typical post-alcohol response. Could you confirm — have you had any alcohol recently?",
+        "contentCaffeine": "{date}, we noticed some fluctuations in your vitals that match patterns we typically see after caffeine intake. Have you had coffee or another caffeinated drink recently?",
+        "contentGeneric": "{date} · {summary}. Would you like some suggestions?",
+        "events": {
+          "sport_detected": "HIIT exercise detected",
+          "late_night_work": "you might be working late",
+          "high_stress": "your stress level is high",
+          "poor_sleep": "poor sleep quality last night",
+          "sedentary": "you've been sedentary for a while",
+          "possible_alcohol_intake": "possible alcohol intake",
+          "possible_caffeine_intake": "possible caffeine intake"
+        }
+      }
     },
     "statusLabel": {
       "error": "Serious",

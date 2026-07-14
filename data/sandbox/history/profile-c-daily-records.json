@@ -1,12 +1,12 @@
 {
   "profileId": "profile-c",
   "dateRange": {
-    "start": "2026-06-10",
-    "end": "2026-07-10"
+    "start": "2026-06-14",
+    "end": "2026-07-14"
   },
   "records": [
     {
-      "date": "2026-06-10",
+      "date": "2026-06-14",
       "hr": [
         65,
         77,
@@ -33,7 +33,7 @@
         "activeMinutes": 18,
         "distanceKm": 2.6
       },
-      "spo2": 99,
+      "spo2": 98,
       "stress": {
         "load": 78
       },
@@ -41,7 +41,7 @@
         {
           "hour": 0,
           "hr": 80,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 0,
           "sleepMinutes": 100,
           "stressLoad": 78
@@ -49,7 +49,7 @@
         {
           "hour": 2,
           "hr": 77,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 23,
           "sleepMinutes": 120,
           "stressLoad": 78
@@ -57,7 +57,7 @@
         {
           "hour": 4,
           "hr": 68,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 94,
           "sleepMinutes": 120,
           "stressLoad": 78
@@ -65,7 +65,7 @@
         {
           "hour": 6,
           "hr": 89,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 211,
           "sleepMinutes": 9,
           "stressLoad": 78
@@ -73,63 +73,63 @@
         {
           "hour": 8,
           "hr": 95,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 376,
           "stressLoad": 78
         },
         {
           "hour": 10,
           "hr": 102,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 587,
           "stressLoad": 78
         },
         {
           "hour": 12,
           "hr": 88,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 846,
           "stressLoad": 78
         },
         {
           "hour": 14,
           "hr": 99,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 1151,
           "stressLoad": 78
         },
         {
           "hour": 16,
           "hr": 88,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 1503,
           "stressLoad": 78
         },
         {
           "hour": 18,
           "hr": 103,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 1902,
           "stressLoad": 78
         },
         {
           "hour": 20,
           "hr": 97,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 2349,
           "stressLoad": 78
         },
         {
           "hour": 22,
           "hr": 67,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 2842,
           "stressLoad": 78
         }
       ]
     },
     {
-      "date": "2026-06-11",
+      "date": "2026-06-15",
       "hr": [
         71,
         78,
@@ -156,7 +156,7 @@
         "activeMinutes": 22,
         "distanceKm": 2.9
       },
-      "spo2": 99,
+      "spo2": 98,
       "stress": {
         "load": 70
       },
@@ -164,7 +164,7 @@
         {
           "hour": 0,
           "hr": 77,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 0,
           "sleepMinutes": 76,
           "stressLoad": 70
@@ -172,7 +172,7 @@
         {
           "hour": 2,
           "hr": 80,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 25,
           "sleepMinutes": 120,
           "stressLoad": 70
@@ -180,7 +180,7 @@
         {
           "hour": 4,
           "hr": 80,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 101,
           "sleepMinutes": 120,
           "stressLoad": 70
@@ -188,7 +188,7 @@
         {
           "hour": 6,
           "hr": 99,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 228,
           "sleepMinutes": 3,
           "stressLoad": 70
@@ -196,63 +196,63 @@
         {
           "hour": 8,
           "hr": 90,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 405,
           "stressLoad": 70
         },
         {
           "hour": 10,
           "hr": 92,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 632,
           "stressLoad": 70
         },
         {
           "hour": 12,
           "hr": 93,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 911,
           "stressLoad": 70
         },
         {
           "hour": 14,
           "hr": 86,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 1239,
           "stressLoad": 70
         },
         {
           "hour": 16,
           "hr": 101,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 1619,
           "stressLoad": 70
         },
         {
           "hour": 18,
           "hr": 93,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 2049,
           "stressLoad": 70
         },
         {
           "hour": 20,
           "hr": 98,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 2529,
           "stressLoad": 70
         },
         {
           "hour": 22,
           "hr": 75,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 3060,
           "stressLoad": 70
         }
       ]
     },
     {
-      "date": "2026-06-12",
+      "date": "2026-06-16",
       "hr": [
         69,
         79,
@@ -279,7 +279,7 @@
         "activeMinutes": 22,
         "distanceKm": 2.8
       },
-      "spo2": 95,
+      "spo2": 96,
       "stress": {
         "load": 76
       },
@@ -287,7 +287,7 @@
         {
           "hour": 0,
           "hr": 76,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 0,
           "sleepMinutes": 45,
           "stressLoad": 76
@@ -295,7 +295,7 @@
         {
           "hour": 2,
           "hr": 81,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 26,
           "sleepMinutes": 120,
           "stressLoad": 76
@@ -303,7 +303,7 @@
         {
           "hour": 4,
           "hr": 79,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 106,
           "sleepMinutes": 120,
           "stressLoad": 76
@@ -311,7 +311,7 @@
         {
           "hour": 6,
           "hr": 85,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 238,
           "sleepMinutes": 5,
           "stressLoad": 76
@@ -319,63 +319,63 @@
         {
           "hour": 8,
           "hr": 98,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 424,
           "stressLoad": 76
         },
         {
           "hour": 10,
           "hr": 88,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 662,
           "stressLoad": 76
         },
         {
           "hour": 12,
           "hr": 87,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 953,
           "stressLoad": 76
         },
         {
           "hour": 14,
           "hr": 105,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 1297,
           "stressLoad": 76
         },
         {
           "hour": 16,
           "hr": 107,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 1694,
           "stressLoad": 76
         },
         {
           "hour": 18,
           "hr": 92,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 2144,
           "stressLoad": 76
         },
         {
           "hour": 20,
           "hr": 90,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 2647,
           "stressLoad": 76
         },
         {
           "hour": 22,
           "hr": 75,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 3203,
           "stressLoad": 76
         }
       ]
     },
     {
-      "date": "2026-06-13",
+      "date": "2026-06-17",
       "hr": [
         69,
         79,
@@ -498,7 +498,7 @@
       ]
     },
     {
-      "date": "2026-06-14",
+      "date": "2026-06-18",
       "hr": [
         67,
         78,
@@ -620,7 +620,7 @@
       ]
     },
     {
-      "date": "2026-06-15",
+      "date": "2026-06-19",
       "hr": [
         71,
         80,
@@ -647,7 +647,7 @@
         "activeMinutes": 26,
         "distanceKm": 3.3
       },
-      "spo2": 99,
+      "spo2": 98,
       "stress": {
         "load": 86
       },
@@ -655,7 +655,7 @@
         {
           "hour": 0,
           "hr": 66,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 0,
           "sleepMinutes": 43,
           "stressLoad": 86
@@ -663,7 +663,7 @@
         {
           "hour": 2,
           "hr": 79,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 30,
           "sleepMinutes": 120,
           "stressLoad": 86
@@ -671,7 +671,7 @@
         {
           "hour": 4,
           "hr": 68,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 120,
           "sleepMinutes": 120,
           "stressLoad": 86
@@ -679,7 +679,7 @@
         {
           "hour": 6,
           "hr": 108,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 269,
           "sleepMinutes": 6,
           "stressLoad": 86
@@ -687,63 +687,63 @@
         {
           "hour": 8,
           "hr": 84,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 478,
           "stressLoad": 86
         },
         {
           "hour": 10,
           "hr": 107,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 748,
           "stressLoad": 86
         },
         {
           "hour": 12,
           "hr": 107,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 1077,
           "stressLoad": 86
         },
         {
           "hour": 14,
           "hr": 107,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 1465,
           "stressLoad": 86
         },
         {
           "hour": 16,
           "hr": 88,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 1914,
           "stressLoad": 86
         },
         {
           "hour": 18,
           "hr": 110,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 2422,
           "stressLoad": 86
         },
         {
           "hour": 20,
           "hr": 100,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 2990,
           "stressLoad": 86
         },
         {
           "hour": 22,
           "hr": 75,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 3618,
           "stressLoad": 86
         }
       ]
     },
     {
-      "date": "2026-06-16",
+      "date": "2026-06-20",
       "hr": [
         71,
         78,
@@ -770,7 +770,7 @@
         "activeMinutes": 24,
         "distanceKm": 3.4
       },
-      "spo2": 95,
+      "spo2": 96,
       "stress": {
         "load": 75
       },
@@ -778,7 +778,7 @@
         {
           "hour": 0,
           "hr": 71,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 0,
           "sleepMinutes": 66,
           "stressLoad": 75
@@ -786,7 +786,7 @@
         {
           "hour": 2,
           "hr": 81,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 29,
           "sleepMinutes": 120,
           "stressLoad": 75
@@ -794,7 +794,7 @@
         {
           "hour": 4,
           "hr": 66,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 118,
           "sleepMinutes": 120,
           "stressLoad": 75
@@ -802,7 +802,7 @@
         {
           "hour": 6,
           "hr": 91,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 265,
           "sleepMinutes": 7,
           "stressLoad": 75
@@ -810,63 +810,63 @@
         {
           "hour": 8,
           "hr": 104,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 470,
           "stressLoad": 75
         },
         {
           "hour": 10,
           "hr": 96,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 735,
           "stressLoad": 75
         },
         {
           "hour": 12,
           "hr": 107,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 1059,
           "stressLoad": 75
         },
         {
           "hour": 14,
           "hr": 93,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 1441,
           "stressLoad": 75
         },
         {
           "hour": 16,
           "hr": 94,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 1882,
           "stressLoad": 75
         },
         {
           "hour": 18,
           "hr": 88,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 2382,
           "stressLoad": 75
         },
         {
           "hour": 20,
           "hr": 93,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 2940,
           "stressLoad": 75
         },
         {
           "hour": 22,
           "hr": 80,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 3558,
           "stressLoad": 75
         }
       ]
     },
     {
-      "date": "2026-06-17",
+      "date": "2026-06-21",
       "hr": [
         79,
         85,
@@ -989,7 +989,7 @@
       ]
     },
     {
-      "date": "2026-06-18",
+      "date": "2026-06-22",
       "hr": [
         73,
         81,
@@ -1016,7 +1016,7 @@
         "activeMinutes": 25,
         "distanceKm": 3.4
       },
-      "spo2": 96,
+      "spo2": 97,
       "stress": {
         "load": 85
       },
@@ -1024,7 +1024,7 @@
         {
           "hour": 0,
           "hr": 72,
-          "spo2": 97,
+          "spo2": 98,
           "steps": 0,
           "sleepMinutes": 52,
           "stressLoad": 85
@@ -1032,7 +1032,7 @@
         {
           "hour": 2,
           "hr": 67,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 29,
           "sleepMinutes": 120,
           "stressLoad": 85
@@ -1040,7 +1040,7 @@
         {
           "hour": 4,
           "hr": 79,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 114,
           "sleepMinutes": 120,
           "stressLoad": 85
@@ -1048,7 +1048,7 @@
         {
           "hour": 6,
           "hr": 88,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 257,
           "sleepMinutes": 7,
           "stressLoad": 85
@@ -1056,63 +1056,63 @@
         {
           "hour": 8,
           "hr": 94,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 457,
           "stressLoad": 85
         },
         {
           "hour": 10,
           "hr": 89,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 714,
           "stressLoad": 85
         },
         {
           "hour": 12,
           "hr": 97,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 1028,
           "stressLoad": 85
         },
         {
           "hour": 14,
           "hr": 102,
-          "spo2": 97,
+          "spo2": 98,
           "steps": 1399,
           "stressLoad": 85
         },
         {
           "hour": 16,
           "hr": 103,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 1827,
           "stressLoad": 85
         },
         {
           "hour": 18,
           "hr": 94,
-          "spo2": 97,
+          "spo2": 98,
           "steps": 2312,
           "stressLoad": 85
         },
         {
           "hour": 20,
           "hr": 93,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 2854,
           "stressLoad": 85
         },
         {
           "hour": 22,
           "hr": 71,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 3454,
           "stressLoad": 85
         }
       ]
     },
     {
-      "date": "2026-06-19",
+      "date": "2026-06-23",
       "hr": [
         74,
         82,
@@ -1235,7 +1235,7 @@
       ]
     },
     {
-      "date": "2026-06-20",
+      "date": "2026-06-24",
       "hr": [
         77,
         84,
@@ -1358,7 +1358,7 @@
       ]
     },
     {
-      "date": "2026-06-21",
+      "date": "2026-06-25",
       "hr": [
         73,
         81,
@@ -1385,7 +1385,7 @@
         "activeMinutes": 20,
         "distanceKm": 3.1
       },
-      "spo2": 95,
+      "spo2": 96,
       "stress": {
         "load": 91
       },
@@ -1393,7 +1393,7 @@
         {
           "hour": 0,
           "hr": 68,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 0,
           "sleepMinutes": 6,
           "stressLoad": 91
@@ -1401,7 +1401,7 @@
         {
           "hour": 2,
           "hr": 68,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 27,
           "sleepMinutes": 120,
           "stressLoad": 91
@@ -1409,7 +1409,7 @@
         {
           "hour": 4,
           "hr": 71,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 107,
           "sleepMinutes": 120,
           "stressLoad": 91
@@ -1417,7 +1417,7 @@
         {
           "hour": 6,
           "hr": 93,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 242,
           "sleepMinutes": 2,
           "stressLoad": 91
@@ -1425,63 +1425,63 @@
         {
           "hour": 8,
           "hr": 95,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 430,
           "stressLoad": 91
         },
         {
           "hour": 10,
           "hr": 83,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 671,
           "stressLoad": 91
         },
         {
           "hour": 12,
           "hr": 91,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 967,
           "stressLoad": 91
         },
         {
           "hour": 14,
           "hr": 81,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 1316,
           "stressLoad": 91
         },
         {
           "hour": 16,
           "hr": 104,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 1719,
           "stressLoad": 91
         },
         {
           "hour": 18,
           "hr": 108,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 2175,
           "stressLoad": 91
         },
         {
           "hour": 20,
           "hr": 84,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 2685,
           "stressLoad": 91
         },
         {
           "hour": 22,
           "hr": 77,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 3249,
           "stressLoad": 91
         }
       ]
     },
     {
-      "date": "2026-06-22",
+      "date": "2026-06-26",
       "hr": [
         77,
         86,
@@ -1508,7 +1508,7 @@
         "activeMinutes": 19,
         "distanceKm": 2.5
       },
-      "spo2": 95,
+      "spo2": 96,
       "stress": {
         "load": 93
       },
@@ -1516,7 +1516,7 @@
         {
           "hour": 0,
           "hr": 76,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 0,
           "sleepMinutes": 34,
           "stressLoad": 93
@@ -1524,7 +1524,7 @@
         {
           "hour": 2,
           "hr": 66,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 23,
           "sleepMinutes": 120,
           "stressLoad": 93
@@ -1532,7 +1532,7 @@
         {
           "hour": 4,
           "hr": 65,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 90,
           "sleepMinutes": 120,
           "stressLoad": 93
@@ -1540,7 +1540,7 @@
         {
           "hour": 6,
           "hr": 87,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 203,
           "sleepMinutes": 8,
           "stressLoad": 93
@@ -1548,63 +1548,63 @@
         {
           "hour": 8,
           "hr": 103,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 360,
           "stressLoad": 93
         },
         {
           "hour": 10,
           "hr": 81,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 563,
           "stressLoad": 93
         },
         {
           "hour": 12,
           "hr": 108,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 811,
           "stressLoad": 93
         },
         {
           "hour": 14,
           "hr": 86,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 1104,
           "stressLoad": 93
         },
         {
           "hour": 16,
           "hr": 94,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 1441,
           "stressLoad": 93
         },
         {
           "hour": 18,
           "hr": 94,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 1824,
           "stressLoad": 93
         },
         {
           "hour": 20,
           "hr": 90,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 2252,
           "stressLoad": 93
         },
         {
           "hour": 22,
           "hr": 77,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 2725,
           "stressLoad": 93
         }
       ]
     },
     {
-      "date": "2026-06-23",
+      "date": "2026-06-27",
       "hr": [
         79,
         86,
@@ -1727,7 +1727,7 @@
       ]
     },
     {
-      "date": "2026-06-24",
+      "date": "2026-06-28",
       "hr": [
         75,
         85,
@@ -1754,7 +1754,7 @@
         "activeMinutes": 25,
         "distanceKm": 3.1
       },
-      "spo2": 96,
+      "spo2": 97,
       "stress": {
         "load": 85
       },
@@ -1762,7 +1762,7 @@
         {
           "hour": 0,
           "hr": 67,
-          "spo2": 97,
+          "spo2": 98,
           "steps": 0,
           "sleepMinutes": 12,
           "stressLoad": 85
@@ -1770,7 +1770,7 @@
         {
           "hour": 2,
           "hr": 78,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 29,
           "sleepMinutes": 120,
           "stressLoad": 85
@@ -1778,7 +1778,7 @@
         {
           "hour": 4,
           "hr": 74,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 116,
           "sleepMinutes": 120,
           "stressLoad": 85
@@ -1786,7 +1786,7 @@
         {
           "hour": 6,
           "hr": 92,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 260,
           "sleepMinutes": 1,
           "stressLoad": 85
@@ -1794,63 +1794,63 @@
         {
           "hour": 8,
           "hr": 87,
-          "spo2": 97,
+          "spo2": 98,
           "steps": 462,
           "stressLoad": 85
         },
         {
           "hour": 10,
           "hr": 106,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 722,
           "stressLoad": 85
         },
         {
           "hour": 12,
           "hr": 91,
-          "spo2": 97,
+          "spo2": 98,
           "steps": 1040,
           "stressLoad": 85
         },
         {
           "hour": 14,
           "hr": 88,
-          "spo2": 97,
+          "spo2": 98,
           "steps": 1416,
           "stressLoad": 85
         },
         {
           "hour": 16,
           "hr": 92,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 1849,
           "stressLoad": 85
         },
         {
           "hour": 18,
           "hr": 87,
-          "spo2": 97,
+          "spo2": 98,
           "steps": 2341,
           "stressLoad": 85
         },
         {
           "hour": 20,
           "hr": 109,
-          "spo2": 97,
+          "spo2": 98,
           "steps": 2890,
           "stressLoad": 85
         },
         {
           "hour": 22,
           "hr": 80,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 3496,
           "stressLoad": 85
         }
       ]
     },
     {
-      "date": "2026-06-25",
+      "date": "2026-06-29",
       "hr": [
         78,
         87,
@@ -1877,7 +1877,7 @@
         "activeMinutes": 18,
         "distanceKm": 2.6
       },
-      "spo2": 95,
+      "spo2": 96,
       "stress": {
         "load": 93
       },
@@ -1885,7 +1885,7 @@
         {
           "hour": 0,
           "hr": 66,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 0,
           "sleepMinutes": 5,
           "stressLoad": 93
@@ -1893,7 +1893,7 @@
         {
           "hour": 2,
           "hr": 76,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 23,
           "sleepMinutes": 120,
           "stressLoad": 93
@@ -1901,7 +1901,7 @@
         {
           "hour": 4,
           "hr": 71,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 91,
           "sleepMinutes": 120,
           "stressLoad": 93
@@ -1909,7 +1909,7 @@
         {
           "hour": 6,
           "hr": 103,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 206,
           "sleepMinutes": 10,
           "stressLoad": 93
@@ -1917,63 +1917,63 @@
         {
           "hour": 8,
           "hr": 94,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 366,
           "stressLoad": 93
         },
         {
           "hour": 10,
           "hr": 105,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 572,
           "stressLoad": 93
         },
         {
           "hour": 12,
           "hr": 83,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 823,
           "stressLoad": 93
         },
         {
           "hour": 14,
           "hr": 88,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 1121,
           "stressLoad": 93
         },
         {
           "hour": 16,
           "hr": 93,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 1464,
           "stressLoad": 93
         },
         {
           "hour": 18,
           "hr": 88,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 1852,
           "stressLoad": 93
         },
         {
           "hour": 20,
           "hr": 100,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 2287,
           "stressLoad": 93
         },
         {
           "hour": 22,
           "hr": 70,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 2767,
           "stressLoad": 93
         }
       ]
     },
     {
-      "date": "2026-06-26",
+      "date": "2026-06-30",
       "hr": [
         73,
         84,
@@ -2095,7 +2095,7 @@
       ]
     },
     {
-      "date": "2026-06-27",
+      "date": "2026-07-01",
       "hr": [
         74,
         85,
@@ -2217,7 +2217,7 @@
       ]
     },
     {
-      "date": "2026-06-28",
+      "date": "2026-07-02",
       "hr": [
         78,
         86,
@@ -2340,7 +2340,7 @@
       ]
     },
     {
-      "date": "2026-06-29",
+      "date": "2026-07-03",
       "hr": [
         82,
         89,
@@ -2462,7 +2462,7 @@
       ]
     },
     {
-      "date": "2026-06-30",
+      "date": "2026-07-04",
       "hr": [
         79,
         91,
@@ -2584,7 +2584,7 @@
       ]
     },
     {
-      "date": "2026-07-01",
+      "date": "2026-07-05",
       "hr": [
         84,
         91,
@@ -2706,7 +2706,7 @@
       ]
     },
     {
-      "date": "2026-07-02",
+      "date": "2026-07-06",
       "hr": [
         81,
         92,
@@ -2733,7 +2733,7 @@
         "activeMinutes": 22,
         "distanceKm": 3
       },
-      "spo2": 99,
+      "spo2": 98,
       "stress": {
         "load": 99
       },
@@ -2741,14 +2741,14 @@
         {
           "hour": 0,
           "hr": 80,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 0,
           "stressLoad": 99
         },
         {
           "hour": 2,
           "hr": 79,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 29,
           "sleepMinutes": 103,
           "stressLoad": 99
@@ -2756,7 +2756,7 @@
         {
           "hour": 4,
           "hr": 65,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 117,
           "sleepMinutes": 120,
           "stressLoad": 99
@@ -2764,7 +2764,7 @@
         {
           "hour": 6,
           "hr": 86,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 263,
           "sleepMinutes": 6,
           "stressLoad": 99
@@ -2772,63 +2772,63 @@
         {
           "hour": 8,
           "hr": 98,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 468,
           "stressLoad": 99
         },
         {
           "hour": 10,
           "hr": 102,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 731,
           "stressLoad": 99
         },
         {
           "hour": 12,
           "hr": 87,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 1053,
           "stressLoad": 99
         },
         {
           "hour": 14,
           "hr": 88,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 1433,
           "stressLoad": 99
         },
         {
           "hour": 16,
           "hr": 99,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 1871,
           "stressLoad": 99
         },
         {
           "hour": 18,
           "hr": 85,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 2368,
           "stressLoad": 99
         },
         {
           "hour": 20,
           "hr": 101,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 2924,
           "stressLoad": 99
         },
         {
           "hour": 22,
           "hr": 79,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 3538,
           "stressLoad": 99
         }
       ]
     },
     {
-      "date": "2026-07-03",
+      "date": "2026-07-07",
       "hr": [
         86,
         90,
@@ -2855,7 +2855,7 @@
         "activeMinutes": 22,
         "distanceKm": 2.8
       },
-      "spo2": 95,
+      "spo2": 96,
       "stress": {
         "load": 99
       },
@@ -2863,14 +2863,14 @@
         {
           "hour": 0,
           "hr": 66,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 0,
           "stressLoad": 99
         },
         {
           "hour": 2,
           "hr": 69,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 26,
           "sleepMinutes": 59,
           "stressLoad": 99
@@ -2878,7 +2878,7 @@
         {
           "hour": 4,
           "hr": 73,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 105,
           "sleepMinutes": 120,
           "stressLoad": 99
@@ -2886,7 +2886,7 @@
         {
           "hour": 6,
           "hr": 94,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 235,
           "sleepMinutes": 9,
           "stressLoad": 99
@@ -2894,63 +2894,63 @@
         {
           "hour": 8,
           "hr": 82,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 418,
           "stressLoad": 99
         },
         {
           "hour": 10,
           "hr": 103,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 653,
           "stressLoad": 99
         },
         {
           "hour": 12,
           "hr": 87,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 941,
           "stressLoad": 99
         },
         {
           "hour": 14,
           "hr": 106,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 1280,
           "stressLoad": 99
         },
         {
           "hour": 16,
           "hr": 104,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 1672,
           "stressLoad": 99
         },
         {
           "hour": 18,
           "hr": 102,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 2117,
           "stressLoad": 99
         },
         {
           "hour": 20,
           "hr": 96,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 2613,
           "stressLoad": 99
         },
         {
           "hour": 22,
           "hr": 80,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 3162,
           "stressLoad": 99
         }
       ]
     },
     {
-      "date": "2026-07-04",
+      "date": "2026-07-08",
       "hr": [
         82,
         88,
@@ -3072,7 +3072,7 @@
       ]
     },
     {
-      "date": "2026-07-05",
+      "date": "2026-07-09",
       "hr": [
         83,
         91,
@@ -3099,7 +3099,7 @@
         "activeMinutes": 27,
         "distanceKm": 3.4
       },
-      "spo2": 99,
+      "spo2": 98,
       "stress": {
         "load": 99
       },
@@ -3107,14 +3107,14 @@
         {
           "hour": 0,
           "hr": 79,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 0,
           "stressLoad": 99
         },
         {
           "hour": 2,
           "hr": 72,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 33,
           "sleepMinutes": 103,
           "stressLoad": 99
@@ -3122,7 +3122,7 @@
         {
           "hour": 4,
           "hr": 67,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 130,
           "sleepMinutes": 120,
           "stressLoad": 99
@@ -3130,7 +3130,7 @@
         {
           "hour": 6,
           "hr": 79,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 293,
           "sleepMinutes": 5,
           "stressLoad": 99
@@ -3138,63 +3138,63 @@
         {
           "hour": 8,
           "hr": 99,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 521,
           "stressLoad": 99
         },
         {
           "hour": 10,
           "hr": 100,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 815,
           "stressLoad": 99
         },
         {
           "hour": 12,
           "hr": 93,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 1173,
           "stressLoad": 99
         },
         {
           "hour": 14,
           "hr": 86,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 1597,
           "stressLoad": 99
         },
         {
           "hour": 16,
           "hr": 95,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 2085,
           "stressLoad": 99
         },
         {
           "hour": 18,
           "hr": 93,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 2639,
           "stressLoad": 99
         },
         {
           "hour": 20,
           "hr": 98,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 3258,
           "stressLoad": 99
         },
         {
           "hour": 22,
           "hr": 74,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 3943,
           "stressLoad": 99
         }
       ]
     },
     {
-      "date": "2026-07-06",
+      "date": "2026-07-10",
       "hr": [
         77,
         89,
@@ -3316,7 +3316,7 @@
       ]
     },
     {
-      "date": "2026-07-07",
+      "date": "2026-07-11",
       "hr": [
         86,
         95,
@@ -3343,7 +3343,7 @@
         "activeMinutes": 17,
         "distanceKm": 2.7
       },
-      "spo2": 99,
+      "spo2": 98,
       "stress": {
         "load": 99
       },
@@ -3351,14 +3351,14 @@
         {
           "hour": 0,
           "hr": 69,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 0,
           "stressLoad": 99
         },
         {
           "hour": 2,
           "hr": 67,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 22,
           "sleepMinutes": 85,
           "stressLoad": 99
@@ -3366,7 +3366,7 @@
         {
           "hour": 4,
           "hr": 67,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 89,
           "sleepMinutes": 120,
           "stressLoad": 99
@@ -3374,7 +3374,7 @@
         {
           "hour": 6,
           "hr": 81,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 201,
           "sleepMinutes": 3,
           "stressLoad": 99
@@ -3382,63 +3382,63 @@
         {
           "hour": 8,
           "hr": 84,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 357,
           "stressLoad": 99
         },
         {
           "hour": 10,
           "hr": 84,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 557,
           "stressLoad": 99
         },
         {
           "hour": 12,
           "hr": 81,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 802,
           "stressLoad": 99
         },
         {
           "hour": 14,
           "hr": 83,
-          "spo2": 99,
+          "spo2": 98,
           "steps": 1092,
           "stressLoad": 99
         },
         {
           "hour": 16,
           "hr": 91,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 1426,
           "stressLoad": 99
         },
         {
           "hour": 18,
           "hr": 91,
-          "spo2": 100,
+          "spo2": 99,
           "steps": 1805,
           "stressLoad": 99
         },
         {
           "hour": 20,
           "hr": 93,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 2228,
           "stressLoad": 99
         },
         {
           "hour": 22,
           "hr": 76,
-          "spo2": 98,
+          "spo2": 97,
           "steps": 2696,
           "stressLoad": 99
         }
       ]
     },
     {
-      "date": "2026-07-08",
+      "date": "2026-07-12",
       "hr": [
         86,
         92,
@@ -3560,7 +3560,7 @@
       ]
     },
     {
-      "date": "2026-07-09",
+      "date": "2026-07-13",
       "hr": [
         82,
         90,
@@ -3682,7 +3682,7 @@
       ]
     },
     {
-      "date": "2026-07-10",
+      "date": "2026-07-14",
       "hr": [
         84,
         91,
@@ -3709,7 +3709,7 @@
         "activeMinutes": 24,
         "distanceKm": 3.3
       },
-      "spo2": 95,
+      "spo2": 96,
       "stress": {
         "load": 99
       },
@@ -3717,14 +3717,14 @@
         {
           "hour": 0,
           "hr": 74,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 0,
           "stressLoad": 99
         },
         {
           "hour": 2,
           "hr": 79,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 29,
           "sleepMinutes": 48,
           "stressLoad": 99
@@ -3732,7 +3732,7 @@
         {
           "hour": 4,
           "hr": 70,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 118,
           "sleepMinutes": 120,
           "stressLoad": 99
@@ -3740,7 +3740,7 @@
         {
           "hour": 6,
           "hr": 75,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 265,
           "sleepMinutes": 5,
           "stressLoad": 99
@@ -3748,56 +3748,56 @@
         {
           "hour": 8,
           "hr": 75,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 471,
           "stressLoad": 99
         },
         {
           "hour": 10,
           "hr": 89,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 735,
           "stressLoad": 99
         },
         {
           "hour": 12,
           "hr": 86,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 1059,
           "stressLoad": 99
         },
         {
           "hour": 14,
           "hr": 94,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 1441,
           "stressLoad": 99
         },
         {
           "hour": 16,
           "hr": 97,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 1883,
           "stressLoad": 99
         },
         {
           "hour": 18,
           "hr": 88,
-          "spo2": 94,
+          "spo2": 95,
           "steps": 2383,
           "stressLoad": 99
         },
         {
           "hour": 20,
           "hr": 108,
-          "spo2": 96,
+          "spo2": 97,
           "steps": 2942,
           "stressLoad": 99
         },
         {
           "hour": 22,
           "hr": 79,
-          "spo2": 95,
+          "spo2": 96,
           "steps": 3559,
           "stressLoad": 99
         }

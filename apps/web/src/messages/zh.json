@@ -281,7 +281,26 @@
       "sedentary": "我已经坐了很久了，现在该做些什么运动或者拉伸？",
       "possibleAlcoholIntake": "我确认最近喝了酒，能根据我的健康数据给我一些针对性的建议吗？",
       "possibleCaffeineIntake": "是的，我最近喝了含咖啡因的饮品，想了解一下这对我的健康有什么影响。",
-      "genericPrompt": "关于「{title}」，我需要一些建议。"
+      "genericPrompt": "关于「{title}」，我需要一些建议。",
+      "banner": {
+        "titleConfirm": "需要确认一下",
+        "titleTriggered": "Active Sensing 已触发",
+        "unknownEvent": "未知事件",
+        "eventJoiner": " 且 ",
+        "contentBoth": "{date}，检测到您的心率和 HRV 出现了一些变化，这和饮酒后或摄入咖啡因后的生理反应有些相似。想确认一下，您最近有喝酒或摄入咖啡因吗？",
+        "contentAlcohol": "{date}，检测到您的心率和 HRV 出现了一些变化，这和饮酒后常见的生理反应有些相似。想确认一下，您最近有摄入酒精吗？",
+        "contentCaffeine": "{date}，注意到您的生理指标有些波动，模式上和我们观察到的咖啡因摄入后有点像。请问您最近有喝咖啡或其他含咖啡因的饮料吗？",
+        "contentGeneric": "{date} {summary}，需要我为您提供一些建议吗？",
+        "events": {
+          "sport_detected": "检测到 HIIT 运动",
+          "late_night_work": "您可能在熬夜工作",
+          "high_stress": "您当前的压力水平较高",
+          "poor_sleep": "您昨晚的睡眠质量欠佳",
+          "sedentary": "您已经久坐不动较长时间了",
+          "possible_alcohol_intake": "可能的饮酒摄入",
+          "possible_caffeine_intake": "可能的咖啡因摄入"
+        }
+      }
     },
     "statusLabel": {
       "error": "严重",

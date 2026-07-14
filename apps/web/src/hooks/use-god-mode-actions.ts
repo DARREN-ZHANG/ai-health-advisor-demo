@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocale, useTranslations } from 'next-intl';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { mapActiveSensingToBanner } from '@/lib/god-mode';
 import { queryKeys } from '@/lib/query-keys';
@@ -27,10 +28,12 @@ export function useGodModeActions() {
   const queryClient = useQueryClient();
   const { setProfileId } = useProfileStore();
   const { showBanner, hideBanner } = useActiveSensingStore();
+  const t = useTranslations('advisor.activeSensing.banner');
+  const locale = useLocale();
 
   const syncActiveSensingBanner = (activeSensing: ActiveSensingState | null) => {
     if (activeSensing?.visible && activeSensing.surface === 'banner') {
-      showBanner(mapActiveSensingToBanner(activeSensing));
+      showBanner(mapActiveSensingToBanner(activeSensing, t, locale));
       return;
     }
 

@@ -36,7 +36,7 @@
       "spo2": 99
     }
   },
-  "initialDemoTime": "2026-07-10T07:05",
+  "initialDemoTime": "2026-07-14T07:05",
   "historyRef": {
     "file": "history/profile-a-daily-records.json"
   },
