@@ -7,19 +7,25 @@ export async function profileRoutes(app: FastifyInstance) {
   const service = new ProfileService(app.runtime);
 
   app.get('/profiles', async (request) => {
-    const profiles = service.listProfiles();
+    const profiles = service.listProfiles(request.ctx.sessionId);
     return createSuccessResponse(profiles, buildMeta(request));
   });
 
   app.get<{ Params: { profileId: string } }>('/profiles/:profileId', async (request, reply) => {
     const { profileId } = request.params;
     try {
-      const profile = service.getProfile(profileId);
+      const profile = service.getProfile(profileId, request.ctx.sessionId);
       return createSuccessResponse(profile, buildMeta(request));
     } catch {
-      return reply.status(404).send(
-        createErrorResponse(ErrorCode.PROFILE_NOT_FOUND, `Profile ${profileId} not found`, buildMeta(request)),
-      );
+      return reply
+        .status(404)
+        .send(
+          createErrorResponse(
+            ErrorCode.PROFILE_NOT_FOUND,
+            `Profile ${profileId} not found`,
+            buildMeta(request),
+          ),
+        );
     }
   });
 }

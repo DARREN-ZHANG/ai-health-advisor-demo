@@ -260,7 +260,7 @@ describe('God-Mode Routes', () => {
       expect(app.runtime.sessionStore.store.get(sessionId)).toBeUndefined();
     });
 
-    test('scope=all 在无 session header 时清空全部会话与分析记忆', async () => {
+    test('scope=all 在无 session header 时不会清空其他 Session 的记忆', async () => {
       app.runtime.sessionStore.store.appendMessage('sess-global-a', 'profile-a', {
         role: 'user',
         text: '保留前的会话 A',
@@ -281,10 +281,10 @@ describe('God-Mode Routes', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(app.runtime.sessionStore.store.get('sess-global-a')).toBeUndefined();
-      expect(app.runtime.sessionStore.store.get('sess-global-b')).toBeUndefined();
-      expect(app.runtime.analyticalMemory.get('sess-global-a')).toBeUndefined();
-      expect(app.runtime.analyticalMemory.get('sess-global-b')).toBeUndefined();
+      expect(app.runtime.sessionStore.store.get('sess-global-a')).toBeDefined();
+      expect(app.runtime.sessionStore.store.get('sess-global-b')).toBeDefined();
+      expect(app.runtime.analyticalMemory.get('sess-global-a')).toBeDefined();
+      expect(app.runtime.analyticalMemory.get('sess-global-b')).toBeDefined();
     });
 
     test('无效 scope 返回 400', async () => {
@@ -317,6 +317,32 @@ describe('God-Mode Routes', () => {
   });
 
   describe('POST /god-mode/timeline-append', () => {
+    test('同一 profile 的时间线操作在不同 Session 间隔离', async () => {
+      const sessionA = { 'x-session-id': 'timeline-session-a' };
+      const sessionB = { 'x-session-id': 'timeline-session-b' };
+
+      const beforeB = await app.inject({
+        method: 'GET',
+        url: '/god-mode/state',
+        headers: sessionB,
+      });
+      const appendA = await app.inject({
+        method: 'POST',
+        url: '/god-mode/timeline-append',
+        headers: sessionA,
+        payload: {
+          segmentType: 'hydration_intake',
+          params: { amountMl: 300 },
+        },
+      });
+      const afterB = await app.inject({ method: 'GET', url: '/god-mode/state', headers: sessionB });
+
+      expect(appendA.statusCode).toBe(200);
+      expect(appendA.json().data.currentDemoTime).not.toBe(beforeB.json().data.currentDemoTime);
+      expect(afterB.json().data.currentDemoTime).toBe(beforeB.json().data.currentDemoTime);
+      expect(afterB.json().data.injectedEvents).toEqual([]);
+    });
+
     test('追加 meal_intake 片段返回 200', async () => {
       // 先重置确保干净状态
       await app.inject({
@@ -410,10 +436,12 @@ describe('God-Mode Routes', () => {
     });
 
     test('饮水记录支持 Mock 当日时间、原子编辑与删除', async () => {
+      const headers = { 'x-session-id': 'sess-hydration-edit' };
       await app.inject({
         method: 'POST',
         url: '/god-mode/reset',
         payload: { scope: 'all' },
+        headers,
       });
 
       const created = await app.inject({
@@ -425,6 +453,7 @@ describe('God-Mode Routes', () => {
           advanceClock: false,
           params: { source: 'life_log', amountMl: 250 },
         },
+        headers,
       });
       expect(created.statusCode).toBe(200);
       const createdBody = created.json();
@@ -442,6 +471,7 @@ describe('God-Mode Routes', () => {
           advanceClock: false,
           params: { source: 'life_log', amountMl: 500 },
         },
+        headers,
       });
       expect(updated.statusCode).toBe(200);
       const updatedId = updated.json().data.lastTimelineSegmentId as string;
@@ -450,6 +480,7 @@ describe('God-Mode Routes', () => {
       const removed = await app.inject({
         method: 'DELETE',
         url: `/god-mode/timeline-segments/${updatedId}`,
+        headers,
       });
       expect(removed.statusCode).toBe(200);
     });
@@ -466,10 +497,12 @@ describe('God-Mode Routes', () => {
     });
 
     test('caffeine_intake 片段重复删除时第二次返回 404 而非 500', async () => {
+      const headers = { 'x-session-id': 'sess-caffeine-delete' };
       await app.inject({
         method: 'POST',
         url: '/god-mode/reset',
         payload: { scope: 'all' },
+        headers,
       });
 
       const created = await app.inject({
@@ -486,6 +519,7 @@ describe('God-Mode Routes', () => {
             dose: 'light',
           },
         },
+        headers,
       });
 
       expect(created.statusCode).toBe(200);
@@ -494,12 +528,14 @@ describe('God-Mode Routes', () => {
       const removed = await app.inject({
         method: 'DELETE',
         url: `/god-mode/timeline-segments/${segmentId}`,
+        headers,
       });
       expect(removed.statusCode).toBe(200);
 
       const removedAgain = await app.inject({
         method: 'DELETE',
         url: `/god-mode/timeline-segments/${segmentId}`,
+        headers,
       });
       expect(removedAgain.statusCode).toBe(404);
       const body = removedAgain.json();

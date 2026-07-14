@@ -25,22 +25,43 @@ function makeMetrics() {
   const calls: Record<string, number> = {};
   return {
     calls,
-    incrementApiRequests: () => { calls.apiRequests = (calls.apiRequests ?? 0) + 1; },
-    incrementAiTimeout: () => { calls.aiTimeout = (calls.aiTimeout ?? 0) + 1; },
-    incrementFallbackUsed: () => { calls.fallbackUsed = (calls.fallbackUsed ?? 0) + 1; },
-    incrementProviderError: () => { calls.providerError = (calls.providerError ?? 0) + 1; },
-    incrementBriefCacheHit: () => { calls.briefCacheHit = (calls.briefCacheHit ?? 0) + 1; },
+    incrementApiRequests: () => {
+      calls.apiRequests = (calls.apiRequests ?? 0) + 1;
+    },
+    incrementAiTimeout: () => {
+      calls.aiTimeout = (calls.aiTimeout ?? 0) + 1;
+    },
+    incrementFallbackUsed: () => {
+      calls.fallbackUsed = (calls.fallbackUsed ?? 0) + 1;
+    },
+    incrementProviderError: () => {
+      calls.providerError = (calls.providerError ?? 0) + 1;
+    },
+    incrementBriefCacheHit: () => {
+      calls.briefCacheHit = (calls.briefCacheHit ?? 0) + 1;
+    },
     recordLatency: () => {},
-    snapshot: () => ({ apiRequests: {}, aiTimeouts: 0, fallbackUsed: 0, providerErrors: 0, briefCacheHits: 0, latencyByRoute: {}, totalRequests: 0, startTime: '' }),
+    snapshot: () => ({
+      apiRequests: {},
+      aiTimeouts: 0,
+      fallbackUsed: 0,
+      providerErrors: 0,
+      briefCacheHits: 0,
+      latencyByRoute: {},
+      totalRequests: 0,
+      startTime: '',
+    }),
   };
 }
 
 function makeRegistry(): RuntimeRegistry {
+  const overrideStore = {
+    getSyncState: vi.fn().mockReturnValue({ lastSyncedMeasuredAt: null, syncSessions: [] }),
+    getSyncedEvents: vi.fn().mockReturnValue([]),
+  };
   return {
-    overrideStore: {
-      getSyncState: vi.fn().mockReturnValue({ lastSyncedMeasuredAt: null, syncSessions: [] }),
-      getSyncedEvents: vi.fn().mockReturnValue([]),
-    },
+    getSessionSandbox: vi.fn().mockReturnValue({ overrideStore }),
+    getRawProfile: vi.fn().mockReturnValue({ profile: { profileId: 'profile-a' }, records: [] }),
     getActiveOverrides: vi.fn().mockReturnValue([]),
     getInjectedEvents: vi.fn().mockReturnValue([]),
   } as unknown as RuntimeRegistry;
@@ -63,7 +84,11 @@ const completeResponse: AgentResponseEnvelope = {
   statusColor: 'good',
   chartTokens: [],
   microTips: [],
-  meta: { taskType: AgentTaskType.HOMEPAGE_SUMMARY, pageContext: defaultPageContext, finishReason: 'complete' },
+  meta: {
+    taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+    pageContext: defaultPageContext,
+    finishReason: 'complete',
+  },
 };
 
 describe('AiOrchestrator', () => {
@@ -121,10 +146,21 @@ describe('AiOrchestrator', () => {
     });
     let timings: Record<string, unknown> | undefined;
 
-    await orchestrator.execute({
-      requestId: 'req-timing', sessionId: 'sess-1', profileId: 'profile-a',
-      taskType: AgentTaskType.HOMEPAGE_SUMMARY, pageContext: defaultPageContext,
-    }, undefined, { onTimings: (value) => { timings = value; } });
+    await orchestrator.execute(
+      {
+        requestId: 'req-timing',
+        sessionId: 'sess-1',
+        profileId: 'profile-a',
+        taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+        pageContext: defaultPageContext,
+      },
+      undefined,
+      {
+        onTimings: (value) => {
+          timings = value;
+        },
+      },
+    );
 
     expect(timings).toMatchObject({
       cacheLookupMs: expect.any(Number),
@@ -161,11 +197,20 @@ describe('AiOrchestrator', () => {
     };
     mockedExecuteAgent.mockResolvedValueOnce(fallbackResponse);
     const metrics = makeMetrics();
-    const orchestrator = new AiOrchestrator({ registry: makeRegistry(), metrics, timeoutMs: 6000, memoryServices: makeMemoryServices(), modelVersion: 'gpt-test' });
+    const orchestrator = new AiOrchestrator({
+      registry: makeRegistry(),
+      metrics,
+      timeoutMs: 6000,
+      memoryServices: makeMemoryServices(),
+      modelVersion: 'gpt-test',
+    });
 
     const result = await orchestrator.execute({
-      requestId: 'req-2', sessionId: 'sess-1', profileId: 'profile-a',
-      taskType: AgentTaskType.HOMEPAGE_SUMMARY, pageContext: defaultPageContext,
+      requestId: 'req-2',
+      sessionId: 'sess-1',
+      profileId: 'profile-a',
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: defaultPageContext,
     });
 
     expect(result.meta.finishReason).toBe('fallback');
@@ -181,11 +226,20 @@ describe('AiOrchestrator', () => {
     };
     mockedExecuteAgent.mockResolvedValueOnce(timeoutResponse);
     const metrics = makeMetrics();
-    const orchestrator = new AiOrchestrator({ registry: makeRegistry(), metrics, timeoutMs: 6000, memoryServices: makeMemoryServices(), modelVersion: 'gpt-test' });
+    const orchestrator = new AiOrchestrator({
+      registry: makeRegistry(),
+      metrics,
+      timeoutMs: 6000,
+      memoryServices: makeMemoryServices(),
+      modelVersion: 'gpt-test',
+    });
 
     const result = await orchestrator.execute({
-      requestId: 'req-3', sessionId: 'sess-1', profileId: 'profile-a',
-      taskType: AgentTaskType.HOMEPAGE_SUMMARY, pageContext: defaultPageContext,
+      requestId: 'req-3',
+      sessionId: 'sess-1',
+      profileId: 'profile-a',
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: defaultPageContext,
     });
 
     expect(result.meta.finishReason).toBe('timeout');
@@ -195,12 +249,21 @@ describe('AiOrchestrator', () => {
   it('provider error 时增加 providerError 计数并抛出', async () => {
     mockedExecuteAgent.mockRejectedValueOnce(new Error('connection failed'));
     const metrics = makeMetrics();
-    const orchestrator = new AiOrchestrator({ registry: makeRegistry(), metrics, timeoutMs: 6000, memoryServices: makeMemoryServices(), modelVersion: 'gpt-test' });
+    const orchestrator = new AiOrchestrator({
+      registry: makeRegistry(),
+      metrics,
+      timeoutMs: 6000,
+      memoryServices: makeMemoryServices(),
+      modelVersion: 'gpt-test',
+    });
 
     await expect(
       orchestrator.execute({
-        requestId: 'req-4', sessionId: 'sess-1', profileId: 'profile-a',
-        taskType: AgentTaskType.HOMEPAGE_SUMMARY, pageContext: defaultPageContext,
+        requestId: 'req-4',
+        sessionId: 'sess-1',
+        profileId: 'profile-a',
+        taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+        pageContext: defaultPageContext,
       }),
     ).rejects.toThrow('connection failed');
 
@@ -214,7 +277,9 @@ describe('AiOrchestrator', () => {
       registry: makeRegistry(),
       metrics,
       timeoutMs: 60000,
-      memoryServices: makeMemoryServices({ payload: completeResponse as unknown as Record<string, unknown> }),
+      memoryServices: makeMemoryServices({
+        payload: completeResponse as unknown as Record<string, unknown>,
+      }),
       modelVersion: 'gpt-test',
     });
 

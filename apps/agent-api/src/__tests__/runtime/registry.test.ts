@@ -9,6 +9,7 @@ import type { RuntimeRegistry } from '../../runtime/registry';
 
 // vitest 从 apps/agent-api 运行，需要回溯到 monorepo 根
 const DATA_DIR = path.resolve(process.cwd(), '../../data/sandbox');
+const SESSION_ID = 'registry-test-session';
 
 describe('RuntimeRegistry', () => {
   let registry: RuntimeRegistry;
@@ -31,7 +32,7 @@ describe('RuntimeRegistry', () => {
   });
 
   it('getProfile 返回有效的 profile 数据', () => {
-    const data = registry.getProfile('profile-a');
+    const data = registry.getProfile('profile-a', SESSION_ID);
     expect(data.profile.profileId).toBe('profile-a');
     expect(data.profile.name.zh.length).toBeGreaterThan(0);
     expect(data.profile.name.en.length).toBeGreaterThan(0);
@@ -39,16 +40,16 @@ describe('RuntimeRegistry', () => {
   });
 
   it('getRawProfile 返回不含 override 的原始数据', () => {
-    const data = registry.getRawProfile('profile-a');
+    const data = registry.getRawProfile('profile-a', SESSION_ID);
     expect(data.profile.profileId).toBe('profile-a');
   });
 
   it('getActiveOverrides 初始为空', () => {
-    expect(registry.getActiveOverrides('profile-a')).toHaveLength(0);
+    expect(registry.getActiveOverrides('profile-a', SESSION_ID)).toHaveLength(0);
   });
 
   it('getInjectedEvents 初始为空', () => {
-    expect(registry.getInjectedEvents('profile-a')).toHaveLength(0);
+    expect(registry.getInjectedEvents('profile-a', SESSION_ID)).toHaveLength(0);
   });
 
   it('sessionMemory 可用', () => {
@@ -77,23 +78,33 @@ describe('RuntimeRegistry', () => {
   });
 
   it('overrideStore 可用', () => {
-    expect(registry.overrideStore.getCurrentProfileId()).toBeDefined();
+    expect(
+      registry.getSessionSandbox(SESSION_ID).overrideStore.getCurrentProfileId(),
+    ).toBeDefined();
   });
 
   it('当前日发生同步后仍保留历史 HRV', () => {
-    const clock = registry.overrideStore.getDemoClock('profile-a');
+    const overrideStore = registry.getSessionSandbox(SESSION_ID).overrideStore;
+    const clock = overrideStore.getDemoClock('profile-a');
     const currentDate = clock.currentTime.slice(0, 10);
-    const rawCurrentDay = registry.getRawProfile('profile-a').records.find((record) => record.date === currentDate);
+    const rawCurrentDay = registry
+      .getRawProfile('profile-a', SESSION_ID)
+      .records.find((record) => record.date === currentDate);
 
     expect(rawCurrentDay?.hrv).toBeDefined();
 
     try {
-      registry.overrideStore.performSync('profile-a', 'manual_refresh');
-      const currentDay = registry.getProfile('profile-a').records.find((record) => record.date === currentDate);
+      overrideStore.performSync('profile-a', 'manual_refresh');
+      const currentDay = registry
+        .getProfile('profile-a', SESSION_ID)
+        .records.find((record) => record.date === currentDate);
 
-      expect(currentDay?.hrv).toBe(rawCurrentDay!.hrv);
+      expect(currentDay?.hrv).toBe(
+        registry.getRawProfile('profile-a', SESSION_ID).profile.dailyBaseline?.hrv ??
+          rawCurrentDay!.hrv,
+      );
     } finally {
-      registry.overrideStore.reset('all');
+      overrideStore.reset('all');
     }
   });
 
@@ -139,16 +150,17 @@ describe('RuntimeRegistry', () => {
   });
 
   it('getTimelineSync exposes synced device samples after manual sync', () => {
+    const overrideStore = registry.getSessionSandbox(SESSION_ID).overrideStore;
     try {
-      registry.overrideStore.performSync('profile-a', 'manual_refresh');
+      overrideStore.performSync('profile-a', 'manual_refresh');
 
-      const timelineSync = registry.getTimelineSync?.('profile-a');
+      const timelineSync = registry.getTimelineSync?.('profile-a', SESSION_ID);
 
       expect(timelineSync).toBeDefined();
       expect(timelineSync?.syncedEvents.length).toBeGreaterThan(0);
       expect(timelineSync?.syncedEvents.some((event) => event.metric === 'heartRate')).toBe(true);
     } finally {
-      registry.overrideStore.reset('all');
+      overrideStore.reset('all');
     }
   });
 

@@ -4,6 +4,8 @@ import { buildApp } from '../../../app.js';
 import type { FastifyInstance } from 'fastify';
 
 const DATA_DIR = path.resolve(process.cwd(), '../../data/sandbox');
+const SESSION_ID = 'data-routes-session';
+const SESSION_HEADERS = { 'x-session-id': SESSION_ID };
 
 describe('Data Routes', () => {
   let app: FastifyInstance;
@@ -70,26 +72,33 @@ describe('Data Routes', () => {
     });
 
     test('当前日同步后 hrv tab 仍返回最近一天 HRV', async () => {
-      const clock = app.runtime.overrideStore.getDemoClock('profile-a');
+      const overrideStore = app.runtime.getSessionSandbox(SESSION_ID).overrideStore;
+      const clock = overrideStore.getDemoClock('profile-a');
       const currentDate = clock.currentTime.slice(0, 10);
-      const rawCurrentDay = app.runtime.getRawProfile('profile-a').records.find((record) => record.date === currentDate);
+      const rawCurrentDay = app.runtime
+        .getRawProfile('profile-a', SESSION_ID)
+        .records.find((record) => record.date === currentDate);
 
       expect(rawCurrentDay?.hrv).toBeDefined();
 
       try {
-        app.runtime.overrideStore.performSync('profile-a', 'manual_refresh');
+        overrideStore.performSync('profile-a', 'manual_refresh');
         const response = await app.inject({
           method: 'GET',
           url: `/profiles/profile-a/data?tab=hrv&timeframe=custom&startDate=${currentDate}&endDate=${currentDate}`,
+          headers: SESSION_HEADERS,
         });
 
         expect(response.statusCode).toBe(200);
         const body = response.json();
         expect(body.success).toBe(true);
         expect(body.data.timeline).toHaveLength(1);
-        expect(body.data.timeline[0].values.hrv).toBe(rawCurrentDay!.hrv);
+        expect(body.data.timeline[0].values.hrv).toBe(
+          app.runtime.getRawProfile('profile-a', SESSION_ID).profile.dailyBaseline?.hrv ??
+            rawCurrentDay!.hrv,
+        );
       } finally {
-        app.runtime.overrideStore.reset('all');
+        overrideStore.reset('all');
       }
     });
 
@@ -142,15 +151,20 @@ describe('Data Routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/profiles/profile-a/data?tab=activity&timeframe=week',
+        headers: SESSION_HEADERS,
       });
       const body = response.json();
-      const records = app.runtime.getRawProfile('profile-a').records;
+      const records = app.runtime.getRawProfile('profile-a', SESSION_ID).records;
       const lastDate = body.data.timeline.at(-1).date;
-      const raw = records.find((r: { date: string; activity?: { distanceKm?: number } }) => r.date === lastDate);
+      const raw = records.find(
+        (r: { date: string; activity?: { distanceKm?: number } }) => r.date === lastDate,
+      );
 
       // 沙箱数据中 distanceKm 已落盘；缺失时也允许接口返回 null（不伪造）
       if (raw?.activity?.distanceKm != null) {
-        expect(body.data.timeline.at(-1).values['activity.distanceKm']).toBe(raw.activity.distanceKm);
+        expect(body.data.timeline.at(-1).values['activity.distanceKm']).toBe(
+          raw.activity.distanceKm,
+        );
       } else {
         expect(body.data.timeline.at(-1).values['activity.distanceKm']).toBeNull();
       }
@@ -170,19 +184,25 @@ describe('Data Routes', () => {
       expect(Array.isArray(body.data)).toBe(true);
       expect(body.data).toHaveLength(2);
       expect(body.data[0].token).toBe('HRV_7DAYS');
-      expect(body.data[0].timeline.some((point: { values: Record<string, number | null> }) => point.values.hrv != null)).toBe(true);
+      expect(
+        body.data[0].timeline.some(
+          (point: { values: Record<string, number | null> }) => point.values.hrv != null,
+        ),
+      ).toBe(true);
       expect(body.data[1].token).toBe('SLEEP_7DAYS');
     });
 
     test('day timeframe 的 HRV chart-data 使用日级 HRV，不返回空 intraday', async () => {
-      const clock = app.runtime.overrideStore.getDemoClock('profile-a');
+      const overrideStore = app.runtime.getSessionSandbox(SESSION_ID).overrideStore;
+      const clock = overrideStore.getDemoClock('profile-a');
       const currentDate = clock.currentTime.slice(0, 10);
 
       try {
-        app.runtime.overrideStore.performSync('profile-a', 'manual_refresh');
+        overrideStore.performSync('profile-a', 'manual_refresh');
         const response = await app.inject({
           method: 'GET',
           url: '/profiles/profile-a/chart-data?tokens=HRV_7DAYS&timeframe=day',
+          headers: SESSION_HEADERS,
         });
 
         expect(response.statusCode).toBe(200);
@@ -192,7 +212,7 @@ describe('Data Routes', () => {
         expect(body.data[0].timeline[0].date).toBe(currentDate);
         expect(body.data[0].timeline[0].values.hrv).toEqual(expect.any(Number));
       } finally {
-        app.runtime.overrideStore.reset('all');
+        overrideStore.reset('all');
       }
     });
 

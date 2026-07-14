@@ -1,4 +1,14 @@
-import type { DailyRecord, DataTab, Timeframe, DateRange, StressTimelineResponse, StressTimelinePoint, StressTrend, DataCenterResponse, DeviceEvent } from '@health-advisor/shared';
+import type {
+  DailyRecord,
+  DataTab,
+  Timeframe,
+  DateRange,
+  StressTimelineResponse,
+  StressTimelinePoint,
+  StressTrend,
+  DataCenterResponse,
+  DeviceEvent,
+} from '@health-advisor/shared';
 import { timeframeToDateRange } from '@health-advisor/shared';
 import { normalizeTimeline, rollingMedian, type TimelinePoint } from '@health-advisor/sandbox';
 import type { RuntimeRegistry } from '../../runtime/registry.js';
@@ -6,9 +16,21 @@ import type { RuntimeRegistry } from '../../runtime/registry.js';
 // tab → 需要提取的 metrics
 const TAB_METRICS: Partial<Record<DataTab, string[]>> = {
   hrv: ['hrv'],
-  sleep: ['sleep.totalMinutes', 'sleep.score', 'sleep.stages.deep', 'sleep.stages.rem', 'sleep.stages.light', 'sleep.stages.awake'],
+  sleep: [
+    'sleep.totalMinutes',
+    'sleep.score',
+    'sleep.stages.deep',
+    'sleep.stages.rem',
+    'sleep.stages.light',
+    'sleep.stages.awake',
+  ],
   'resting-hr': ['hr'],
-  activity: ['activity.steps', 'activity.calories', 'activity.activeMinutes', 'activity.distanceKm'],
+  activity: [
+    'activity.steps',
+    'activity.calories',
+    'activity.activeMinutes',
+    'activity.distanceKm',
+  ],
   spo2: ['spo2'],
   // stress tab: 主读 stress.load（含 override），同时携带底层指标供推导 fallback
   stress: ['stress.load', 'hr', 'sleep.totalMinutes', 'sleep.stages.deep', 'activity.steps'],
@@ -61,17 +83,19 @@ export class DataService {
    * - 检测 demo clock，用已同步事件聚合替换当前活动日记录
    * 此处直接返回其 records，避免重复替换。
    */
-  private getRecordsWithCurrentDay(profileId: string): DailyRecord[] {
-    return this.registry.getProfile(profileId).records;
+  private getRecordsWithCurrentDay(profileId: string, sessionId: string): DailyRecord[] {
+    return this.registry.getProfile(profileId, sessionId).records;
   }
 
   /**
    * 获取 demo 模式下的参考日期。
    * demo 时钟存在时返回其日期，否则返回 undefined（由调用方使用 new Date()）
    */
-  private getDemoReferenceDate(profileId: string): string | undefined {
+  private getDemoReferenceDate(profileId: string, sessionId: string): string | undefined {
     try {
-      const clock = this.registry.overrideStore.getDemoClock(profileId);
+      const clock = this.registry
+        .getSessionSandbox(sessionId)
+        .overrideStore.getDemoClock(profileId);
       return clock.currentTime?.slice(0, 10) ?? undefined;
     } catch {
       return undefined;
@@ -80,11 +104,12 @@ export class DataService {
 
   getTimelineData(
     profileId: string,
+    sessionId: string,
     timeframe: Timeframe,
     customDateRange?: DateRange,
   ): TimelineDataResponse {
-    const records = this.getRecordsWithCurrentDay(profileId);
-    const refDate = this.getDemoReferenceDate(profileId);
+    const records = this.getRecordsWithCurrentDay(profileId, sessionId);
+    const refDate = this.getDemoReferenceDate(profileId, sessionId);
     const range = timeframeToDateRange(timeframe, refDate, customDateRange);
     const filtered = this.registry.selectByTimeframe(records, timeframe, {
       referenceDate: range.end,
@@ -96,12 +121,13 @@ export class DataService {
 
   getDataCenterData(
     profileId: string,
+    sessionId: string,
     tab: DataTab,
     timeframe: Timeframe,
     customDateRange?: DateRange,
   ): DataCenterResponse | StressTimelineResponse {
-    const records = this.getRecordsWithCurrentDay(profileId);
-    const refDate = this.getDemoReferenceDate(profileId);
+    const records = this.getRecordsWithCurrentDay(profileId, sessionId);
+    const refDate = this.getDemoReferenceDate(profileId, sessionId);
     const range = timeframeToDateRange(timeframe, refDate, customDateRange);
     const filtered = this.registry.selectByTimeframe(records, timeframe, {
       referenceDate: range.end,
@@ -127,27 +153,29 @@ export class DataService {
   }
 
   /** 暴露给外部（如 ChartService）使用的 records 获取方法 */
-  getRecordsForProfile(profileId: string): DailyRecord[] {
-    return this.getRecordsWithCurrentDay(profileId);
+  getRecordsForProfile(profileId: string, sessionId: string): DailyRecord[] {
+    return this.getRecordsWithCurrentDay(profileId, sessionId);
   }
 
-  getDeviceSyncOverview(profileId: string): DeviceSyncOverviewResponse {
-    const syncState = this.registry.overrideStore.getSyncState(profileId);
-    const pendingEvents = this.registry.overrideStore.getPendingEvents(profileId);
-    const syncedEvents = this.registry.overrideStore.getSyncedEvents(profileId);
+  getDeviceSyncOverview(profileId: string, sessionId: string): DeviceSyncOverviewResponse {
+    const overrideStore = this.registry.getSessionSandbox(sessionId).overrideStore;
+    const syncState = overrideStore.getSyncState(profileId);
+    const pendingEvents = overrideStore.getPendingEvents(profileId);
+    const syncedEvents = overrideStore.getSyncedEvents(profileId);
     const allEvents = [...syncedEvents, ...pendingEvents];
 
     // 按时间排序以获取首尾事件
-    const sortedEvents = [...allEvents].sort((a, b) =>
-      a.measuredAt.localeCompare(b.measuredAt),
-    );
+    const sortedEvents = [...allEvents].sort((a, b) => a.measuredAt.localeCompare(b.measuredAt));
 
     // 将 SyncSession 映射为兼容旧格式的 syncSessions
     const syncSessions = syncState.syncSessions.map((session) => ({
       syncId: session.syncId,
       connectedAt: session.startedAt,
       disconnectedAt: session.finishedAt,
-      uploadedRange: session.uploadedMeasuredRange ?? { start: session.startedAt, end: session.finishedAt },
+      uploadedRange: session.uploadedMeasuredRange ?? {
+        start: session.startedAt,
+        end: session.finishedAt,
+      },
       sampleCount: session.uploadedEventCount,
       firstSampleAt: session.uploadedMeasuredRange?.start ?? null,
       lastSampleAt: session.uploadedMeasuredRange?.end ?? null,
@@ -167,27 +195,27 @@ export class DataService {
 
   getDeviceSyncSamples(
     profileId: string,
+    sessionId: string,
     scope: 'pending' | 'sync-session',
     syncId?: string,
     limit?: number,
   ): DeviceSyncSamplesResponse {
+    const overrideStore = this.registry.getSessionSandbox(sessionId).overrideStore;
     let events: DeviceEvent[];
 
     if (scope === 'pending') {
-      events = this.registry.overrideStore.getPendingEvents(profileId);
+      events = overrideStore.getPendingEvents(profileId);
     } else {
       // sync-session: 从 syncState 中找到对应的 session，返回其上传的事件
-      const syncState = this.registry.overrideStore.getSyncState(profileId);
+      const syncState = overrideStore.getSyncState(profileId);
       const session = syncState.syncSessions.find((s) => s.syncId === syncId);
       if (!session) {
         throw new Error(`Sync session not found: ${syncId}`);
       }
-      const syncedEvents = this.registry.overrideStore.getSyncedEvents(profileId);
+      const syncedEvents = overrideStore.getSyncedEvents(profileId);
       if (session.uploadedMeasuredRange) {
         const { start, end } = session.uploadedMeasuredRange;
-        events = syncedEvents.filter(
-          (e) => e.measuredAt >= start && e.measuredAt <= end,
-        );
+        events = syncedEvents.filter((e) => e.measuredAt >= start && e.measuredAt <= end);
       } else {
         events = [];
       }
@@ -214,30 +242,26 @@ export class DataService {
 function deriveStressLoadScore(p: TimelinePoint): number {
   // HRV 贡献：HRV 越低压力越大，基准 60ms
   const hrv = p.values['hrv'];
-  const hrvContrib = hrv != null
-    ? Math.max(0, Math.min(100, 50 + (60 - hrv) * 2))
-    : 50;
+  const hrvContrib = hrv != null ? Math.max(0, Math.min(100, 50 + (60 - hrv) * 2)) : 50;
 
   // 睡眠贡献：睡眠越少压力越大，基准 480 分钟（8 小时）
   const sleepMinutes = p.values['sleep.totalMinutes'];
-  const sleepContrib = sleepMinutes != null
-    ? Math.max(0, Math.min(100, 100 - (sleepMinutes / 480) * 80))
-    : 50;
+  const sleepContrib =
+    sleepMinutes != null ? Math.max(0, Math.min(100, 100 - (sleepMinutes / 480) * 80)) : 50;
 
   // 深睡贡献：深睡越少压力越大，基准 90 分钟
   const deepSleep = p.values['sleep.stages.deep'];
-  const deepSleepContrib = deepSleep != null
-    ? Math.max(0, Math.min(100, 100 - (deepSleep / 90) * 60))
-    : 50;
+  const deepSleepContrib =
+    deepSleep != null ? Math.max(0, Math.min(100, 100 - (deepSleep / 90) * 60)) : 50;
 
   // 活动贡献：中等活动量降低压力
   const steps = p.values['activity.steps'];
-  const activityContrib = steps != null
-    ? Math.max(0, Math.min(100, 100 - Math.min(steps / 8000, 1) * 40))
-    : 50;
+  const activityContrib =
+    steps != null ? Math.max(0, Math.min(100, 100 - Math.min(steps / 8000, 1) * 40)) : 50;
 
   // 加权求和
-  const score = hrvContrib * 0.35 + sleepContrib * 0.25 + deepSleepContrib * 0.2 + activityContrib * 0.2;
+  const score =
+    hrvContrib * 0.35 + sleepContrib * 0.25 + deepSleepContrib * 0.2 + activityContrib * 0.2;
   return Math.round(Math.max(0, Math.min(100, score)));
 }
 
@@ -266,9 +290,10 @@ function buildStressTimelineResponse(
   }));
 
   const validScores = points.map((p) => p.stressLoadScore);
-  const average = validScores.length > 0
-    ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length)
-    : 0;
+  const average =
+    validScores.length > 0
+      ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length)
+      : 0;
   const max = validScores.length > 0 ? Math.round(Math.max(...validScores)) : 0;
   const min = validScores.length > 0 ? Math.round(Math.min(...validScores)) : 0;
 

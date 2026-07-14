@@ -7,11 +7,7 @@ import type {
   MicroEventParams,
   MicroEventType,
 } from '@health-advisor/shared';
-import type {
-  OverrideEntry,
-  DatedEvent,
-  SyncState,
-} from '@health-advisor/sandbox';
+import type { OverrideEntry, DatedEvent, SyncState } from '@health-advisor/sandbox';
 import {
   buildInitialProfileState,
   generateEventsForSegment,
@@ -72,14 +68,26 @@ export interface OverrideStoreService {
     params?: Record<string, number | string | boolean>,
     offsetMinutes?: number,
     options?: { durationMinutes?: number; advanceClock?: boolean; startTime?: string },
-  ): { events: DeviceEvent[]; newCurrentTime: string; segmentId: string; segmentStart: string; segmentEnd: string };
+  ): {
+    events: DeviceEvent[];
+    newCurrentTime: string;
+    segmentId: string;
+    segmentStart: string;
+    segmentEnd: string;
+  };
   replaceSegment(
     profileId: string,
     segmentId: string,
     segmentType: ActivitySegmentType,
     params?: Record<string, number | string | boolean>,
     options?: { durationMinutes?: number; startTime?: string },
-  ): { events: DeviceEvent[]; newCurrentTime: string; segmentId: string; segmentStart: string; segmentEnd: string };
+  ): {
+    events: DeviceEvent[];
+    newCurrentTime: string;
+    segmentId: string;
+    segmentStart: string;
+    segmentEnd: string;
+  };
   removeSegment(profileId: string, segmentId: string): boolean;
 
   // — 追加微事件 —
@@ -91,13 +99,17 @@ export interface OverrideStoreService {
   ): { events: DeviceEvent[]; newCurrentTime: string; eventStart: string; eventEnd: string };
 
   // — 同步操作 —
-  getSyncState(profileId: string): { lastSyncedMeasuredAt: string | null; syncSessions: SyncSession[] };
+  getSyncState(profileId: string): {
+    lastSyncedMeasuredAt: string | null;
+    syncSessions: SyncSession[];
+  };
   getPendingEvents(profileId: string): DeviceEvent[];
   getSyncedEvents(profileId: string): DeviceEvent[];
   performSync(profileId: string, trigger: 'app_open' | 'manual_refresh'): SyncSession;
 
   // — 时间轴重置 —
   resetProfileTimeline(profileId: string): void;
+  removeProfile(profileId: string): void;
 }
 
 // ============================================================
@@ -106,7 +118,14 @@ export interface OverrideStoreService {
 
 export function createOverrideStore(
   defaultProfileId: string,
-  options?: { dataDir?: string; initialDemoTime?: string },
+  options?: {
+    dataDir?: string;
+    initialDemoTime?: string;
+    getInitialState?: (profileId: string) => {
+      clock: DemoClock;
+      segments: ActivitySegment[];
+    };
+  },
 ): OverrideStoreService {
   let currentProfileId = defaultProfileId;
   const overridesByProfile = new Map<string, OverrideEntry[]>();
@@ -122,8 +141,13 @@ export function createOverrideStore(
     let segments: ActivitySegment[];
     let rawEvents: DeviceEvent[];
 
-    // 如果提供了 dataDir，从 timeline script 构建完整初始状态
-    if (options?.dataDir) {
+    if (options?.getInitialState) {
+      const initial = options.getInitialState(profileId);
+      clock = { ...initial.clock };
+      segments = structuredClone(initial.segments);
+      rawEvents = segments.flatMap((seg) => generateEventsForSegment(seg));
+      // 如果提供了 dataDir，从 timeline script 构建完整初始状态
+    } else if (options?.dataDir) {
       const initial = buildInitialProfileState(options.dataDir, profileId);
       clock = initial.demoClock;
       segments = initial.segments;
@@ -217,7 +241,13 @@ export function createOverrideStore(
       params?: Record<string, number | string | boolean>,
       offsetMinutes?: number,
       options?: { durationMinutes?: number; advanceClock?: boolean; startTime?: string },
-    ): { events: DeviceEvent[]; newCurrentTime: string; segmentId: string; segmentStart: string; segmentEnd: string } {
+    ): {
+      events: DeviceEvent[];
+      newCurrentTime: string;
+      segmentId: string;
+      segmentStart: string;
+      segmentEnd: string;
+    } {
       const state = ensureDemoState(profileId);
       const result = appendSegment(
         state.segments,
@@ -277,12 +307,8 @@ export function createOverrideStore(
         throw new Error(`时间轴片段不存在: ${segmentId}`);
       }
 
-      const retainedSegments = state.segments.filter(
-        (segment) => segment.segmentId !== segmentId,
-      );
-      const retainedEvents = state.rawEvents.filter(
-        (event) => event.segmentId !== segmentId,
-      );
+      const retainedSegments = state.segments.filter((segment) => segment.segmentId !== segmentId);
+      const retainedEvents = state.rawEvents.filter((event) => event.segmentId !== segmentId);
       const result = appendSegment(
         retainedSegments,
         options?.startTime ?? state.clock.currentTime,
@@ -331,12 +357,8 @@ export function createOverrideStore(
 
       const updatedState: DemoProfileState = {
         ...state,
-        segments: state.segments.filter(
-          (segment) => segment.segmentId !== segmentId,
-        ),
-        rawEvents: state.rawEvents.filter(
-          (event) => event.segmentId !== segmentId,
-        ),
+        segments: state.segments.filter((segment) => segment.segmentId !== segmentId),
+        rawEvents: state.rawEvents.filter((event) => event.segmentId !== segmentId),
       };
       const internalSync = rebuildSyncState(updatedState);
       const { state: newSync } = sandboxPerformSync(
@@ -378,7 +400,11 @@ export function createOverrideStore(
       };
 
       const internalSync = rebuildSyncState(updatedState);
-      const { state: newSync } = sandboxPerformSync(internalSync, 'app_open', updatedState.clock.currentTime);
+      const { state: newSync } = sandboxPerformSync(
+        internalSync,
+        'app_open',
+        updatedState.clock.currentTime,
+      );
 
       demoStateByProfile.set(profileId, {
         ...updatedState,
@@ -397,7 +423,10 @@ export function createOverrideStore(
     },
 
     // — 同步操作 —
-    getSyncState(profileId: string): { lastSyncedMeasuredAt: string | null; syncSessions: SyncSession[] } {
+    getSyncState(profileId: string): {
+      lastSyncedMeasuredAt: string | null;
+      syncSessions: SyncSession[];
+    } {
       const { syncState } = ensureDemoState(profileId);
       return {
         lastSyncedMeasuredAt: syncState.lastSyncedMeasuredAt,
@@ -436,6 +465,11 @@ export function createOverrideStore(
 
     // — 时间轴重置 —
     resetProfileTimeline(profileId: string): void {
+      demoStateByProfile.delete(profileId);
+    },
+    removeProfile(profileId: string): void {
+      overridesByProfile.delete(profileId);
+      eventsByProfile.delete(profileId);
       demoStateByProfile.delete(profileId);
     },
   };

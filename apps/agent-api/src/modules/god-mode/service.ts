@@ -1,16 +1,9 @@
-import { writeFileSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import type { RuntimeRegistry } from '../../runtime/registry.js';
 import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
 import {
   recognizeEvents,
   buildRecognizeInputFromDeviceEvents,
   computeDerivedTemporalStates,
-  loadManifest,
-  generateHistory,
-  PROFILE_CONFIGS,
-  generateTimelineScript,
-  deriveSleepConfig,
 } from '@health-advisor/sandbox';
 import type {
   ActiveSensingState,
@@ -21,7 +14,6 @@ import type {
   MetricOverridePayload,
   MicroEventParams,
   MicroEventType,
-  RecognizedEvent,
   ResetPayload,
   UpdateProfilePayload,
 } from '@health-advisor/shared';
@@ -31,66 +23,76 @@ export class GodModeService {
   constructor(private registry: RuntimeRegistry) {}
 
   /** BE-022: 切换 profile，清空旧 profile 的 session/analytical memory */
-  switchProfile(profileId: string, sessionId?: string): GodModeStateResponse {
+  switchProfile(profileId: string, sessionId: string): GodModeStateResponse {
+    const session = this.registry.getSessionSandbox(sessionId);
     // 验证 profile 存在
-    this.registry.getRawProfile(profileId);
+    session.getRawProfile(profileId);
 
-    this.registry.overrideStore.switchProfile(profileId);
+    session.overrideStore.switchProfile(profileId);
 
     // 使用真实 sessionId 清空 session + analytical memory
-    const effectiveSessionId = sessionId ?? `god-mode-${Date.now()}`;
-    this.registry.sessionStore.clearOnProfileSwitch(effectiveSessionId);
-    this.registry.analyticalMemory.invalidateOnProfileSwitch(effectiveSessionId);
+    this.registry.sessionStore.clearOnProfileSwitch(sessionId);
+    this.registry.analyticalMemory.invalidateOnProfileSwitch(sessionId);
 
-    return this.getState();
+    return this.getState(sessionId);
   }
 
   /** BE-023: 注入事件 */
-  injectEvent(profileId: string, payload: EventInjectPayload, sessionId?: string): GodModeStateResponse {
+  injectEvent(
+    profileId: string,
+    payload: EventInjectPayload,
+    sessionId: string,
+  ): GodModeStateResponse {
     const event: DatedEvent = {
       date: payload.timestamp ?? new Date().toISOString().slice(0, 10),
       type: payload.eventType,
       data: payload.data,
     };
-    this.registry.overrideStore.injectEvent(profileId, event);
+    this.registry.getSessionSandbox(sessionId).overrideStore.injectEvent(profileId, event);
     this.invalidateSessionAnalytical(sessionId);
-    return this.getStateForProfile(profileId);
+    return this.getStateForProfile(profileId, sessionId);
   }
 
   /** BE-024: 覆盖指标 */
-  overrideMetric(profileId: string, payload: MetricOverridePayload, sessionId?: string): GodModeStateResponse {
+  overrideMetric(
+    profileId: string,
+    payload: MetricOverridePayload,
+    sessionId: string,
+  ): GodModeStateResponse {
     const entry: OverrideEntry = {
       metric: payload.metric,
       value: payload.value,
       ...(payload.dateRange ? { dateRange: payload.dateRange } : {}),
     };
-    this.registry.overrideStore.addOverride(profileId, entry);
+    this.registry.getSessionSandbox(sessionId).overrideStore.addOverride(profileId, entry);
     this.invalidateSessionAnalytical(sessionId);
-    return this.getStateForProfile(profileId);
+    return this.getStateForProfile(profileId, sessionId);
   }
 
   /** BE-025: reset / restore */
-  reset(payload: ResetPayload, sessionId?: string): GodModeStateResponse {
-    this.registry.overrideStore.reset(payload.scope);
+  reset(payload: ResetPayload, sessionId: string): GodModeStateResponse {
+    this.registry.getSessionSandbox(sessionId).overrideStore.reset(payload.scope);
 
     if (payload.scope === 'all') {
-      this.registry.sessionStore.clearAll();
-      this.registry.analyticalMemory.clearAll();
-      return this.getState();
+      this.registry.sessionStore.clearOnProfileSwitch(sessionId);
+      this.registry.analyticalMemory.invalidateOnProfileSwitch(sessionId);
+      return this.getState(sessionId);
     }
 
-    if (sessionId && payload.scope === 'profile') {
+    if (payload.scope === 'profile') {
       this.registry.sessionStore.clearOnProfileSwitch(sessionId);
     }
 
     this.invalidateSessionAnalytical(sessionId);
-    return this.getState();
+    return this.getState(sessionId);
   }
 
   /** BE-025A: 获取当前 God-Mode 状态 */
-  getState(): GodModeStateResponse {
-    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
-    return this.getStateForProfile(currentProfileId);
+  getState(sessionId: string): GodModeStateResponse {
+    const currentProfileId = this.registry
+      .getSessionSandbox(sessionId)
+      .overrideStore.getCurrentProfileId();
+    return this.getStateForProfile(currentProfileId, sessionId);
   }
 
   /** 追加微事件到时间轴 */
@@ -100,33 +102,35 @@ export class GodModeService {
     sessionId?: string,
     options?: { durationMinutes?: number; advanceClock?: boolean; timeOfDay?: string },
   ): GodModeStateResponse {
-    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
-    const profile = this.registry.getRawProfile(currentProfileId);
-    const baseline = profile.profile?.dailyBaseline ?? profile.profile?.weeklyBaseline ?? profile.profile?.baseline;
+    if (!sessionId) throw new Error('sessionId is required');
+    const session = this.registry.getSessionSandbox(sessionId);
+    const currentProfileId = session.overrideStore.getCurrentProfileId();
+    const profile = session.getRawProfile(currentProfileId);
+    const baseline =
+      profile.profile?.dailyBaseline ??
+      profile.profile?.weeklyBaseline ??
+      profile.profile?.baseline;
     const enrichedParams = {
       ...params,
-      ...(baseline ? {
-        _baselineRestingHr: baseline.restingHr,
-        _baselineHrv: baseline.hrv,
-        _baselineSpo2: baseline.spo2,
-      } : {}),
+      ...(baseline
+        ? {
+            _baselineRestingHr: baseline.restingHr,
+            _baselineHrv: baseline.hrv,
+            _baselineSpo2: baseline.spo2,
+          }
+        : {}),
     };
 
-    const currentDemoTime = this.registry.overrideStore.getDemoClock(currentProfileId).currentTime;
-    this.registry.overrideStore.appendMicroEvent(
-      currentProfileId,
-      microEventType,
-      enrichedParams,
-      {
-        durationMinutes: options?.durationMinutes,
-        advanceClock: options?.timeOfDay ? false : options?.advanceClock,
-        startTime: options?.timeOfDay
-          ? `${currentDemoTime.slice(0, 10)}T${options.timeOfDay}`
-          : undefined,
-      },
-    );
+    const currentDemoTime = session.overrideStore.getDemoClock(currentProfileId).currentTime;
+    session.overrideStore.appendMicroEvent(currentProfileId, microEventType, enrichedParams, {
+      durationMinutes: options?.durationMinutes,
+      advanceClock: options?.timeOfDay ? false : options?.advanceClock,
+      startTime: options?.timeOfDay
+        ? `${currentDemoTime.slice(0, 10)}T${options.timeOfDay}`
+        : undefined,
+    });
     this.invalidateSessionAnalytical(sessionId);
-    return this.getStateForProfile(currentProfileId);
+    return this.getStateForProfile(currentProfileId, sessionId);
   }
 
   /** 追加活动片段到时间轴 */
@@ -142,22 +146,33 @@ export class GodModeService {
       replaceSegmentId?: string;
     },
   ): GodModeStateResponse {
-    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
-    const currentDemoTime = this.registry.overrideStore.getDemoClock(currentProfileId).currentTime;
+    if (!sessionId) throw new Error('sessionId is required');
+    const session = this.registry.getSessionSandbox(sessionId);
+    const currentProfileId = session.overrideStore.getCurrentProfileId();
+    const currentDemoTime = session.overrideStore.getDemoClock(currentProfileId).currentTime;
     const startTime = options?.timeOfDay
       ? `${currentDemoTime.slice(0, 10)}T${options.timeOfDay}`
       : undefined;
 
     // 注入 profile 基线到 params，使生成器能基于用户实际生理特征生成数据
-    const profile = this.registry.getRawProfile(currentProfileId);
-    const baseline = profile.profile?.dailyBaseline ?? profile.profile?.weeklyBaseline ?? profile.profile?.baseline;
+    const profile = session.getRawProfile(currentProfileId);
+    const baseline =
+      profile.profile?.dailyBaseline ??
+      profile.profile?.weeklyBaseline ??
+      profile.profile?.baseline;
     const enrichedParams = {
       ...params,
-      ...(baseline ? { _baselineRestingHr: baseline.restingHr, _baselineHrv: baseline.hrv, _baselineSpo2: baseline.spo2 } : {}),
+      ...(baseline
+        ? {
+            _baselineRestingHr: baseline.restingHr,
+            _baselineHrv: baseline.hrv,
+            _baselineSpo2: baseline.spo2,
+          }
+        : {}),
     };
 
     const appendResult = options?.replaceSegmentId
-      ? this.registry.overrideStore.replaceSegment(
+      ? session.overrideStore.replaceSegment(
           currentProfileId,
           options.replaceSegmentId,
           segmentType,
@@ -167,7 +182,7 @@ export class GodModeService {
             startTime,
           },
         )
-      : this.registry.overrideStore.appendSegment(
+      : session.overrideStore.appendSegment(
           currentProfileId,
           segmentType,
           enrichedParams,
@@ -187,14 +202,19 @@ export class GodModeService {
       // 已确认的生活记录已经作为 timeline segment 进入识别管线，
       // 不再写一份无法随编辑/删除同步的 injected event。
     } else if (bannerEventType) {
-      this.registry.overrideStore.injectEvent(currentProfileId, {
+      session.overrideStore.injectEvent(currentProfileId, {
         date: appendResult.segmentStart,
         type: bannerEventType,
-        data: { source: segmentType, segmentStart: appendResult.segmentStart, segmentEnd: appendResult.segmentEnd, ...(params ?? {}) },
+        data: {
+          source: segmentType,
+          segmentStart: appendResult.segmentStart,
+          segmentEnd: appendResult.segmentEnd,
+          ...(params ?? {}),
+        },
       });
     } else {
       // 非白名单事件也要注入，用于"覆盖"之前的状态
-      this.registry.overrideStore.injectEvent(currentProfileId, {
+      session.overrideStore.injectEvent(currentProfileId, {
         date: appendResult.segmentStart,
         type: segmentType,
         data: { ...(params ?? {}) },
@@ -203,45 +223,50 @@ export class GodModeService {
 
     this.invalidateSessionAnalytical(sessionId);
     return {
-      ...this.getStateForProfile(currentProfileId),
+      ...this.getStateForProfile(currentProfileId, sessionId),
       lastTimelineSegmentId: appendResult.segmentId,
     };
   }
 
   removeTimelineSegment(segmentId: string, sessionId?: string): GodModeStateResponse | null {
-    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
-    if (!this.registry.overrideStore.removeSegment(currentProfileId, segmentId)) {
+    if (!sessionId) throw new Error('sessionId is required');
+    const overrideStore = this.registry.getSessionSandbox(sessionId).overrideStore;
+    const currentProfileId = overrideStore.getCurrentProfileId();
+    if (!overrideStore.removeSegment(currentProfileId, segmentId)) {
       return null;
     }
     this.invalidateSessionAnalytical(sessionId);
-    return this.getStateForProfile(currentProfileId);
+    return this.getStateForProfile(currentProfileId, sessionId);
   }
 
   /** 推进时钟 */
-  advanceClock(minutes: number): GodModeStateResponse {
-    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
-    this.registry.overrideStore.advanceClock(currentProfileId, minutes);
-    return this.getStateForProfile(currentProfileId);
+  advanceClock(minutes: number, sessionId: string): GodModeStateResponse {
+    const overrideStore = this.registry.getSessionSandbox(sessionId).overrideStore;
+    const currentProfileId = overrideStore.getCurrentProfileId();
+    overrideStore.advanceClock(currentProfileId, minutes);
+    return this.getStateForProfile(currentProfileId, sessionId);
   }
 
   /** 重置时间轴 */
-  resetProfileTimeline(profileId: string, sessionId?: string): GodModeStateResponse {
-    this.registry.overrideStore.resetProfileTimeline(profileId);
+  resetProfileTimeline(profileId: string, sessionId: string): GodModeStateResponse {
+    const overrideStore = this.registry.getSessionSandbox(sessionId).overrideStore;
+    overrideStore.resetProfileTimeline(profileId);
     // 重置后自动同步 baseline 事件
-    this.registry.overrideStore.performSync(profileId, 'manual_refresh');
+    overrideStore.performSync(profileId, 'manual_refresh');
     this.invalidateSessionAnalytical(sessionId);
-    return this.getState();
+    return this.getState(sessionId);
   }
 
   /** 获取指定 profile 的 God-Mode 状态 */
-  private getStateForProfile(profileId: string): GodModeStateResponse {
-    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
-    const clock = this.registry.overrideStore.getDemoClock(profileId);
-    const syncState = this.registry.overrideStore.getSyncState(profileId);
-    const pendingEvents = this.registry.overrideStore.getPendingEvents(profileId);
+  private getStateForProfile(profileId: string, sessionId: string): GodModeStateResponse {
+    const session = this.registry.getSessionSandbox(sessionId);
+    const currentProfileId = session.overrideStore.getCurrentProfileId();
+    const clock = session.overrideStore.getDemoClock(profileId);
+    const syncState = session.overrideStore.getSyncState(profileId);
+    const pendingEvents = session.overrideStore.getPendingEvents(profileId);
 
     // 从已同步事件计算识别结果和派生状态
-    const syncedEvents = this.registry.overrideStore.getSyncedEvents(profileId);
+    const syncedEvents = session.overrideStore.getSyncedEvents(profileId);
     const currentTime = clock.currentTime ?? new Date().toISOString().slice(0, 16);
     // 任务 1.2：先建立无标签观察，再调用新签名
     // 辅助函数内部完成：micro event 分离、sensor event 投影
@@ -255,16 +280,16 @@ export class GodModeService {
 
     return {
       currentProfileId,
-      activeOverrides: this.registry.overrideStore.getActiveOverrides(profileId),
-      injectedEvents: this.registry.overrideStore.getInjectedEvents(profileId),
-        activeSensing: this.deriveActiveSensing(profileId),
+      activeOverrides: session.overrideStore.getActiveOverrides(profileId),
+      injectedEvents: session.overrideStore.getInjectedEvents(profileId),
+      activeSensing: this.deriveActiveSensing(profileId, sessionId),
       // 时间轴同步状态字段
       currentDemoTime: clock.currentTime,
       lastSyncTime: syncState.lastSyncedMeasuredAt,
       pendingEventCount: pendingEvents.length,
       recentRecognizedEvents: recognizedEvents,
       recentDerivedStates: derivedStates,
-      availableProfiles: [...this.registry.profiles.values()].map((p) => ({
+      availableProfiles: [...session.profiles.values()].map((p) => ({
         profileId: p.profile.profileId,
         name: localize(p.profile.name, DEFAULT_LOCALE),
       })),
@@ -286,8 +311,13 @@ export class GodModeService {
     'possible_caffeine_intake',
   ]);
 
-  private deriveActiveSensing(currentProfileId: string): ActiveSensingState | null {
-    const injectedEvents = this.registry.overrideStore.getInjectedEvents(currentProfileId);
+  private deriveActiveSensing(
+    currentProfileId: string,
+    sessionId: string,
+  ): ActiveSensingState | null {
+    const injectedEvents = this.registry
+      .getSessionSandbox(sessionId)
+      .overrideStore.getInjectedEvents(currentProfileId);
     if (injectedEvents.length === 0) {
       return null;
     }
@@ -308,126 +338,63 @@ export class GodModeService {
   }
 
   /** 一键校准演示数据：以当前真实日期为演示日，重新生成 31 天历史数据 */
-  recalibrate(sessionId?: string): GodModeStateResponse {
-    const today = new Date();
-    const endDate = today.toISOString().slice(0, 10);
-    const startDateObj = new Date(today);
-    startDateObj.setDate(startDateObj.getDate() - 30);
-    const startDate = startDateObj.toISOString().slice(0, 10);
-
-    const dataDir = this.registry.config.dataDir;
-    const manifest = loadManifest(dataDir);
-
-    // 各 profile 的早间时间偏移
-    const demoTimeOffsets: Record<string, { hour: number; min: number }> = {
-      'profile-a': { hour: 7, min: 5 },
-      'profile-b': { hour: 7, min: 30 },
-      'profile-c': { hour: 6, min: 45 },
-      'profile-d': { hour: 7, min: 15 },
-    };
-
-    for (const entry of manifest.profiles) {
-      const config = PROFILE_CONFIGS[entry.profileId];
-      if (!config) continue;
-
-      // 1. 生成并写入 history
-      const history = generateHistory(config, startDate, endDate);
-      const historyPath = join(dataDir, 'history', `${entry.profileId}-daily-records.json`);
-      writeFileSync(historyPath, JSON.stringify(history, null, 2) + '\n', 'utf-8');
-
-      // 2. 更新 profile 的 initialDemoTime
-      const offset = demoTimeOffsets[entry.profileId] ?? { hour: 7, min: 0 };
-      const initialDemoTime = `${endDate}T${String(offset.hour).padStart(2, '0')}:${String(offset.min).padStart(2, '0')}`;
-
-      const profilePath = join(dataDir, entry.file);
-      const profileData = JSON.parse(readFileSync(profilePath, 'utf-8'));
-      profileData.initialDemoTime = initialDemoTime;
-      writeFileSync(profilePath, JSON.stringify(profileData, null, 2) + '\n', 'utf-8');
-
-      // 3. 生成并写入 timeline script（使用 profile 实际的 avgSleepMinutes 和 demo 时间偏移）
-      const avgSleepMinutes = profileData.profile?.dailyBaseline?.avgSleepMinutes
-        ?? profileData.profile?.baseline?.avgSleepMinutes
-        ?? config.baseline.avgSleepMinutes;
-      const sleepConfig = deriveSleepConfig(avgSleepMinutes, { hour: offset.hour, min: offset.min });
-      const script = generateTimelineScript(entry.profileId, endDate, initialDemoTime, sleepConfig);
-      const scriptPath = join(dataDir, 'timeline-scripts', `${entry.profileId}-day-1.json`);
-      writeFileSync(scriptPath, JSON.stringify(script, null, 2) + '\n', 'utf-8');
-    }
-
-    // 4. 重新加载内存中的 profile 数据
-    this.registry.reloadProfiles();
-
-    // 5. 清空所有 demo state、session 和 analytical memory
-    this.registry.overrideStore.reset('all');
-    this.registry.sessionStore.clearAll();
-    this.registry.analyticalMemory.clearAll();
-
-    // 6. 对每个 profile 执行初始同步，使 timeline script 中的 baseline 事件变为已同步
-    // 否则日级别查询会因当前日无 synced events 而返回空数据
-    for (const entry of manifest.profiles) {
-      this.registry.overrideStore.performSync(entry.profileId, 'manual_refresh');
-    }
-
+  recalibrate(sessionId: string): GodModeStateResponse {
+    this.registry.getSessionSandbox(sessionId).profileManager.recalibrate();
+    this.registry.sessionStore.clearOnProfileSwitch(sessionId);
     this.invalidateSessionAnalytical(sessionId);
-    return this.getState();
+    return this.getState(sessionId);
   }
 
   /** 检测演示数据是否过期（initialDemoTime 不是今天） */
-  isDataStale(): boolean {
-    const dataDir = this.registry.config.dataDir;
-    const manifest = loadManifest(dataDir);
-    if (manifest.profiles.length === 0) return false;
-
+  isDataStale(sessionId: string): boolean {
+    const overrideStore = this.registry.getSessionSandbox(sessionId).overrideStore;
+    const currentProfileId = overrideStore.getCurrentProfileId();
     const today = new Date().toISOString().slice(0, 10);
-    const firstEntry = manifest.profiles[0]!;
-    const firstProfilePath = join(dataDir, firstEntry.file);
-    const profileData = JSON.parse(readFileSync(firstProfilePath, 'utf-8'));
-    const profileDate = String(profileData.initialDemoTime).slice(0, 10);
-
-    return profileDate !== today;
+    return overrideStore.getDemoClock(currentProfileId).currentTime.slice(0, 10) !== today;
   }
 
   /** 自动校准：仅在数据过期时执行 recalibrate */
-  autoCalibrate(): { recalibrated: boolean; reason: string } {
-    if (!this.isDataStale()) {
+  autoCalibrate(sessionId: string): { recalibrated: boolean; reason: string } {
+    if (!this.isDataStale(sessionId)) {
       return { recalibrated: false, reason: 'demo data is up-to-date' };
     }
 
-    this.recalibrate();
+    this.recalibrate(sessionId);
     return { recalibrated: true, reason: 'demo data was stale, recalibrated' };
   }
 
   /** 更新 profile 字段（局部更新） */
-  updateProfile(profileId: string, changes: UpdateProfilePayload, sessionId?: string) {
-    const result = this.registry.profileManager.updateProfile(profileId, changes);
-
-    // baseline 变更后 timeline script 已重新写入磁盘，但 override store 的
-    // demo state 仍持有旧的 synced events，导致 LLM 通过 recognizeEvents
-    // 读到过期数据。需要重置 timeline 并重新同步。
-    if (result.regenerated) {
-      this.registry.overrideStore.resetProfileTimeline(profileId);
-      this.registry.overrideStore.performSync(profileId, 'manual_refresh');
-    }
-
+  updateProfile(profileId: string, changes: UpdateProfilePayload, sessionId: string) {
+    const result = this.registry
+      .getSessionSandbox(sessionId)
+      .profileManager.updateProfile(profileId, changes);
     this.invalidateSessionAnalytical(sessionId);
     return result;
   }
 
   /** 克隆创建新 profile */
-  cloneProfile(sourceProfileId: string, newProfileId: string, overrides?: CloneProfilePayload['overrides']) {
-    return this.registry.profileManager.cloneProfile(sourceProfileId, newProfileId, overrides);
+  cloneProfile(
+    sourceProfileId: string,
+    newProfileId: string,
+    sessionId: string,
+    overrides?: CloneProfilePayload['overrides'],
+  ) {
+    return this.registry
+      .getSessionSandbox(sessionId)
+      .profileManager.cloneProfile(sourceProfileId, newProfileId, overrides);
   }
 
   /** 删除 profile */
-  deleteProfile(profileId: string) {
-    const currentProfileId = this.registry.overrideStore.getCurrentProfileId();
-    this.registry.profileManager.deleteProfile(profileId);
+  deleteProfile(profileId: string, sessionId: string) {
+    const session = this.registry.getSessionSandbox(sessionId);
+    const currentProfileId = session.overrideStore.getCurrentProfileId();
+    session.profileManager.deleteProfile(profileId);
 
     // 如果删除的是当前活跃 profile，切换到第一个可用 profile
     if (currentProfileId === profileId) {
-      const remaining = [...this.registry.profiles.keys()];
+      const remaining = [...session.profiles.keys()];
       if (remaining.length > 0) {
-        this.registry.overrideStore.switchProfile(remaining[0]!);
+        session.overrideStore.switchProfile(remaining[0]!);
       }
     }
 
@@ -435,13 +402,10 @@ export class GodModeService {
   }
 
   /** 恢复 profile 到原始模板 */
-  resetProfile(profileId: string, sessionId?: string) {
-    const result = this.registry.profileManager.resetProfile(profileId);
-
-    // resetProfile 重写了 timeline script，需要同步重置 override store 的 demo state
-    this.registry.overrideStore.resetProfileTimeline(profileId);
-    this.registry.overrideStore.performSync(profileId, 'manual_refresh');
-
+  resetProfile(profileId: string, sessionId: string) {
+    const result = this.registry
+      .getSessionSandbox(sessionId)
+      .profileManager.resetProfile(profileId);
     this.invalidateSessionAnalytical(sessionId);
     return result;
   }

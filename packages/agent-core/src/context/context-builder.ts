@@ -19,12 +19,12 @@ export function buildAgentContext(
   durableFacts: UserMemoryFact[] = [],
 ): AgentContext {
   // 1. 解析 profile
-  const profileData = deps.getProfile(request.profileId);
+  const profileData = deps.getProfile(request.profileId, request.sessionId);
   const profile = profileData.profile;
 
   // 2. 获取 overrides 和 events
-  const overrides = deps.getActiveOverrides(request.profileId);
-  const injectedEvents = deps.getInjectedEvents(request.profileId);
+  const overrides = deps.getActiveOverrides(request.profileId, request.sessionId);
+  const injectedEvents = deps.getInjectedEvents(request.profileId, request.sessionId);
   const baseEvents = extractBaseEvents(profileData.records);
   const mergedEvents = deps.mergeEvents(baseEvents, injectedEvents);
 
@@ -65,15 +65,20 @@ export function buildAgentContext(
     .map((m) => ({ role: m.role, text: m.text }));
 
   const analytical = deps.analyticalMemory.getForProfile(request.sessionId, request.profileId);
-  const effectiveTab = request.tab ?? ('dataTab' in request.pageContext ? (request.pageContext as { dataTab?: string }).dataTab : undefined);
+  const effectiveTab =
+    request.tab ??
+    ('dataTab' in request.pageContext
+      ? (request.pageContext as { dataTab?: string }).dataTab
+      : undefined);
   const effectiveTimeframe = request.timeframe ?? request.pageContext.timeframe;
-  const scope = effectiveTab && effectiveTimeframe ? `${effectiveTab}:${effectiveTimeframe}` : undefined;
+  const scope =
+    effectiveTab && effectiveTimeframe ? `${effectiveTab}:${effectiveTimeframe}` : undefined;
 
   // 9. 获取时间轴同步上下文（可选）
-  const timelineSync = deps.getTimelineSync?.(request.profileId);
+  const timelineSync = deps.getTimelineSync?.(request.profileId, request.sessionId);
 
   // 10. 获取当前模拟时间（可选）
-  const demoNow = deps.getDemoNow?.(request.profileId);
+  const demoNow = deps.getDemoNow?.(request.profileId, request.sessionId);
 
   return {
     profile: {
@@ -82,11 +87,20 @@ export function buildAgentContext(
       age: profile.age,
       tags: (profile.tags || []).map((tag) => localize(tag, locale)),
       baselines: {
-        restingHR: profile.dailyBaseline?.restingHr ?? profile.weeklyBaseline?.restingHr ?? profile.baseline.restingHr,
+        restingHR:
+          profile.dailyBaseline?.restingHr ??
+          profile.weeklyBaseline?.restingHr ??
+          profile.baseline.restingHr,
         hrv: profile.dailyBaseline?.hrv ?? profile.weeklyBaseline?.hrv ?? profile.baseline.hrv,
         spo2: profile.dailyBaseline?.spo2 ?? profile.weeklyBaseline?.spo2 ?? profile.baseline.spo2,
-        avgSleepMinutes: profile.dailyBaseline?.avgSleepMinutes ?? profile.weeklyBaseline?.avgSleepMinutes ?? profile.baseline.avgSleepMinutes,
-        avgSteps: profile.dailyBaseline?.avgSteps ?? profile.weeklyBaseline?.avgSteps ?? profile.baseline.avgSteps,
+        avgSleepMinutes:
+          profile.dailyBaseline?.avgSleepMinutes ??
+          profile.weeklyBaseline?.avgSleepMinutes ??
+          profile.baseline.avgSleepMinutes,
+        avgSteps:
+          profile.dailyBaseline?.avgSteps ??
+          profile.weeklyBaseline?.avgSteps ??
+          profile.baseline.avgSteps,
       },
     },
     task: {

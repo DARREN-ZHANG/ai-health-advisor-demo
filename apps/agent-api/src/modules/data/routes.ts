@@ -1,7 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { createSuccessResponse, createErrorResponse, ErrorCode } from '@health-advisor/shared';
 import type { DataTab, Timeframe } from '@health-advisor/shared';
-import { DataTabSchema, TimeframeSchema, isValidChartTokenId, ChartTokenId } from '@health-advisor/shared';
+import {
+  DataTabSchema,
+  TimeframeSchema,
+  isValidChartTokenId,
+  ChartTokenId,
+} from '@health-advisor/shared';
 import { buildMeta } from '../../utils/meta.js';
 import { DataService } from './service.js';
 import { ChartService } from './chart-service.js';
@@ -20,25 +25,48 @@ export async function dataRoutes(app: FastifyInstance) {
 
     const parsedTimeframe = TimeframeSchema.safeParse(timeframe);
     if (!parsedTimeframe.success) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'Invalid timeframe', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(ErrorCode.VALIDATION_ERROR, 'Invalid timeframe', buildMeta(request)),
+        );
     }
 
-    const customDateRange = resolveCustomDateRange(parsedTimeframe.data, request.query.startDate, request.query.endDate);
+    const customDateRange = resolveCustomDateRange(
+      parsedTimeframe.data,
+      request.query.startDate,
+      request.query.endDate,
+    );
     if (parsedTimeframe.data === 'custom' && !customDateRange) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'timeframe=custom requires both startDate and endDate', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            'timeframe=custom requires both startDate and endDate',
+            buildMeta(request),
+          ),
+        );
     }
 
     try {
-      const data = dataService.getTimelineData(profileId, parsedTimeframe.data, customDateRange);
+      const data = dataService.getTimelineData(
+        profileId,
+        request.ctx.sessionId,
+        parsedTimeframe.data,
+        customDateRange,
+      );
       return createSuccessResponse(data, buildMeta(request));
     } catch {
-      return reply.status(404).send(
-        createErrorResponse(ErrorCode.PROFILE_NOT_FOUND, `Profile ${profileId} not found`, buildMeta(request)),
-      );
+      return reply
+        .status(404)
+        .send(
+          createErrorResponse(
+            ErrorCode.PROFILE_NOT_FOUND,
+            `Profile ${profileId} not found`,
+            buildMeta(request),
+          ),
+        );
     }
   });
 
@@ -53,32 +81,62 @@ export async function dataRoutes(app: FastifyInstance) {
 
     const parsedTab = DataTabSchema.safeParse(tab);
     if (!parsedTab.success) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, `Invalid tab: ${tab}`, buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            `Invalid tab: ${tab}`,
+            buildMeta(request),
+          ),
+        );
     }
 
     const parsedTimeframe = TimeframeSchema.safeParse(timeframe);
     if (!parsedTimeframe.success) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'Invalid timeframe', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(ErrorCode.VALIDATION_ERROR, 'Invalid timeframe', buildMeta(request)),
+        );
     }
 
-    const customDateRange = resolveCustomDateRange(parsedTimeframe.data, request.query.startDate, request.query.endDate);
+    const customDateRange = resolveCustomDateRange(
+      parsedTimeframe.data,
+      request.query.startDate,
+      request.query.endDate,
+    );
     if (parsedTimeframe.data === 'custom' && !customDateRange) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'timeframe=custom requires both startDate and endDate', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            'timeframe=custom requires both startDate and endDate',
+            buildMeta(request),
+          ),
+        );
     }
 
     try {
-      const data = dataService.getDataCenterData(profileId, parsedTab.data, parsedTimeframe.data, customDateRange);
+      const data = dataService.getDataCenterData(
+        profileId,
+        request.ctx.sessionId,
+        parsedTab.data,
+        parsedTimeframe.data,
+        customDateRange,
+      );
       return createSuccessResponse(data, buildMeta(request));
     } catch {
-      return reply.status(404).send(
-        createErrorResponse(ErrorCode.PROFILE_NOT_FOUND, `Profile ${profileId} not found`, buildMeta(request)),
-      );
+      return reply
+        .status(404)
+        .send(
+          createErrorResponse(
+            ErrorCode.PROFILE_NOT_FOUND,
+            `Profile ${profileId} not found`,
+            buildMeta(request),
+          ),
+        );
     }
   });
 
@@ -93,34 +151,67 @@ export async function dataRoutes(app: FastifyInstance) {
 
     const parsedTimeframe = TimeframeSchema.safeParse(timeframe);
     if (!parsedTimeframe.success) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'Invalid timeframe', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(ErrorCode.VALIDATION_ERROR, 'Invalid timeframe', buildMeta(request)),
+        );
     }
 
-    const customDateRange = resolveCustomDateRange(parsedTimeframe.data, request.query.startDate, request.query.endDate);
+    const customDateRange = resolveCustomDateRange(
+      parsedTimeframe.data,
+      request.query.startDate,
+      request.query.endDate,
+    );
     if (parsedTimeframe.data === 'custom' && !customDateRange) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'timeframe=custom requires both startDate and endDate', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            'timeframe=custom requires both startDate and endDate',
+            buildMeta(request),
+          ),
+        );
     }
 
-    const rawTokens = tokensParam.split(',').map((t) => t.trim()).filter(Boolean);
+    const rawTokens = tokensParam
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
     const validTokens: ChartTokenId[] = rawTokens.filter(isValidChartTokenId) as ChartTokenId[];
 
     if (validTokens.length === 0) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'No valid chart tokens provided', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            'No valid chart tokens provided',
+            buildMeta(request),
+          ),
+        );
     }
 
     try {
-      const data = chartService.getChartData(profileId, validTokens, parsedTimeframe.data, customDateRange);
+      const data = chartService.getChartData(
+        profileId,
+        request.ctx.sessionId,
+        validTokens,
+        parsedTimeframe.data,
+        customDateRange,
+      );
       return createSuccessResponse(data, buildMeta(request));
     } catch {
-      return reply.status(404).send(
-        createErrorResponse(ErrorCode.PROFILE_NOT_FOUND, `Profile ${profileId} not found`, buildMeta(request)),
-      );
+      return reply
+        .status(404)
+        .send(
+          createErrorResponse(
+            ErrorCode.PROFILE_NOT_FOUND,
+            `Profile ${profileId} not found`,
+            buildMeta(request),
+          ),
+        );
     }
   });
 
@@ -130,12 +221,18 @@ export async function dataRoutes(app: FastifyInstance) {
     const { profileId } = request.params;
 
     try {
-      const data = dataService.getDeviceSyncOverview(profileId);
+      const data = dataService.getDeviceSyncOverview(profileId, request.ctx.sessionId);
       return createSuccessResponse(data, buildMeta(request));
     } catch {
-      return reply.status(404).send(
-        createErrorResponse(ErrorCode.PROFILE_NOT_FOUND, `Profile ${profileId} not found`, buildMeta(request)),
-      );
+      return reply
+        .status(404)
+        .send(
+          createErrorResponse(
+            ErrorCode.PROFILE_NOT_FOUND,
+            `Profile ${profileId} not found`,
+            buildMeta(request),
+          ),
+        );
     }
   });
 
@@ -148,39 +245,69 @@ export async function dataRoutes(app: FastifyInstance) {
     const limit = request.query.limit ? Number.parseInt(request.query.limit, 10) : undefined;
 
     if (rawScope !== 'pending' && rawScope !== 'sync-session') {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'scope must be "pending" or "sync-session"', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            'scope must be "pending" or "sync-session"',
+            buildMeta(request),
+          ),
+        );
     }
 
     const scope = rawScope;
 
     if (scope === 'sync-session' && !request.query.syncId) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'scope=sync-session requires syncId', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            'scope=sync-session requires syncId',
+            buildMeta(request),
+          ),
+        );
     }
 
     if (request.query.limit && Number.isNaN(limit)) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'limit must be a number', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            'limit must be a number',
+            buildMeta(request),
+          ),
+        );
     }
 
     try {
-      const data = dataService.getDeviceSyncSamples(profileId, scope, request.query.syncId, limit);
+      const data = dataService.getDeviceSyncSamples(
+        profileId,
+        request.ctx.sessionId,
+        scope,
+        request.query.syncId,
+        limit,
+      );
       return createSuccessResponse(data, buildMeta(request));
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       if (message.startsWith('Sync session not found:')) {
-        return reply.status(404).send(
-          createErrorResponse(ErrorCode.NOT_FOUND, message, buildMeta(request)),
-        );
+        return reply
+          .status(404)
+          .send(createErrorResponse(ErrorCode.NOT_FOUND, message, buildMeta(request)));
       }
 
-      return reply.status(404).send(
-        createErrorResponse(ErrorCode.PROFILE_NOT_FOUND, `Profile ${profileId} not found`, buildMeta(request)),
-      );
+      return reply
+        .status(404)
+        .send(
+          createErrorResponse(
+            ErrorCode.PROFILE_NOT_FOUND,
+            `Profile ${profileId} not found`,
+            buildMeta(request),
+          ),
+        );
     }
   });
 }

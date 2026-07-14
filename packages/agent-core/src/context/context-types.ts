@@ -1,11 +1,14 @@
-import type { DailyRecord, Timeframe, RecognizedEvent, DerivedTemporalState } from '@health-advisor/shared';
+import type { DailyRecord, Timeframe } from '@health-advisor/shared';
 import type { OverrideEntry, DatedEvent } from '@health-advisor/sandbox';
 import type { SessionMemoryStore } from '../memory/session-memory-store';
 import type { AnalyticalMemoryStore } from '../memory/analytical-memory-store';
 import type { TimelineSyncContext } from '../types/agent-context';
 
 export interface ContextBuilderDeps {
-  getProfile: (profileId: string) => import('@health-advisor/shared').ProfileData;
+  getProfile: (
+    profileId: string,
+    sessionId: string,
+  ) => import('@health-advisor/shared').ProfileData;
   selectByTimeframe: (
     records: DailyRecord[],
     timeframe: Timeframe,
@@ -15,10 +18,10 @@ export interface ContextBuilderDeps {
   mergeEvents: (baseEvents: DatedEvent[], injectedEvents: DatedEvent[]) => DatedEvent[];
   sessionMemory: SessionMemoryStore;
   analyticalMemory: AnalyticalMemoryStore;
-  getActiveOverrides: (profileId: string) => OverrideEntry[];
-  getInjectedEvents: (profileId: string) => DatedEvent[];
+  getActiveOverrides: (profileId: string, sessionId: string) => OverrideEntry[];
+  getInjectedEvents: (profileId: string, sessionId: string) => DatedEvent[];
   /** 获取时间轴同步上下文（可选，demo timeline 模式下提供） */
-  getTimelineSync?: (profileId: string) => TimelineSyncContext | undefined;
+  getTimelineSync?: (profileId: string, sessionId: string) => TimelineSyncContext | undefined;
   /** 获取当前模拟时间（可选，demo timeline 模式下提供，格式 YYYY-MM-DDTHH:mm） */
-  getDemoNow?: (profileId: string) => string | undefined;
+  getDemoNow?: (profileId: string, sessionId: string) => string | undefined;
 }

@@ -6,6 +6,8 @@ import { buildApp } from '../../../app.js';
 import type { FastifyInstance } from 'fastify';
 
 const SOURCE_DATA_DIR = path.resolve(import.meta.dirname, '../../../../../../data/sandbox');
+const SESSION_ID = 'profile-crud-session';
+const SESSION_HEADERS = { 'x-session-id': SESSION_ID };
 
 describe('Profile CRUD Routes', () => {
   let app: FastifyInstance;
@@ -32,6 +34,27 @@ describe('Profile CRUD Routes', () => {
   });
 
   describe('PUT /god-mode/profiles/:profileId', () => {
+    test('同一 profile 的编辑仅对当前 Session 可见', async () => {
+      const sessionA = { 'x-session-id': 'profile-session-a' };
+      const sessionB = { 'x-session-id': 'profile-session-b' };
+
+      const update = await app.inject({
+        method: 'PUT',
+        url: '/god-mode/profiles/profile-a',
+        payload: { name: 'Session A 用户' },
+        headers: sessionA,
+      });
+      expect(update.statusCode).toBe(200);
+
+      const [profileA, profileB] = await Promise.all([
+        app.inject({ method: 'GET', url: '/profiles/profile-a', headers: sessionA }),
+        app.inject({ method: 'GET', url: '/profiles/profile-a', headers: sessionB }),
+      ]);
+
+      expect(profileA.json().data.profile.name.zh).toBe('Session A 用户');
+      expect(profileB.json().data.profile.name.zh).not.toBe('Session A 用户');
+    });
+
     test('更新 profile 基本字段返回 200', async () => {
       const response = await app.inject({
         method: 'PUT',
@@ -82,12 +105,15 @@ describe('Profile CRUD Routes', () => {
 
     test('更新 dailyBaseline.avgSleepMinutes 后 history 中睡眠时长精确匹配', async () => {
       const targetSleep = 420;
+      const historyPath = path.join(dataDir, 'history/profile-c-daily-records.json');
+      const historyBefore = readFileSync(historyPath, 'utf-8');
 
       // 1. 更新 dailyBaseline
       const response = await app.inject({
         method: 'PUT',
         url: '/god-mode/profiles/profile-c',
         payload: { dailyBaseline: { avgSleepMinutes: targetSleep } },
+        headers: SESSION_HEADERS,
       });
 
       expect(response.statusCode).toBe(200);
@@ -96,13 +122,18 @@ describe('Profile CRUD Routes', () => {
       expect(body.data.profile.dailyBaseline.avgSleepMinutes).toBe(targetSleep);
       expect(body.data.regenerated).toBe(true);
 
-      // 2. 读取 history 文件，验证今天记录的 sleep.totalMinutes 精确匹配
-      const historyPath = path.join(dataDir, 'history/profile-c-daily-records.json');
-      const historyData = JSON.parse(readFileSync(historyPath, 'utf-8'));
+      // 2. 同一 Session 读取更新后的记录，磁盘模板保持不变
+      const profileResponse = await app.inject({
+        method: 'GET',
+        url: '/profiles/profile-c',
+        headers: SESSION_HEADERS,
+      });
+      const historyData = profileResponse.json().data;
       const today = new Date().toISOString().slice(0, 10);
       const todayRecord = historyData.records.find((r: { date: string }) => r.date === today);
       expect(todayRecord).toBeDefined();
       expect(todayRecord.sleep.totalMinutes).toBe(targetSleep);
+      expect(readFileSync(historyPath, 'utf-8')).toBe(historyBefore);
     });
   });
 
@@ -116,6 +147,7 @@ describe('Profile CRUD Routes', () => {
           newProfileId: 'test-clone',
           overrides: { name: '克隆用户' },
         },
+        headers: SESSION_HEADERS,
       });
 
       expect(response.statusCode).toBe(200);
@@ -128,9 +160,12 @@ describe('Profile CRUD Routes', () => {
       const stateResponse = await app.inject({
         method: 'GET',
         url: '/god-mode/state',
+        headers: SESSION_HEADERS,
       });
       const state = stateResponse.json();
-      const profileIds = state.data.availableProfiles.map((p: { profileId: string }) => p.profileId);
+      const profileIds = state.data.availableProfiles.map(
+        (p: { profileId: string }) => p.profileId,
+      );
       expect(profileIds).toContain('test-clone');
     });
 
@@ -143,6 +178,7 @@ describe('Profile CRUD Routes', () => {
           sourceProfileId: 'profile-a',
           newProfileId: 'test-clone',
         },
+        headers: SESSION_HEADERS,
       });
 
       // 再创建同 ID 的
@@ -153,6 +189,7 @@ describe('Profile CRUD Routes', () => {
           sourceProfileId: 'profile-a',
           newProfileId: 'test-clone',
         },
+        headers: SESSION_HEADERS,
       });
 
       expect(response.statusCode).toBe(409);
@@ -192,11 +229,13 @@ describe('Profile CRUD Routes', () => {
           sourceProfileId: 'profile-a',
           newProfileId: 'test-delete',
         },
+        headers: SESSION_HEADERS,
       });
 
       const response = await app.inject({
         method: 'DELETE',
         url: '/god-mode/profiles/test-delete',
+        headers: SESSION_HEADERS,
       });
 
       expect(response.statusCode).toBe(200);
@@ -215,13 +254,20 @@ describe('Profile CRUD Routes', () => {
     });
 
     test('删除最后一个 profile 返回 400', async () => {
-      const stateResponse = await app.inject({ method: 'GET', url: '/god-mode/state' });
+      const stateResponse = await app.inject({
+        method: 'GET',
+        url: '/god-mode/state',
+        headers: SESSION_HEADERS,
+      });
       const state = stateResponse.json();
-      const profileIds = state.data.availableProfiles.map((profile: { profileId: string }) => profile.profileId);
+      const profileIds = state.data.availableProfiles.map(
+        (profile: { profileId: string }) => profile.profileId,
+      );
       for (const profileId of profileIds.filter((id: string) => id !== 'profile-a')) {
         await app.inject({
           method: 'DELETE',
           url: `/god-mode/profiles/${profileId}`,
+          headers: SESSION_HEADERS,
         });
       }
 
@@ -229,6 +275,7 @@ describe('Profile CRUD Routes', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: '/god-mode/profiles/profile-a',
+        headers: SESSION_HEADERS,
       });
 
       expect(response.statusCode).toBe(400);
@@ -242,12 +289,14 @@ describe('Profile CRUD Routes', () => {
         method: 'PUT',
         url: '/god-mode/profiles/profile-a',
         payload: { name: '已修改' },
+        headers: SESSION_HEADERS,
       });
 
       // 恢复
       const response = await app.inject({
         method: 'POST',
         url: '/god-mode/profiles/profile-a/reset',
+        headers: SESSION_HEADERS,
       });
 
       expect(response.statusCode).toBe(200);

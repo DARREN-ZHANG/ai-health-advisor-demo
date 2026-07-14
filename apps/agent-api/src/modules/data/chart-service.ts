@@ -1,6 +1,10 @@
 import type { ChartTokenId, Timeframe, DateRange } from '@health-advisor/shared';
 import { timeframeToDateRange } from '@health-advisor/shared';
-import { normalizeTimeline, normalizeIntradayTimeline, type TimelinePoint } from '@health-advisor/sandbox';
+import {
+  normalizeTimeline,
+  normalizeIntradayTimeline,
+  type TimelinePoint,
+} from '@health-advisor/sandbox';
 import type { RuntimeRegistry } from '../../runtime/registry.js';
 import { DataService } from './service.js';
 
@@ -23,7 +27,10 @@ const TOKEN_CONFIG: Record<ChartTokenId, ChartSeriesConfig> = {
   RESTING_HR_7DAYS: { metrics: ['hr'], defaultDays: 7 },
   ACTIVITY_7DAYS: { metrics: ['activity.steps'], defaultDays: 7 },
   SPO2_7DAYS: { metrics: ['spo2'], defaultDays: 7 },
-  SLEEP_STAGE_LAST_NIGHT: { metrics: ['sleep.stages.deep', 'sleep.stages.rem', 'sleep.stages.light', 'sleep.stages.awake'], defaultDays: 1 },
+  SLEEP_STAGE_LAST_NIGHT: {
+    metrics: ['sleep.stages.deep', 'sleep.stages.rem', 'sleep.stages.light', 'sleep.stages.awake'],
+    defaultDays: 1,
+  },
   STRESS_LOAD_7DAYS: { metrics: ['stress.load'], defaultDays: 7 },
   HRV_SLEEP_14DAYS_COMPARE: { metrics: ['hrv', 'sleep.totalMinutes'], defaultDays: 14 },
 };
@@ -44,15 +51,16 @@ export class ChartService {
 
   getChartData(
     profileId: string,
+    sessionId: string,
     tokenIds: ChartTokenId[],
     timeframe: Timeframe,
     customDateRange?: DateRange,
   ): ChartDataResponse[] {
     // 使用冻结历史 + 当前活动日聚合的 records
-    const records = this.dataService.getRecordsForProfile(profileId);
+    const records = this.dataService.getRecordsForProfile(profileId, sessionId);
 
     // demo 模式下使用 demo 时钟日期作为参考，避免跨日时日期范围不匹配
-    const refDate = this.getDemoReferenceDate(profileId);
+    const refDate = this.getDemoReferenceDate(profileId, sessionId);
 
     return tokenIds.map((tokenId) => {
       const config = TOKEN_CONFIG[tokenId];
@@ -64,9 +72,10 @@ export class ChartService {
 
       // day timeframe 仅对 IntradaySnapshot 可表达的指标使用分时数据。
       // HRV 是日级指标，不能从 intraday 快照读取。
-      const timeline = timeframe === 'day' && config.metrics.every((metric) => INTRADAY_METRICS.has(metric))
-        ? normalizeIntradayTimeline(filtered, config.metrics)
-        : normalizeTimeline(filtered, config.metrics);
+      const timeline =
+        timeframe === 'day' && config.metrics.every((metric) => INTRADAY_METRICS.has(metric))
+          ? normalizeIntradayTimeline(filtered, config.metrics)
+          : normalizeTimeline(filtered, config.metrics);
 
       return { profileId, token: tokenId, range, timeline };
     });
@@ -76,9 +85,11 @@ export class ChartService {
    * 获取 demo 模式下的参考日期。
    * demo 时钟存在时返回其日期，否则返回 undefined（由调用方使用 new Date()）
    */
-  private getDemoReferenceDate(profileId: string): string | undefined {
+  private getDemoReferenceDate(profileId: string, sessionId: string): string | undefined {
     try {
-      const clock = this.registry.overrideStore.getDemoClock(profileId);
+      const clock = this.registry
+        .getSessionSandbox(sessionId)
+        .overrideStore.getDemoClock(profileId);
       return clock.currentTime?.slice(0, 10) ?? undefined;
     } catch {
       return undefined;

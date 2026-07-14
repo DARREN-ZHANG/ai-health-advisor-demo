@@ -31,7 +31,11 @@ const mockResponse: AgentResponseEnvelope = {
   statusColor: 'good',
   chartTokens: [],
   microTips: ['保持运动'],
-  meta: { taskType: AgentTaskType.HOMEPAGE_SUMMARY, pageContext: defaultPageContext, finishReason: 'complete' },
+  meta: {
+    taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+    pageContext: defaultPageContext,
+    finishReason: 'complete',
+  },
 };
 
 describe('AI Routes', () => {
@@ -85,8 +89,9 @@ describe('AI Routes', () => {
       mockedExecuteAgent.mockResolvedValueOnce(mockResponse);
 
       // 重置时间轴，使 baseline 的 rawEvents 重新变为 pending 状态
-      app.runtime.overrideStore.resetProfileTimeline('profile-a');
-      const pendingBefore = app.runtime.overrideStore.getPendingEvents('profile-a');
+      const overrideStore = app.runtime.getSessionSandbox('sess-sync').overrideStore;
+      overrideStore.resetProfileTimeline('profile-a');
+      const pendingBefore = overrideStore.getPendingEvents('profile-a');
       expect(pendingBefore.length).toBeGreaterThan(0);
 
       const response = await app.inject({
@@ -103,12 +108,12 @@ describe('AI Routes', () => {
       expect(response.statusCode).toBe(200);
 
       // 同步后 pending 事件应被清空（变为已同步）
-      const pendingAfter = app.runtime.overrideStore.getPendingEvents('profile-a');
+      const pendingAfter = overrideStore.getPendingEvents('profile-a');
       expect(pendingAfter.length).toBe(0);
 
       // 同步会话中应有 app_open 记录
-      const syncState = app.runtime.overrideStore.getSyncState('profile-a');
-      const appOpenSessions = syncState.syncSessions.filter(s => s.trigger === 'app_open');
+      const syncState = overrideStore.getSyncState('profile-a');
+      const appOpenSessions = syncState.syncSessions.filter((s) => s.trigger === 'app_open');
       expect(appOpenSessions.length).toBeGreaterThan(0);
     });
 
@@ -118,9 +123,11 @@ describe('AI Routes', () => {
       mockedExecuteAgent.mockResolvedValueOnce(mockResponse);
 
       // 先执行一次同步清空 pending
-      app.runtime.overrideStore.performSync('profile-a', 'manual_refresh');
+      const sessionId = 'sess-no-pending';
+      const overrideStore = app.runtime.getSessionSandbox(sessionId).overrideStore;
+      overrideStore.performSync('profile-a', 'manual_refresh');
 
-      const syncStateBefore = app.runtime.overrideStore.getSyncState('profile-a');
+      const syncStateBefore = overrideStore.getSyncState('profile-a');
       const sessionCountBefore = syncStateBefore.syncSessions.length;
 
       const response = await app.inject({
@@ -131,12 +138,13 @@ describe('AI Routes', () => {
           pageContext: defaultPageContext,
           bustCache: true,
         },
+        headers: { 'x-session-id': sessionId },
       });
 
       expect(response.statusCode).toBe(200);
 
       // 无 pending 事件时同步会话数量不变
-      const syncStateAfter = app.runtime.overrideStore.getSyncState('profile-a');
+      const syncStateAfter = overrideStore.getSyncState('profile-a');
       expect(syncStateAfter.syncSessions.length).toBe(sessionCountBefore);
     });
 
@@ -156,7 +164,8 @@ describe('AI Routes', () => {
     test('GOD MODE 校准后不再返回旧的 morning brief 缓存', async () => {
       mockedExecuteAgent.mockReset();
       app.briefCache.clearAll();
-      app.runtime.overrideStore.reset('all');
+      const sessionId = 'sess-recalibrate';
+      app.runtime.getSessionSandbox(sessionId).overrideStore.reset('all');
 
       const staleResponse: AgentResponseEnvelope = {
         ...mockResponse,
@@ -167,9 +176,7 @@ describe('AI Routes', () => {
         summary: 'HRV 数据已恢复',
       };
 
-      mockedExecuteAgent
-        .mockResolvedValueOnce(staleResponse)
-        .mockResolvedValueOnce(freshResponse);
+      mockedExecuteAgent.mockResolvedValueOnce(staleResponse).mockResolvedValueOnce(freshResponse);
 
       const first = await app.inject({
         method: 'POST',
@@ -178,6 +185,7 @@ describe('AI Routes', () => {
           profileId: 'profile-a',
           pageContext: defaultPageContext,
         },
+        headers: { 'x-session-id': sessionId },
       });
 
       expect(first.statusCode).toBe(200);
@@ -187,6 +195,7 @@ describe('AI Routes', () => {
         method: 'POST',
         url: '/god-mode/recalibrate',
         payload: {},
+        headers: { 'x-session-id': sessionId },
       });
 
       expect(recalibrate.statusCode).toBe(200);
@@ -198,6 +207,7 @@ describe('AI Routes', () => {
           profileId: 'profile-a',
           pageContext: defaultPageContext,
         },
+        headers: { 'x-session-id': sessionId },
       });
 
       expect(second.statusCode).toBe(200);
@@ -205,28 +215,37 @@ describe('AI Routes', () => {
       expect(mockedExecuteAgent).toHaveBeenCalledTimes(2);
     });
 
-    test("micro event append can be followed by bust-cache morning brief regeneration", async () => {
+    test('micro event append can be followed by bust-cache morning brief regeneration', async () => {
       mockedExecuteAgent.mockReset();
       mockedExecuteAgent.mockResolvedValueOnce(mockResponse);
-      app.runtime.overrideStore.reset("all");
+      const sessionId = 'sess-micro-event';
+      app.runtime.getSessionSandbox(sessionId).overrideStore.reset('all');
 
       const appendResponse = await app.inject({
-        method: "POST",
-        url: "/god-mode/micro-event-append",
-        payload: { microEventType: "micro_deep_breathing", durationMinutes: 3 },
+        method: 'POST',
+        url: '/god-mode/micro-event-append',
+        payload: { microEventType: 'micro_deep_breathing', durationMinutes: 3 },
+        headers: { 'x-session-id': sessionId },
       });
 
       expect(appendResponse.statusCode).toBe(200);
-      expect(appendResponse.json().data.recentRecognizedEvents.some((event: { type: string }) => event.type === "micro_deep_breathing")).toBe(true);
+      expect(
+        appendResponse
+          .json()
+          .data.recentRecognizedEvents.some(
+            (event: { type: string }) => event.type === 'micro_deep_breathing',
+          ),
+      ).toBe(true);
 
       const briefResponse = await app.inject({
-        method: "POST",
-        url: "/ai/morning-brief",
+        method: 'POST',
+        url: '/ai/morning-brief',
         payload: {
-          profileId: "profile-a",
+          profileId: 'profile-a',
           pageContext: defaultPageContext,
           bustCache: true,
         },
+        headers: { 'x-session-id': sessionId },
       });
 
       expect(briefResponse.statusCode).toBe(200);
@@ -250,7 +269,12 @@ describe('AI Routes', () => {
         url: '/ai/view-summary',
         payload: {
           profileId: 'profile-a',
-          pageContext: { profileId: 'profile-a', page: 'data-center', timeframe: 'week', dataTab: 'hrv' },
+          pageContext: {
+            profileId: 'profile-a',
+            page: 'data-center',
+            timeframe: 'week',
+            dataTab: 'hrv',
+          },
           tab: 'hrv',
           timeframe: 'week',
         },

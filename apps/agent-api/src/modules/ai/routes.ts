@@ -1,6 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
-import { createSuccessResponse, createErrorResponse, ErrorCode, AgentTaskType, PageContextSchema } from '@health-advisor/shared';
+import {
+  createSuccessResponse,
+  createErrorResponse,
+  ErrorCode,
+  AgentTaskType,
+  PageContextSchema,
+} from '@health-advisor/shared';
 import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 import { AgentRequestSchema } from '@health-advisor/agent-core';
 import { buildMeta } from '../../utils/meta.js';
@@ -64,18 +70,25 @@ export async function aiRoutes(app: FastifyInstance) {
 
     // 后端隐式触发 app_open 同步：将 pending 事件同步到已同步状态，
     // 确保首页晨间简报基于最新已同步数据生成
-    const pendingEvents = app.runtime.overrideStore.getPendingEvents(profileId);
+    const overrideStore = app.runtime.getSessionSandbox(request.ctx.sessionId).overrideStore;
+    const pendingEvents = overrideStore.getPendingEvents(profileId);
     if (pendingEvents.length > 0) {
-      app.runtime.overrideStore.performSync(profileId, 'app_open');
+      overrideStore.performSync(profileId, 'app_open');
       // 同步后刷新 brief 缓存，避免返回过期的缓存结果
       await app.memoryServices.cache.invalidateProfile({ profileId });
     }
 
     const parsed = PageContextSchema.safeParse(pageContext);
     if (!parsed.success) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'Invalid pageContext', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            'Invalid pageContext',
+            buildMeta(request),
+          ),
+        );
     }
 
     const agentRequest = {
@@ -88,9 +101,15 @@ export async function aiRoutes(app: FastifyInstance) {
 
     const parseResult = AgentRequestSchema.safeParse(agentRequest);
     if (!parseResult.success) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, parseResult.error.issues.map((i) => i.message).join('; '), buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            parseResult.error.issues.map((i) => i.message).join('; '),
+            buildMeta(request),
+          ),
+        );
     }
 
     const orchestrationStartedAt = performance.now();
@@ -104,7 +123,10 @@ export async function aiRoutes(app: FastifyInstance) {
       },
     });
     attachAiLogMeta(request, result.meta.finishReason, timings);
-    return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
+    return createSuccessResponse(
+      attachSessionMeta(result, request.ctx.sessionId),
+      buildMeta(request),
+    );
   });
 
   // BE-019: /ai/view-summary
@@ -114,9 +136,15 @@ export async function aiRoutes(app: FastifyInstance) {
 
     const parsed = PageContextSchema.safeParse(pageContext);
     if (!parsed.success) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'Invalid pageContext', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            'Invalid pageContext',
+            buildMeta(request),
+          ),
+        );
     }
 
     const agentRequest = {
@@ -131,9 +159,15 @@ export async function aiRoutes(app: FastifyInstance) {
 
     const parseResult = AgentRequestSchema.safeParse(agentRequest);
     if (!parseResult.success) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, parseResult.error.issues.map((i) => i.message).join('; '), buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            parseResult.error.issues.map((i) => i.message).join('; '),
+            buildMeta(request),
+          ),
+        );
     }
 
     const orchestrationStartedAt = performance.now();
@@ -147,7 +181,10 @@ export async function aiRoutes(app: FastifyInstance) {
       },
     });
     attachAiLogMeta(request, result.meta.finishReason, timings);
-    return createSuccessResponse(attachSessionMeta(result, request.ctx.sessionId), buildMeta(request));
+    return createSuccessResponse(
+      attachSessionMeta(result, request.ctx.sessionId),
+      buildMeta(request),
+    );
   });
 
   // BE-020: /ai/chat
@@ -156,16 +193,28 @@ export async function aiRoutes(app: FastifyInstance) {
     const { profileId, pageContext, userMessage, smartPromptId, visibleChartIds } = request.body;
 
     if (!userMessage || typeof userMessage !== 'string') {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'userMessage is required', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            'userMessage is required',
+            buildMeta(request),
+          ),
+        );
     }
 
     const parsed = PageContextSchema.safeParse(pageContext);
     if (!parsed.success) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, 'Invalid pageContext', buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            'Invalid pageContext',
+            buildMeta(request),
+          ),
+        );
     }
 
     const agentRequest = {
@@ -181,9 +230,15 @@ export async function aiRoutes(app: FastifyInstance) {
 
     const parseResult = AgentRequestSchema.safeParse(agentRequest);
     if (!parseResult.success) {
-      return reply.status(400).send(
-        createErrorResponse(ErrorCode.VALIDATION_ERROR, parseResult.error.issues.map((i) => i.message).join('; '), buildMeta(request)),
-      );
+      return reply
+        .status(400)
+        .send(
+          createErrorResponse(
+            ErrorCode.VALIDATION_ERROR,
+            parseResult.error.issues.map((i) => i.message).join('; '),
+            buildMeta(request),
+          ),
+        );
     }
 
     const orchestrationStartedAt = performance.now();
@@ -237,13 +292,19 @@ export async function aiRoutes(app: FastifyInstance) {
     }
 
     return createSuccessResponse(
-      attachSessionMeta({ ...result, ...(memoryCandidates.length > 0 ? { memoryCandidates } : {}) }, request.ctx.sessionId),
+      attachSessionMeta(
+        { ...result, ...(memoryCandidates.length > 0 ? { memoryCandidates } : {}) },
+        request.ctx.sessionId,
+      ),
       buildMeta(request),
     );
   });
 }
 
-function attachSessionMeta(result: Awaited<ReturnType<AiOrchestrator['execute']>>, sessionId?: string) {
+function attachSessionMeta(
+  result: Awaited<ReturnType<AiOrchestrator['execute']>>,
+  sessionId?: string,
+) {
   return {
     ...result,
     meta: {

@@ -16,7 +16,6 @@ import { aiRoutes } from './modules/ai/routes.js';
 import { godModeRoutes } from './modules/god-mode/routes.js';
 import { memoryRoutes } from './modules/memory/routes.js';
 import { workflowRoutes } from './modules/workflows/routes.js';
-import { GodModeService } from './modules/god-mode/service.js';
 import { BriefCache } from './services/brief-cache.js';
 import { createMemoryServices } from './runtime/memory-services.js';
 import { LlmMemoryExtractionService } from '@health-advisor/agent-core';
@@ -49,9 +48,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
   const app = Fastify({
     logger: {
       level: config.LOG_LEVEL,
-      transport: config.NODE_ENV === 'development'
-        ? { target: 'pino-pretty' }
-        : undefined,
+      transport: config.NODE_ENV === 'development' ? { target: 'pino-pretty' } : undefined,
     },
     requestIdHeader: 'x-request-id',
     requestIdLogLabel: 'requestId',
@@ -93,30 +90,6 @@ export async function buildApp(options: BuildAppOptions = {}) {
   // God-Mode 路由受 ENABLE_GOD_MODE 环境变量保护
   if (config.ENABLE_GOD_MODE) {
     await app.register(godModeRoutes);
-
-    // 自动校准：启动时检测并校准过期的演示数据，之后每小时检查一次
-    const godModeService = new GodModeService(registry);
-    const startupResult = godModeService.autoCalibrate();
-    app.log.info(`[auto-calibration] startup: ${startupResult.reason}`);
-    if (startupResult.recalibrated) {
-      briefCache.clearAll();
-    }
-
-    const calibrationTimer = setInterval(() => {
-      try {
-        const result = godModeService.autoCalibrate();
-        if (result.recalibrated) {
-          briefCache.clearAll();
-          app.log.info(`[auto-calibration] scheduled: ${result.reason}`);
-        }
-      } catch (err) {
-        app.log.error(err, '[auto-calibration] scheduled check failed');
-      }
-    }, 60 * 60 * 1000);
-
-    app.addHook('onClose', () => {
-      clearInterval(calibrationTimer);
-    });
   }
 
   return app;

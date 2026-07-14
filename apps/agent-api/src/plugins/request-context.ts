@@ -14,7 +14,7 @@ export interface AiRequestMeta {
 
 export interface RequestContext {
   requestId: string;
-  sessionId?: string;
+  sessionId: string;
   profileId?: string;
   startTime: number;
   /** AI 路由设置：provider/model/finishReason/fallbackTriggered */
@@ -29,9 +29,9 @@ declare module 'fastify' {
 
 export const requestContextPlugin = fp(async function (app: FastifyInstance) {
   app.addHook('onRequest', async (request: FastifyRequest) => {
-    const requestId =
-      (request.headers['x-request-id'] as string) || crypto.randomUUID();
-    const sessionId = (request.headers['x-session-id'] as string) || `session-${crypto.randomUUID()}`;
+    const requestId = (request.headers['x-request-id'] as string) || crypto.randomUUID();
+    const sessionId =
+      (request.headers['x-session-id'] as string) || `session-${crypto.randomUUID()}`;
     const profileId = request.headers['x-profile-id'] as string | undefined;
 
     request.id = requestId;

@@ -207,11 +207,15 @@
 
 #### Sandbox Loader
 
-负责加载和校验沙盒 JSON 数据，提供 profile 基础读取能力。
+负责加载和校验只读沙盒 JSON 模板，为每个新 Session 创建独立的数据副本。
+
+#### Session Sandbox Store
+
+以 `sessionId` 为隔离键，持有当前 Session 独立的 Profile 集合、当前 Profile、时间线、演示时钟、指标覆盖和注入事件。Profile 编辑、克隆、删除、重置与演示数据校准均只修改当前 Session 的内存副本，不回写沙盒 JSON 模板。
 
 #### Runtime Override Store
 
-负责保存 God-Mode 引起的运行时数据变更，并在读取时与基础沙盒数据合并。
+负责保存单个 Session 内 God-Mode 引起的运行时数据变更，并在读取时与该 Session 的 Profile 数据合并。
 
 #### Context Manager
 
@@ -381,7 +385,7 @@ Agent 输入由以下内容组成：
 
 ### 9.4 运行时数据变更
 
-God-Mode 引起的所有数据变更都属于运行时变更，只存在于内存态 override store 中。
+God-Mode 与 Profile 编辑器引起的所有数据变更都属于 Session 运行时变更，只存在于当前 Session 的内存沙盒中。不同 Session 即使操作同一个 `profileId`，其状态也完全隔离。
 
 运行时变更包含：
 
@@ -389,6 +393,8 @@ God-Mode 引起的所有数据变更都属于运行时变更，只存在于内�
 - 特定日期事件注入
 - 特定指标覆盖
 - 场景重置
+- Profile 字段与基线编辑
+- Profile 克隆、删除与恢复
 
 ---
 
@@ -480,7 +486,7 @@ God-Mode 是系统正式架构的一部分，用于演示态控制。
 
 ### 12.1 支持的控制类型
 
-- 全局 profile 切换
+- Session 内 profile 切换
 - 瞬时事件注入
 - 指标局部覆盖
 - 场景恢复
@@ -488,11 +494,12 @@ God-Mode 是系统正式架构的一部分，用于演示态控制。
 
 ### 12.2 行为边界
 
-- Profile 切换触发全局状态刷新，但不强制页面跳转
+- Profile 切换只刷新当前 Session 的状态，不强制页面跳转，也不影响其他终端或页面实例
 - 瞬时事件注入可打断当前视图并触发高优先级横幅
 - 指标覆盖只触发局部重绘
 - 演示脚本触发本质上是受控的多步 God-Mode 动作序列，必须通过正式 API 执行，而不是前端本地拼接状态
 - 所有 God-Mode 行为不得破坏当前演示主流程
+- 每次完整进入页面创建新的页面级 Session；同一页面内的请求复用该 Session，刷新、新标签页和其他终端互不共享
 
 ---
 

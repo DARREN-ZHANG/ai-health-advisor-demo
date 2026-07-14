@@ -7,7 +7,10 @@ function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   if (value && typeof value === 'object') {
     const record = value as Record<string, unknown>;
-    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`).join(',')}}`;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`)
+      .join(',')}}`;
   }
   return JSON.stringify(value);
 }
@@ -24,12 +27,21 @@ export function buildAgentCacheIdentity(input: {
   modelVersion: string;
 }) {
   const locale = input.locale ?? 'zh';
-  const syncState = input.registry.overrideStore.getSyncState(input.request.profileId);
-  const syncedEvents = input.registry.overrideStore.getSyncedEvents(input.request.profileId);
-  const activeOverrides = input.registry.getActiveOverrides(input.request.profileId);
-  const injectedEvents = input.registry.getInjectedEvents(input.request.profileId);
+  const session = input.registry.getSessionSandbox(input.request.sessionId);
+  const syncState = session.overrideStore.getSyncState(input.request.profileId);
+  const syncedEvents = session.overrideStore.getSyncedEvents(input.request.profileId);
+  const activeOverrides = input.registry.getActiveOverrides(
+    input.request.profileId,
+    input.request.sessionId,
+  );
+  const injectedEvents = input.registry.getInjectedEvents(
+    input.request.profileId,
+    input.request.sessionId,
+  );
+  const profile = input.registry.getRawProfile(input.request.profileId, input.request.sessionId);
   const scope = {
     taskType: input.request.taskType,
+    sessionId: input.request.sessionId,
     profileId: input.request.profileId,
     pageContext: input.request.pageContext,
     tab: input.request.tab,
@@ -39,9 +51,12 @@ export function buildAgentCacheIdentity(input: {
   };
 
   return {
-    cacheType: input.request.taskType === AgentTaskType.HOMEPAGE_SUMMARY ? 'homepage_brief' as const : 'view_summary' as const,
+    cacheType:
+      input.request.taskType === AgentTaskType.HOMEPAGE_SUMMARY
+        ? ('homepage_brief' as const)
+        : ('view_summary' as const),
     cacheKey: sha256({ scope, locale }),
-    dataFingerprint: sha256({ syncState, syncedEvents, activeOverrides, injectedEvents }),
+    dataFingerprint: sha256({ profile, syncState, syncedEvents, activeOverrides, injectedEvents }),
     promptVersion: input.promptVersion,
     modelVersion: input.modelVersion,
     locale,
