@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { act, cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { FutureSuggestion } from '@health-advisor/shared';
 import { FutureTimelineBlock } from './FutureTimelineBlock';
 import { HomepageIntlProvider } from './intl-test-helper';
@@ -71,5 +71,77 @@ describe('FutureTimelineBlock', () => {
     renderBlock({ ...suggestion, timePoint: '9:30' });
 
     expect(screen.getByRole('heading', { name: '上午 - 9:30 AM' })).toBeInTheDocument();
+  });
+
+  // —— 打字机渐进式渲染（Task 9）——
+
+  // 用于打字机测试的简化建议（文案短，便于在定时器推进后用 Regex 匹配片段）
+  const typewriterSuggestion: FutureSuggestion = {
+    timePoint: '15:30',
+    predictedState: '低谷',
+    rationale: '咖啡因',
+    action: {
+      id: 'f1',
+      emoji: '🧘',
+      title: '呼吸',
+      description: '深呼吸',
+      aiPromise: '记录',
+    },
+  };
+
+  it('animate=true 时 predictionBody 整段逐字增长', () => {
+    vi.useFakeTimers();
+    render(
+      <HomepageIntlProvider>
+        <FutureTimelineBlock suggestion={typewriterSuggestion} animate done={false} />
+      </HomepageIntlProvider>,
+    );
+
+    // timePoint 立即显示（不参与打字机）
+    expect(screen.getByText(/15:30/)).toBeInTheDocument();
+
+    // 初始：predictionBody 尚未完整出现（打字机刚启动，整段为空）
+    expect(screen.queryByText(/低谷/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/咖啡因/)).not.toBeInTheDocument();
+
+    // 合成段短，30ms × 字数足够在 1000ms 内完成
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    // 整段完成后，用 Regex 匹配片段（避免精确全文依赖）
+    expect(screen.getByText(/低谷/)).toBeInTheDocument();
+    expect(screen.getByText(/咖啡因/)).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
+  it('done=true 立即显示全文（跳过打字机）', () => {
+    render(
+      <HomepageIntlProvider>
+        <FutureTimelineBlock suggestion={typewriterSuggestion} done />
+      </HomepageIntlProvider>,
+    );
+
+    expect(screen.getByText(/低谷/)).toBeInTheDocument();
+    expect(screen.getByText(/咖啡因/)).toBeInTheDocument();
+  });
+
+  it('done 从 false 切到 true 时立即补全', () => {
+    vi.useFakeTimers();
+    const { rerender } = render(
+      <HomepageIntlProvider>
+        <FutureTimelineBlock suggestion={typewriterSuggestion} animate done={false} />
+      </HomepageIntlProvider>,
+    );
+
+    rerender(
+      <HomepageIntlProvider>
+        <FutureTimelineBlock suggestion={typewriterSuggestion} animate done />
+      </HomepageIntlProvider>,
+    );
+
+    expect(screen.getByText(/低谷/)).toBeInTheDocument();
+    vi.useRealTimers();
   });
 });
