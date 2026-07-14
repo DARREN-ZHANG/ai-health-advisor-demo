@@ -17,7 +17,9 @@
 - 所有由穿戴设备数据推断出的事件都必须采用概率性语言；只有用户主动记录或确认的事件可以确定表达。
 - 低于该事件类型发布阈值的识别结果不进入实时简报，只保留内部观测。
 - 所有无物理单位的派生分数均不得展示给客户，包括 motion intensity、stress load、sleep score、quality score 和事件 confidence 百分比。
-- `bpm`、`ms`、`%`、`steps`、`min` 等具有明确物理含义的测量值仍可展示。
+- `bpm`、`ms`、`%`、`steps`、`h`、`min`、`km`、`kcal` 等具有明确物理含义的测量值仍可展示，但必须在进入 LLM 前转换为该指标最常用的展示单位。
+- 睡眠总时长、平均睡眠时长和 deep/light/REM/awake 睡眠阶段时长统一使用 `h`，不得在 LLM Response 中以 `min` 展示。
+- 非睡眠持续时间小于 60 分钟时使用 `min`，达到 60 分钟时转换为 `h`；内部存储和计算继续使用原始分钟值。
 - 英文 homepage summary 使用 90–180 words；中文继续使用 220–420 graphemes。
 - 缺少工具结果、算法能力或估算能力时保持静默，不向客户解释系统为何不能计算。
 - 客户边界违规必须 fail closed：不得发布、缓存或写入 memory；禁止通过字符串替换修补模型原文。
@@ -30,6 +32,7 @@
 4. 生效的 `data/sandbox/prompts/homepage/template.md` 告诉模型“没有工具结果时不得估算”，`realtime-brief-tool-orchestrator.ts` 还会渲染 tool name、policyId、status、reason 和 error；模型因此会复述“没有算法/无法估算”等内部说明。
 5. 英文 prompt 和 eval 当前要求 150–300 words，但 runtime verifier 只做 `summary.length > 500` 的 locale-agnostic soft check，且普通 homepage 场景不会因此阻断输出。
 6. `verifyOutput()` 在普通场景只是观测机制；hard violation 不会自动阻止 memory、cache 或 API 返回。
+7. `metric-summary.ts`、`context-packet-builder.ts` 和 `context-packet-renderer.ts` 当前把 `avgSleepMinutes`、`sleep_total`、`sleep_deep`、`sleep_rem` 作为 `min` 直接渲染，而图表层 `CHART_TOKEN_META.SLEEP_7DAYS` 已使用 `h`，同一指标在 LLM 与 UI 之间单位不一致。
 
 ### 非目标
 
@@ -37,6 +40,7 @@
 - 不把 Mock Timeline 的隐藏标签重新包装成“算法结果”。
 - 不新增正则替换、文本截断或固定兜底文案来掩盖违规回复。
 - 不改动当前工作区中用户已有的 `data/sandbox/history`、`profiles` 和 `timeline-scripts` 未提交内容。
+- 不修改 `SleepData.totalMinutes`、`SleepStages`、`activeMinutes` 或 `durationMinutes` 的内部存储单位；本计划只规范 customer-facing projection 和 LLM Response。
 
 ---
 
@@ -50,6 +54,7 @@
 | `packages/sandbox/src/helpers/event-calibration.ts` | 新建每类事件的校准与发布阈值逻辑。 |
 | `packages/sandbox/src/calibration/event-recognition.json` | 保存离线校准后的每类发布阈值和可发布状态。 |
 | `packages/agent-core/src/context/customer-facing-evidence.ts` | 新建内部分析包到客户可见事实包的类型安全投影。 |
+| `packages/agent-core/src/context/customer-facing-unit-policy.ts` | 新建按指标语义转换、舍入和格式化的唯一 LLM 展示单位注册表。 |
 | `packages/agent-core/src/context/context-packet.ts` | 增加 `EventCertaintyBand` 和公开事实类型。 |
 | `packages/agent-core/src/context/context-packet-builder.ts` | 过滤低置信度事件并建立公开事件事实。 |
 | `packages/agent-core/src/prompts/context-packet-renderer.ts` | 仅渲染公开事实，不再渲染内部评分和标识符。 |
@@ -359,6 +364,7 @@ git commit -m "feat(agent-core): calibrate language for inferred events"
 **产出：**
 
 - [ ] 所有无物理单位派生分只以定性结论进入生成上下文。
+- [ ] 所有公开数值在进入 LLM 前已转换成指标最常用的展示单位，sleep 始终使用 `h`。
 - [ ] 工具错误、缺失和内部执行信息不进入生成上下文。
 - [ ] 违规响应在 memory/cache/API 之前被阻断，不进行字符串清洗。
 
@@ -375,11 +381,15 @@ git commit -m "feat(agent-core): calibrate language for inferred events"
 **涉及文件：**
 
 - 创建：`packages/agent-core/src/context/customer-facing-evidence.ts`
+- 创建：`packages/agent-core/src/context/customer-facing-unit-policy.ts`
 - 修改：`packages/agent-core/src/context/context-packet.ts`
 - 修改：`packages/agent-core/src/prompts/context-packet-renderer.ts`
 - 修改：`packages/agent-core/src/prompts/task-builder.ts`
 - 修改：`packages/agent-core/src/index.ts`
+- 修改：`data/sandbox/prompts/homepage/style/en.md`
+- 修改：`data/sandbox/prompts/homepage/style/zh.md`
 - 创建：`packages/agent-core/src/__tests__/context/customer-facing-evidence.test.ts`
+- 创建：`packages/agent-core/src/__tests__/context/customer-facing-unit-policy.test.ts`
 - 测试：`packages/agent-core/src/__tests__/prompts/context-packet-renderer.test.ts`
 
 **上下文：**
@@ -387,7 +397,7 @@ git commit -m "feat(agent-core): calibrate language for inferred events"
 公开数值类型必须使用封闭单位集合：
 
 ```ts
-export type PublicMetricUnit = 'bpm' | 'ms' | '%' | 'steps' | 'min';
+export type PublicMetricUnit = 'bpm' | 'ms' | '%' | 'steps' | 'h' | 'min' | 'km' | 'kcal';
 
 export interface PublicNumericFact {
   kind: 'numeric';
@@ -409,26 +419,44 @@ export interface PublicQualitativeFact {
 
 `motion`、`stress_load`、sleep score、quality score 和 confidence 必须映射为 `PublicQualitativeFact`；不得存在 `unit: 'score'` 的公开类型。该投影应用于 homepage、view summary 和 advisor chat，避免同一内部分数从其他入口泄漏。
 
+公开单位由 `customer-facing-unit-policy.ts` 的注册表按 metric 决定，禁止仅根据上游 `unit` 字符串透传：
+
+| 指标 | 内部值 | LLM/Response 展示 | 舍入与格式 |
+| --- | --- | --- | --- |
+| `sleep_total`、`sleep_deep`、`sleep_light`、`sleep_rem`、`sleep_awake`、`avg_sleep` | min | h | `minutes / 60`，最多 1 位小数，去掉末尾 `.0`，如 `450 → 7.5 h`、`480 → 8 h` |
+| 非睡眠 event/action/activity duration | min | `<60 → min`，`>=60 → h` | min 使用整数；h 最多 1 位小数 |
+| `heart_rate`、`resting_hr` | bpm | bpm | 整数，如 `100 bpm` |
+| `hrv`、`hrv_rmssd` | ms | ms | 整数，如 `84 ms` |
+| `spo2` | % | % | 最多 1 位小数，百分号前不加空格，如 `99%` |
+| `steps` | steps | steps | 整数并使用 locale thousands separator，如 `2,998 steps` |
+| `distance` | km | km | 最多 1 位小数，如 `4.2 km` |
+| `calories` | kcal | kcal | 整数，如 `320 kcal` |
+
+除 `%` 外，数值与英文单位之间保留一个空格。任何尚未登记的 metric/unit 组合不得进入公开包，必须先为其补充显式注册项和测试。
+
 **实现步骤：**
 
 - [ ] 实现 `buildCustomerFacingEvidencePacket(packet, locale)`，只接受内部 packet，返回公开事实、公开事件和允许的 action intents。
-- [ ] 为物理单位建立显式映射；遇到 `score` 或未知单位时只保留 qualifier/interpretation，不复制 value/min/max/average/delta。
+- [ ] 实现 `formatCustomerFacingMetric(metric, value, sourceUnit, locale)`；转换发生在公开事实构建阶段，内部 `DailyRecord`、`MetricSummary` 和事件窗口仍保留原始单位。
+- [ ] 按上表注册物理单位映射；遇到 `score` 时只保留 qualifier/interpretation，不复制 value/min/max/average/delta；遇到未知 metric/unit 时返回结构化 validation error，不静默猜测单位。
+- [ ] 更新中英文 homepage style：模型必须原样使用公开包给出的值和单位，禁止把 sleep 的 `h` 换回 `min`，禁止在回复中自行换算或混用单位。
 - [ ] 从公开包中移除 `sourceSegmentId`、recognized/internal IDs、raw event type、raw evidence、confidence、baseline delta 和 verifier 字段。
 - [ ] 修改 renderer，只接受 `CustomerFacingEvidencePacket` 渲染客户生成上下文；内部 packet 继续供 rule engine、tools 和观测使用。
-- [ ] 添加全入口测试：homepage/view/chat prompt 均不包含 `unit=score`、`movement intensity averaged 3.9`、`stress load 72`、`qualityScore` 或 exact confidence；HR 107bpm、HRV 84ms、SpO2 99%、steps 和 duration 仍可出现。
+- [ ] 添加单位边界测试：30 min event 显示 `30 min`，60/90/120 min event 显示 `1 h`/`1.5 h`/`2 h`，45/450/480 min sleep 显示 `0.8 h`/`7.5 h`/`8 h`；验证内部输入对象未被修改。
+- [ ] 添加全入口测试：homepage/view/chat prompt 均不包含 `unit=score`、`movement intensity averaged 3.9`、`stress load 72`、`qualityScore`、exact confidence、`sleep 480 min` 或 `deep sleep 90 min`；HR 107 bpm、HRV 84 ms、SpO2 99%、steps、distance、calories 和规范化 duration 仍可出现。
 
 **验证方式：**
 
 ```bash
-pnpm --filter @health-advisor/agent-core test -- src/__tests__/context/customer-facing-evidence.test.ts src/__tests__/prompts/context-packet-renderer.test.ts
+pnpm --filter @health-advisor/agent-core test -- src/__tests__/context/customer-facing-evidence.test.ts src/__tests__/context/customer-facing-unit-policy.test.ts src/__tests__/prompts/context-packet-renderer.test.ts
 ```
 
-预期结果：公开包类型无法构造 `unit: 'score'`；三类任务的 prompt 均通过评分隔离测试。
+预期结果：公开包类型无法构造 `unit: 'score'`；三类任务的 prompt 均通过评分隔离和常用单位测试；所有 sleep duration 均为 `h`。
 
 **提交说明：**
 
 ```bash
-git add packages/agent-core/src/context/customer-facing-evidence.ts packages/agent-core/src/context/context-packet.ts packages/agent-core/src/prompts/context-packet-renderer.ts packages/agent-core/src/prompts/task-builder.ts packages/agent-core/src/index.ts packages/agent-core/src/__tests__/context/customer-facing-evidence.test.ts packages/agent-core/src/__tests__/prompts/context-packet-renderer.test.ts
+git add packages/agent-core/src/context/customer-facing-evidence.ts packages/agent-core/src/context/customer-facing-unit-policy.ts packages/agent-core/src/context/context-packet.ts packages/agent-core/src/prompts/context-packet-renderer.ts packages/agent-core/src/prompts/task-builder.ts packages/agent-core/src/index.ts packages/agent-core/src/__tests__/context/customer-facing-evidence.test.ts packages/agent-core/src/__tests__/context/customer-facing-unit-policy.test.ts packages/agent-core/src/__tests__/prompts/context-packet-renderer.test.ts data/sandbox/prompts/homepage/style/en.md data/sandbox/prompts/homepage/style/zh.md
 git commit -m "feat(agent-core): project internal evidence to customer-safe facts"
 ```
 
@@ -643,9 +671,12 @@ git commit -m "fix(agent-core): unify realtime brief length policy"
 
 第二个 case 使用图 2 对应运动窗口，内部 packet 保留 motion average 3.9、max 9.7 和 session score，但 fixture answer 不得包含任何派生分数；同时模拟 caffeine tool 无 invocation，禁止输出算法、工具、戒指能力和无法估算等元说明。英文 summary 必须为 90–180 words。
 
+两个 case 都必须包含单位断言：sleep total/stages 只能使用 `h`；30 分钟运动使用 `min`，达到 60 分钟的非睡眠事件使用 `h`；不得出现同一指标混用 `h` 和 `min`。
+
 **实现步骤：**
 
 - [ ] 扩展 homepage eval expectation：`requireProbabilisticEventLanguage`、`forbidInternalDerivedScores`、`forbidCapabilityDisclosure`。
+- [ ] 扩展数值/单位 expectation：`requiredDisplayUnits` 和 `forbiddenDisplayUnits` 以 metric 为 key 检查，不使用跨指标的全局单位正则。
 - [ ] 在 task scorer 中使用结构化 expectation 和公开 claim ledger 结果，不把具体截图数字硬编码到全局 scorer。
 - [ ] 创建两个 fixture case，分别覆盖中文推断进餐和英文运动简报。
 - [ ] 增加 API 集成测试：通过的 envelope 不含内部字段；content policy 失败时 orchestrator 不缓存结果。
@@ -743,7 +774,10 @@ git commit -m "test(agent-core): cover realtime brief customer boundaries"
 - [ ] 所有 sensor-inferred event 都使用 possible/likely 表达；只有 user report 使用确定性表达。
 - [ ] LLM prompt 和客户回复均不显示事件 confidence 百分比。
 - [ ] Homepage、view summary 和 advisor chat 均不显示 motion/stress/sleep/quality 等派生分数。
-- [ ] HR、HRV、SpO2、steps 和 duration 等允许的物理数值仍能正常引用。
+- [ ] 所有 sleep total、average 和 stage duration 在 LLM prompt 与 Response 中都使用 `h`，不存在 sleep `min` 表达。
+- [ ] 非睡眠 duration 小于 60 分钟使用 `min`，达到 60 分钟使用 `h`；同一数值只展示一种单位。
+- [ ] HR、HRV、SpO2、steps、distance 和 calories 分别使用 `bpm`、`ms`、`%`、`steps`、`km`、`kcal`。
+- [ ] 未登记的 metric/unit 组合无法进入 `CustomerFacingEvidencePacket`，不会被猜测或原样透传。
 - [ ] tool missing/error/empty 不会向 LLM 渲染任何内部元数据，也不会生成系统能力说明。
 - [ ] 违规内容在 memory、cache 和 API return 前被阻断；没有新增字符串替换或截断逻辑。
 - [ ] 英文 homepage summary 的 90/180 边界通过，89/181 被拒绝；中文 220/420 边界保持一致。
