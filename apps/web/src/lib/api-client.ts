@@ -3,8 +3,14 @@ import type { ApiResponse } from '@health-advisor/shared';
 
 /** 网络请求安全兜底超时（毫秒），用于防止请求永远挂起 */
 const DEFAULT_TIMEOUT_MS = 30_000;
-/** AI 请求超时（毫秒），需大于后端 AI_TIMEOUT_MS 以等待 fallback 降级响应 */
-export const AI_REQUEST_TIMEOUT_MS = 65_000;
+/**
+ * AI 请求超时（毫秒）。
+ * 后端单次 LLM 调用最多 60s（AGENT_SLA_TIMEOUT_MS），但 content policy 违规时会触发
+ * 一次 regeneration（第二次 LLM 调用），sync gate 高风险场景还可能触发 reviewer 调用。
+ * 最坏情况：2 次 LLM × 60s + 开销 ≈ 130s。设为 150s 留出余量。
+ * 长期方案是 streaming（已规划），当前用长超时保证 fallback 降级响应能被前端接收。
+ */
+export const AI_REQUEST_TIMEOUT_MS = 150_000;
 /** AI 请求建议的 UI 等待阈值（毫秒），前端可据此展示 timeout 状态 */
 export const AI_UI_TIMEOUT_MS = 6_000;
 const SESSION_ID_STORAGE_KEY = 'session-id';
