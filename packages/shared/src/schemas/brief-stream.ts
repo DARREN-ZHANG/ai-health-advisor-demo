@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AgentResponseEnvelopeSchema } from './agent';
+import { ActionOptionSchema, AgentResponseEnvelopeSchema, FutureSuggestionSchema } from './agent';
 import { BRIEF_STREAM_ERROR_CODES } from '../types/brief-stream';
 import type { BriefStreamEvent } from '../types/brief-stream';
 
@@ -45,9 +45,31 @@ const BriefFailedEventSchema = z.object({
   }),
 });
 
+const BriefActionReadyEventSchema = z.object({
+  type: z.literal('brief.action.ready'),
+  requestId: requestIdSchema,
+  index: z.number().int().nonnegative(),
+  action: ActionOptionSchema,
+});
+
+const BriefForecastStartedEventSchema = z.object({
+  type: z.literal('brief.forecast.started'),
+  requestId: requestIdSchema,
+});
+
+const BriefFutureSuggestionReadyEventSchema = z.object({
+  type: z.literal('brief.future_suggestion.ready'),
+  requestId: requestIdSchema,
+  index: z.number().int().nonnegative(),
+  suggestion: FutureSuggestionSchema,
+});
+
 export const BriefStreamEventSchema = z.discriminatedUnion('type', [
   BriefStartedEventSchema,
   BriefSummaryDeltaEventSchema,
+  BriefActionReadyEventSchema,
+  BriefForecastStartedEventSchema,
+  BriefFutureSuggestionReadyEventSchema,
   BriefCompletedEventSchema,
   BriefFailedEventSchema,
 ]);

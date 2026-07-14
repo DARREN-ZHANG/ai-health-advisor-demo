@@ -1,4 +1,4 @@
-import type { AgentResponseEnvelope } from './agent';
+import type { ActionOption, AgentResponseEnvelope, FutureSuggestion } from './agent';
 
 /**
  * 首页实时简报的 SSE 事件契约。
@@ -49,6 +49,27 @@ export interface BriefFailedEvent {
   };
 }
 
+export interface BriefActionReadyEvent {
+  type: 'brief.action.ready';
+  requestId: string;
+  /** actions 数组下标，从 0 起 */
+  index: number;
+  action: ActionOption;
+}
+
+export interface BriefForecastStartedEvent {
+  type: 'brief.forecast.started';
+  requestId: string;
+}
+
+export interface BriefFutureSuggestionReadyEvent {
+  type: 'brief.future_suggestion.ready';
+  requestId: string;
+  /** futureSuggestions 数组下标，从 0 起 */
+  index: number;
+  suggestion: FutureSuggestion;
+}
+
 /**
  * 流事件的判别联合：以 `type` 作为判别字段。
  * started → 可选多次 summary.delta → completed | failed (终态二选一)。
@@ -56,5 +77,8 @@ export interface BriefFailedEvent {
 export type BriefStreamEvent =
   | BriefStartedEvent
   | BriefSummaryDeltaEvent
+  | BriefActionReadyEvent
+  | BriefForecastStartedEvent
+  | BriefFutureSuggestionReadyEvent
   | BriefCompletedEvent
   | BriefFailedEvent;
