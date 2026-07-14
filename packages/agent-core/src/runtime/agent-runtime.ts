@@ -426,10 +426,16 @@ export async function executeAgent(
       // 违规 → 尝试一次 regeneration（仅传结构化 violation code + 客户规则，不含内部值）
       const feedback = buildRegenerationFeedback(firstPolicyResult.violations, locale);
       const regeneratedTaskPrompt = `${taskPrompt}\n\n${feedback}`;
-      const regeneratedRaw = await deps.agent.invoke({
-        systemPrompt,
-        userPrompt: regeneratedTaskPrompt,
-      });
+      // 重生成同样是一次模型调用，必须受 SLA 预算约束；否则上游在此处迟滞时，
+      // 首次调用的 timeout 无法保护请求，前端最终只能收到中断错误。
+      const regeneratedRaw = await withTimeout(
+        (signal) => deps.agent.invoke({
+          systemPrompt,
+          userPrompt: regeneratedTaskPrompt,
+          signal,
+        }),
+        timeoutMs,
+      );
       tryNotify(() => observer?.onModelOutput?.(regeneratedRaw.content));
 
       const regeneratedParsed = parseAgentResponse(regeneratedRaw.content, {

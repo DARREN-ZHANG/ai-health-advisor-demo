@@ -566,6 +566,21 @@ describe('P0 Observer 集成测试', () => {
       expect(analyticalMemory.get('sess-1')?.latestHomepageBrief).toBe(goodSummary);
     });
 
+    it('regeneration 超时会返回 timeout fallback，而不会无限等待', async () => {
+      const badSummary = '你刚吃完饭，运动强度 4.2。';
+      const invokeMock = vi.fn();
+      invokeMock.mockResolvedValueOnce({
+        content: JSON.stringify({ summary: badSummary, chartTokens: [], microTips: [] }),
+      });
+      invokeMock.mockImplementationOnce(() => new Promise<never>(() => {}));
+
+      const result = await executeAgent(makeRequest(), makeDeps({ invoke: invokeMock }), 10);
+
+      expect(invokeMock).toHaveBeenCalledTimes(2);
+      expect(result.source).toBe('fallback');
+      expect(result.meta.finishReason).toBe('timeout');
+    });
+
     it('第二次 regeneration 仍违规 → 返回 typed error，不写 memory', async () => {
       const sessionMemory = new InMemorySessionMemoryStore();
       const analyticalMemory = new InMemoryAnalyticalMemoryStore();
