@@ -282,7 +282,7 @@ describe('AI Routes', () => {
     test('cache miss 多 delta：started → delta* → completed', async () => {
       mockedExecuteAgent.mockReset();
       app.briefCache.clearAll();
-      app.runtime.overrideStore.reset('all');
+      app.runtime.getSessionSandbox('sess-stream-1').overrideStore.reset('all');
 
       // executeAgent 收到 options.onSummaryDelta，调用模拟 delta
       mockedExecuteAgent.mockImplementationOnce(
@@ -344,7 +344,7 @@ describe('AI Routes', () => {
 
     test('cache hit 直达 completed（无 delta）', async () => {
       mockedExecuteAgent.mockReset();
-      app.runtime.overrideStore.reset('all');
+      app.runtime.getSessionSandbox('sess-stream-2').overrideStore.reset('all');
 
       // 第一次调用产生缓存
       mockedExecuteAgent.mockResolvedValueOnce(mockResponse);
@@ -352,7 +352,7 @@ describe('AI Routes', () => {
         method: 'POST',
         url: '/ai/morning-brief',
         payload: { profileId: 'profile-a', pageContext: defaultPageContext },
-        headers: { 'x-session-id': 'sess-cache-fill' },
+        headers: { 'x-session-id': 'sess-stream-2' },
       });
 
       // 第二次 stream 调用应命中缓存，不调用 executeAgent
@@ -384,7 +384,7 @@ describe('AI Routes', () => {
     test('invalid output（fallback）发 failed terminal', async () => {
       mockedExecuteAgent.mockReset();
       app.briefCache.clearAll();
-      app.runtime.overrideStore.reset('all');
+      app.runtime.getSessionSandbox('sess-stream-3').overrideStore.reset('all');
 
       const fallbackResponse: AgentResponseEnvelope = {
         ...mockResponse,
@@ -422,7 +422,7 @@ describe('AI Routes', () => {
     test('provider exception 发 failed terminal', async () => {
       mockedExecuteAgent.mockReset();
       app.briefCache.clearAll();
-      app.runtime.overrideStore.reset('all');
+      app.runtime.getSessionSandbox('sess-stream-4').overrideStore.reset('all');
 
       mockedExecuteAgent.mockRejectedValueOnce(new Error('connection failed'));
 
@@ -506,7 +506,7 @@ describe('AI Routes', () => {
 
       mockedExecuteAgent.mockReset();
       localApp.briefCache.clearAll();
-      localApp.runtime.overrideStore.reset('all');
+      localApp.runtime.getSessionSandbox('sess-stream-abort').overrideStore.reset('all');
 
       let signalAfterAbort: boolean | undefined;
       let deltaCountAfterAbort = 0;

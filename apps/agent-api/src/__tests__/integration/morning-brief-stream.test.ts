@@ -159,7 +159,7 @@ describe('Morning Brief Stream 集成测试', () => {
   test('合法多 delta：started → delta* → completed，帧通过 schema 校验', async () => {
     mockedExecuteAgent.mockReset();
     app.briefCache.clearAll();
-    app.runtime.overrideStore.reset('all');
+    app.runtime.getSessionSandbox('sess-int-1').overrideStore.reset('all');
 
     // fake streaming agent：按可控顺序推送 delta 片段（模拟 JSON summary 增量）
     mockedExecuteAgent.mockImplementationOnce(
@@ -238,7 +238,7 @@ describe('Morning Brief Stream 集成测试', () => {
    */
   test('cache hit 直达 completed（无 delta），finishReason=cached', async () => {
     mockedExecuteAgent.mockReset();
-    app.runtime.overrideStore.reset('all');
+    app.runtime.getSessionSandbox('sess-int-2').overrideStore.reset('all');
 
     // 第一次调用 JSON route 产生缓存
     mockedExecuteAgent.mockResolvedValueOnce(validEnvelope);
@@ -246,7 +246,7 @@ describe('Morning Brief Stream 集成测试', () => {
       method: 'POST',
       url: '/ai/morning-brief',
       payload: { profileId: 'profile-a', pageContext: defaultPageContext },
-      headers: { 'x-session-id': 'sess-cache-fill' },
+      headers: { 'x-session-id': 'sess-int-2' },
     });
     expect(fillResponse.statusCode).toBe(200);
 
@@ -288,7 +288,7 @@ describe('Morning Brief Stream 集成测试', () => {
   test('fallback finishReason 发 failed terminal（无 completed）', async () => {
     mockedExecuteAgent.mockReset();
     app.briefCache.clearAll();
-    app.runtime.overrideStore.reset('all');
+    app.runtime.getSessionSandbox('sess-int-3').overrideStore.reset('all');
 
     const fallbackResponse: AgentResponseEnvelope = {
       ...validEnvelope,
@@ -334,7 +334,7 @@ describe('Morning Brief Stream 集成测试', () => {
   test('provider 抛异常发 failed terminal', async () => {
     mockedExecuteAgent.mockReset();
     app.briefCache.clearAll();
-    app.runtime.overrideStore.reset('all');
+    app.runtime.getSessionSandbox('sess-int-4').overrideStore.reset('all');
 
     mockedExecuteAgent.mockRejectedValueOnce(new Error('provider connection failed'));
 
@@ -393,7 +393,7 @@ describe('Morning Brief Stream 集成测试', () => {
 
     mockedExecuteAgent.mockReset();
     localApp.briefCache.clearAll();
-    localApp.runtime.overrideStore.reset('all');
+    localApp.runtime.getSessionSandbox('sess-int-abort').overrideStore.reset('all');
 
     let signalAfterAbort: boolean | undefined;
     let deltaCountAfterAbort = 0;
@@ -477,7 +477,7 @@ describe('Morning Brief Stream 集成测试', () => {
   test('客户端 X-Request-Id header 决定 SSE 帧的 requestId（端到端契约）', async () => {
     mockedExecuteAgent.mockReset();
     app.briefCache.clearAll();
-    app.runtime.overrideStore.reset('all');
+    app.runtime.getSessionSandbox('sess-int-reqid').overrideStore.reset('all');
 
     // fake streaming agent：推送 2 个 delta，验证每个 delta 帧都带客户端 requestId
     mockedExecuteAgent.mockImplementationOnce(
