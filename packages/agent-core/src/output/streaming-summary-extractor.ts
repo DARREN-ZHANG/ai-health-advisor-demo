@@ -1,4 +1,11 @@
 import { JSONParser } from '@streamparser/json';
+import {
+  safeForParser,
+  detectMarkdownFence,
+  MarkdownFenceError,
+  type SurrogateBuffer,
+  type FenceCheckState,
+} from './chunk-safety';
 
 /**
  * parser onValue 事件的结构类型。
@@ -69,24 +76,27 @@ export class StreamingSummaryExtractor {
   /** 是否已调用 finish，防止重复使用 */
   private finished = false;
 
-  /** 缓冲前导空白，用于在真正内容到达前判断是否为 markdown fence */
-  private leadingWhitespaceBuffer = '';
-
-  /** 是否已完成前导检测（遇到第一个非空白字符后不再缓冲） */
-  private leadingCheckDone = false;
-
   /**
-   * 末尾落单的 high surrogate（0xD800-0xDBFF）缓冲。
+   * 末尾落单 high surrogate 缓冲。
    *
    * 背景：@streamparser/json 0.0.22 在 chunk 边界切断 UTF-16 surrogate pair 时
    * 会产生乱码——它把单独的 high surrogate 当成完整字符释放为 partial value，
    * 后续 low surrogate 到达后值无法对齐。模型 chunk 边界不可控，必须在喂入
    * parser 前确保不把 surrogate pair 拆开。
    *
-   * 策略：若 chunk（拼接 pendingSurrogateTail 后）末尾是落单 high surrogate，
-   * 把它暂存到下一个 chunk，确保交给 parser 的字符串总是以完整码元结尾。
+   * 守卫逻辑由 chunk-safety.ts 的 safeForParser 维护，集中到独立 helper 后
+   * StreamingStructureExtractor 复用同一份实现避免漂移。
    */
-  private pendingSurrogateTail = '';
+  private readonly surrogateBuf: SurrogateBuffer = { tail: '' };
+
+  /**
+   * markdown code fence 前导检测状态。
+   *
+   * 模型有时用 ```json ... ``` 包裹 JSON，违反纯 JSON 流契约。为支持合法 JSON
+   * 的前导空白（可能跨 chunk），需缓冲直到遇到第一个实质字符再判定。
+   * 守卫逻辑由 chunk-safety.ts 的 detectMarkdownFence 维护。
+   */
+  private readonly fenceState: FenceCheckState = { done: false, buffer: '' };
 
   constructor() {
     this.parser = new JSONParser({
@@ -120,11 +130,20 @@ export class StreamingSummaryExtractor {
     // 模型有时用 ```json ... ``` 包裹 JSON，这违反纯 JSON 流契约。
     // 我们不在运行时 strip（plan 明确要求不接受 fence），而是直接作为错误抛出。
     // 为支持合法的 JSON 前导空白，先消耗前导空白再判断。
-    this.detectMarkdownFence(chunk);
+    // 守卫逻辑在 chunk-safety.ts，抛 MarkdownFenceError；这里转成
+    // StreamingSummaryParseError 以保持对外 instanceof 契约（runtime 依赖它区分错误）。
+    try {
+      detectMarkdownFence(this.fenceState, chunk);
+    } catch (err) {
+      if (err instanceof MarkdownFenceError) {
+        throw new StreamingSummaryParseError(err.message);
+      }
+      throw err;
+    }
 
     // surrogate pair 安全缓冲：确保不把 UTF-16 surrogate pair 拆开交给 parser。
     // @streamparser/json 0.0.22 在 chunk 边界切断 surrogate pair 会产生乱码。
-    const safeChunk = this.safeForParser(chunk);
+    const safeChunk = safeForParser(this.surrogateBuf, chunk);
 
     // parser.write 可能同步抛错（例如非法 JSON 字符），统一转成 typed error
     if (safeChunk.length > 0) {
@@ -159,13 +178,13 @@ export class StreamingSummaryExtractor {
 
     // 冲刷残留的 surrogate 缓冲：流结束时若仍有落单 high surrogate，
     // 说明 JSON 中存在非法的单独 surrogate 字符，交给 parser 处理（会抛错）。
-    if (this.pendingSurrogateTail.length > 0) {
+    if (this.surrogateBuf.tail.length > 0) {
       try {
-        this.parser.write(this.pendingSurrogateTail);
+        this.parser.write(this.surrogateBuf.tail);
       } catch (err) {
         throw this.toTypedError(err);
       }
-      this.pendingSurrogateTail = '';
+      this.surrogateBuf.tail = '';
     }
 
     // 调用 end() 让 parser 进行最终状态检查。
@@ -254,83 +273,5 @@ export class StreamingSummaryExtractor {
     }
     const msg = (err as Error)?.message ?? String(err);
     return new StreamingSummaryParseError(`JSON 解析错误：${msg}`);
-  }
-
-  /**
-   * 确保 chunk 不在 UTF-16 surrogate pair 中间断开。
-   *
-   * 把上一个 chunk 残留的 pendingSurrogateTail 拼到当前 chunk 前，
-   * 检查合并后字符串的末尾是否是落单的 high surrogate（0xD800-0xDBFF）；
-   * 若是，把它暂存到 pendingSurrogateTail，返回的字符串不含该尾部。
-   *
-   * 这样保证每次交给 parser.write 的字符串都以完整码元结尾，
-   * parser 的 partial value 释放不会因 surrogate 切断而错乱。
-   */
-  private safeForParser(chunk: string): string {
-    const combined = this.pendingSurrogateTail + chunk;
-    this.pendingSurrogateTail = '';
-
-    if (combined.length === 0) {
-      return '';
-    }
-
-    const lastCharCode = combined.charCodeAt(combined.length - 1);
-    // high surrogate 范围：0xD800 - 0xDBFF
-    if (lastCharCode >= 0xd800 && lastCharCode <= 0xdbff) {
-      // 末尾是落单 high surrogate，暂存等下一个 chunk 补全
-      // 用 charAt 避免在 noUncheckedIndexedAccess 下返回 string | undefined
-      this.pendingSurrogateTail = combined.charAt(combined.length - 1);
-      return combined.slice(0, -1);
-    }
-
-    return combined;
-  }
-
-  /**
-   * 检测 markdown code fence 并抛错。
-   *
-   * 支持合法 JSON 的前导空白（空格、\t、\n、\r）。
-   * 一旦遇到第一个非空白字符是反引号 `，判定为 fence 违规。
-   *
-   * 实现要点：前导空白可能跨多个 chunk，因此缓冲前导空白直到遇到第一个
-   * 实质字符；一旦检测完成（无论是否抛错），后续 chunk 不再处理。
-   */
-  private detectMarkdownFence(chunk: string): void {
-    if (this.leadingCheckDone) {
-      return;
-    }
-
-    // 把 chunk 追加到前导缓冲，逐字符判断
-    this.leadingWhitespaceBuffer += chunk;
-    const buf = this.leadingWhitespaceBuffer;
-
-    for (let i = 0; i < buf.length; i++) {
-      // 用 charAt 避免在 noUncheckedIndexedAccess 下返回 string | undefined
-      const ch = buf.charAt(i);
-      if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') {
-        // 继续消耗前导空白
-        continue;
-      }
-      // 遇到第一个非空白字符，检测完成
-      this.leadingCheckDone = true;
-      if (ch === '`') {
-        throw new StreamingSummaryParseError(
-          '输入以 markdown code fence（```）开头，期望纯 JSON 流',
-        );
-      }
-      // 合法 JSON 起始字符，清空检测缓冲（parser 在 push 主流程已收到原始 chunk）
-      this.leadingWhitespaceBuffer = '';
-      return;
-    }
-
-    // 整个 chunk 都是前导空白，尚未遇到实质字符。
-    // 此时不能判定，但也不应让 parser 处理缓冲过的内容两次——
-    // 实际 chunk 已经原样传给 parser（见 push），这里只做检测。
-    // 前导空白过长本身就可疑（合法 JSON 不会这样），作为异常输入直接拒绝。
-    if (this.leadingWhitespaceBuffer.length > 64) {
-      throw new StreamingSummaryParseError(
-        '前导空白过长（>64 字符），疑似异常输入',
-      );
-    }
   }
 }
