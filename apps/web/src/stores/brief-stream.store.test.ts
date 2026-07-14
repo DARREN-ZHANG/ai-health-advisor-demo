@@ -18,6 +18,9 @@ describe('briefStreamStore', () => {
       requestId: 'req-1',
       phase: 'streaming',
       draftSummary: '',
+      draftActions: [],
+      forecastStarted: false,
+      draftFutureSuggestions: [],
     });
   });
 

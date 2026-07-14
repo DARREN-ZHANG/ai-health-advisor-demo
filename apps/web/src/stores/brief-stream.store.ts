@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ActionOption, FutureSuggestion } from '@health-advisor/shared';
 
 /**
  * 首页实时简报流式状态 store。
@@ -29,15 +30,32 @@ export interface BriefStreamEntry {
   phase: BriefStreamPhase;
   /** 累积的增量 summary 文本(UI 据此渲染打字机效果) */
   draftSummary: string;
+  /** 按 index 累积的 action 草稿(SSE 乱序到达也按下标归位) */
+  draftActions: ActionOption[];
+  /** forecast 阶段是否已开始(收到 brief.forecast.started 后置 true,幂等) */
+  forecastStarted: boolean;
+  /** 按 index 累积的 futureSuggestion 草稿 */
+  draftFutureSuggestions: FutureSuggestion[];
 }
 
 interface BriefStreamState {
   /** 以 profileId 为键的草稿条目集合 */
   entries: Record<string, BriefStreamEntry>;
-  /** 开始一次流:创建 entry,phase=streaming,draftSummary 清空 */
+  /** 开始一次流:创建 entry,phase=streaming,draft 字段全部清空 */
   begin(profileId: string, requestId: string): void;
-  /** 追加 delta;requestId 不匹配时静默忽略(stale 事件) */
+  /** 追加 summary delta;requestId 不匹配时静默忽略(stale 事件) */
   append(profileId: string, requestId: string, delta: string): void;
+  /** 按 index 放置 action 草稿;requestId 不匹配时静默忽略 */
+  appendAction(profileId: string, requestId: string, index: number, action: ActionOption): void;
+  /** 标记 forecast 已开始(幂等);requestId 不匹配时静默忽略 */
+  markForecastStarted(profileId: string, requestId: string): void;
+  /** 按 index 放置 futureSuggestion 草稿;requestId 不匹配时静默忽略 */
+  appendFutureSuggestion(
+    profileId: string,
+    requestId: string,
+    index: number,
+    suggestion: FutureSuggestion,
+  ): void;
   /** 完成:校验 requestId 后清除 entry(终态数据进 React Query cache) */
   complete(profileId: string, requestId: string): void;
   /** 失败:校验 requestId 后清除 entry(同时清空 draft) */
@@ -57,6 +75,9 @@ export const useBriefStreamStore = create<BriefStreamState>((set, get) => ({
           requestId,
           phase: 'streaming',
           draftSummary: '',
+          draftActions: [],
+          forecastStarted: false,
+          draftFutureSuggestions: [],
         },
       },
     })),
@@ -82,6 +103,58 @@ export const useBriefStreamStore = create<BriefStreamState>((set, get) => ({
             ...entry,
             draftSummary: entry.draftSummary + delta,
           },
+        },
+      };
+    });
+  },
+
+  appendAction: (profileId, requestId, index, action) => {
+    // 与 append 同型:快路径 + set 回调内权威校验双重守护 requestId
+    const current = get().entries[profileId];
+    if (!current || current.requestId !== requestId) return;
+    set((state) => {
+      const entry = state.entries[profileId];
+      if (!entry || entry.requestId !== requestId) return state;
+      // index-aware 放置:SSE 乱序到达也能按下标归位
+      const next = entry.draftActions.slice();
+      next[index] = action;
+      return {
+        entries: {
+          ...state.entries,
+          [profileId]: { ...entry, draftActions: next },
+        },
+      };
+    });
+  },
+
+  markForecastStarted: (profileId, requestId) => {
+    // 幂等:已在快路径和 set 回调里双重检查 forecastStarted,避免重复 set
+    const current = get().entries[profileId];
+    if (!current || current.requestId !== requestId || current.forecastStarted) return;
+    set((state) => {
+      const entry = state.entries[profileId];
+      if (!entry || entry.requestId !== requestId || entry.forecastStarted) return state;
+      return {
+        entries: {
+          ...state.entries,
+          [profileId]: { ...entry, forecastStarted: true },
+        },
+      };
+    });
+  },
+
+  appendFutureSuggestion: (profileId, requestId, index, suggestion) => {
+    const current = get().entries[profileId];
+    if (!current || current.requestId !== requestId) return;
+    set((state) => {
+      const entry = state.entries[profileId];
+      if (!entry || entry.requestId !== requestId) return state;
+      const next = entry.draftFutureSuggestions.slice();
+      next[index] = suggestion;
+      return {
+        entries: {
+          ...state.entries,
+          [profileId]: { ...entry, draftFutureSuggestions: next },
         },
       };
     });
