@@ -10,6 +10,31 @@
 
 ---
 
+## Implementation Status（2026-07-14）
+
+本计划的功能实现已落地。任务 1.1–4.2 中原有的事件观察投影、无标签识别、离线校准、确定性档位、公开工具结论、阻断式发布门禁和唯一长度策略由主分支既有提交完成；本轮补齐了客户可见单位投影、自由文本评分入口收口、数值与单位联合归因，以及指标级单位 Eval。
+
+| 任务 | 状态 | 主要实现/验证 |
+| --- | --- | --- |
+| 1.1 双通道数据契约 | 已完成 | `SensorObservation`、source/calibration schema；shared 191 tests、sandbox 372 tests 通过。 |
+| 1.2 无标签事件识别 | 已完成 | 识别结果对 Timeline 标签/ID 重命名保持不变；sensor 推断不携带 `sourceSegmentId`。 |
+| 1.3 校准与发布阈值 | 已完成 | calibration artifact 校验通过；低于 publish threshold 的候选不发布。 |
+| 2.1 确定性语言契约 | 已完成 | possible/likely/reported 映射及中英文 prompt/content policy 测试通过。 |
+| 3.1 CustomerFacingEvidencePacket | 已完成 | 新增 `customer-facing-unit-policy.ts`；sleep 全部转 `h`，其他物理量按注册表投影；未知组合 fail closed。 |
+| 3.2 工具公开结论 | 已完成 | tool missing/error/empty 不进入公开 prompt；success 只投影客户可用 claim。 |
+| 3.3 发布前内容门禁 | 已完成 | 数值与单位必须联合匹配 claim ledger；内部评分、能力说明和错误单位阻断发布。 |
+| 4.1 长度策略 | 已完成 | 英文 90–180 words、中文 220–420 graphemes 的统一策略与边界测试通过。 |
+| 4.2 回归验收 | 功能回归完成 | `H-040` 30/30、`H-041` 25/25；agent-core 1021 tests、agent-api 228 tests 通过。 |
+
+本轮提交：
+
+- `609a268 feat(agent-core): normalize customer-facing health units`
+- `651fa10 chore(deps): add tsx for validation scripts`
+
+仓库级验收基线仍有两组与本需求无关的既有失败，未在本轮扩展范围处理：72 个 core fixture 中 66 个旧 case 存在 hard failure；`pnpm validate` 的 fallback 文件仍使用 locale 顶层结构且缺少 `scenarios/manifest.json`。同一次数据校验中 profiles、history、timeline scripts、prompts 和 event calibration artifact 均通过。
+
+---
+
 ## Context Summary
 
 ### 已确认的产品口径
