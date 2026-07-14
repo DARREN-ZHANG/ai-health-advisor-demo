@@ -673,6 +673,47 @@ describe('realtime-brief-content-policy', () => {
       const result = enforceCustomerContentPolicy(input);
       expect(result.violations.find((x) => x.code === 'unattributed_numeric_claim')).toBeUndefined();
     });
+
+    it('summary 中四舍五入的数值在容差范围内 → 不违规', () => {
+      // evidence 精确值：HRV=54.8ms, steps=8123, HR=64.7bpm, SpO2=97.5%
+      // 模型自然输出会四舍五入：55ms, 8000步, 65bpm, 98%
+      const packet = makePacket([
+        makeNumericFact('hrv_rmssd', 54.8, 'ms'),
+        makeNumericFact('steps', 8123, 'steps'),
+        makeNumericFact('heart_rate', 64.7, 'bpm'),
+        makeNumericFact('spo2', 97.5, '%'),
+      ]);
+      const envelope = makeEnvelope({
+        summary: 'HRV 稳定在 55ms 左右，步数超过 8000 步，心率 65bpm，血氧 98%。',
+      });
+      const input: RealtimeBriefPolicyInput = {
+        envelope,
+        evidencePacket: packet,
+        actionCandidates: [],
+        locale: 'zh',
+        taskType: 'homepage_summary',
+      };
+      const result = enforceCustomerContentPolicy(input);
+      expect(result.violations.find((x) => x.code === 'unattributed_numeric_claim')).toBeUndefined();
+    });
+
+    it('summary 中明显编造的数值超出容差 → 违规', () => {
+      // evidence 心率 65bpm，模型声称 120bpm → 差 55 远超容差 max(1, 65*0.05=3.25)
+      const packet = makePacket([makeNumericFact('heart_rate', 65, 'bpm')]);
+      const envelope = makeEnvelope({
+        summary: '你的心率达到 120bpm，需要关注。',
+      });
+      const input: RealtimeBriefPolicyInput = {
+        envelope,
+        evidencePacket: packet,
+        actionCandidates: [],
+        locale: 'zh',
+        taskType: 'homepage_summary',
+      };
+      const result = enforceCustomerContentPolicy(input);
+      const v = result.violations.find((x) => x.code === 'unattributed_numeric_claim');
+      expect(v).toBeDefined();
+    });
   });
 
   describe('enforceCustomerContentPolicy - summary_length_out_of_range', () => {

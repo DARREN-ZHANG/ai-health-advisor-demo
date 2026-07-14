@@ -435,12 +435,18 @@ function checkNumericAttribution(
   return violations;
 }
 
-/** 判断数值是否被允许（精确匹配 + 容差：±1 处理四舍五入） */
+/**
+ * 判断数值是否被允许（精确匹配 + 宽松容差）。
+ *
+ * 容差策略：绝对容差 1 或相对容差 5%，取较大值。
+ * 允许模型对数值进行合理的四舍五入（如 54.8ms→55ms, 8123步→8000步），
+ * 同时拒绝明显编造的数值（如 evidence 65bpm 时声称 120bpm）。
+ */
 function isNumberAllowed(value: number, ledger: ClaimLedger): boolean {
   if (ledger.allowedNumbers.has(value)) return true;
-  // 容差：±1 步允许（避免 7.99 vs 8.0 之类的舍入误差）
   for (const allowed of ledger.allowedNumbers) {
-    if (Math.abs(allowed - value) < 0.01) return true;
+    const tolerance = Math.max(1, allowed * 0.05);
+    if (Math.abs(allowed - value) <= tolerance) return true;
   }
   return false;
 }
