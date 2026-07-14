@@ -18,6 +18,16 @@ import { gotoAndWait, reloadAndWait } from './_app-ready';
  * Mock 信封：与后端 `ApiResponse<T> = { success, data, error, meta }` 一致；
  * api-client 通过 `body.success` 判定业务成功，不包一层 success:true 会被
  * 当作失败抛错。
+ *
+ * 首页 streaming 改造（任务 4.1）：
+ *  - 首页 useMorningBrief 现调用 `/ai/morning-brief/stream`（SSE），不再调
+ *    `/ai/morning-brief`（JSON）。mockValoApi 默认挂载 stream mock，返回完整
+ *    SSE contract（started → delta* → completed）。
+ *  - E2E 只验证终态（completed 后首页 DOM），不验证流式过程中间态——
+ *    Playwright route.fulfill 一次性返回全部 body，无法冒充真实流式时序。
+ *    渐进 DOM 时序由 Vitest ReadableStream 单测（brief-stream-client.test.ts）
+ *    负责。
+ *  - 保留旧 JSON route mock（`/ai/morning-brief` 不带 stream）供未迁移场景。
  */
 
 // ---------- 共享 mock 工具 ----------
@@ -37,7 +47,7 @@ function mockApiResponse<T>(data: T) {
   };
 }
 
-/** Mock 的最小可用 AgentResponseEnvelope。 */
+/** Mock 的最小可用 AgentResponseEnvelope（通过 AgentResponseEnvelopeSchema 校验）。 */
 function mockBriefEnvelope(overrides: Record<string, unknown> = {}) {
   return {
     summary: '你昨晚深睡偏少，建议睡前放松。',
@@ -47,8 +57,84 @@ function mockBriefEnvelope(overrides: Record<string, unknown> = {}) {
     actions: [],
     source: 'llm',
     statusColor: 'good',
-    meta: { taskType: 'morning-brief', pageContext: {}, finishReason: 'stop' },
+    // taskType 必须是 AgentTaskType 枚举值（'homepage_summary'），
+    // pageContext 必须通过 PageContextSchema（需要 profileId/page/timeframe），
+    // 否则 BriefCompletedEventSchema → AgentResponseEnvelopeSchema 校验失败。
+    meta: {
+      taskType: 'homepage_summary',
+      pageContext: { profileId: 'profile-a', page: 'homepage', timeframe: 'week' },
+      finishReason: 'complete',
+    },
     ...overrides,
+  };
+}
+
+/**
+ * 把 BriefStreamEvent 序列化为单帧 SSE 文本。
+ *
+ * 与后端 SseWriter.serializeSseFrame 格式一致：
+ * `event: <type>\ndata: <单行 JSON>\n\n`
+ */
+function serializeSseFrame(event: { type: string } & Record<string, unknown>): string {
+  return `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
+}
+
+/**
+ * 构造首页 morning brief stream 的完整 SSE body。
+ *
+ * started → delta*(可选) → completed（含完整 envelope）。
+ * 默认无 delta（cache hit 直达 completed 的最简形态）；
+ * 调用方可传 deltas 数组模拟渐进 summary。
+ *
+ * requestId 必须与前端 streamMorningBrief 发送的 X-Request-Id header 一致，
+ * 否则前端的 STREAM_REQUEST_ID_MISMATCH 校验会 reject。route handler 应从
+ * 请求 header 读取 requestId 传入。
+ *
+ * route.fulfill 一次性返回全部 body，不是真实流式；E2E 只验证终态 DOM。
+ */
+function mockBriefStreamBody(
+  envelope: Record<string, unknown>,
+  requestId: string,
+  options: { deltas?: string[] } = {},
+): string {
+  const frames: string[] = [
+    serializeSseFrame({ type: 'brief.started', requestId }),
+  ];
+  for (const delta of options.deltas ?? []) {
+    frames.push(
+      serializeSseFrame({ type: 'brief.summary.delta', requestId, delta }),
+    );
+  }
+  frames.push(
+    serializeSseFrame({
+      type: 'brief.completed',
+      requestId,
+      response: envelope,
+    }),
+  );
+  return frames.join('');
+}
+
+/**
+ * 创建 morning brief stream 的 route fulfill handler。
+ *
+ * 从请求的 X-Request-Id header 读取 requestId（前端 streamMorningBrief 生成并通过
+ * 该 header 发送），保证 SSE body 里的 requestId 与前端期望一致，避免
+ * STREAM_REQUEST_ID_MISMATCH。
+ */
+function fulfillBriefStream(envelope: Record<string, unknown>) {
+  return async (route: import('@playwright/test').Route) => {
+    const requestId = (await route.request().headerValue('X-Request-Id')) || 'mock-req-e2e';
+    const body = mockBriefStreamBody(envelope, requestId);
+    return route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      headers: {
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+      },
+      body,
+    });
   };
 }
 
@@ -88,8 +174,17 @@ async function mockValoApi(page: Page) {
     }),
   );
 
-  // Morning brief —— 首页加载时请求
-  await page.route('**/ai/morning-brief**', (route) =>
+  // Morning brief stream —— 首页 useMorningBrief 调用 /ai/morning-brief/stream
+  // 返回完整 SSE contract（started → completed），E2E 只验证终态 DOM。
+  // route.fulfill 一次性返回全部 body，无法冒充真实流式时序；渐进 DOM 时序
+  // 由 Vitest ReadableStream 单测负责。
+  // 使用动态 handler：从请求 X-Request-Id header 读取 requestId，保证 SSE body
+  // 里的 requestId 与前端期望一致。
+  await page.route('**/ai/morning-brief/stream**', fulfillBriefStream(mockBriefEnvelope()));
+
+  // Morning brief JSON（旧端点）—— 保留供未迁移场景测试。
+  // 首页已迁移到 stream endpoint；若有其他页面仍调用 JSON 端点会命中此 mock。
+  await page.route('**/ai/morning-brief', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -106,7 +201,11 @@ async function mockValoApi(page: Page) {
         mockApiResponse(
           mockBriefEnvelope({
             summary: 'mock chat reply',
-            meta: { taskType: 'chat', pageContext: {}, finishReason: 'stop' },
+            meta: {
+              taskType: 'advisor_chat',
+              pageContext: { profileId: 'profile-a', page: 'homepage', timeframe: 'week' },
+              finishReason: 'complete',
+            },
           }),
         ),
       ),
@@ -378,36 +477,31 @@ test.describe('Valo UI 关键路径', () => {
   });
 
   test('Action Card (calendar) Yes → AppointmentSheet 打开', async ({ page }) => {
-    // 重新 mock morning-brief 提供 calendar action
-    await page.unroute('**/ai/morning-brief**');
-    await page.route('**/ai/morning-brief**', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(
-          mockApiResponse(
-            mockBriefEnvelope({
-              actions: [
-                {
-                  id: 'action-calendar-1',
-                  emoji: '📅',
-                  title: 'Add wind-down to calendar',
-                  description: 'Schedule 10-min wind-down',
-                  aiPromise: 'Helps you wind down before sleep',
-                  interaction: {
-                    kind: 'calendar',
-                    calendar: {
-                      title: 'Wind-down',
-                      timingLabel: 'tonight',
-                      durationMinutes: 10,
-                    },
-                  },
+    // 重新 mock morning-brief stream 提供 calendar action
+    await page.unroute('**/ai/morning-brief/stream**');
+    await page.route(
+      '**/ai/morning-brief/stream**',
+      fulfillBriefStream(
+        mockBriefEnvelope({
+          actions: [
+            {
+              id: 'action-calendar-1',
+              emoji: '📅',
+              title: 'Add wind-down to calendar',
+              description: 'Schedule 10-min wind-down',
+              aiPromise: 'Helps you wind down before sleep',
+              interaction: {
+                kind: 'calendar',
+                calendar: {
+                  title: 'Wind-down',
+                  timingLabel: 'tonight',
+                  durationMinutes: 10,
                 },
-              ],
-            }),
-          ),
-        ),
-      }),
+              },
+            },
+          ],
+        }),
+      ),
     );
 
     await gotoAndWait(page, '/');
@@ -436,34 +530,29 @@ test.describe('Valo UI 关键路径', () => {
 
   test('Action Card (micro_event) Yes → ActionTimerSheet 打开', async ({ page }) => {
     // 重新 mock 提供 micro_event action
-    await page.unroute('**/ai/morning-brief**');
-    await page.route('**/ai/morning-brief**', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(
-          mockApiResponse(
-            mockBriefEnvelope({
-              actions: [
-                {
-                  id: 'action-micro-1',
-                  emoji: '🫁',
-                  title: 'Box breathing',
-                  description: '2 minutes box breathing',
-                  aiPromise: 'Activates parasympathetic system',
-                  interaction: {
-                    kind: 'micro_event',
-                    microEvent: {
-                      type: 'micro_box_breathing',
-                      durationMinutes: 2,
-                    },
-                  },
+    await page.unroute('**/ai/morning-brief/stream**');
+    await page.route(
+      '**/ai/morning-brief/stream**',
+      fulfillBriefStream(
+        mockBriefEnvelope({
+          actions: [
+            {
+              id: 'action-micro-1',
+              emoji: '🫁',
+              title: 'Box breathing',
+              description: '2 minutes box breathing',
+              aiPromise: 'Activates parasympathetic system',
+              interaction: {
+                kind: 'micro_event',
+                microEvent: {
+                  type: 'micro_box_breathing',
+                  durationMinutes: 2,
                 },
-              ],
-            }),
-          ),
-        ),
-      }),
+              },
+            },
+          ],
+        }),
+      ),
     );
 
     await gotoAndWait(page, '/');

@@ -425,4 +425,158 @@ describe('AiOrchestrator', () => {
     // 成功的 complete 应触发 cache.set
     expect(cacheSet).toHaveBeenCalledTimes(1);
   });
+
+  // ===== 流式传输（任务 2.2 新增）=====
+
+  it('cache miss 时透传 onSummaryDelta 并记录流式 timing', async () => {
+    // executeAgent 的第 6 参数是 options；测试时直接调用 callback 模拟 delta
+    mockedExecuteAgent.mockImplementationOnce(
+      async (_req, _deps, _timeout, _observer, _locale, options) => {
+        const onDelta = options?.onSummaryDelta;
+        if (onDelta) {
+          await onDelta('健康');
+          await onDelta('状态');
+          await onDelta('良好');
+        }
+        return completeResponse;
+      },
+    );
+    const orchestrator = new AiOrchestrator({
+      registry: makeRegistry(),
+      metrics: makeMetrics(),
+      timeoutMs: 60000,
+      memoryServices: makeMemoryServices(),
+      modelVersion: 'gpt-test',
+    });
+
+    const receivedDeltas: string[] = [];
+    let timings: Record<string, unknown> | undefined;
+
+    const result = await orchestrator.execute(
+      {
+        requestId: 'req-stream-1',
+        sessionId: 'sess-1',
+        profileId: 'profile-a',
+        taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+        pageContext: defaultPageContext,
+      },
+      undefined,
+      {
+        onSummaryDelta: (delta) => { receivedDeltas.push(delta); },
+        onTimings: (value) => { timings = value; },
+      },
+    );
+
+    // delta 顺序正确
+    expect(receivedDeltas).toEqual(['健康', '状态', '良好']);
+    // 终态为 complete（cache miss 正常完成）
+    expect(result.meta.finishReason).toBe('complete');
+    // 流式 timing 字段存在且类型正确
+    expect(timings).toMatchObject({
+      llmFirstTokenMs: expect.any(Number),
+      streamChunkCount: 3,
+      streamDurationMs: expect.any(Number),
+    });
+  });
+
+  it('cache hit 时不调用 onSummaryDelta 且无流式 timing', async () => {
+    mockedExecuteAgent.mockClear();
+    const orchestrator = new AiOrchestrator({
+      registry: makeRegistry(),
+      metrics: makeMetrics(),
+      timeoutMs: 60000,
+      memoryServices: makeMemoryServices({
+        payload: completeResponse as unknown as Record<string, unknown>,
+      }),
+      modelVersion: 'gpt-test',
+    });
+
+    const onSummaryDelta = vi.fn();
+    let timings: Record<string, unknown> | undefined;
+
+    const result = await orchestrator.execute(
+      {
+        requestId: 'req-stream-2',
+        sessionId: 'sess-1',
+        profileId: 'profile-a',
+        taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+        pageContext: defaultPageContext,
+      },
+      undefined,
+      {
+        onSummaryDelta,
+        onTimings: (value) => { timings = value; },
+      },
+    );
+
+    // cache hit 直接返回 cached envelope，不伪造 delta
+    expect(result.meta.finishReason).toBe('cached');
+    expect(onSummaryDelta).not.toHaveBeenCalled();
+    expect(mockedExecuteAgent).not.toHaveBeenCalled();
+    // 流式 timing 字段不存在
+    expect(timings?.llmFirstTokenMs).toBeUndefined();
+    expect(timings?.streamChunkCount).toBeUndefined();
+    expect(timings?.streamDurationMs).toBeUndefined();
+    // 但 cache hit 标志存在
+    expect(timings?.cacheHit).toBe(true);
+  });
+
+  it('signal 透传给 executeAgent', async () => {
+    mockedExecuteAgent.mockResolvedValueOnce(completeResponse);
+    const orchestrator = new AiOrchestrator({
+      registry: makeRegistry(),
+      metrics: makeMetrics(),
+      timeoutMs: 60000,
+      memoryServices: makeMemoryServices(),
+      modelVersion: 'gpt-test',
+    });
+
+    const controller = new AbortController();
+    await orchestrator.execute(
+      {
+        requestId: 'req-stream-3',
+        sessionId: 'sess-1',
+        profileId: 'profile-a',
+        taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+        pageContext: defaultPageContext,
+      },
+      undefined,
+      { signal: controller.signal },
+    );
+
+    // executeAgent 第 6 参数应包含 signal
+    expect(mockedExecuteAgent).toHaveBeenCalledTimes(1);
+    const sixthArg = mockedExecuteAgent.mock.calls[0]?.[5] as { signal?: AbortSignal } | undefined;
+    expect(sixthArg?.signal).toBe(controller.signal);
+  });
+
+  it('finishReason 非 complete 时不 cache set', async () => {
+    const fallbackResponse: AgentResponseEnvelope = {
+      ...completeResponse,
+      source: 'fallback',
+      statusColor: 'warning',
+      meta: { ...completeResponse.meta, finishReason: 'fallback' },
+    };
+    mockedExecuteAgent.mockResolvedValueOnce(fallbackResponse);
+    const memoryServices = makeMemoryServices();
+    const orchestrator = new AiOrchestrator({
+      registry: makeRegistry(),
+      metrics: makeMetrics(),
+      timeoutMs: 60000,
+      memoryServices,
+      modelVersion: 'gpt-test',
+    });
+
+    const result = await orchestrator.execute({
+      requestId: 'req-stream-4',
+      sessionId: 'sess-1',
+      profileId: 'profile-a',
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: defaultPageContext,
+    });
+
+    expect(result.meta.finishReason).toBe('fallback');
+    // finishReason 非 complete 时不应写入缓存
+    expect(memoryServices.cache.set).not.toHaveBeenCalled();
+  });
 });

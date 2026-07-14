@@ -7,7 +7,9 @@ import { HealthHero } from '@/components/homepage/HealthHero';
 import { SwitchStatusDialog } from '@/components/homepage/SwitchStatusDialog';
 import { BriefTimeline } from '@/components/homepage/BriefTimeline';
 import { ActionCard } from '@/components/homepage/ActionCard';
+import { ActionCardSkeleton } from '@/components/homepage/ActionCardSkeleton';
 import { FutureTimelineBlock } from '@/components/homepage/FutureTimelineBlock';
+import { FutureTimelineBlockSkeleton } from '@/components/homepage/FutureTimelineBlockSkeleton';
 import { ActionTimerSheet } from '@/components/homepage/ActionTimerSheet';
 import { AppointmentSheet } from '@/components/homepage/AppointmentSheet';
 import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
@@ -20,8 +22,8 @@ import { mapApiStatusToVisualState } from '@/lib/health-visual-state';
 import { useMorningBrief, useRefetchBrief } from '@/hooks/use-ai-query';
 import { useActionInteractions } from '@/hooks/use-action-interactions';
 import { useUIStore } from '@/stores/ui.store';
+import { useBriefStreamStore } from '@/stores/brief-stream.store';
 import { useTranslations } from 'next-intl';
-import type { ActionOption } from '@health-advisor/shared';
 
 /**
  * 首页：四态 Hero + Switch Status + 简报 / Action 卡 / Timer。
@@ -53,7 +55,26 @@ export default function HomePage() {
   // 解决 useRefetchBrief 在不同组件实例间 mutation state 不共享的问题——
   // 抽屉 hook 和首页各自独立的 mutation 实例，isPending 不互通，用 store flag 桥接。
   const isBriefRefreshing = useGodModeStore((s) => s.isBriefRefreshing);
-  const briefIsLoading = isLoading || isFetching || refetchBrief.isPending || isBriefRefreshing;
+
+  // —— brief-stream store 订阅（任务 3.2）——
+  // 订阅当前 profile 的 draft entry；流式期间 draftSummary 逐步增长，
+  // completed/failed 后 entry 清除。直接从 s.entries 取值（而非 s.getEntry()），
+  // 让 Zustand selector 的 snapshot 语义生效：begin/append 产生新对象引用触发 re-render，
+  // complete/fail 删除 key 返回 undefined 也触发。
+  const draftEntry = useBriefStreamStore((s) =>
+    currentProfileId ? s.entries[currentProfileId] : undefined,
+  );
+  const draftSummary = draftEntry?.draftSummary;
+  const hasDraft = typeof draftSummary === 'string' && draftSummary.length > 0;
+
+  // briefIsLoading 语义扩展：终态前（draft 期间或刷新中）保持 true。
+  // 驱动 Hero/LifeLog disabled，确保结构化字段（status/actions）终态前不可交互。
+  const briefIsLoading =
+    isLoading ||
+    isFetching ||
+    refetchBrief.isPending ||
+    isBriefRefreshing ||
+    hasDraft;
   const isInitialBriefLoading = briefIsLoading && !data;
   const isBriefUpdating = briefIsLoading && !!data;
 
@@ -101,10 +122,51 @@ export default function HomePage() {
     }
   }, [error, showToast, t]);
 
-  const summary = data?.summary || (error ? t('briefNetworkError') : t('briefPreparing'));
-  const actions = data?.actions ?? [];
-  // 未来时间点建议：LLM 基于今日已发生活动推断，缺失时降级为静态 Figma 文案
-  const futureSuggestions = data?.futureSuggestions ?? [];
+  // —— 简报显示规则（任务 3.2 六条规则）——
+  // effectiveData 始终保留旧 cache（draft 期间 actions/statusColor/futureSuggestions
+  // 来自旧 data，completed 后 React Query cache 原子替换）。
+  // 规则 4：draft 期间旧结构化字段保留到 completed。
+  const effectiveData = data;
+
+  // displayedSummary 优先级：draft > data.summary > fallback
+  // 规则 1：无旧数据、无 draft → skeleton（briefIsLoading && !effectiveData && !hasDraft）
+  // 规则 2：有 draft → 显示 draftSummary（aria-busy=true 由 BriefTimeline isStreaming 处理）
+  // 规则 3：有旧数据、刷新中、无 draft → 保留旧 summary + updating indicator
+  // 规则 5：completed → cache 替换，effectiveData.summary 变新
+  // 规则 6：failed → draft 清除；首次加载 error，刷新失败保留旧 effectiveData
+  const displayedSummary = hasDraft
+    ? draftSummary
+    : effectiveData?.summary ||
+      (error && !effectiveData ? t('briefNetworkError') : t('briefPreparing'));
+
+  // —— 渐进式流式渲染阶段推导（任务 3.2）——
+  // isStreaming 基于 phase 判断（而非 draftSummary 长度）：
+  // 即使 summary delta 尚未到达，只要 phase=streaming，actions/forecast 就进入渐进态。
+  const isStreaming = draftEntry?.phase === 'streaming';
+
+  // actions 来源：流式中取 draftActions（SSE 逐步累积），非流式取 effectiveData（终态 cache）。
+  const actions = isStreaming && draftEntry
+    ? draftEntry.draftActions
+    : (effectiveData?.actions ?? []);
+  // futureSuggestions 同型：流式中取 draftFutureSuggestions，非流式取终态。
+  const futureSuggestions = isStreaming && draftEntry
+    ? draftEntry.draftFutureSuggestions
+    : (effectiveData?.futureSuggestions ?? []);
+
+  // forecast 阶段是否已开始：收到 brief.forecast.started 后才显示预测区骨架。
+  // 非流式时 forecastVisible 无意义（由 futureSuggestions.length 驱动渲染）。
+  const forecastVisible = isStreaming && Boolean(draftEntry?.forecastStarted);
+
+  // summary 是否已流式结束——双重信号取或：
+  // 1. brief.summary.done 事件（JSON parser 检测 summary 字符串闭合时触发，最早信号）
+  // 2. draftActions 非空（首个 brief.action.ready 到达，可靠兜底）
+  // 保留兜底是因为 brief.summary.done 依赖 @streamparser/json 的 final value 事件，
+  // 一旦该信号因 parser 行为差异未及时到达，兜底确保 Skeleton 至少在首个 action 就绪时出现。
+  // 非流式时视为已结束（直接进入终态渲染）。
+  const summaryDone =
+    !isStreaming ||
+    draftEntry?.summaryDone === true ||
+    (draftEntry?.draftActions?.length ?? 0) > 0;
 
   // 已记录/已加入日历/正在 Timer 或 Appointment 中 的 action 不再渲染为可交互卡片，
   // 避免用户在浮层打开期间重复点击 Yes。
@@ -116,6 +178,51 @@ export default function HomePage() {
       a.id !== interactions.timerAction?.id &&
       a.id !== interactions.appointmentAction?.id,
   );
+
+  // —— 卡片位 / 预测位的"已就绪 + 骨架占位"统一数组（任务 3.2）——
+  // 流式中：把已到达的 draft 元素补足到最少 2 位（null 位由 Skeleton 渲染）；
+  //         draft 元素多于 2 个时按实际数量展示（不截断）。
+  // 非流式：直接用终态数据，无 Skeleton。
+  // null 代表"此位等待中"，对应位置渲染 ActionCardSkeleton / FutureTimelineBlockSkeleton。
+  //
+  // 改进：summary 流式期间（summaryDone=false）卡片区整体不展示（cardSlots=[]），
+  //       避免 summary 还在打字时就冒出卡片 Skeleton。
+  const cardSlots = isStreaming
+    ? summaryDone
+      ? Array.from({ length: Math.max(2, visibleActions.length) }, (_, i) =>
+          visibleActions[i] ?? null,
+        )
+      : []
+    : visibleActions.map((a) => a);
+  const forecastSlots = forecastVisible
+    ? Array.from({ length: Math.max(2, futureSuggestions.length) }, (_, i) =>
+        futureSuggestions[i] ?? null,
+      )
+    : futureSuggestions.map((s) => s);
+
+  // —— 预测建议串行渲染（改进 2）——
+  // 流式中逐个展开：visibleForecastCount 表示"已决定渲染到第几个"（含正在打字的当前位）。
+  // 第 N 个 Block 打字完成（onComplete）后才递增到 N+1，下一个 Block 才进入打字状态，
+  // 避免 N 个建议同时并行打字。
+  // 非流式（终态）：全部展开，由 done=true 立即全文显示。
+  const futureSuggestionsCount = futureSuggestions.length;
+  const [visibleForecastCount, setVisibleForecastCount] = useState(0);
+
+  useEffect(() => {
+    if (!isStreaming) {
+      // 终态：全部展开
+      setVisibleForecastCount(futureSuggestionsCount);
+      return;
+    }
+    // 流式中
+    if (futureSuggestionsCount === 0) {
+      // forecast 阶段已开启但还没有 suggestion 到达
+      setVisibleForecastCount(0);
+    } else if (visibleForecastCount === 0) {
+      // 第一个 suggestion 到达：立即展开（开始打字）
+      setVisibleForecastCount(1);
+    }
+  }, [isStreaming, futureSuggestionsCount, visibleForecastCount]);
 
   // 当前 Timer 的总秒数
   const timerDurationSeconds =
@@ -160,35 +267,75 @@ export default function HomePage() {
             />
 
             <BriefTimeline
-              summary={summary}
+              summary={displayedSummary}
               currentTime={godModeState?.currentDemoTime ?? undefined}
-              isLoading={isInitialBriefLoading}
+              isLoading={briefIsLoading && !effectiveData && !hasDraft}
               isUpdating={isBriefUpdating}
+              isStreaming={hasDraft}
             />
 
-            {visibleActions.length > 0 ? (
+            {cardSlots.length > 0 ? (
               <div className="-mt-2 ml-8 overflow-hidden" data-valo-action-tips-viewport="">
                 <ul
                   className="flex list-none gap-3 overflow-x-auto overscroll-x-none p-0 pb-1 after:block after:w-5 after:shrink-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                   data-valo-action-tips=""
                 >
-                  {visibleActions.map((action: ActionOption) => (
-                    <ActionCard
-                      key={action.id}
-                      action={action}
-                      onYes={interactions.handleYes}
-                      onNotNow={interactions.handleNotNow}
-                      pending={interactions.pendingActionId === action.id}
-                    />
-                  ))}
+                  {cardSlots.map((action, i) =>
+                    action ? (
+                      <ActionCard
+                        key={action.id}
+                        action={action}
+                        onYes={interactions.handleYes}
+                        onNotNow={interactions.handleNotNow}
+                        pending={interactions.pendingActionId === action.id}
+                      />
+                    ) : (
+                      <ActionCardSkeleton key={`skeleton-card-${i}`} />
+                    ),
+                  )}
                 </ul>
               </div>
             ) : null}
 
-            {/* 下午/晚间：LLM futureSuggestions 优先；响应到达后仍缺失才降级到 Figma 静态文案 */}
-            {futureSuggestions.length > 0 ? (
+            {/* 下午/晚间预测区（任务 3.2 渐进式 + 改进 2 串行渲染）：
+                - 流式中 forecastStarted 后：串行展开——前 N 个 Block（done/active）+ 1 个 Skeleton 占位。
+                  第 N 个 Block 打字完成后（onComplete）才展开第 N+1 个，避免并行打字。
+                - 流式中 forecastStarted 前：整段隐藏（等用户先看到 summary + 卡片渐进）。
+                - 非流式且 futureSuggestions>0：渲染终态 FutureTimelineBlock（done=true，全文）。
+                - 非流式且无 futureSuggestions：降级 Figma 静态文案（首次加载除外）。 */}
+            {isStreaming && !forecastVisible ? null : forecastVisible ? (
+              forecastSlots.map((suggestion, i) => {
+                // 串行：只渲染到 visibleForecastCount（含）位置，超出部分不渲染
+                if (i >= visibleForecastCount + 1) return null;
+
+                if (i < visibleForecastCount && suggestion) {
+                  // 已展开位置：有内容则渲染 Block（done 或 active）
+                  return (
+                    <FutureTimelineBlock
+                      key={suggestion.action.id}
+                      suggestion={suggestion}
+                      animate={isStreaming}
+                      done={!isStreaming || i < visibleForecastCount - 1}
+                      onComplete={() => {
+                        // 仅"当前正在打字"的 Block 完成时递增
+                        if (i === visibleForecastCount - 1) {
+                          setVisibleForecastCount((c) => c + 1);
+                        }
+                      }}
+                    />
+                  );
+                }
+                // 下一个占位 / 已展开但内容未到：渲染 Skeleton
+                return <FutureTimelineBlockSkeleton key={`skeleton-forecast-${i}`} />;
+              })
+            ) : futureSuggestions.length > 0 ? (
               futureSuggestions.map((suggestion) => (
-                <FutureTimelineBlock key={suggestion.action.id} suggestion={suggestion} />
+                <FutureTimelineBlock
+                  key={suggestion.action.id}
+                  suggestion={suggestion}
+                  animate={isStreaming}
+                  done={!isStreaming}
+                />
               ))
             ) : isInitialBriefLoading ? // LLM 响应中：暂不展示静态降级，避免响应到达后被替换造成闪烁
             null : (

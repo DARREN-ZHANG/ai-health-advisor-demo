@@ -217,6 +217,14 @@ export type { TokenValidationResult } from './output/token-validator';
 export { cleanSafetyIssues } from './output/safety-cleaner';
 export type { SafetyCleanResult, SafetyFlag } from './output/safety-cleaner';
 
+// Output - Streaming Summary Extractor（首页实时简报流式传输）
+// 从模型流式输出的增量 JSON 中只释放 $.summary 字段的文本 delta
+export { StreamingSummaryExtractor, StreamingSummaryParseError } from './output/streaming-summary-extractor';
+
+// Output - Streaming Structure Extractor（首页实时简报渐进式流式渲染）
+// 从模型流式输出的增量 JSON 中释放 actions / futureSuggestions 数组元素的就绪信号
+export { StreamingStructureExtractor, type StructureSignal } from './output/streaming-structure-extractor';
+
 // Verification (P0)
 export { verifyOutput } from './output/verifier';
 export type { VerifierInput } from './output/verifier';
@@ -245,7 +253,7 @@ export type { FallbackEngine, FallbackAssets, FallbackEntry, FallbackLookupKey }
 export { withTimeout, TimeoutError } from './runtime/timeout-controller';
 export type { TimeoutController } from './runtime/timeout-controller';
 export { executeAgent } from './runtime/agent-runtime';
-export type { AgentRuntimeDeps, AgentRuntimeObserver } from './runtime/agent-runtime';
+export type { AgentRuntimeDeps, AgentRuntimeObserver, AgentExecutionOptions } from './runtime/agent-runtime';
 export {
   appendWebSearchEvidenceToPrompt,
   collectWebSearchEvidence,

@@ -44,15 +44,36 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(
-  path: string,
-  options: RequestInit & { timeoutMs?: number } = {},
-): Promise<T> {
-  const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
-  const url = `${env.NEXT_PUBLIC_AGENT_API_BASE_URL}${path}`;
+/**
+ * 拼接完整 API URL。
+ *
+ * 抽成独立 helper 的意图:普通 JSON 请求与 SSE 流式请求都需要把
+ * `env.NEXT_PUBLIC_AGENT_API_BASE_URL` 与 path 拼起来,抽离避免两处各写一份
+ * `${env.NEXT_PUBLIC_AGENT_API_BASE_URL}${path}` 字面量造成漂移。
+ */
+export function createApiUrl(path: string): string {
+  return `${env.NEXT_PUBLIC_AGENT_API_BASE_URL}${path}`;
+}
 
-  const headers = new Headers(fetchOptions.headers);
-  if (!headers.has('Content-Type') && !(fetchOptions.body instanceof FormData)) {
+/**
+ * 构建发往后端的请求头:Content-Type、X-Session-Id、X-Lang。
+ *
+ * 抽成可复用 helper 的意图:
+ * - 普通 `request<T>` 走 JSON
+ * - SSE 流式 client 走 fetch + ReadableStream
+ * 两者的 headers 构建逻辑(session/locale/Content-Type)必须完全一致,
+ * 否则后端鉴权与 i18n 会因请求方式不同而表现不一致。
+ *
+ * @param existingHeaders 调用方已设置的头(如自定义 Content-Type 或 FormData 场景),
+ *   传入后会以其为基底再补充 session/locale;为 FormData 时跳过 Content-Type。
+ * @param body 用于判断是否为 FormData(FormData 时由浏览器自动设置 Content-Type)。
+ */
+export function buildApiHeaders(
+  existingHeaders?: HeadersInit,
+  body?: BodyInit | null,
+): Headers {
+  const headers = new Headers(existingHeaders);
+  if (!headers.has('Content-Type') && !(body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -62,6 +83,17 @@ async function request<T>(
   // 注入语言偏好
   const locale = typeof window !== 'undefined' ? window.localStorage.getItem('lang') || 'zh' : 'zh';
   headers.set('X-Lang', locale);
+
+  return headers;
+}
+
+async function request<T>(
+  path: string,
+  options: RequestInit & { timeoutMs?: number } = {}
+): Promise<T> {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
+  const url = createApiUrl(path);
+  const headers = buildApiHeaders(fetchOptions.headers, fetchOptions.body);
 
   // 6 秒超时控制
   const controller = new AbortController();

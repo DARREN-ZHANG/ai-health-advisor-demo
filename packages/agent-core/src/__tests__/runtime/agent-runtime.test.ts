@@ -98,7 +98,9 @@ function makeDeps(agent: Partial<HealthAgent> = {}): AgentRuntimeDeps {
           microTips: ['保持规律作息'],
         }),
       })),
-    },
+      // stream 默认与 invoke 返回相同内容（按 chunk 切分），便于测试覆盖
+      stream: agent.stream,
+    } as HealthAgent,
     promptLoader: mockPromptLoader,
     fallbackEngine: mockFallbackEngine,
   };
@@ -360,7 +362,8 @@ function makeDepsFromRecords(
           microTips: ['保持规律作息'],
         }),
       })),
-    },
+      stream: agentOverrides.stream,
+    } as HealthAgent,
     promptLoader: mockPromptLoader,
     fallbackEngine: mockFallbackEngine,
   };
@@ -513,5 +516,335 @@ describe('executeAgent observer', () => {
 
     expect(result.summary).toBe(COMPLIANT_SUMMARY);
     expect(result.meta.finishReason).toBe('complete');
+  });
+});
+
+// 辅助：把字符串切成 chunks 的 async generator，模拟 HealthAgent.stream
+async function* chunksToStream(chunks: string[]): AsyncGenerator<{ content: string }> {
+  for (const chunk of chunks) {
+    yield { content: chunk };
+  }
+}
+
+describe('executeAgent streaming', () => {
+  it('delta 顺序正确且拼接等于 summary（stream 分支）', async () => {
+    // 构造合法 JSON，summary 分散在多个 chunk 中。
+    // summary 必须满足 zh 220-420 grapheme 下限（customer policy 对 homepage_summary 强制），
+    // 否则会触发 regeneration（走 invoke 默认 mock）导致 summary 被改写。
+    // 这里把 COMPLIANT_SUMMARY 切成 3 段，验证 extractor 按模型 chunk 顺序增量释放 delta。
+    const summaryHead = COMPLIANT_SUMMARY.slice(0, 10);
+    const summaryMid = COMPLIANT_SUMMARY.slice(10, 20);
+    const summaryTail = COMPLIANT_SUMMARY.slice(20);
+    const fullSummary = `${summaryHead}${summaryMid}${summaryTail}`;
+    expect(fullSummary).toBe(COMPLIANT_SUMMARY);
+    const fullJson = JSON.stringify({
+      summary: fullSummary,
+      chartTokens: [ChartTokenId.HRV_7DAYS],
+      microTips: [],
+    });
+    // 切成多个 chunk（在 summary 值中间切，确保 extractor 增量释放 delta）
+    const chunks = [
+      '{"summary":"',
+      summaryHead,
+      summaryMid,
+      summaryTail,
+      `","chartTokens":["${ChartTokenId.HRV_7DAYS}"],"microTips":[]}`,
+    ];
+    const streamMock = vi.fn(() => chunksToStream(chunks));
+    const deps = makeDeps({ stream: streamMock });
+
+    const receivedDeltas: string[] = [];
+    const result = await executeAgent(
+      makeRequest(),
+      deps,
+      undefined,
+      undefined,
+      undefined,
+      { onSummaryDelta: (delta) => { receivedDeltas.push(delta); } },
+    );
+
+    // delta 按模型 chunk 顺序到达
+    expect(receivedDeltas).toEqual([summaryHead, summaryMid, summaryTail]);
+    expect(receivedDeltas.join('')).toBe(fullSummary);
+    // stream 被调用（而非 invoke）
+    expect(streamMock).toHaveBeenCalled();
+    // 最终 envelope 正常（raw 经过 parseAgentResponse）
+    expect(result.summary).toBe(fullSummary);
+    expect(result.meta.finishReason).toBe('complete');
+    expect(fullJson).toContain(fullSummary);
+  });
+
+  it('raw 仍通过现有 parser，envelope 结构正确', async () => {
+    // stream 产出完整合法 JSON，验证最终 envelope 的所有字段。
+    // summary 必须满足 zh 220-420 grapheme 下限（homepage_summary customer policy），
+    // 否则 raw 会被判违规走 regeneration，summary 字段就被替换为 invoke 默认值。
+    const chunks = [
+      `{"summary":"${COMPLIANT_SUMMARY}","chartTokens":["`,
+      ChartTokenId.HRV_7DAYS,
+      '"],"microTips":["多喝水"]}',
+    ];
+    const deps = makeDeps({ stream: vi.fn(() => chunksToStream(chunks)) });
+
+    const result = await executeAgent(
+      makeRequest(),
+      deps,
+      undefined,
+      undefined,
+      undefined,
+      { onSummaryDelta: () => {} },
+    );
+
+    expect(result.summary).toBe(COMPLIANT_SUMMARY);
+    expect(result.chartTokens).toEqual([ChartTokenId.HRV_7DAYS]);
+    expect(result.microTips).toEqual(['多喝水']);
+    expect(result.meta.finishReason).toBe('complete');
+    expect(result.meta.taskType).toBe(AgentTaskType.HOMEPAGE_SUMMARY);
+  });
+
+  it('callback 背压被 await（async callback 完成后才继续下一个 delta）', async () => {
+    // 用一个 async callback + 计数器验证 runtime 确实 await 了每个 delta
+    const chunks = [
+      '{"summary":"',
+      '第一段',
+      '第二段',
+      '第三段',
+      '"}',
+    ];
+    const order: string[] = [];
+    let pendingId = 0;
+    const deps = makeDeps({ stream: vi.fn(() => chunksToStream(chunks)) });
+
+    await executeAgent(
+      makeRequest(),
+      deps,
+      undefined,
+      undefined,
+      undefined,
+      {
+        // 异步 callback：记录调用顺序 + 标记完成顺序，验证 backpressure
+        onSummaryDelta: (delta) => {
+          const id = pendingId++;
+          order.push(`start-${id}-${delta}`);
+          return new Promise<void>((resolve) => {
+            // 用 microtask 模拟异步完成
+            queueMicrotask(() => {
+              order.push(`end-${id}-${delta}`);
+              resolve();
+            });
+          });
+        },
+      },
+    );
+
+    // 若 runtime 没 await，会出现 start-1 在 end-0 之前（乱序）
+    // 正确 await 时：start-0 end-0 start-1 end-1 ... 严格交替
+    expect(order).toEqual([
+      'start-0-第一段',
+      'end-0-第一段',
+      'start-1-第二段',
+      'end-1-第二段',
+      'start-2-第三段',
+      'end-2-第三段',
+    ]);
+  });
+
+  it('预 aborted signal 停止 provider 迭代（不产生完整输出）', async () => {
+    // 当外部 signal 已 aborted，合并后的 signal 也应立即 aborted，
+    // stream 迭代器据此中断（模拟 LangChain 行为：signal aborted 时抛错）
+    let receivedSignal: AbortSignal | undefined;
+    let iteratedChunks = 0;
+    async function* streamWithGate(signal: AbortSignal): AsyncGenerator<{ content: string }> {
+      receivedSignal = signal;
+      // 模拟 LangChain 行为：signal abort 后抛错，不继续 yield
+      for (const ch of ['{"summary":"不应完整消费"}']) {
+        if (signal.aborted) {
+          throw new DOMException('aborted', 'AbortError');
+        }
+        iteratedChunks++;
+        yield { content: ch };
+      }
+    }
+    const deps = makeDeps({
+      stream: vi.fn((_input: { signal?: AbortSignal }) => streamWithGate(_input.signal!)),
+    });
+
+    // 外部预 aborted signal
+    const abortController = new AbortController();
+    abortController.abort();
+
+    const result = await executeAgent(
+      makeRequest(),
+      deps,
+      undefined,
+      undefined,
+      undefined,
+      {
+        signal: abortController.signal,
+        onSummaryDelta: () => {},
+      },
+    );
+
+    // 验证 signal 被传入 stream，且合并后立即 aborted（AbortSignal.any 行为）
+    expect(receivedSignal).toBeDefined();
+    expect(receivedSignal!.aborted).toBe(true);
+    // 迭代器在第一个 chunk 之前就因 abort 抛错，没有消费任何 chunk
+    expect(iteratedChunks).toBe(0);
+    // -> 走 catch 块 provider_error -> fallback envelope（finishReason 非 complete）
+    expect(result.meta.finishReason).not.toBe('complete');
+  });
+
+  it('stream 产出非法 JSON 时不写 memory（extractor.finish 抛错走 fallback）', async () => {
+    // stream 产出截断的 JSON：extractor.push 会释放 provisional delta（summary 字符串在推进），
+    // 但 extractor.finish() 会抛 StreamingSummaryParseError（字符串未闭合）。
+    // 这个 error 向上抛到 executeAgent 的 catch 块，走 streaming_parse_error 分支
+    // （不是 provider_error，因为 instanceof StreamingSummaryParseError 命中）。
+    const truncatedChunks = ['{"summary":"部分内容', '但 JSON 没闭合'];
+    const streamMock = vi.fn(() => chunksToStream(truncatedChunks));
+    const deps = makeDeps({ stream: streamMock });
+
+    const receivedDeltas: string[] = [];
+    const result = await executeAgent(
+      makeRequest(),
+      deps,
+      undefined,
+      undefined,
+      undefined,
+      { onSummaryDelta: (delta) => { receivedDeltas.push(delta); } },
+    );
+
+    // provisional delta 已经释放（extractor 在 push 阶段释放，finish 才抛错）
+    expect(receivedDeltas).toEqual(['部分内容', '但 JSON 没闭合']);
+    // finishReason 非 complete（fallback）
+    expect(result.meta.finishReason).not.toBe('complete');
+    // session memory 不应被写入（因为没到 writeSessionMemory 步骤）
+    const messages = deps.sessionMemory.getRecentMessages('sess-1');
+    expect(messages.length).toBe(0);
+    // analytical memory 也不应被写入
+    const analytical = deps.analyticalMemory.get('sess-1');
+    expect(analytical?.latestHomepageBrief).toBeUndefined();
+  });
+
+  it('customer policy 失败时 provisional delta 已发出但 memory 不写入', async () => {
+    // 场景：stream 产出合法 JSON（extractor.finish 通过，summary delta 已释放），
+    // 但整体结构让 parseAgentResponse 失败（如 statusColor 非法值）。
+    // 这是 customer policy 失败的典型场景：第一轮 provisional delta 可以出现，
+    // 但最终 envelope 不合法，返回 fallback（finishReason 非 complete），memory 不写入。
+    const chunks = [
+      '{"summary":"第一轮 delta 已发出","chartTokens":[],"statusColor":"INVALID_COLOR"}',
+    ];
+    const deps = makeDeps({ stream: vi.fn(() => chunksToStream(chunks)) });
+
+    const receivedDeltas: string[] = [];
+    const result = await executeAgent(
+      makeRequest(),
+      deps,
+      undefined,
+      undefined,
+      undefined,
+      { onSummaryDelta: (delta) => { receivedDeltas.push(delta); } },
+    );
+
+    // provisional delta 已经发出
+    expect(receivedDeltas).toEqual(['第一轮 delta 已发出']);
+    // 但最终 parse 失败（statusColor 非法）→ fallback envelope（finishReason 非 complete）
+    expect(result.meta.finishReason).not.toBe('complete');
+    // memory 不应被写入
+    const messages = deps.sessionMemory.getRecentMessages('sess-1');
+    expect(messages.length).toBe(0);
+    const analytical = deps.analyticalMemory.get('sess-1');
+    expect(analytical?.latestHomepageBrief).toBeUndefined();
+  });
+
+  it('非 HOMEPAGE_SUMMARY 任务即使传 onSummaryDelta 也走 invoke 分支', async () => {
+    const invokeMock = vi.fn(async () => ({
+      content: JSON.stringify({
+        summary: 'HRV 稳定',
+        chartTokens: [ChartTokenId.HRV_7DAYS],
+        microTips: [],
+      }),
+    }));
+    const streamMock = vi.fn(() => chunksToStream(['should-not-be-called']));
+    const deps = makeDeps({ invoke: invokeMock, stream: streamMock });
+
+    const onSummaryDelta = vi.fn();
+    await executeAgent(
+      makeRequest({
+        taskType: AgentTaskType.VIEW_SUMMARY,
+        tab: 'hrv',
+        timeframe: 'week',
+        pageContext: { profileId: 'profile-a', page: 'data-center', dataTab: 'hrv', timeframe: 'week' },
+      }),
+      deps,
+      undefined,
+      undefined,
+      undefined,
+      { onSummaryDelta },
+    );
+
+    // VIEW_SUMMARY 即使传了 onSummaryDelta，也走 invoke 分支
+    expect(invokeMock).toHaveBeenCalled();
+    expect(streamMock).not.toHaveBeenCalled();
+    expect(onSummaryDelta).not.toHaveBeenCalled();
+  });
+
+  it('未传 onSummaryDelta 时 HOMEPAGE_SUMMARY 走 invoke 分支（向后兼容）', async () => {
+    // summary 必须满足 zh 220-420 grapheme 下限（homepage_summary customer policy），
+    // 否则 invoke 输出会被判违规，触发 regeneration 二次失败 → fail-closed → fallback。
+    const invokeMock = vi.fn(async () => ({
+      content: JSON.stringify({
+        summary: COMPLIANT_SUMMARY,
+        chartTokens: [],
+        microTips: [],
+      }),
+    }));
+    const streamMock = vi.fn(() => chunksToStream(['should-not-be-called']));
+    const deps = makeDeps({ invoke: invokeMock, stream: streamMock });
+
+    // HOMEPAGE_SUMMARY 但不传 options 或 options.onSummaryDelta
+    const result = await executeAgent(makeRequest(), deps);
+
+    expect(invokeMock).toHaveBeenCalled();
+    expect(streamMock).not.toHaveBeenCalled();
+    expect(result.meta.finishReason).toBe('complete');
+    expect(result.summary).toBe(COMPLIANT_SUMMARY);
+  });
+
+  it('onSummaryDelta 抛错时走 fallback（provider_error），memory 不写入', async () => {
+    // 回归保护：onSummaryDelta callback 抛 Error 时（消费端 bug），
+    // runtime 不能静默吞错，必须走 fallback 路径（finishReason 非 complete），
+    // 且 memory 不写入（因为抛错点在 obtainRawOutput 内，没到 writeSessionMemory 步骤）。
+    // callback 抛的是普通 Error，不是 StreamingSummaryParseError，
+    // 因此 catch 块的 instanceof 判断不命中，走 provider_error 分支（非 streaming_parse_error）。
+    const chunks = [
+      '{"summary":"',
+      '第一段',
+      '"}',
+    ];
+    const streamMock = vi.fn(() => chunksToStream(chunks));
+    const deps = makeDeps({ stream: streamMock });
+
+    const onFallback = vi.fn();
+    const result = await executeAgent(
+      makeRequest(),
+      deps,
+      undefined,
+      { onFallback },
+      undefined,
+      {
+        // 第一次调用就抛错（模拟 callback bug）
+        onSummaryDelta: () => { throw new Error('callback bug'); },
+      },
+    );
+
+    // finishReason 非 complete（走 fallback）
+    expect(result.meta.finishReason).not.toBe('complete');
+    // observer.onFallback 收到 provider_error（普通 Error 不是 StreamingSummaryParseError）
+    expect(onFallback).toHaveBeenCalledWith('provider_error');
+    // session memory 不应被写入
+    const messages = deps.sessionMemory.getRecentMessages('sess-1');
+    expect(messages.length).toBe(0);
+    // analytical memory 也不应被写入
+    const analytical = deps.analyticalMemory.get('sess-1');
+    expect(analytical?.latestHomepageBrief).toBeUndefined();
   });
 });

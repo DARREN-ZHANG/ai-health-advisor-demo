@@ -78,4 +78,46 @@ describe('BriefTimeline', () => {
     renderWithIntl(<BriefTimeline summary={'第一行\n第二行'} />);
     expect(screen.getByText(/第一行/)).toBeInTheDocument();
   });
+
+  it('isStreaming=true 时渲染 summary 文本（不隐藏内容）', () => {
+    renderWithIntl(
+      <BriefTimeline summary="流式输出中" isStreaming />,
+    );
+    expect(screen.getByText('流式输出中')).toBeInTheDocument();
+  });
+
+  it('isStreaming=true 时 section 标记 aria-busy=true', () => {
+    renderWithIntl(
+      <BriefTimeline summary="流式输出中" isStreaming />,
+    );
+    const section = document.querySelector('section[aria-busy="true"]');
+    expect(section).not.toBeNull();
+  });
+
+  it('isStreaming=true 且 isLoading=false 时仍显示内容（非骨架）', () => {
+    renderWithIntl(
+      <BriefTimeline summary="正在生成" isStreaming isLoading={false} />,
+    );
+    // 流式期间不是骨架：内容必须可见
+    expect(screen.getByText('正在生成')).toBeInTheDocument();
+    // 不应出现骨架 aria-hidden 块
+    expect(document.querySelector('.animate-pulse')).toBeNull();
+  });
+
+  it('isStreaming=false 时不标记 aria-busy', () => {
+    renderWithIntl(
+      <BriefTimeline summary="终态内容" isStreaming={false} />,
+    );
+    const busy = document.querySelector('section[aria-busy="true"]');
+    expect(busy).toBeNull();
+  });
+
+  it('isStreaming 与 isLoading 同时为 true 时优先渲染骨架', () => {
+    renderWithIntl(
+      <BriefTimeline summary="x" isLoading isStreaming />,
+    );
+    // isLoading 优先：骨架期间不显示 summary
+    expect(screen.queryByText('x')).not.toBeInTheDocument();
+    expect(document.querySelector('section[aria-busy="true"]')).not.toBeNull();
+  });
 });

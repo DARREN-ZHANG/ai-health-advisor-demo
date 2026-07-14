@@ -67,6 +67,18 @@ export type {
   FutureSuggestion,
 } from './types/agent';
 
+// Types — brief-stream
+// 运行时常量（BRIEF_STREAM_ERROR_CODES）放 types 区，沿用 micro-event 先例
+export { BRIEF_STREAM_ERROR_CODES } from './types/brief-stream';
+export type {
+  BriefStartedEvent,
+  BriefSummaryDeltaEvent,
+  BriefCompletedEvent,
+  BriefFailedEvent,
+  BriefStreamEvent,
+  BriefStreamErrorCode, // failed 事件允许的错误码
+} from './types/brief-stream';
+
 // Types — god-mode
 export type {
   // 时间轴动作载荷
@@ -160,6 +172,12 @@ export {
   MemoryCandidateConfirmationSchema,
   FutureSuggestionSchema,
 } from './schemas/agent';
+
+// Schemas — brief-stream
+export {
+  BriefStreamEventSchema,
+  isBriefStreamTerminalEvent,
+} from './schemas/brief-stream';
 
 export { ChartTokenIdSchema, isValidChartTokenId } from './schemas/chart-token';
 

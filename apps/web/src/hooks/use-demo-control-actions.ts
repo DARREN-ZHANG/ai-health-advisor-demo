@@ -24,10 +24,11 @@ import type { TimelineSegmentConfig } from '@/components/demo-control/types';
  * - 点击任意添加按钮后，抽屉**立即关闭**（toggleOpen(false)），不等 mutation
  *   完成。让用户马上看到首页的加载反馈，而非卡在抽屉里。
  * - 普通片段（walk/meal 等）：写时间轴 → 强制刷新简报（bustCache 绕过
- *   Supabase 2h TTL）。期间 isBriefRefreshing=true 驱动首页 skeleton
- *   （与首次进入页面一致），pendingSegmentType 驱动抽屉按钮 loading。
+ *   Supabase 2h TTL）。god-mode 刷新期间 isBriefRefreshing=true 驱动
+ *   Hero 思考态与 briefIsLoading；首页 summary 区域显示流式 draft，
+ *   结构化字段保持旧值直到 completed。pendingSegmentType 驱动抽屉按钮 loading。
  * - 概率片段（caffeine/alcohol）：injectEvent + active-sensing banner
- *   二次确认。**不刷新简报也不显示 skeleton**：用户在 Banner 确认前
+ *   二次确认。**不刷新简报也不显示思考态**：用户在 Banner 确认前
  *   简报内容不应改变（后端 routes.ts 的设计意图）。
  *
  * pending 状态生命周期：
@@ -38,7 +39,8 @@ import type { TimelineSegmentConfig } from '@/components/demo-control/types';
  * isBriefRefreshing 跨组件桥接：
  * - useDemoControlActions 和 page.tsx 各自调用 useRefetchBrief 得到的是
  *   独立的 mutation 实例，isPending 不互通。用 store flag 让 page.tsx
- *   能感知 demo-control 发起的刷新，从而显示更新指示并保留已有简报。
+ *   能感知 demo-control 发起的刷新，从而驱动 briefIsLoading（Hero 思考态
+ *   与结构化字段禁用；summary 区域显示流式 draft）。
  *
  * 失败处理：抽屉已关闭（乐观），通过 toast 提示；isBriefRefreshing 和
  * pendingSegmentType 在 finally 中始终清空，确保 UI 不卡死。
@@ -87,7 +89,8 @@ export function useDemoControlActions() {
           setPendingProbabilisticAction(pending);
           // 概率事件不刷新简报：用户在 Banner 二次确认前不应更新简报内容
         } else {
-          // isBriefRefreshing 驱动首页更新指示，同时保留已有简报内容
+          // isBriefRefreshing=true 驱动 briefIsLoading：Hero 思考态 + 结构化字段禁用。
+          // 首页 summary 区域显示流式 draft（store begin/append），completed 后 cache 原子替换。
           setIsBriefRefreshing(true);
           await appendTimeline({
             segmentType: segment.type,

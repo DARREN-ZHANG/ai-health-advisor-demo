@@ -1,5 +1,11 @@
 import type { AgentRequest } from '../types/agent-request';
-import type { AgentResponseEnvelope, DataTab, Locale } from '@health-advisor/shared';
+import type {
+  ActionOption,
+  AgentResponseEnvelope,
+  DataTab,
+  FutureSuggestion,
+  Locale,
+} from '@health-advisor/shared';
 import { AgentTaskType, DEFAULT_LOCALE } from '@health-advisor/shared';
 import type { ContextBuilderDeps } from '../context/context-types';
 import type { HealthAgent } from '../executor/create-agent';
@@ -24,6 +30,11 @@ import {
 import { buildCustomerFacingEvidencePacket } from '../context/customer-facing-evidence';
 import { withTimeout, TimeoutError } from './timeout-controller';
 import { AGENT_SLA_TIMEOUT_MS } from '../constants/limits';
+import { StreamingSummaryExtractor, StreamingSummaryParseError } from '../output/streaming-summary-extractor';
+import {
+  StreamingStructureExtractor,
+  type StructureSignal,
+} from '../output/streaming-structure-extractor';
 
 /** H-10: ReAct 最大步骤数（设计文档要求固定为 3） */
 const MAX_REACT_STEPS = 3;
@@ -108,7 +119,9 @@ export interface AgentRuntimeObserver {
     violationCodes: string[];
   }): void;
   onParsed?(envelope: AgentResponseEnvelope): void;
-  onFallback?(reason: 'low_data' | 'invalid_output' | 'timeout' | 'provider_error'): void;
+  onFallback?(
+    reason: 'low_data' | 'invalid_output' | 'timeout' | 'provider_error' | 'streaming_parse_error',
+  ): void;
   /** P0 新增：确定性验证完成后触发 */
   onVerified?(report: VerificationReport): void;
   /** P0 新增：异步 reflection 完成后触发 */
@@ -136,6 +149,36 @@ export interface AgentRuntimeObserver {
 }
 
 /**
+ * executeAgent 的可选执行参数（第 6 个参数）。
+ *
+ * 用于首页实时简报流式传输：
+ * - `signal`：外部取消信号（如 HTTP 请求断开），与 runtime 超时 signal 合并，
+ *   任一触发都会终止底层 LangChain 迭代器。
+ * - `onSummaryDelta`：summary 文本增量回调。仅在 `taskType === HOMEPAGE_SUMMARY`
+ *   且提供该回调时进入 stream 分支；每个 delta 都会 `await`，用于传递 HTTP
+ *   backpressure（消费端慢时阻塞迭代）。
+ * - `onSummaryDone`：summary 字段值完整结束时触发一次（去重）。比 `onActionReady`
+ *   早——前者在 JSON parser 见到 summary 字符串闭合即触发，后者要等 actions
+ *   数组首个元素对象完整闭合。UI 据此在 summary 流式结束后立即展示卡片 Skeleton。
+ * - `onActionReady`：actions 数组中单个元素就绪时触发（index 为数组下标）。
+ * - `onForecastStarted`：futureSuggestions 区段开始（首个元素就绪）时触发一次，
+ *   先于紧随其后的 `onFutureSuggestionReady`；若 LLM 未生成 futureSuggestions 则不触发。
+ * - `onFutureSuggestionReady`：futureSuggestions 数组中单个元素就绪时触发。
+ *
+ * 结构回调仅决定是否在 stream 分支并行运行 `StreamingStructureExtractor`；不改变
+ * useStream 触发条件（仍是 `HOMEPAGE_SUMMARY + onSummaryDelta`）。route 层总是
+ * 同时提供 summary 与结构回调。
+ */
+export interface AgentExecutionOptions {
+  signal?: AbortSignal;
+  onSummaryDelta?: (delta: string) => void | Promise<void>;
+  onSummaryDone?: () => void | Promise<void>;
+  onActionReady?: (index: number, action: ActionOption) => void | Promise<void>;
+  onForecastStarted?: () => void | Promise<void>;
+  onFutureSuggestionReady?: (index: number, suggestion: FutureSuggestion) => void | Promise<void>;
+}
+
+/**
  * 安全执行 observer 回调，observer 抛错不影响生产流程。
  */
 function tryNotify(fn: (() => void) | undefined): void {
@@ -157,6 +200,7 @@ export async function executeAgent(
   timeoutMs: number = AGENT_SLA_TIMEOUT_MS,
   observer?: AgentRuntimeObserver,
   locale: Locale = DEFAULT_LOCALE,
+  options?: AgentExecutionOptions,
 ): Promise<AgentResponseEnvelope> {
   const fallbackKey: FallbackLookupKey = {
     profileId: request.profileId,
@@ -354,10 +398,16 @@ export async function executeAgent(
 
     tryNotify(() => observer?.onPromptBuilt?.({ systemPrompt, taskPrompt }));
 
-    // 7. 带超时调用 LLM，超时时通过 AbortSignal 真正中断底层调用
-    const raw = await withTimeout(
-      (signal) => deps.agent.invoke({ systemPrompt, userPrompt: taskPrompt, signal }),
+    // 7. 获取模型完整 raw 输出。
+    // HOMEPAGE_SUMMARY 且提供 onSummaryDelta 时走 stream 分支（边收集边推送 summary delta），
+    // 否则走 invoke 分支（带超时的单次调用）。两个分支都返回完整 raw 供后续 parser 处理。
+    const raw = await obtainRawOutput(
+      deps,
+      systemPrompt,
+      taskPrompt,
       timeoutMs,
+      options,
+      request.taskType,
     );
     tryNotify(() => observer?.onModelOutput?.(raw.content));
 
@@ -716,8 +766,194 @@ export async function executeAgent(
       tryNotify(() => observer?.onFallback?.('timeout'));
       return toTimeoutFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
     }
-    tryNotify(() => observer?.onFallback?.('provider_error'));
+    // StreamingSummaryParseError 是流式提取器的协议违规（截断、重复 key、类型错误等），
+    // 与 provider error 区分开：返回 fallback envelope（finishReason 非 complete），
+    // SSE adapter 会据此转为 failed terminal。memory 不写入（因为没到达写 memory 步骤）。
+    const fallbackReason = error instanceof StreamingSummaryParseError
+      ? 'streaming_parse_error'
+      : 'provider_error';
+    tryNotify(() => observer?.onFallback?.(fallbackReason));
     return toFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
+  }
+}
+
+/**
+ * 获取模型的完整 raw 输出。
+ *
+ * ## 分支选择
+ *
+ * - `HOMEPAGE_SUMMARY + onSummaryDelta`：走 stream 分支，用 StreamingSummaryExtractor
+ *   从增量 JSON 中实时释放 `$.summary` 文本 delta，每个 delta 都 `await onSummaryDelta`
+ *   以传递 backpressure。
+ * - 其他情况：走 invoke 分支（原逻辑，`withTimeout` 包装单次 invoke）。
+ *
+ * 两个分支都返回 `{ content: string }`（完整 raw）给后续 parseAgentResponse。
+ *
+ * ## 超时机制差异（stream 分支 vs invoke 分支）⚠️
+ *
+ * 两个分支的超时机制**不等价**，实现者（尤其是任务 2.2 SSE adapter）必须理解差异：
+ *
+ * **invoke 分支：** `withTimeout` 用 `Promise.race` 实现，超时直接 reject
+ * `TimeoutError`。executeAgent 的 catch 块按 `TimeoutError` 处理 → 走 timeout 分支
+ * → `toTimeoutFallback`（`finishReason: 'timeout'`）。
+ *
+ * **stream 分支：** 不用 `withTimeout`，改用 `setTimeout + AbortController +
+ * AbortSignal.any`。超时触发 `timeoutController.abort()`，合并 signal 传给
+ * `deps.agent.stream`。LangChain 兼容的 provider iterator 在下一个 yield 点检查
+ * signal.aborted，抛 `AbortError`（DOMException 或类似）。这个 AbortError **不是**
+ * `TimeoutError`，因此 executeAgent catch 块走 provider_error 分支（对非
+ * StreamingSummaryParseError 的错误）→ `toFallback`（`finishReason: 'fallback'`）。
+ *
+ * 注意：stream 超时**不会**走 TimeoutError → timeout 路径。如果 SSE adapter
+ * 需要区分"超时导致的 fallback"和"provider 真实错误"，不能只看 finishReason，
+ * 需要通过 observer 或 log 额外区分（或后续任务再统一改造）。
+ *
+ * ## onSummaryDelta 背压对超时的延迟影响 ⚠️
+ *
+ * stream 分支的 timeout 定时器在 `await onSummaryDelta(delta)` 期间继续计时，
+ * 但 timeout 的"生效"（即 abort 信号被传递给 iterator）需要 iterator 重新进入
+ * `for await` 循环才能被检查。如果 `onSummaryDelta` callback 慢（SSE 背压、
+ * 网络拥塞、消费端处理重），timeout 只能在当前 callback resolve 后、iterator
+ * 回到循环顶部时才生效。实际超时时间可能略大于 `timeoutMs`，超出量约等于
+ * 最后一个 `onSummaryDelta` 调用的执行时间。
+ *
+ * 这是有意为之：保留 backpressure 语义，避免在 callback 中途 abort 导致半写状态。
+ * 若对超时精度敏感，需要在 SSE adapter 层自己管理 timer（如响应式 flush + heartbeat）。
+ *
+ * ## 为什么选方案 B（AbortSignal.any）而非 Promise.race
+ *
+ * 方案 B（当前实现）的优势：
+ * - 保留 `AbortSignal.any` 合并外部 request signal（HTTP 断开、上层取消等）的能力；
+ * - 单一 signal 通道贯穿 provider iterator，provider 内部可以在任何 await 点检查 abort；
+ * - 不需要在 stream 外再包一层 `Promise.race`，避免双 timeout 路径（race reject +
+ *   iterator abort）导致的竞态。
+ *
+ * 方案 A（用 withTimeout 包 stream 迭代）的劣势：
+ * - `Promise.race` 只能 reject 外层 Promise，不会自动 abort 底层 iterator，
+ *   provider iterator 会继续在后台消费直到自然结束（资源泄漏）；
+ * - 外部 request signal（options.signal）需要二次合并逻辑，复杂度上升。
+ */
+async function obtainRawOutput(
+  deps: AgentRuntimeDeps,
+  systemPrompt: string,
+  taskPrompt: string,
+  timeoutMs: number,
+  options: AgentExecutionOptions | undefined,
+  taskType: AgentTaskType,
+): Promise<{ content: string }> {
+  // 仅 HOMEPAGE_SUMMARY 且提供了 onSummaryDelta 时才走流式分支
+  const useStream =
+    taskType === AgentTaskType.HOMEPAGE_SUMMARY && Boolean(options?.onSummaryDelta);
+
+  if (!useStream) {
+    // invoke 分支：保持原有行为，带超时
+    const raw = await withTimeout(
+      (signal) => deps.agent.invoke({ systemPrompt, userPrompt: taskPrompt, signal }),
+      timeoutMs,
+    );
+    return { content: raw.content };
+  }
+
+  // stream 分支：StreamingSummaryExtractor 从增量 JSON 释放 summary delta
+  // useStream 已保证 onSummaryDelta 存在；这里用防御性 if 守卫再次确认，
+  // 避免双重非空断言（!）在类型变更时静默失败。
+  if (!options?.onSummaryDelta) {
+    throw new Error('unreachable: onSummaryDelta missing in stream branch');
+  }
+  const onSummaryDelta = options.onSummaryDelta;
+  const summaryExtractor = new StreamingSummaryExtractor();
+  // 仅当 route 层提供至少一个结构回调时才并行构造 structure 提取器，避免无谓开销。
+  // useStream 触发条件仍由 HOMEPAGE_SUMMARY + onSummaryDelta 决定，不受结构回调影响。
+  const hasStructureCallback = Boolean(
+    options?.onActionReady || options?.onForecastStarted || options?.onFutureSuggestionReady,
+  );
+  const structureExtractor = hasStructureCallback ? new StreamingStructureExtractor() : null;
+  let rawContent = '';
+
+  // summary done 信号去重：仅在第一次检测到 isSummaryDone 时触发 onSummaryDone 回调。
+  // 触发时机比 onActionReady 早——JSON parser 见到 summary 字符串闭合即触发，
+  // 不必等 actions 数组首个元素完整闭合。UI 据此立即展示卡片 Skeleton。
+  let summaryDoneEmitted = false;
+  const maybeEmitSummaryDone = async (): Promise<void> => {
+    if (!summaryDoneEmitted && summaryExtractor.isSummaryDone()) {
+      summaryDoneEmitted = true;
+      await options?.onSummaryDone?.();
+    }
+  };
+
+  // stream 分支自己管理 timeout：合并内部 timeout signal + 外部 request signal
+  const timeoutController = new AbortController();
+  const timer = setTimeout(() => timeoutController.abort(), timeoutMs);
+  const signals: AbortSignal[] = [timeoutController.signal];
+  if (options?.signal) {
+    signals.push(options.signal);
+  }
+  // AbortSignal.any：任一 signal abort 即合并 signal abort。Node 20+ 原生支持。
+  const mergedSignal = AbortSignal.any(signals);
+
+  try {
+    for await (const chunk of deps.agent.stream({
+      systemPrompt,
+      userPrompt: taskPrompt,
+      signal: mergedSignal,
+    })) {
+      rawContent += chunk.content;
+      // summary 提取器先 push：其错误（StreamingSummaryParseError 等）由 runtime
+      // 上层 catch 统一处理，会驱动 fallback。
+      const deltas = summaryExtractor.push(chunk.content);
+      for (const delta of deltas) {
+        // await 每个回调，传递 backpressure（慢消费端会阻塞迭代）
+        await onSummaryDelta(delta);
+      }
+      // summary 字段可能在本次 push 中完整闭合——先于结构信号检查触发，
+      // 让 UI 能立即用 Skeleton 占位卡片区域（不必等首个 action 元素就绪）。
+      await maybeEmitSummaryDone();
+      // structure 提取器后 push：任何错误都吞掉，绝不中断 summary 流式。
+      // 结构信号是渐进式 UI 的优化，丢失不应降级整条 SSE。
+      if (structureExtractor) {
+        let structureSignals: StructureSignal[] = [];
+        try {
+          structureSignals = structureExtractor.push(chunk.content);
+        } catch {
+          // 结构提取器任何错误都吞掉（含 MarkdownFenceError）——
+          // 不能中断 summary 流式，summary 提取器的错误由现有 runtime 机制单独处理
+        }
+        for (const signal of structureSignals) {
+          await dispatchStructureSignal(signal, options);
+        }
+      }
+    }
+    // 通知 summary extractor 输入结束；JSON 不完整/重复 key/类型错误会抛 StreamingSummaryParseError
+    summaryExtractor.finish();
+    // structure extractor 的 finish 本身吞错，不会抛
+    structureExtractor?.finish();
+  } finally {
+    clearTimeout(timer);
+  }
+
+  return { content: rawContent };
+}
+
+/**
+ * 把单个结构信号派发给 route 层提供的回调。
+ *
+ * - `Record<string, unknown>` → `ActionOption` / `FutureSuggestion` 的类型断言
+ *   由 route 层负责单元素业务校验；runtime 不做 zod 校验（终态 parser 的职责）。
+ * - 回调的 reject 顺着 await 冒泡（与 onSummaryDelta 一致），runtime catch 会兜底。
+ */
+async function dispatchStructureSignal(
+  signal: StructureSignal,
+  options: AgentExecutionOptions | undefined,
+): Promise<void> {
+  if (signal.kind === 'action') {
+    await options?.onActionReady?.(signal.index, signal.action as unknown as ActionOption);
+  } else if (signal.kind === 'forecastStarted') {
+    await options?.onForecastStarted?.();
+  } else {
+    await options?.onFutureSuggestionReady?.(
+      signal.index,
+      signal.suggestion as unknown as FutureSuggestion,
+    );
   }
 }
 

@@ -256,6 +256,314 @@ describe('AI Routes', () => {
     });
   });
 
+  describe('POST /ai/morning-brief/stream', () => {
+    /**
+     * 解析 SSE 文本为事件数组。每个事件是 { event, data }。
+     * SSE 帧格式：`event: <type>\ndata: <json>\n\n`
+     */
+    function parseSseFrames(text: string): Array<{ event: string; data: unknown }> {
+      const frames: Array<{ event: string; data: unknown }> = [];
+      const blocks = text.split('\n\n');
+      for (const block of blocks) {
+        if (!block.trim()) continue;
+        let eventType = '';
+        let dataLine = '';
+        for (const line of block.split('\n')) {
+          if (line.startsWith('event: ')) eventType = line.slice(7);
+          else if (line.startsWith('data: ')) dataLine = line.slice(6);
+        }
+        if (eventType && dataLine) {
+          frames.push({ event: eventType, data: JSON.parse(dataLine) });
+        }
+      }
+      return frames;
+    }
+
+    test('cache miss 多 delta：started → delta* → completed', async () => {
+      mockedExecuteAgent.mockReset();
+      app.briefCache.clearAll();
+      app.runtime.getSessionSandbox('sess-stream-1').overrideStore.reset('all');
+
+      // executeAgent 收到 options.onSummaryDelta，调用模拟 delta
+      mockedExecuteAgent.mockImplementationOnce(
+        async (_req, _deps, _timeout, _observer, _locale, options) => {
+          const onDelta = options?.onSummaryDelta;
+          if (onDelta) {
+            await onDelta('健康');
+            await onDelta('状态');
+            await onDelta('良好');
+          }
+          return mockResponse;
+        },
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief/stream',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          bustCache: true,
+        },
+        headers: { 'x-session-id': 'sess-stream-1' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['content-type']).toContain('text/event-stream');
+      expect(response.headers['cache-control']).toBe('no-cache, no-transform');
+      expect(response.headers['x-accel-buffering']).toBe('no');
+      expect(response.headers['x-session-id']).toBe('sess-stream-1');
+
+      const frames = parseSseFrames(response.body);
+      const types = frames.map((f) => f.event);
+      expect(types[0]).toBe('brief.started');
+      // 中间 3 个都是 delta
+      expect(types.slice(1, 4)).toEqual([
+        'brief.summary.delta',
+        'brief.summary.delta',
+        'brief.summary.delta',
+      ]);
+      // 最后一个是 completed
+      expect(types[types.length - 1]).toBe('brief.completed');
+
+      // delta 内容顺序
+      const deltas = frames
+        .filter((f) => f.event === 'brief.summary.delta')
+        .map((f) => (f.data as { delta: string }).delta);
+      expect(deltas).toEqual(['健康', '状态', '良好']);
+
+      // completed 事件含完整 response
+      const completed = frames.find((f) => f.event === 'brief.completed');
+      expect(completed).toBeDefined();
+      expect((completed!.data as { response: { summary: string } }).response.summary).toBe('健康状态良好');
+
+      // 只有一个终态
+      const terminals = frames.filter((f) => f.event === 'brief.completed' || f.event === 'brief.failed');
+      expect(terminals).toHaveLength(1);
+    });
+
+    test('cache hit 直达 completed（无 delta）', async () => {
+      mockedExecuteAgent.mockReset();
+      app.runtime.getSessionSandbox('sess-stream-2').overrideStore.reset('all');
+
+      // 第一次调用产生缓存
+      mockedExecuteAgent.mockResolvedValueOnce(mockResponse);
+      await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief',
+        payload: { profileId: 'profile-a', pageContext: defaultPageContext },
+        headers: { 'x-session-id': 'sess-stream-2' },
+      });
+
+      // 第二次 stream 调用应命中缓存，不调用 executeAgent
+      mockedExecuteAgent.mockClear();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief/stream',
+        payload: { profileId: 'profile-a', pageContext: defaultPageContext },
+        headers: { 'x-session-id': 'sess-stream-2' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const frames = parseSseFrames(response.body);
+      const types = frames.map((f) => f.event);
+
+      // 只有 started + completed，无 delta
+      expect(types).toEqual(['brief.started', 'brief.completed']);
+      expect(types).not.toContain('brief.summary.delta');
+      expect(mockedExecuteAgent).not.toHaveBeenCalled();
+
+      // completed 的 finishReason 保留 cached
+      const completed = frames.find((f) => f.event === 'brief.completed');
+      expect(
+        (completed!.data as { response: { meta: { finishReason: string } } }).response.meta.finishReason,
+      ).toBe('cached');
+    });
+
+    test('invalid output（fallback）发 failed terminal', async () => {
+      mockedExecuteAgent.mockReset();
+      app.briefCache.clearAll();
+      app.runtime.getSessionSandbox('sess-stream-3').overrideStore.reset('all');
+
+      const fallbackResponse: AgentResponseEnvelope = {
+        ...mockResponse,
+        source: 'fallback',
+        statusColor: 'warning',
+        meta: { ...mockResponse.meta, finishReason: 'fallback' },
+      };
+      mockedExecuteAgent.mockResolvedValueOnce(fallbackResponse);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief/stream',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          bustCache: true,
+        },
+        headers: { 'x-session-id': 'sess-stream-3' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const frames = parseSseFrames(response.body);
+      const types = frames.map((f) => f.event);
+
+      // started → failed（无 completed）
+      expect(types[0]).toBe('brief.started');
+      expect(types[types.length - 1]).toBe('brief.failed');
+      expect(types).not.toContain('brief.completed');
+
+      // failed 含错误码
+      const failed = frames.find((f) => f.event === 'brief.failed');
+      expect((failed!.data as { error: { code: string } }).error.code).toBe('BRIEF_GENERATION_FAILED');
+    });
+
+    test('provider exception 发 failed terminal', async () => {
+      mockedExecuteAgent.mockReset();
+      app.briefCache.clearAll();
+      app.runtime.getSessionSandbox('sess-stream-4').overrideStore.reset('all');
+
+      mockedExecuteAgent.mockRejectedValueOnce(new Error('connection failed'));
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief/stream',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          bustCache: true,
+        },
+        headers: { 'x-session-id': 'sess-stream-4' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const frames = parseSseFrames(response.body);
+      const types = frames.map((f) => f.event);
+
+      // started → failed
+      expect(types[0]).toBe('brief.started');
+      expect(types[types.length - 1]).toBe('brief.failed');
+      expect(types).not.toContain('brief.completed');
+    });
+
+    test('无效 pageContext 返回 400 JSON（不是 SSE）', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/morning-brief/stream',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: { invalid: true },
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      // 仍是 JSON error，不是 SSE
+      expect(response.headers['content-type']).toContain('application/json');
+      const body = response.json();
+      expect(body.success).toBe(false);
+    });
+
+    /**
+     * 覆盖 routes.ts 的 onDisconnect → abortController.abort() 链路。
+     *
+     * routes.ts 注册了 request.raw.on('aborted', onDisconnect) 和
+     * reply.raw.on('close', onDisconnect)。其余 5 个 stream 测试都用
+     * app.inject 正常完成，从不触发断连路径。
+     *
+     * inject 模式下 request.raw 是 light-my-request 的 Request（继承自
+     * Readable + EventEmitter），支持手动 emit。本测试通过 preHandler
+     * 捕获 request.raw，在 mock executeAgent 的第一次 onSummaryDelta 之后
+     * emit 'aborted'，验证：
+     *   1. onDisconnect 被触发并调用 abortController.abort()
+     *      （证据：options.signal.aborted === true）
+     *   2. SSE 流仍以合法终端结束（exactly-one-terminal 不变）
+     *
+     * 真实场景下 abort 后底层 provider 会抛 AbortError，routes 走 catch
+     * 发 failed；这里 mock executeAgent 不监听 signal，直接返回
+     * mockResponse，因此走 completed 终态——验证的是 abort 链路注册正确，
+     * 不验证 provider 取消语义（由 agent-core 单测覆盖）。
+     *
+     * 独立 app 实例避免 preHandler hook 污染全局 app 的其他测试。
+     */
+    test('客户端断连触发 abortController.abort()（onDisconnect 链路）', async () => {
+      const localApp = await buildApp({
+        env: {
+          FALLBACK_ONLY_MODE: 'true',
+          ENABLE_GOD_MODE: 'true',
+          NODE_ENV: 'test',
+          DATA_DIR: dataDir,
+        },
+      });
+
+      // 捕获 stream 路由的 request.raw，供 mock 在 delta 之间 emit 'aborted'
+      let capturedRaw: NodeJS.EventEmitter | undefined;
+      localApp.addHook('preHandler', async (request) => {
+        if (request.url.includes('/ai/morning-brief/stream')) {
+          capturedRaw = request.raw as unknown as NodeJS.EventEmitter;
+        }
+      });
+
+      mockedExecuteAgent.mockReset();
+      localApp.briefCache.clearAll();
+      localApp.runtime.getSessionSandbox('sess-stream-abort').overrideStore.reset('all');
+
+      let signalAfterAbort: boolean | undefined;
+      let deltaCountAfterAbort = 0;
+      mockedExecuteAgent.mockImplementationOnce(
+        async (_req, _deps, _timeout, _observer, _locale, options) => {
+          const onDelta = options?.onSummaryDelta;
+          const signal = options?.signal;
+          if (onDelta) {
+            await onDelta('健康');
+            // 模拟客户端断连：触发 request.raw 的 'aborted' 事件。
+            // EventEmitter.emit 是同步的，onDisconnect 立即调用
+            // abortController.abort()，signal.aborted 立即变 true。
+            capturedRaw?.emit('aborted');
+            signalAfterAbort = signal?.aborted;
+            // 第二次 delta：真实 provider 此时已收到 abort 会抛
+            // AbortError；mock 不监听 signal，继续推送以验证 writer
+            // 守卫不会因 abort 误关闭（isClosed 仍为 false，delta 写入）。
+            await onDelta('状态');
+            deltaCountAfterAbort++;
+          }
+          return mockResponse;
+        },
+      );
+
+      const response = await localApp.inject({
+        method: 'POST',
+        url: '/ai/morning-brief/stream',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          bustCache: true,
+        },
+        headers: { 'x-session-id': 'sess-stream-abort' },
+      });
+
+      // 断言 1：emit('aborted') 后 onDisconnect 调用了 abortController.abort()
+      expect(signalAfterAbort).toBe(true);
+      // mock 在 emit 后继续推送了一次 delta
+      expect(deltaCountAfterAbort).toBe(1);
+
+      expect(response.statusCode).toBe(200);
+      const frames = parseSseFrames(response.body);
+      const types = frames.map((f) => f.event);
+
+      // 断言 2：SSE 流仍以合法终端结束（started → delta* → completed）
+      expect(types[0]).toBe('brief.started');
+      expect(types[types.length - 1]).toBe('brief.completed');
+      // 只有一个终态
+      const terminals = frames.filter(
+        (f) => f.event === 'brief.completed' || f.event === 'brief.failed',
+      );
+      expect(terminals).toHaveLength(1);
+
+      await localApp.close();
+    });
+  });
+
   describe('POST /ai/view-summary', () => {
     test('返回视图总结响应', async () => {
       const viewResponse: AgentResponseEnvelope = {

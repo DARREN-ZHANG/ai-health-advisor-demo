@@ -27,6 +27,7 @@
     "@langchain/google-genai": "^0.2.0",
     "@langchain/openai": "^0.4.0",
     "@langchain/tavily": "^1.2.0",
+    "@streamparser/json": "^0.0.22",
     "zod": "^3.24.0"
   },
   "devDependencies": {

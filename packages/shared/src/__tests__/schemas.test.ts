@@ -51,6 +51,10 @@ import { ChartTokenId } from '../types/chart-token';
 import { AgentTaskType } from '../types/agent';
 import { MICRO_EVENT_TYPES } from '../types/micro-event';
 import { MicroEventTypeSchema } from '../schemas/micro-event';
+import {
+  BriefStreamEventSchema,
+  isBriefStreamTerminalEvent,
+} from '../schemas/brief-stream';
 
 describe('SandboxProfileSchema', () => {
   const validProfile = {
@@ -1454,5 +1458,164 @@ describe('AgentResponseEnvelopeSchema — futureSuggestions', () => {
       },
     };
     expect(AgentResponseEnvelopeSchema.safeParse(envelope).success).toBe(true);
+  });
+});
+
+describe('BriefStreamEventSchema', () => {
+  // 复用一个合法的 terminal envelope，避免每个 case 重复构造
+  const validEnvelope = {
+    summary: '健康状态稳定，继续保持规律作息',
+    source: 'llm',
+    statusColor: 'good' as const,
+    chartTokens: [ChartTokenId.HRV_7DAYS],
+    meta: {
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: { profileId: 'p1', page: 'home', timeframe: 'week' },
+      finishReason: 'complete',
+    },
+  };
+
+  it('accepts brief.started event', () => {
+    const event = { type: 'brief.started', requestId: 'req-001' };
+    expect(BriefStreamEventSchema.safeParse(event).success).toBe(true);
+  });
+
+  it('accepts brief.summary.delta event', () => {
+    const event = {
+      type: 'brief.summary.delta',
+      requestId: 'req-001',
+      delta: '今早 HRV',
+    };
+    expect(BriefStreamEventSchema.safeParse(event).success).toBe(true);
+  });
+
+  it('accepts brief.completed event with valid envelope', () => {
+    const event = {
+      type: 'brief.completed',
+      requestId: 'req-001',
+      response: validEnvelope,
+    };
+    expect(BriefStreamEventSchema.safeParse(event).success).toBe(true);
+  });
+
+  it('accepts brief.failed event with known error code', () => {
+    const event = {
+      type: 'brief.failed',
+      requestId: 'req-001',
+      error: { code: 'BRIEF_GENERATION_FAILED', message: 'provider 超时' },
+    };
+    expect(BriefStreamEventSchema.safeParse(event).success).toBe(true);
+  });
+
+  it('accepts brief.failed with STREAM_ABORTED code', () => {
+    const event = {
+      type: 'brief.failed',
+      requestId: 'req-001',
+      error: { code: 'STREAM_ABORTED', message: '客户端断开' },
+    };
+    expect(BriefStreamEventSchema.safeParse(event).success).toBe(true);
+  });
+
+  it('rejects empty delta', () => {
+    const event = {
+      type: 'brief.summary.delta',
+      requestId: 'req-001',
+      delta: '',
+    };
+    expect(BriefStreamEventSchema.safeParse(event).success).toBe(false);
+  });
+
+  it('rejects empty requestId', () => {
+    const event = { type: 'brief.started', requestId: '' };
+    expect(BriefStreamEventSchema.safeParse(event).success).toBe(false);
+  });
+
+  it('rejects unknown event type', () => {
+    const event = { type: 'brief.unknown', requestId: 'req-001' };
+    expect(BriefStreamEventSchema.safeParse(event).success).toBe(false);
+  });
+
+  it('rejects completed event with invalid terminal envelope', () => {
+    // summary 缺失 —— AgentResponseEnvelopeSchema 会拒绝
+    const event = {
+      type: 'brief.completed',
+      requestId: 'req-001',
+      response: {
+        chartTokens: [],
+        meta: {
+          taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+          pageContext: { profileId: 'p1', page: 'home', timeframe: 'week' },
+          finishReason: 'complete',
+        },
+      },
+    };
+    expect(BriefStreamEventSchema.safeParse(event).success).toBe(false);
+  });
+
+  it('rejects failed event with unknown error code', () => {
+    const event = {
+      type: 'brief.failed',
+      requestId: 'req-001',
+      error: { code: 'PROVIDER_ERROR', message: '上游错误' },
+    };
+    expect(BriefStreamEventSchema.safeParse(event).success).toBe(false);
+  });
+
+  it('rejects failed event with empty error message', () => {
+    const event = {
+      type: 'brief.failed',
+      requestId: 'req-001',
+      error: { code: 'BRIEF_GENERATION_FAILED', message: '' },
+    };
+    expect(BriefStreamEventSchema.safeParse(event).success).toBe(false);
+  });
+});
+
+describe('isBriefStreamTerminalEvent', () => {
+  const validEnvelope = {
+    summary: '健康状态稳定',
+    source: 'llm',
+    statusColor: 'good' as const,
+    chartTokens: [],
+    meta: {
+      taskType: AgentTaskType.HOMEPAGE_SUMMARY,
+      pageContext: { profileId: 'p1', page: 'home', timeframe: 'week' },
+      finishReason: 'complete',
+    },
+  };
+
+  it('returns true for brief.completed', () => {
+    const event = BriefStreamEventSchema.parse({
+      type: 'brief.completed',
+      requestId: 'req-001',
+      response: validEnvelope,
+    });
+    expect(isBriefStreamTerminalEvent(event)).toBe(true);
+  });
+
+  it('returns true for brief.failed', () => {
+    const event = BriefStreamEventSchema.parse({
+      type: 'brief.failed',
+      requestId: 'req-001',
+      error: { code: 'STREAM_ABORTED', message: '断开' },
+    });
+    expect(isBriefStreamTerminalEvent(event)).toBe(true);
+  });
+
+  it('returns false for brief.started', () => {
+    const event = BriefStreamEventSchema.parse({
+      type: 'brief.started',
+      requestId: 'req-001',
+    });
+    expect(isBriefStreamTerminalEvent(event)).toBe(false);
+  });
+
+  it('returns false for brief.summary.delta', () => {
+    const event = BriefStreamEventSchema.parse({
+      type: 'brief.summary.delta',
+      requestId: 'req-001',
+      delta: '增量',
+    });
+    expect(isBriefStreamTerminalEvent(event)).toBe(false);
   });
 });

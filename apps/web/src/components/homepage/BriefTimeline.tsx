@@ -17,12 +17,21 @@ const COMPACT_RING_SEGMENT_LENGTH = 7.2;
  *
  * 首次加载使用骨架占位；已有内容刷新时保留简报，并在标题右侧显示更新状态。
  * 可交互建议统一由首页的 `ActionCard` 渲染，避免同时出现两类建议卡片。
+ *
+ * 流式语义（任务 3.2）：
+ * - `isStreaming=true` 表示 summary 来自 brief-stream store 的 draft，
+ *   终态（React Query cache 原子替换）尚未到达。
+ * - 流式期间 section 标记 `aria-busy=true`，让辅助技术知道内容仍在更新；
+ *   但不增加打字机计时器、光标动画或 token 人工节流——summary 直接渲染，
+ *   由 store append 的频率驱动视觉增量。
  */
 export interface BriefTimelineProps {
   summary: string;
   currentTime?: string;
   isLoading?: boolean;
   isUpdating?: boolean;
+  /** draft 期间标记 aria-busy=true（summary 仍可见） */
+  isStreaming?: boolean;
 }
 
 export function BriefTimeline({
@@ -30,6 +39,7 @@ export function BriefTimeline({
   currentTime,
   isLoading = false,
   isUpdating = false,
+  isStreaming = false,
 }: BriefTimelineProps) {
   const t = useTranslations('homepage');
   const formattedTime = formatTimelineTime(currentTime);
@@ -48,7 +58,11 @@ export function BriefTimeline({
   }
 
   return (
-    <section aria-label={t('now')} className="relative pl-8" data-valo-brief-timeline="">
+    <section
+      aria-label={t('now')}
+      aria-busy={isStreaming || undefined}
+      className="relative pl-8"
+      data-valo-brief-timeline="">
       <span
         aria-hidden="true"
         className="absolute left-0 top-0 flex h-5 w-5 items-center justify-center text-[20px] leading-5 text-[var(--valo-prime)] drop-shadow-[0_0_8px_var(--valo-prime)]"
