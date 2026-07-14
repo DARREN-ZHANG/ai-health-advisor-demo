@@ -6,6 +6,8 @@ import {
   ErrorCode,
   AgentTaskType,
   PageContextSchema,
+  ActionOptionSchema,
+  FutureSuggestionSchema,
 } from '@health-advisor/shared';
 import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
 import { AgentRequestSchema, type AgentRequest } from '@health-advisor/agent-core';
@@ -216,6 +218,50 @@ export async function aiRoutes(app: FastifyInstance) {
               delta,
             });
           }
+        },
+        // 单元素 safeParse：对每个 action/suggestion 独立校验，非法元素记 warn 跳过，
+        // 不让一个坏元素中断整条流。与 onSummaryDelta 对称，写帧前检查 writer.isClosed。
+        onActionReady: async (index, action) => {
+          if (writer.isClosed) return;
+          const parsed = ActionOptionSchema.safeParse(action);
+          if (!parsed.success) {
+            app.log.warn(
+              { requestId: request.ctx.requestId, index, issues: parsed.error.issues },
+              'action.ready 元素校验失败，跳过',
+            );
+            return;
+          }
+          await writer.writeEvent({
+            type: 'brief.action.ready',
+            requestId: request.ctx.requestId,
+            index,
+            action: parsed.data,
+          });
+        },
+        onForecastStarted: async () => {
+          if (!writer.isClosed) {
+            await writer.writeEvent({
+              type: 'brief.forecast.started',
+              requestId: request.ctx.requestId,
+            });
+          }
+        },
+        onFutureSuggestionReady: async (index, suggestion) => {
+          if (writer.isClosed) return;
+          const parsed = FutureSuggestionSchema.safeParse(suggestion);
+          if (!parsed.success) {
+            app.log.warn(
+              { requestId: request.ctx.requestId, index, issues: parsed.error.issues },
+              'future_suggestion.ready 元素校验失败，跳过',
+            );
+            return;
+          }
+          await writer.writeEvent({
+            type: 'brief.future_suggestion.ready',
+            requestId: request.ctx.requestId,
+            index,
+            suggestion: parsed.data,
+          });
         },
         onTimings: (value) => {
           timings = {

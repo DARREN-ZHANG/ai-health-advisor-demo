@@ -615,4 +615,136 @@ describe('Morning Brief Stream 集成测试', () => {
     expect(response.headers['access-control-allow-origin']).toBeUndefined();
     expect(response.headers['access-control-allow-credentials']).toBeUndefined();
   });
+
+  /**
+   * 场景 9：完整结构化流。
+   *
+   * 验证新回调的端到端顺序契约：
+   *   started → action.ready+ → forecast.started → future_suggestion.ready+ → completed
+   * 且 action.ready 的 index 递增、action.id 正确透传。
+   */
+  test('完整流：started → action.ready+ → forecast.started → future_suggestion.ready+ → completed', async () => {
+    mockedExecuteAgent.mockReset();
+    app.briefCache.clearAll();
+    app.runtime.getSessionSandbox('sess-int-struct').overrideStore.reset('all');
+
+    const action1 = { id: 'a1', emoji: '💧', title: '补水', description: '多喝水', aiPromise: '记录' };
+    const action2 = { id: 'a2', emoji: '🧘', title: '拉伸', description: '放松', aiPromise: '记录' };
+    const suggestion = {
+      timePoint: '15:30',
+      predictedState: '低谷',
+      rationale: '咖啡因',
+      action: { id: 'f1', emoji: '🧘', title: '呼吸', description: '深呼吸', aiPromise: '记录' },
+    };
+
+    mockedExecuteAgent.mockImplementationOnce(
+      async (_req, _deps, _timeout, _observer, _locale, options) => {
+        await options?.onSummaryDelta?.('摘要');
+        await options?.onActionReady?.(0, action1);
+        await options?.onActionReady?.(1, action2);
+        await options?.onForecastStarted?.();
+        await options?.onFutureSuggestionReady?.(0, suggestion);
+        return { ...validEnvelope, actions: [action1, action2], futureSuggestions: [suggestion] };
+      },
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/ai/morning-brief/stream',
+      payload: { profileId: 'profile-a', pageContext: defaultPageContext, bustCache: true },
+      headers: { 'x-session-id': 'sess-int-struct' },
+    });
+    const events = parseSseFrames(response.body).map(validateFrameSchema);
+    const types = events.map((e) => e.type);
+
+    expect(types[0]).toBe('brief.started');
+    expect(types[types.length - 1]).toBe('brief.completed');
+    // 顺序 invariant：action.ready* → forecast.started → future_suggestion.ready*
+    const lastActionIdx = types.lastIndexOf('brief.action.ready');
+    const forecastIdx = types.indexOf('brief.forecast.started');
+    const firstSuggestionIdx = types.indexOf('brief.future_suggestion.ready');
+    expect(forecastIdx).toBeGreaterThan(lastActionIdx);
+    expect(firstSuggestionIdx).toBeGreaterThan(forecastIdx);
+    // action.ready index 递增
+    const actionEvents = events.filter(
+      (e): e is Extract<BriefStreamEvent, { type: 'brief.action.ready' }> =>
+        e.type === 'brief.action.ready',
+    );
+    expect(actionEvents.map((e) => e.index)).toEqual([0, 1]);
+    expect(actionEvents[0].action.id).toBe('a1');
+  });
+
+  /**
+   * 场景 10：单元素 safeParse 容错。
+   *
+   * route 层对每个 action 做 ActionOptionSchema.safeParse，非法（缺 emoji）
+   * 的 action 被跳过，流不中断；合法 action 仍透传，completed 仍到达。
+   */
+  test('action 字段非法（缺 emoji）时该 action.ready 被跳过，流不中断', async () => {
+    mockedExecuteAgent.mockReset();
+    app.briefCache.clearAll();
+    app.runtime.getSessionSandbox('sess-int-skip').overrideStore.reset('all');
+
+    mockedExecuteAgent.mockImplementationOnce(
+      async (_req, _deps, _timeout, _observer, _locale, options) => {
+        // 第一个 action 缺 emoji，ActionOptionSchema 拒绝 → route 层跳过
+        await options?.onActionReady?.(0, { id: 'bad', title: 't', description: 'd', aiPromise: 'p' } as never);
+        await options?.onActionReady?.(1, { id: 'good', emoji: '💧', title: 't', description: 'd', aiPromise: 'p' });
+        await options?.onForecastStarted?.();
+        return validEnvelope;
+      },
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/ai/morning-brief/stream',
+      payload: { profileId: 'profile-a', pageContext: defaultPageContext, bustCache: true },
+      headers: { 'x-session-id': 'sess-int-skip' },
+    });
+    const events = parseSseFrames(response.body).map(validateFrameSchema);
+    const actionEvents = events.filter(
+      (e): e is Extract<BriefStreamEvent, { type: 'brief.action.ready' }> =>
+        e.type === 'brief.action.ready',
+    );
+    // 只剩第二个合法 action
+    expect(actionEvents).toHaveLength(1);
+    expect(actionEvents[0].action.id).toBe('good');
+    // completed 仍到达
+    expect(events.some((e) => e.type === 'brief.completed')).toBe(true);
+  });
+
+  /**
+   * 场景 11：cache hit 不触发结构化回调。
+   *
+   * cache hit 走 cached 分支，不调用 executeAgent，自然不会有
+   * action.ready / forecast.started。锁定「结构化回调仅 cache miss 路径产出」。
+   */
+  test('cache hit：started → completed（无 action.ready / forecast.started）', async () => {
+    // 第一次请求预热缓存
+    mockedExecuteAgent.mockReset();
+    app.briefCache.clearAll();
+    app.runtime.getSessionSandbox('sess-int-cache').overrideStore.reset('all');
+    mockedExecuteAgent.mockImplementationOnce(async () => validEnvelope);
+    await app.inject({
+      method: 'POST',
+      url: '/ai/morning-brief/stream',
+      payload: { profileId: 'profile-a', pageContext: defaultPageContext, bustCache: true },
+      headers: { 'x-session-id': 'sess-int-cache' },
+    });
+
+    // 第二次请求命中缓存（不 bust）
+    mockedExecuteAgent.mockImplementationOnce(async () => { throw new Error('不应调用 LLM'); });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/ai/morning-brief/stream',
+      payload: { profileId: 'profile-a', pageContext: defaultPageContext },
+      headers: { 'x-session-id': 'sess-int-cache' },
+    });
+    const events = parseSseFrames(response.body).map(validateFrameSchema);
+    const types = events.map((e) => e.type);
+    expect(types[0]).toBe('brief.started');
+    expect(types[types.length - 1]).toBe('brief.completed');
+    expect(types).not.toContain('brief.action.ready');
+    expect(types).not.toContain('brief.forecast.started');
+  });
 });
