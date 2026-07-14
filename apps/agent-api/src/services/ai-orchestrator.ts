@@ -1,5 +1,11 @@
 import crypto from 'node:crypto';
-import { AgentTaskType, type AgentResponseEnvelope, type Locale } from '@health-advisor/shared';
+import {
+  AgentTaskType,
+  type ActionOption,
+  type AgentResponseEnvelope,
+  type FutureSuggestion,
+  type Locale,
+} from '@health-advisor/shared';
 import {
   executeAgent,
   type AgentRequest,
@@ -71,6 +77,19 @@ export interface AiOrchestratorExecuteOptions {
    * 用于把 runtime delta 推送到 SSE writer；cache hit 不调用（不伪造 delta）。
    */
   onSummaryDelta?(delta: string): void | Promise<void>;
+  /**
+   * 结构化回调：actions 数组中单个元素就绪时触发。仅 cache miss 时透传。
+   * 签名与 agent-core 的 AgentExecutionOptions 一致。
+   */
+  onActionReady?(index: number, action: ActionOption): void | Promise<void>;
+  /**
+   * 结构化回调：futureSuggestions 区段开始时触发一次。仅 cache miss 时透传。
+   */
+  onForecastStarted?(): void | Promise<void>;
+  /**
+   * 结构化回调：futureSuggestions 数组中单个元素就绪时触发。仅 cache miss 时透传。
+   */
+  onFutureSuggestionReady?(index: number, suggestion: FutureSuggestion): void | Promise<void>;
 }
 
 function cacheableTask(taskType: AgentTaskType): boolean {
@@ -146,6 +165,12 @@ export class AiOrchestrator {
         {
           ...(options?.signal ? { signal: options.signal } : {}),
           ...(wrappedOnSummaryDelta ? { onSummaryDelta: wrappedOnSummaryDelta } : {}),
+          // 结构回调纯透传，cache miss 才进此分支；与 onSummaryDelta 一致
+          ...(options?.onActionReady ? { onActionReady: options.onActionReady } : {}),
+          ...(options?.onForecastStarted ? { onForecastStarted: options.onForecastStarted } : {}),
+          ...(options?.onFutureSuggestionReady
+            ? { onFutureSuggestionReady: options.onFutureSuggestionReady }
+            : {}),
         },
       );
       timings.agentMs = Math.round(performance.now() - agentStartedAt);
