@@ -26,7 +26,7 @@
 ## 关键假设与风险
 
 - **LLM 按字段顺序输出 JSON**：prompt 约束 `summary → actions → futureSuggestions`，JSON 序列化保持插入序，GPT 类模型几乎总是遵守。若偶发乱序，提取器按到达顺序释放元素，前端按 index 容器化放置，视觉上仍正确（只是出现顺序可能不严格自上而下），不影响正确性。
-- **streamparser 数组元素就绪回调**：`@streamparser/json` 的 `paths` 是否支持 `$.actions[*]`、`$.futureSuggestions[*]` 并在每个元素完整解析时触发 `onValue`（key 为数组 index），需在实现阶段用探针验证。若不支持 `[*]`，退化方案：监听 `$.actions` / `$.futureSuggestions` 整个数组的 partial value，自行 diff 出新增完整元素。本设计以"`[*]` 可用"为基线，diff 方案为兜底。
+- **streamparser 数组元素就绪**（已探针验证，0.0.22）：`paths: ['$.actions.*', '$.futureSuggestions.*']` 在每个数组元素（对象）完整闭合时触发一次 `onValue`，`key` 为数组 index，`stack` 第二层的 `key` 字段（`'actions'` / `'futureSuggestions'`）区分元素归属。注意语法是 `.*` 不是 `[*]`（后者不被识别，零事件）。对象类型的元素不支持 `emitPartialValues`（partial value 为 undefined），只能拿到完整闭合的对象——这与"元素就绪即推送"的设计一致，无需字段级渐进。
 - **stream 分支触发条件不变**：仍是 `HOMEPAGE_SUMMARY + onSummaryDelta`。route 层总是同时提供全部回调；结构提取器在 stream 分支内随 summary 提取器一起运行。
 
 ## 体验时间轴
@@ -47,10 +47,11 @@ T3  brief.action.ready { index:0, action }
 T4  更多 brief.action.ready 到达（index 递增）
     → 卡片逐张替换 Skeleton；若 LLM 生成 >2 张，超出部分追加到 Skeleton 之后
 
-T5  brief.forecast.started
-    → forecast.started 表示 actions 数组已闭合（JSON 顺序保证，不会再有新卡片）；
+T5  brief.forecast.started（紧邻 T6 之前，几乎同时到达）
+    → forecast.started 在第一个 futureSuggestions 元素就绪时发，
+      表示 actions 数组已闭合（JSON 顺序保证，不会再有新卡片）；
       卡片区剩余 Skeleton 纯为占位凑数，等待 completed 时移除
-    → 预测区开始显示 Skeleton（固定 2 条占位）
+    → 预测区从"不渲染"切到"显示"：容器展开 + Skeleton 占位（2 条）
 
 T6  brief.future_suggestion.ready { index:0, suggestion }
     → 第 1 条预测渲染：timePoint 与 action 卡片立即显示；
@@ -92,7 +93,7 @@ data: {"requestId":"req-1","index":0,"suggestion":{...FutureSuggestion}}
 ```
 
 - `brief.action.ready`：单个 action 元素在 JSON 中解析完整（对象闭合）时发。`index` 是数组下标（从 0 起，递增）。`action` 必须通过 `ActionOptionSchema`。
-- `brief.forecast.started`：无 payload（只 requestId）。标记 LLM 输出进入 `futureSuggestions` 字段，前端据此把预测区从"不渲染"切到"Skeleton"。即使后续 LLM 输出空数组（`futureSuggestions: []`），此事件仍发（前端在 completed 时按终态修正）。
+- `brief.forecast.started`：无 payload（只 requestId）。标记"预测区该出现了"。检测时机：**第一个 `futureSuggestions` 元素就绪时**（streamparser 无法更早区分"字段开始"与"元素就绪"，见实现说明）。这意味着此事件总紧邻第一个 `future_suggestion.ready` 之前，预测区 Skeleton 可见时间极短——但仍标记了阶段切换，前端据此把预测区从"不渲染"切到"显示"（容器展开 + 第一条预测渲染）。若 LLM 不生成 futureSuggestions（字段缺省或空数组），此事件不发，预测区永不渲染。
 - `brief.future_suggestion.ready`：单个 futureSuggestion 元素完整时发。`suggestion` 必须通过 `FutureSuggestionSchema`。
 
 ### 事件顺序 invariant
@@ -122,7 +123,7 @@ started → summary.delta* → action.ready* → forecast.started → future_sug
 不修改已稳定的 `StreamingSummaryExtractor`（职责单一、已有充分的 streamparser 探针验证与 surrogate/fence 守卫）。新建 `packages/agent-core/src/output/streaming-structure-extractor.ts`，专注 actions/futureSuggestions 元素就绪与阶段切换。
 
 **职责**：
-- 内部一个 `JSONParser` 实例，`paths` 配置覆盖 `$.actions[*]` 与 `$.futureSuggestions[*]`（基线）或 `$.actions` / `$.futureSuggestions`（diff 兜底），实现时探针决定。
+- 内部一个 `JSONParser` 实例，`paths: ['$.actions.*', '$.futureSuggestions.*']`，`emitPartialValues` 不启用（对象元素无 partial 语义）。
 - `push(chunk)` 返回结构化信号数组：
   ```typescript
   type StructureSignal =
@@ -131,7 +132,7 @@ started → summary.delta* → action.ready* → forecast.started → future_sug
     | { kind: 'suggestion'; index: number; suggestion: FutureSuggestion };
   ```
 - 每个 LLM chunk 喂入后，解析出的完整元素与阶段切换以信号形式释放。
-- `forecastStarted` 在检测到 `futureSuggestions` 字段开始解析时释放一次（去重：只释放一次）。
+- `forecastStarted` 在见到**第一个 `futureSuggestions` 元素**就绪时（stack 第二层 key 从 `'actions'` 切到 `'futureSuggestions'`）释放一次（去重：只释放一次），紧随其后释放该元素的 `suggestion` 信号。若 LLM 不生成 futureSuggestions，此信号永不释放。
 - 不做 `ActionOptionSchema`/`FutureSuggestionSchema` 的完整 zod 校验（那是终态 parser 的职责），只做最小结构判断（对象闭合、必要字段存在），把完整校验留给 `parseAgentResponse`。理由：流式期校验失败无法回退已发事件，且 streamparser 已保证 JSON 结构合法。单元素的业务级校验在 route 层做（见下文"错误、兜底与边界"）。
 - 复用 `StreamingSummaryExtractor` 的两个关键守卫：
   - **surrogate pair 安全**：chunk 边界切断 UTF-16 surrogate pair 会破坏 streamparser，需同样的 `pendingSurrogateTail` 缓冲。
@@ -318,8 +319,7 @@ page.tsx 调用处：流式中 `animate={true} done={false}`，completed 后（�
 - **LLM 输出畸形 JSON**：StreamingStructureExtractor 遇到解析异常应吞掉（不抛），已释放的 action/suggestion 保留在 draft；summary 提取器仍按现有契约可能抛 `StreamingSummaryParseError`，runtime 走 fallback 路径，route 发 `brief.failed`，前端清 draft 显示错误。结构提取器的错误不污染 summary 提取器（独立实例）。
 - **单元素业务校验**：route 层的 `onActionReady`/`onFutureSuggestionReady` 在构造 SSE 事件前，对 action/suggestion 各做一次 `ActionOptionSchema.safeParse`/`FutureSuggestionSchema.safeParse`，失败则跳过该事件（不写给 writer、记一条 warn 日志），流不中断。这保证 SseWriter 的 `BriefStreamEventSchema.safeParse` 不会因嵌套对象字段非法而抛错。跨字段的终态约束（如 action.id 与 futureSuggestions.action.id 不得重复）仍由 `parseAgentResponse` 在 completed 前统一校验，失败处理见下条。
 - **元素就绪后终态校验失败**：已发的 `action.ready`/`future_suggestion.ready` 无法撤回。route 在终态校验失败时仍发 `brief.failed`，前端清 draft（连同已就绪的卡片/预测一起清），显示错误。这与 summary 流式后失败的语义一致（provisional 数据不保证成为终态）。
-- **LLM 不生成 futureSuggestions**：`forecast.started` 不发，预测区永不渲染。终态 envelope 的 futureSuggestions 为空/缺省，正确。
-- **LLM 生成空数组 `futureSuggestions: []`**：streamparser 触及字段但无元素。`forecast.started` 发（预测区显示 Skeleton），无 `future_suggestion.ready`。completed 到达时终态无预测，store 清理，预测区消失。短暂 Skeleton 闪烁可接受（或前端在 completed 后用 CSS transition 平滑移除）。
+- **LLM 不生成 futureSuggestions**（字段缺省或空数组）：`forecast.started` 不发，预测区永不渲染。终态 envelope 的 futureSuggestions 为空/缺省，正确。
 - **断连/abort**：现有 abortController 机制不变。已就绪的卡片/预测保留在 draft（store 未 complete/fail 时不清理），用户看到部分内容。React Query cache 仍是旧值。
 - **快速连点/profile 切换**：store 的 requestId 守护对 `appendAction`/`markForecastStarted`/`appendFutureSuggestion` 同样生效，stale 事件不覆盖新 entry。
 
@@ -333,7 +333,7 @@ page.tsx 调用处：流式中 `animate={true} done={false}`，completed 后（�
   - surrogate pair 跨 chunk 边界（复用 summary 提取器的测试矩阵）。
   - markdown fence 前导抛错。
   - 畸形 JSON 中途：已释放信号保留，不抛（吞错）。
-  - futureSuggestions 缺省 / 空数组两种场景的 forecastStarted 行为。
+  - futureSuggestions 缺省 / 空数组：`forecastStarted` 与 suggestion 信号均不释放。
 - `obtainRawOutput` stream 分支：模拟 LLM token 流，验证 summary delta + structure 信号都正确释放、backpressure await 生效。
 - `AgentExecutionOptions` 新回调的可选性（缺失不崩）。
 
