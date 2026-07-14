@@ -98,6 +98,16 @@ describe('AiOrchestrator', () => {
       observer?.onPacketBuilt?.({} as never);
       observer?.onPromptBuilt?.({ systemPrompt: 'system', taskPrompt: 'task' });
       observer?.onModelOutput?.('{"summary":"ok"}');
+      observer?.onCustomerPolicyEvaluated?.({
+        phase: 'initial',
+        approved: false,
+        violationCodes: ['unattributed_numeric_claim'],
+      });
+      observer?.onCustomerPolicyEvaluated?.({
+        phase: 'regeneration',
+        approved: true,
+        violationCodes: [],
+      });
       observer?.onParsed?.(completeResponse);
       observer?.onVerified?.({} as never);
       return completeResponse;
@@ -124,6 +134,18 @@ describe('AiOrchestrator', () => {
       promptBuildMs: expect.any(Number),
       llmMs: expect.any(Number),
       postProcessMs: expect.any(Number),
+      contentPolicyChecks: [
+        {
+          phase: 'initial',
+          approved: false,
+          violationCodes: ['unattributed_numeric_claim'],
+        },
+        {
+          phase: 'regeneration',
+          approved: true,
+          violationCodes: [],
+        },
+      ],
       agentMs: expect.any(Number),
       cacheWriteMs: expect.any(Number),
       orchestrationMs: expect.any(Number),

@@ -615,7 +615,7 @@ describe('realtime-brief-content-policy', () => {
       expect(v!.code === 'unattributed_numeric_claim' && v!.value).toBe('75');
     });
 
-    it('actions 中的数值不在 ledger 中 → 违规', () => {
+    it('actions 中的建议时长不属于健康事实 → 不要求 evidence ledger 归因', () => {
       const packet = makePacket();
       const envelope = makeEnvelope({
         summary: '状态平稳。',
@@ -629,7 +629,48 @@ describe('realtime-brief-content-policy', () => {
         taskType: 'homepage_summary',
       };
       const result = enforceCustomerContentPolicy(input);
+      expect(result.violations.find((x) => x.code === 'unattributed_numeric_claim')).toBeUndefined();
+    });
+
+    it('actions 中的健康测量数值仍必须来自 evidence ledger', () => {
+      const packet = makePacket();
+      const envelope = makeEnvelope({
+        summary: '状态平稳。',
+        actions: [makeAction({ description: '等心率回到 120bpm 再继续活动' })],
+      });
+      const input: RealtimeBriefPolicyInput = {
+        envelope,
+        evidencePacket: packet,
+        actionCandidates: [],
+        locale: 'zh',
+        taskType: 'homepage_summary',
+      };
+      const result = enforceCustomerContentPolicy(input);
       expect(result.violations.find((x) => x.code === 'unattributed_numeric_claim')).toBeDefined();
+    });
+
+    it('futureSuggestions action 中的建议时长不要求 evidence ledger 归因', () => {
+      const packet = makePacket();
+      const envelope = makeEnvelope({
+        summary: '状态平稳。',
+        futureSuggestions: [
+          {
+            timePoint: '22:00',
+            predictedState: '晚间可能更适合放松',
+            rationale: '根据今天已发生的活动节奏',
+            action: makeAction({ description: '做 10 分钟呼吸练习' }),
+          },
+        ],
+      });
+      const input: RealtimeBriefPolicyInput = {
+        envelope,
+        evidencePacket: packet,
+        actionCandidates: [],
+        locale: 'zh',
+        taskType: 'homepage_summary',
+      };
+      const result = enforceCustomerContentPolicy(input);
+      expect(result.violations.find((x) => x.code === 'unattributed_numeric_claim')).toBeUndefined();
     });
 
     it('futureSuggestions 中的数值不在 ledger 中 → 违规', () => {

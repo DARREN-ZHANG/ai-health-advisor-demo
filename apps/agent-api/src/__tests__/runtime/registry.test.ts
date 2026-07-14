@@ -121,7 +121,7 @@ describe('RuntimeRegistry', () => {
     });
   });
 
-  it('将超过 60 秒的模型超时限制为单次请求预算', () => {
+  it('将各角色配置的模型超时原样传给 provider', () => {
     const config = loadConfig({
       FALLBACK_ONLY_MODE: 'false',
       LLM_API_KEY: 'sk-test',
@@ -132,9 +132,9 @@ describe('RuntimeRegistry', () => {
     });
 
     expect(toProviderEnv(config)).toMatchObject({
-      LLM_TIMEOUT_MS: '60000',
-      PLANNER_LLM_TIMEOUT_MS: '60000',
-      REVIEWER_LLM_TIMEOUT_MS: '60000',
+      LLM_TIMEOUT_MS: '120000',
+      PLANNER_LLM_TIMEOUT_MS: '90000',
+      REVIEWER_LLM_TIMEOUT_MS: '70000',
     });
   });
 

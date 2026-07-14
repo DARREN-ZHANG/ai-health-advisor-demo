@@ -6,7 +6,6 @@ import { AgentRequestSchema } from '@health-advisor/agent-core';
 import { buildMeta } from '../../utils/meta.js';
 import { AiOrchestrator, type AiExecutionTimings } from '../../services/ai-orchestrator.js';
 import type { AiRequestMeta } from '../../plugins/request-context.js';
-import { SINGLE_LLM_TIMEOUT_MS } from '../../runtime/registry.js';
 
 interface MorningBriefBody {
   profileId: string;
@@ -33,7 +32,7 @@ export async function aiRoutes(app: FastifyInstance) {
   const orchestrator = new AiOrchestrator({
     registry: app.runtime,
     metrics: app.metrics,
-    timeoutMs: Math.min(app.config.AI_TIMEOUT_MS, SINGLE_LLM_TIMEOUT_MS),
+    timeoutMs: app.config.AI_TIMEOUT_MS,
     memoryServices: app.memoryServices,
     modelVersion: app.config.LLM_MODEL,
   });

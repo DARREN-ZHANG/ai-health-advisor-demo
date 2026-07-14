@@ -33,6 +33,11 @@ export interface AiExecutionTimings {
   llmMs?: number;
   postProcessMs?: number;
   syncGateMs?: number;
+  contentPolicyChecks?: Array<{
+    phase: 'initial' | 'regeneration' | 'sync-regeneration';
+    approved: boolean;
+    violationCodes: string[];
+  }>;
   agentMs?: number;
   cacheWriteMs?: number;
   orchestrationMs: number;
@@ -130,9 +135,14 @@ export class AiOrchestrator {
   }
 }
 
+type RuntimePhaseTimings = Omit<
+  AiExecutionTimings,
+  'cacheLookupMs' | 'cacheHit' | 'agentMs' | 'cacheWriteMs' | 'orchestrationMs'
+>;
+
 function createRuntimeTimingObserver(startedAt: number): {
   observer: AgentRuntimeObserver;
-  snapshot: () => Omit<AiExecutionTimings, 'cacheLookupMs' | 'cacheHit' | 'agentMs' | 'cacheWriteMs' | 'orchestrationMs'>;
+  snapshot: () => RuntimePhaseTimings;
 } {
   let contextBuiltAt: number | undefined;
   let rulesEvaluatedAt: number | undefined;
@@ -142,7 +152,7 @@ function createRuntimeTimingObserver(startedAt: number): {
   let parsedAt: number | undefined;
   let verifiedAt: number | undefined;
   let syncGateStartedAt: number | undefined;
-  const timings: Record<string, number> = {};
+  const timings: RuntimePhaseTimings = {};
 
   const now = () => performance.now();
   const elapsed = (from: number) => Math.round(now() - from);
@@ -168,6 +178,11 @@ function createRuntimeTimingObserver(startedAt: number): {
       onModelOutput: () => {
         modelOutputAt = now();
         if (promptBuiltAt !== undefined) timings.llmMs = Math.round(modelOutputAt - promptBuiltAt);
+      },
+      onCustomerPolicyEvaluated: (check) => {
+        const checks = timings.contentPolicyChecks ?? [];
+        checks.push(check);
+        timings.contentPolicyChecks = checks;
       },
       onParsed: () => {
         parsedAt = now();

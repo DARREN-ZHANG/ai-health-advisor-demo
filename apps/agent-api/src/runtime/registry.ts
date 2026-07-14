@@ -46,9 +46,6 @@ import { createOverrideStore, type OverrideStoreService } from './override-store
 import { ProfileManager } from '../modules/god-mode/profile-manager.js';
 import type { MetricsStore } from '../plugins/metrics.js';
 
-/** 单次模型调用的最长预算；前端保留额外网络余量，避免提前取消后端请求。 */
-export const SINGLE_LLM_TIMEOUT_MS = 60_000;
-
 /**
  * 用 dailyBaseline 精确值填充记录中缺失的字段。
  * 仅当字段不存在（null/undefined）时才填充，避免覆盖已观测数据。
@@ -376,7 +373,7 @@ export function toProviderEnv(config: AppConfig): Record<string, string> {
     LLM_MODEL: config.LLM_MODEL,
     LLM_API_KEY: config.LLM_API_KEY,
     LLM_BASE_URL: config.LLM_BASE_URL,
-    LLM_TIMEOUT_MS: String(Math.min(config.LLM_TIMEOUT_MS, SINGLE_LLM_TIMEOUT_MS)),
+    LLM_TIMEOUT_MS: String(config.LLM_TIMEOUT_MS),
     // 交互式 AI 端点统一 quick fail，禁止 Provider SDK 在请求内重试。
     LLM_MAX_RETRIES: '0',
     PLANNER_LLM_MAX_RETRIES: '0',
@@ -392,7 +389,7 @@ export function toProviderEnv(config: AppConfig): Record<string, string> {
   if (config.PLANNER_LLM_API_KEY) env.PLANNER_LLM_API_KEY = config.PLANNER_LLM_API_KEY;
   if (config.PLANNER_LLM_BASE_URL) env.PLANNER_LLM_BASE_URL = config.PLANNER_LLM_BASE_URL;
   if (config.PLANNER_LLM_TEMPERATURE != null) env.PLANNER_LLM_TEMPERATURE = String(config.PLANNER_LLM_TEMPERATURE);
-  if (config.PLANNER_LLM_TIMEOUT_MS != null) env.PLANNER_LLM_TIMEOUT_MS = String(Math.min(config.PLANNER_LLM_TIMEOUT_MS, SINGLE_LLM_TIMEOUT_MS));
+  if (config.PLANNER_LLM_TIMEOUT_MS != null) env.PLANNER_LLM_TIMEOUT_MS = String(config.PLANNER_LLM_TIMEOUT_MS);
 
   // Reviewer 角色独立配置
   if (config.REVIEWER_LLM_PROVIDER) env.REVIEWER_LLM_PROVIDER = config.REVIEWER_LLM_PROVIDER;
@@ -400,7 +397,7 @@ export function toProviderEnv(config: AppConfig): Record<string, string> {
   if (config.REVIEWER_LLM_API_KEY) env.REVIEWER_LLM_API_KEY = config.REVIEWER_LLM_API_KEY;
   if (config.REVIEWER_LLM_BASE_URL) env.REVIEWER_LLM_BASE_URL = config.REVIEWER_LLM_BASE_URL;
   if (config.REVIEWER_LLM_TEMPERATURE != null) env.REVIEWER_LLM_TEMPERATURE = String(config.REVIEWER_LLM_TEMPERATURE);
-  if (config.REVIEWER_LLM_TIMEOUT_MS != null) env.REVIEWER_LLM_TIMEOUT_MS = String(Math.min(config.REVIEWER_LLM_TIMEOUT_MS, SINGLE_LLM_TIMEOUT_MS));
+  if (config.REVIEWER_LLM_TIMEOUT_MS != null) env.REVIEWER_LLM_TIMEOUT_MS = String(config.REVIEWER_LLM_TIMEOUT_MS);
 
   return env;
 }

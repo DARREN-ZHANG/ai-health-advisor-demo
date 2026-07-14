@@ -102,6 +102,11 @@ export interface AgentRuntimeObserver {
   onPacketBuilt?(packet: TaskContextPacket): void;
   onPromptBuilt?(input: { systemPrompt: string; taskPrompt: string }): void;
   onModelOutput?(raw: string): void;
+  onCustomerPolicyEvaluated?(check: {
+    phase: 'initial' | 'regeneration' | 'sync-regeneration';
+    approved: boolean;
+    violationCodes: string[];
+  }): void;
   onParsed?(envelope: AgentResponseEnvelope): void;
   onFallback?(reason: 'low_data' | 'invalid_output' | 'timeout' | 'provider_error'): void;
   /** P0 新增：确定性验证完成后触发 */
@@ -416,6 +421,11 @@ export async function executeAgent(
       locale,
       taskType: context.task.type,
     });
+    tryNotify(() => observer?.onCustomerPolicyEvaluated?.({
+      phase: 'initial',
+      approved: firstPolicyResult.approved,
+      violationCodes: firstPolicyResult.violations.map((violation) => violation.code),
+    }));
 
     // 最终用于后续流程的 envelope（policy 通过的版本）
     let result: AgentResponseEnvelope;
@@ -477,6 +487,11 @@ export async function executeAgent(
         locale,
         taskType: context.task.type,
       });
+      tryNotify(() => observer?.onCustomerPolicyEvaluated?.({
+        phase: 'regeneration',
+        approved: secondPolicyResult.approved,
+        violationCodes: secondPolicyResult.violations.map((violation) => violation.code),
+      }));
 
       if (!secondPolicyResult.approved) {
         // 第二次仍违规 → fail-closed typed error，不写 memory
@@ -619,6 +634,11 @@ export async function executeAgent(
                 locale,
                 taskType: context.task.type,
               });
+              tryNotify(() => observer?.onCustomerPolicyEvaluated?.({
+                phase: 'sync-regeneration',
+                approved: regeneratedPolicyResult.approved,
+                violationCodes: regeneratedPolicyResult.violations.map((violation) => violation.code),
+              }));
               if (!regeneratedPolicyResult.approved) {
                 // 重生成虽通过 sync gate，但违反客户内容策略 → fail-closed typed error
                 // 不通知 onSyncGate approved（避免误导观察者），不写 memory

@@ -281,6 +281,38 @@ export function enforceCustomerContentPolicy(
   }
   const fullText = textParts.join('\n');
 
+  // 数值归因按字段语义检查。ActionOption 中的时长是用户可执行的处方参数，
+  // 不是对既有健康事实的断言；其余物理指标仍必须能追溯到公开证据。
+  const numericSegments: NumericAttributionSegment[] = [
+    { text: envelope.summary, allowUnattributedActionDuration: false },
+  ];
+  if (envelope.actions) {
+    for (const action of envelope.actions) {
+      numericSegments.push({
+        text: [action.title, action.description, action.aiPromise].join('\n'),
+        allowUnattributedActionDuration: true,
+      });
+    }
+  }
+  if (envelope.futureSuggestions) {
+    for (const suggestion of envelope.futureSuggestions) {
+      numericSegments.push(
+        {
+          text: [suggestion.predictedState, suggestion.rationale].join('\n'),
+          allowUnattributedActionDuration: false,
+        },
+        {
+          text: [
+            suggestion.action.title,
+            suggestion.action.description,
+            suggestion.action.aiPromise,
+          ].join('\n'),
+          allowUnattributedActionDuration: true,
+        },
+      );
+    }
+  }
+
   const violations: RealtimeBriefBoundaryViolation[] = [];
 
   // 检查 1：inferred_event_asserted_as_fact
@@ -295,7 +327,7 @@ export function enforceCustomerContentPolicy(
   // 检查 4：unattributed_numeric_claim
   // 仅在 homepage_summary 任务强制（其他任务的 facts 来源不完整，避免误报）
   if (taskType === 'homepage_summary') {
-    violations.push(...checkNumericAttribution(fullText, ledger));
+    violations.push(...checkNumericAttribution(numericSegments, ledger));
   }
 
   // 检查 5：summary_length_out_of_range（下限仅对 homepage_summary 强制）
@@ -409,8 +441,15 @@ function checkCapabilityDisclosure(text: string): RealtimeBriefBoundaryViolation
  * 设计取舍：仅扫描带物理单位的数值（bpm/ms/%/steps/min/分钟/小时/步/分）
  * 避免误报枚举数字（如 list 序号、时间点 "22:00" 等通过单位过滤规避）。
  */
+interface NumericAttributionSegment {
+  text: string;
+  allowUnattributedActionDuration: boolean;
+}
+
+const ACTION_DURATION_UNITS = new Set(['min', '分钟', '分', '小时']);
+
 function checkNumericAttribution(
-  text: string,
+  segments: NumericAttributionSegment[],
   ledger: ClaimLedger,
 ): RealtimeBriefBoundaryViolation[] {
   const violations: RealtimeBriefBoundaryViolation[] = [];
@@ -419,16 +458,26 @@ function checkNumericAttribution(
   const numericWithUnit = /(\d+(?:\.\d+)?)\s*(bpm|ms|%|steps|min|分钟|分|小时|步|公里|km|cal|大卡|千卡|次)/gi;
   const seen = new Set<string>();
 
-  let match: RegExpExecArray | null;
-  while ((match = numericWithUnit.exec(text)) !== null) {
-    const valueStr = match[1]!;
-    const value = parseFloat(valueStr);
-    if (Number.isNaN(value)) continue;
-    if (seen.has(valueStr)) continue;
-    seen.add(valueStr);
-    // 不在 ledger 中 → 违规
-    if (!isNumberAllowed(value, ledger)) {
-      violations.push({ code: 'unattributed_numeric_claim', value: valueStr });
+  for (const segment of segments) {
+    numericWithUnit.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = numericWithUnit.exec(segment.text)) !== null) {
+      const valueStr = match[1]!;
+      const unit = match[2]!.toLowerCase();
+      const value = parseFloat(valueStr);
+      if (Number.isNaN(value)) continue;
+
+      // 行动字段里的时间单位描述的是建议本身，不是健康测量结论。
+      if (segment.allowUnattributedActionDuration && ACTION_DURATION_UNITS.has(unit)) {
+        continue;
+      }
+
+      if (seen.has(valueStr)) continue;
+      seen.add(valueStr);
+      // 不在 ledger 中 → 违规
+      if (!isNumberAllowed(value, ledger)) {
+        violations.push({ code: 'unattributed_numeric_claim', value: valueStr });
+      }
     }
   }
 
