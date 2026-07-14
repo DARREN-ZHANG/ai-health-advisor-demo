@@ -111,6 +111,18 @@ export class StreamingSummaryExtractor {
   }
 
   /**
+   * 是否已收到 summary 的 final value（summary 字段值已完整结束）。
+   *
+   * runtime 据此触发 onSummaryDone 回调——它比 onActionReady 早，
+   * 因为前者在 JSON parser 见到 summary 字符串闭合时即置位，
+   * 后者要等 actions 数组第一个元素完整闭合。
+   * UI 用此信号在 summary 流式结束后立即展示卡片 Skeleton。
+   */
+  isSummaryDone(): boolean {
+    return this.summaryFinalReceived;
+  }
+
+  /**
    * 喂入一个模型 chunk（string），返回本次新产生的 delta 数组。
    * 不推进 summary 解析时返回空数组 []。
    */

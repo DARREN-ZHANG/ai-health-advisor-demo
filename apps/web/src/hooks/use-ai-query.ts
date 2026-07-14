@@ -70,6 +70,9 @@ async function runBriefStream(
           case 'brief.summary.delta':
             store.append(profileId, requestId, event.delta);
             break;
+          case 'brief.summary.done':
+            store.markSummaryDone(profileId, requestId);
+            break;
           case 'brief.action.ready':
             store.appendAction(profileId, requestId, event.index, event.action);
             break;

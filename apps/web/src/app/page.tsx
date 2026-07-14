@@ -157,6 +157,17 @@ export default function HomePage() {
   // 非流式时 forecastVisible 无意义（由 futureSuggestions.length 驱动渲染）。
   const forecastVisible = isStreaming && Boolean(draftEntry?.forecastStarted);
 
+  // summary 是否已流式结束——双重信号取或：
+  // 1. brief.summary.done 事件（JSON parser 检测 summary 字符串闭合时触发，最早信号）
+  // 2. draftActions 非空（首个 brief.action.ready 到达，可靠兜底）
+  // 保留兜底是因为 brief.summary.done 依赖 @streamparser/json 的 final value 事件，
+  // 一旦该信号因 parser 行为差异未及时到达，兜底确保 Skeleton 至少在首个 action 就绪时出现。
+  // 非流式时视为已结束（直接进入终态渲染）。
+  const summaryDone =
+    !isStreaming ||
+    draftEntry?.summaryDone === true ||
+    (draftEntry?.draftActions?.length ?? 0) > 0;
+
   // 已记录/已加入日历/正在 Timer 或 Appointment 中 的 action 不再渲染为可交互卡片，
   // 避免用户在浮层打开期间重复点击 Yes。
   const visibleActions = actions.filter(
@@ -173,16 +184,45 @@ export default function HomePage() {
   //         draft 元素多于 2 个时按实际数量展示（不截断）。
   // 非流式：直接用终态数据，无 Skeleton。
   // null 代表"此位等待中"，对应位置渲染 ActionCardSkeleton / FutureTimelineBlockSkeleton。
+  //
+  // 改进：summary 流式期间（summaryDone=false）卡片区整体不展示（cardSlots=[]），
+  //       避免 summary 还在打字时就冒出卡片 Skeleton。
   const cardSlots = isStreaming
-    ? Array.from({ length: Math.max(2, visibleActions.length) }, (_, i) =>
-        visibleActions[i] ?? null,
-      )
+    ? summaryDone
+      ? Array.from({ length: Math.max(2, visibleActions.length) }, (_, i) =>
+          visibleActions[i] ?? null,
+        )
+      : []
     : visibleActions.map((a) => a);
   const forecastSlots = forecastVisible
     ? Array.from({ length: Math.max(2, futureSuggestions.length) }, (_, i) =>
         futureSuggestions[i] ?? null,
       )
     : futureSuggestions.map((s) => s);
+
+  // —— 预测建议串行渲染（改进 2）——
+  // 流式中逐个展开：visibleForecastCount 表示"已决定渲染到第几个"（含正在打字的当前位）。
+  // 第 N 个 Block 打字完成（onComplete）后才递增到 N+1，下一个 Block 才进入打字状态，
+  // 避免 N 个建议同时并行打字。
+  // 非流式（终态）：全部展开，由 done=true 立即全文显示。
+  const futureSuggestionsCount = futureSuggestions.length;
+  const [visibleForecastCount, setVisibleForecastCount] = useState(0);
+
+  useEffect(() => {
+    if (!isStreaming) {
+      // 终态：全部展开
+      setVisibleForecastCount(futureSuggestionsCount);
+      return;
+    }
+    // 流式中
+    if (futureSuggestionsCount === 0) {
+      // forecast 阶段已开启但还没有 suggestion 到达
+      setVisibleForecastCount(0);
+    } else if (visibleForecastCount === 0) {
+      // 第一个 suggestion 到达：立即展开（开始打字）
+      setVisibleForecastCount(1);
+    }
+  }, [isStreaming, futureSuggestionsCount, visibleForecastCount]);
 
   // 当前 Timer 的总秒数
   const timerDurationSeconds =
@@ -257,24 +297,37 @@ export default function HomePage() {
               </div>
             ) : null}
 
-            {/* 下午/晚间预测区（任务 3.2 渐进式）：
-                - 流式中 forecastStarted 后：渲染 Skeleton + 已到达的 FutureTimelineBlock（打字机）。
+            {/* 下午/晚间预测区（任务 3.2 渐进式 + 改进 2 串行渲染）：
+                - 流式中 forecastStarted 后：串行展开——前 N 个 Block（done/active）+ 1 个 Skeleton 占位。
+                  第 N 个 Block 打字完成后（onComplete）才展开第 N+1 个，避免并行打字。
                 - 流式中 forecastStarted 前：整段隐藏（等用户先看到 summary + 卡片渐进）。
                 - 非流式且 futureSuggestions>0：渲染终态 FutureTimelineBlock（done=true，全文）。
                 - 非流式且无 futureSuggestions：降级 Figma 静态文案（首次加载除外）。 */}
             {isStreaming && !forecastVisible ? null : forecastVisible ? (
-              forecastSlots.map((suggestion, i) =>
-                suggestion ? (
-                  <FutureTimelineBlock
-                    key={suggestion.action.id}
-                    suggestion={suggestion}
-                    animate={isStreaming}
-                    done={!isStreaming}
-                  />
-                ) : (
-                  <FutureTimelineBlockSkeleton key={`skeleton-forecast-${i}`} />
-                ),
-              )
+              forecastSlots.map((suggestion, i) => {
+                // 串行：只渲染到 visibleForecastCount（含）位置，超出部分不渲染
+                if (i >= visibleForecastCount + 1) return null;
+
+                if (i < visibleForecastCount && suggestion) {
+                  // 已展开位置：有内容则渲染 Block（done 或 active）
+                  return (
+                    <FutureTimelineBlock
+                      key={suggestion.action.id}
+                      suggestion={suggestion}
+                      animate={isStreaming}
+                      done={!isStreaming || i < visibleForecastCount - 1}
+                      onComplete={() => {
+                        // 仅"当前正在打字"的 Block 完成时递增
+                        if (i === visibleForecastCount - 1) {
+                          setVisibleForecastCount((c) => c + 1);
+                        }
+                      }}
+                    />
+                  );
+                }
+                // 下一个占位 / 已展开但内容未到：渲染 Skeleton
+                return <FutureTimelineBlockSkeleton key={`skeleton-forecast-${i}`} />;
+              })
             ) : futureSuggestions.length > 0 ? (
               futureSuggestions.map((suggestion) => (
                 <FutureTimelineBlock

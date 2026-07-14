@@ -157,6 +157,9 @@ export interface AgentRuntimeObserver {
  * - `onSummaryDelta`：summary 文本增量回调。仅在 `taskType === HOMEPAGE_SUMMARY`
  *   且提供该回调时进入 stream 分支；每个 delta 都会 `await`，用于传递 HTTP
  *   backpressure（消费端慢时阻塞迭代）。
+ * - `onSummaryDone`：summary 字段值完整结束时触发一次（去重）。比 `onActionReady`
+ *   早——前者在 JSON parser 见到 summary 字符串闭合即触发，后者要等 actions
+ *   数组首个元素对象完整闭合。UI 据此在 summary 流式结束后立即展示卡片 Skeleton。
  * - `onActionReady`：actions 数组中单个元素就绪时触发（index 为数组下标）。
  * - `onForecastStarted`：futureSuggestions 区段开始（首个元素就绪）时触发一次，
  *   先于紧随其后的 `onFutureSuggestionReady`；若 LLM 未生成 futureSuggestions 则不触发。
@@ -169,6 +172,7 @@ export interface AgentRuntimeObserver {
 export interface AgentExecutionOptions {
   signal?: AbortSignal;
   onSummaryDelta?: (delta: string) => void | Promise<void>;
+  onSummaryDone?: () => void | Promise<void>;
   onActionReady?: (index: number, action: ActionOption) => void | Promise<void>;
   onForecastStarted?: () => void | Promise<void>;
   onFutureSuggestionReady?: (index: number, suggestion: FutureSuggestion) => void | Promise<void>;
@@ -866,6 +870,17 @@ async function obtainRawOutput(
   const structureExtractor = hasStructureCallback ? new StreamingStructureExtractor() : null;
   let rawContent = '';
 
+  // summary done 信号去重：仅在第一次检测到 isSummaryDone 时触发 onSummaryDone 回调。
+  // 触发时机比 onActionReady 早——JSON parser 见到 summary 字符串闭合即触发，
+  // 不必等 actions 数组首个元素完整闭合。UI 据此立即展示卡片 Skeleton。
+  let summaryDoneEmitted = false;
+  const maybeEmitSummaryDone = async (): Promise<void> => {
+    if (!summaryDoneEmitted && summaryExtractor.isSummaryDone()) {
+      summaryDoneEmitted = true;
+      await options?.onSummaryDone?.();
+    }
+  };
+
   // stream 分支自己管理 timeout：合并内部 timeout signal + 外部 request signal
   const timeoutController = new AbortController();
   const timer = setTimeout(() => timeoutController.abort(), timeoutMs);
@@ -890,6 +905,9 @@ async function obtainRawOutput(
         // await 每个回调，传递 backpressure（慢消费端会阻塞迭代）
         await onSummaryDelta(delta);
       }
+      // summary 字段可能在本次 push 中完整闭合——先于结构信号检查触发，
+      // 让 UI 能立即用 Skeleton 占位卡片区域（不必等首个 action 元素就绪）。
+      await maybeEmitSummaryDone();
       // structure 提取器后 push：任何错误都吞掉，绝不中断 summary 流式。
       // 结构信号是渐进式 UI 的优化，丢失不应降级整条 SSE。
       if (structureExtractor) {

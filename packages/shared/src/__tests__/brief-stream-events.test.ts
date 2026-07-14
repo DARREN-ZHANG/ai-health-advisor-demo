@@ -32,3 +32,16 @@ describe('BriefStreamEventSchema 新增 3 个事件', () => {
     expect(isBriefStreamTerminalEvent({ type: 'brief.future_suggestion.ready', requestId: 'r1', index: 0, suggestion } as never)).toBe(false);
   });
 });
+
+describe('BriefStreamEventSchema brief.summary.done 事件', () => {
+  it('brief.summary.done 合法', () => {
+    const e = { type: 'brief.summary.done', requestId: 'r1' };
+    expect(BriefStreamEventSchema.parse(e).type).toBe('brief.summary.done');
+  });
+  it('brief.summary.done 缺 requestId 拒绝', () => {
+    expect(() => BriefStreamEventSchema.parse({ type: 'brief.summary.done' })).toThrow();
+  });
+  it('brief.summary.done 非终态', () => {
+    expect(isBriefStreamTerminalEvent({ type: 'brief.summary.done', requestId: 'r1' } as never)).toBe(false);
+  });
+});

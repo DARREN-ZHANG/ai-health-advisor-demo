@@ -219,6 +219,14 @@ export async function aiRoutes(app: FastifyInstance) {
             });
           }
         },
+        onSummaryDone: async () => {
+          if (!writer.isClosed) {
+            await writer.writeEvent({
+              type: 'brief.summary.done',
+              requestId: request.ctx.requestId,
+            });
+          }
+        },
         // 单元素 safeParse：对每个 action/suggestion 独立校验，非法元素记 warn 跳过，
         // 不让一个坏元素中断整条流。与 onSummaryDelta 对称，写帧前检查 writer.isClosed。
         onActionReady: async (index, action) => {

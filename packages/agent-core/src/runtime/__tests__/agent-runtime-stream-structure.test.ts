@@ -181,4 +181,54 @@ describe('executeAgent stream 分支结构信号', () => {
     expect(deltas.join('')).toBe(COMPLIANT_SUMMARY);
     expect(result.meta.finishReason).toBe('complete');
   });
+
+  it('onSummaryDone 在 summary 字段闭合时触发一次，且早于 onActionReady', async () => {
+    const fullJson = JSON.stringify({
+      summary: COMPLIANT_SUMMARY,
+      source: 'llm',
+      statusColor: 'good',
+      chartTokens: [],
+      actions: [
+        { id: 'a1', emoji: '💧', title: '补水', description: '多喝水', aiPromise: '记录' },
+      ],
+    });
+    // 切成多个 chunk 确保 summary 闭合与 action 就绪不在同一 chunk
+    const chunks = Array.from({ length: Math.ceil(fullJson.length / 7) }, (_, i) => fullJson.slice(i * 7, i * 7 + 7));
+    const deps = makeDeps({ stream: vi.fn(() => chunksToStream(chunks)) });
+
+    const order: string[] = [];
+    const onSummaryDelta = vi.fn(() => { order.push('delta'); });
+    const onSummaryDone = vi.fn(() => { order.push('summary-done'); });
+    const onActionReady = vi.fn(() => { order.push('action-ready'); });
+
+    await executeAgent(makeRequest(), deps, undefined, undefined, undefined, {
+      onSummaryDelta,
+      onSummaryDone,
+      onActionReady,
+    });
+
+    // onSummaryDone 仅触发一次（去重）
+    expect(onSummaryDone).toHaveBeenCalledTimes(1);
+    // onActionReady 触发一次
+    expect(onActionReady).toHaveBeenCalledTimes(1);
+    // 时序：summary-done 出现在 action-ready 之前（JSON parser 先见 summary 闭合，再见 action 元素就绪）
+    const summaryDoneIdx = order.indexOf('summary-done');
+    const actionReadyIdx = order.indexOf('action-ready');
+    expect(summaryDoneIdx).toBeLessThan(actionReadyIdx);
+    expect(summaryDoneIdx).toBeGreaterThan(-1);
+  });
+
+  it('无 onSummaryDone 回调时正常运行（向后兼容）', async () => {
+    const fullJson = JSON.stringify({
+      summary: COMPLIANT_SUMMARY,
+      source: 'llm', statusColor: 'good', chartTokens: [],
+      actions: [{ id: 'a1', emoji: '💧', title: 't', description: 'd', aiPromise: 'p' }],
+    });
+    const deps = makeDeps({ stream: vi.fn(() => chunksToStream([fullJson])) });
+    const result = await executeAgent(makeRequest(), deps, undefined, undefined, undefined, {
+      onSummaryDelta: () => {},
+      onActionReady: () => {},
+    });
+    expect(result.meta.finishReason).toBe('complete');
+  });
 });

@@ -620,10 +620,11 @@ describe('Morning Brief Stream 集成测试', () => {
    * 场景 9：完整结构化流。
    *
    * 验证新回调的端到端顺序契约：
-   *   started → action.ready+ → forecast.started → future_suggestion.ready+ → completed
+   *   started → summary.delta* → summary.done → action.ready+ → forecast.started → future_suggestion.ready+ → completed
    * 且 action.ready 的 index 递增、action.id 正确透传。
+   * summary.done 必须出现在 summary.delta 之后、action.ready 之前（早于首个 action 元素就绪）。
    */
-  test('完整流：started → action.ready+ → forecast.started → future_suggestion.ready+ → completed', async () => {
+  test('完整流：started → summary.delta* → summary.done → action.ready+ → forecast.started → future_suggestion.ready+ → completed', async () => {
     mockedExecuteAgent.mockReset();
     app.briefCache.clearAll();
     app.runtime.getSessionSandbox('sess-int-struct').overrideStore.reset('all');
@@ -640,6 +641,7 @@ describe('Morning Brief Stream 集成测试', () => {
     mockedExecuteAgent.mockImplementationOnce(
       async (_req, _deps, _timeout, _observer, _locale, options) => {
         await options?.onSummaryDelta?.('摘要');
+        await options?.onSummaryDone?.();
         await options?.onActionReady?.(0, action1);
         await options?.onActionReady?.(1, action2);
         await options?.onForecastStarted?.();
@@ -659,6 +661,13 @@ describe('Morning Brief Stream 集成测试', () => {
 
     expect(types[0]).toBe('brief.started');
     expect(types[types.length - 1]).toBe('brief.completed');
+    // summary.done 出现且位置正确：在最后 summary.delta 之后，首个 action.ready 之前
+    const summaryDoneIdx = types.indexOf('brief.summary.done');
+    const lastDeltaIdx = types.lastIndexOf('brief.summary.delta');
+    const firstActionIdx = types.indexOf('brief.action.ready');
+    expect(summaryDoneIdx).toBeGreaterThan(-1);
+    expect(summaryDoneIdx).toBeGreaterThan(lastDeltaIdx);
+    expect(summaryDoneIdx).toBeLessThan(firstActionIdx);
     // 顺序 invariant：action.ready* → forecast.started → future_suggestion.ready*
     const lastActionIdx = types.lastIndexOf('brief.action.ready');
     const forecastIdx = types.indexOf('brief.forecast.started');
@@ -746,5 +755,6 @@ describe('Morning Brief Stream 集成测试', () => {
     expect(types[types.length - 1]).toBe('brief.completed');
     expect(types).not.toContain('brief.action.ready');
     expect(types).not.toContain('brief.forecast.started');
+    expect(types).not.toContain('brief.summary.done');
   });
 });

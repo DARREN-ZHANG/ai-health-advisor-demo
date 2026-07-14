@@ -6,12 +6,27 @@ describe('brief-stream store 结构 draft', () => {
     useBriefStreamStore.setState({ entries: {} });
   });
 
-  it('begin 初始化空 draftActions / forecastStarted / draftFutureSuggestions', () => {
+  it('begin 初始化空 draftActions / forecastStarted / draftFutureSuggestions / summaryDone=false', () => {
     useBriefStreamStore.getState().begin('p1', 'r1');
     const entry = useBriefStreamStore.getState().getEntry('p1');
     expect(entry?.draftActions).toEqual([]);
     expect(entry?.forecastStarted).toBe(false);
     expect(entry?.draftFutureSuggestions).toEqual([]);
+    expect(entry?.summaryDone).toBe(false);
+  });
+
+  it('markSummaryDone 幂等 + stale requestId 拒绝', () => {
+    const s = useBriefStreamStore.getState();
+    s.begin('p1', 'r1');
+    // stale requestId 被忽略
+    s.markSummaryDone('p1', 'stale');
+    expect(useBriefStreamStore.getState().getEntry('p1')?.summaryDone).toBe(false);
+    // 正确 requestId 第一次设置成功
+    s.markSummaryDone('p1', 'r1');
+    expect(useBriefStreamStore.getState().getEntry('p1')?.summaryDone).toBe(true);
+    // 第二次幂等（不重复 set）
+    s.markSummaryDone('p1', 'r1');
+    expect(useBriefStreamStore.getState().getEntry('p1')?.summaryDone).toBe(true);
   });
 
   it('appendAction 按 index 放置（乱序到达也正确）', () => {

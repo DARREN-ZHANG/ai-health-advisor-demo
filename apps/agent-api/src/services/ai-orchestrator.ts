@@ -78,6 +78,12 @@ export interface AiOrchestratorExecuteOptions {
    */
   onSummaryDelta?(delta: string): void | Promise<void>;
   /**
+   * summary 字段值完整结束时触发一次（去重）。仅 cache miss 时透传。
+   * 时序早于 onActionReady——JSON parser 见 summary 字符串闭合即触发，
+   * UI 据此在 summary 流完后立即展示卡片 Skeleton。
+   */
+  onSummaryDone?(): void | Promise<void>;
+  /**
    * 结构化回调：actions 数组中单个元素就绪时触发。仅 cache miss 时透传。
    * 签名与 agent-core 的 AgentExecutionOptions 一致。
    */
@@ -165,6 +171,7 @@ export class AiOrchestrator {
         {
           ...(options?.signal ? { signal: options.signal } : {}),
           ...(wrappedOnSummaryDelta ? { onSummaryDelta: wrappedOnSummaryDelta } : {}),
+          ...(options?.onSummaryDone ? { onSummaryDone: options.onSummaryDone } : {}),
           // 结构回调纯透传，cache miss 才进此分支；与 onSummaryDelta 一致
           ...(options?.onActionReady ? { onActionReady: options.onActionReady } : {}),
           ...(options?.onForecastStarted ? { onForecastStarted: options.onForecastStarted } : {}),

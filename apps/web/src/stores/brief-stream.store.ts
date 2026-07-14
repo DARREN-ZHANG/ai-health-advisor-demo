@@ -30,6 +30,10 @@ export interface BriefStreamEntry {
   phase: BriefStreamPhase;
   /** 累积的增量 summary 文本(UI 据此渲染打字机效果) */
   draftSummary: string;
+  /** summary 字段是否已流式结束(收到 brief.summary.done 后置 true,幂等)。
+   *  比首个 action.ready 早——JSON parser 见 summary 字符串闭合即触发,
+   *  UI 据此立即展示卡片 Skeleton。 */
+  summaryDone: boolean;
   /** 按 index 累积的 action 草稿(SSE 乱序到达也按下标归位) */
   draftActions: ActionOption[];
   /** forecast 阶段是否已开始(收到 brief.forecast.started 后置 true,幂等) */
@@ -45,6 +49,8 @@ interface BriefStreamState {
   begin(profileId: string, requestId: string): void;
   /** 追加 summary delta;requestId 不匹配时静默忽略(stale 事件) */
   append(profileId: string, requestId: string, delta: string): void;
+  /** 标记 summary 字段已结束(幂等);requestId 不匹配时静默忽略 */
+  markSummaryDone(profileId: string, requestId: string): void;
   /** 按 index 放置 action 草稿;requestId 不匹配时静默忽略 */
   appendAction(profileId: string, requestId: string, index: number, action: ActionOption): void;
   /** 标记 forecast 已开始(幂等);requestId 不匹配时静默忽略 */
@@ -75,6 +81,7 @@ export const useBriefStreamStore = create<BriefStreamState>((set, get) => ({
           requestId,
           phase: 'streaming',
           draftSummary: '',
+          summaryDone: false,
           draftActions: [],
           forecastStarted: false,
           draftFutureSuggestions: [],
@@ -103,6 +110,22 @@ export const useBriefStreamStore = create<BriefStreamState>((set, get) => ({
             ...entry,
             draftSummary: entry.draftSummary + delta,
           },
+        },
+      };
+    });
+  },
+
+  markSummaryDone: (profileId, requestId) => {
+    // 幂等:双重检查 summaryDone,避免重复 set
+    const current = get().entries[profileId];
+    if (!current || current.requestId !== requestId || current.summaryDone) return;
+    set((state) => {
+      const entry = state.entries[profileId];
+      if (!entry || entry.requestId !== requestId || entry.summaryDone) return state;
+      return {
+        entries: {
+          ...state.entries,
+          [profileId]: { ...entry, summaryDone: true },
         },
       };
     });

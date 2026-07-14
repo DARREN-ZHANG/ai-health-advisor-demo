@@ -22,6 +22,11 @@ export interface BriefSummaryDeltaEvent {
   delta: string;
 }
 
+export interface BriefSummaryDoneEvent {
+  type: 'brief.summary.done';
+  requestId: string;
+}
+
 export interface BriefCompletedEvent {
   type: 'brief.completed';
   requestId: string;
@@ -72,11 +77,12 @@ export interface BriefFutureSuggestionReadyEvent {
 
 /**
  * 流事件的判别联合：以 `type` 作为判别字段。
- * started → 可选多次 summary.delta → completed | failed (终态二选一)。
+ * started → 可选多次 summary.delta → summary.done → action.ready* → forecast.started → future_suggestion.ready* → completed | failed (终态二选一)。
  */
 export type BriefStreamEvent =
   | BriefStartedEvent
   | BriefSummaryDeltaEvent
+  | BriefSummaryDoneEvent
   | BriefActionReadyEvent
   | BriefForecastStartedEvent
   | BriefFutureSuggestionReadyEvent

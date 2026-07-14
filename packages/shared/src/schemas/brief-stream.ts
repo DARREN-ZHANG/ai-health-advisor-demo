@@ -29,6 +29,11 @@ const BriefSummaryDeltaEventSchema = z.object({
   delta: z.string().min(1),
 });
 
+const BriefSummaryDoneEventSchema = z.object({
+  type: z.literal('brief.summary.done'),
+  requestId: requestIdSchema,
+});
+
 const BriefCompletedEventSchema = z.object({
   type: z.literal('brief.completed'),
   requestId: requestIdSchema,
@@ -67,6 +72,7 @@ const BriefFutureSuggestionReadyEventSchema = z.object({
 export const BriefStreamEventSchema = z.discriminatedUnion('type', [
   BriefStartedEventSchema,
   BriefSummaryDeltaEventSchema,
+  BriefSummaryDoneEventSchema,
   BriefActionReadyEventSchema,
   BriefForecastStartedEventSchema,
   BriefFutureSuggestionReadyEventSchema,

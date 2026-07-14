@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { FutureSuggestion } from '@health-advisor/shared';
 
-/** 打字机逐字 reveal 的单字间隔（ms） */
-const TYPING_INTERVAL_MS = 30;
+/** 打字机逐字 reveal 的单字间隔（ms）——提速到 15ms */
+const TYPING_INTERVAL_MS = 15;
 
 /**
  * FutureTimelineBlock —— 未来时间点建议（Valo 时间轴风格）。
@@ -13,6 +13,9 @@ const TYPING_INTERVAL_MS = 30;
  *
  * 打字机模式（animate=true 且 done=false）下，predictionBody 整段逐字 reveal；
  * timePoint/daypart 等结构化部分立即显示，不参与打字机。
+ *
+ * 串行渲染：打字机完成时触发 onComplete，父组件据此展开下一个 Block。
+ * 用 ref 保存回调避免其进入 effect 依赖项（防止父组件每次渲染重置打字机）。
  */
 export interface FutureTimelineBlockProps {
   suggestion: FutureSuggestion;
@@ -20,9 +23,11 @@ export interface FutureTimelineBlockProps {
   animate?: boolean;
   /** 流已结束或非流式：true 时立即显示全文 */
   done?: boolean;
+  /** 打字机完成时触发（仅 animate=true 且 done=false 模式下触发一次） */
+  onComplete?: () => void;
 }
 
-export function FutureTimelineBlock({ suggestion, animate, done }: FutureTimelineBlockProps) {
+export function FutureTimelineBlock({ suggestion, animate, done, onComplete }: FutureTimelineBlockProps) {
   const t = useTranslations('homepage');
   const { timePoint, predictedState, rationale, action } = suggestion;
   const hour = Number(timePoint.split(':')[0]);
@@ -41,6 +46,11 @@ export function FutureTimelineBlock({ suggestion, animate, done }: FutureTimelin
   });
   const [revealed, setRevealed] = useState<string>(showFull ? fullText : '');
 
+  // 用 ref 保存 onComplete，避免其进入下方 effect 依赖项
+  // （父组件每次渲染传入新内联函数会触发打字机重置）
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
   useEffect(() => {
     if (showFull) {
       setRevealed(fullText);
@@ -48,12 +58,16 @@ export function FutureTimelineBlock({ suggestion, animate, done }: FutureTimelin
     }
     setRevealed('');
     let idx = 0;
+    let completed = false;
     const timer = setInterval(() => {
       if (idx < fullText.length) {
         idx += 1;
         setRevealed(fullText.slice(0, idx));
-      } else {
+      } else if (!completed) {
+        // 防御重复触发：clearInterval 后仍可能因闭包引用被调多次
+        completed = true;
         clearInterval(timer);
+        onCompleteRef.current?.();
       }
     }, TYPING_INTERVAL_MS);
     return () => clearInterval(timer);
