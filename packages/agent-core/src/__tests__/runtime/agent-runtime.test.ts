@@ -528,8 +528,15 @@ async function* chunksToStream(chunks: string[]): AsyncGenerator<{ content: stri
 
 describe('executeAgent streaming', () => {
   it('delta 顺序正确且拼接等于 summary（stream 分支）', async () => {
-    // 构造合法 JSON，summary 分散在多个 chunk 中
-    const fullSummary = '整体状态良好，继续保持。';
+    // 构造合法 JSON，summary 分散在多个 chunk 中。
+    // summary 必须满足 zh 220-420 grapheme 下限（customer policy 对 homepage_summary 强制），
+    // 否则会触发 regeneration（走 invoke 默认 mock）导致 summary 被改写。
+    // 这里把 COMPLIANT_SUMMARY 切成 3 段，验证 extractor 按模型 chunk 顺序增量释放 delta。
+    const summaryHead = COMPLIANT_SUMMARY.slice(0, 10);
+    const summaryMid = COMPLIANT_SUMMARY.slice(10, 20);
+    const summaryTail = COMPLIANT_SUMMARY.slice(20);
+    const fullSummary = `${summaryHead}${summaryMid}${summaryTail}`;
+    expect(fullSummary).toBe(COMPLIANT_SUMMARY);
     const fullJson = JSON.stringify({
       summary: fullSummary,
       chartTokens: [ChartTokenId.HRV_7DAYS],
@@ -538,9 +545,9 @@ describe('executeAgent streaming', () => {
     // 切成多个 chunk（在 summary 值中间切，确保 extractor 增量释放 delta）
     const chunks = [
       '{"summary":"',
-      '整体',
-      '状态良好，',
-      '继续保持。',
+      summaryHead,
+      summaryMid,
+      summaryTail,
       `","chartTokens":["${ChartTokenId.HRV_7DAYS}"],"microTips":[]}`,
     ];
     const streamMock = vi.fn(() => chunksToStream(chunks));
@@ -557,7 +564,7 @@ describe('executeAgent streaming', () => {
     );
 
     // delta 按模型 chunk 顺序到达
-    expect(receivedDeltas).toEqual(['整体', '状态良好，', '继续保持。']);
+    expect(receivedDeltas).toEqual([summaryHead, summaryMid, summaryTail]);
     expect(receivedDeltas.join('')).toBe(fullSummary);
     // stream 被调用（而非 invoke）
     expect(streamMock).toHaveBeenCalled();
@@ -568,9 +575,11 @@ describe('executeAgent streaming', () => {
   });
 
   it('raw 仍通过现有 parser，envelope 结构正确', async () => {
-    // stream 产出完整合法 JSON，验证最终 envelope 的所有字段
+    // stream 产出完整合法 JSON，验证最终 envelope 的所有字段。
+    // summary 必须满足 zh 220-420 grapheme 下限（homepage_summary customer policy），
+    // 否则 raw 会被判违规走 regeneration，summary 字段就被替换为 invoke 默认值。
     const chunks = [
-      '{"summary":"测试摘要","chartTokens":["',
+      `{"summary":"${COMPLIANT_SUMMARY}","chartTokens":["`,
       ChartTokenId.HRV_7DAYS,
       '"],"microTips":["多喝水"]}',
     ];
@@ -585,7 +594,7 @@ describe('executeAgent streaming', () => {
       { onSummaryDelta: () => {} },
     );
 
-    expect(result.summary).toBe('测试摘要');
+    expect(result.summary).toBe(COMPLIANT_SUMMARY);
     expect(result.chartTokens).toEqual([ChartTokenId.HRV_7DAYS]);
     expect(result.microTips).toEqual(['多喝水']);
     expect(result.meta.finishReason).toBe('complete');
@@ -779,9 +788,11 @@ describe('executeAgent streaming', () => {
   });
 
   it('未传 onSummaryDelta 时 HOMEPAGE_SUMMARY 走 invoke 分支（向后兼容）', async () => {
+    // summary 必须满足 zh 220-420 grapheme 下限（homepage_summary customer policy），
+    // 否则 invoke 输出会被判违规，触发 regeneration 二次失败 → fail-closed → fallback。
     const invokeMock = vi.fn(async () => ({
       content: JSON.stringify({
-        summary: '向后兼容',
+        summary: COMPLIANT_SUMMARY,
         chartTokens: [],
         microTips: [],
       }),
@@ -795,7 +806,7 @@ describe('executeAgent streaming', () => {
     expect(invokeMock).toHaveBeenCalled();
     expect(streamMock).not.toHaveBeenCalled();
     expect(result.meta.finishReason).toBe('complete');
-    expect(result.summary).toBe('向后兼容');
+    expect(result.summary).toBe(COMPLIANT_SUMMARY);
   });
 
   it('onSummaryDelta 抛错时走 fallback（provider_error），memory 不写入', async () => {
