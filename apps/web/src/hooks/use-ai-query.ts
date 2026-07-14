@@ -63,14 +63,25 @@ async function runBriefStream(
       requestId,
       signal,
       onEvent: (event) => {
-        if (event.type === 'brief.summary.delta') {
-          // 校验 requestId 由 store 内部做（stale 不覆盖）。
-          // 每次 onEvent 重新 getState()，确保拿到最新 store 实例
-          // （Zustand store 是单例，getState() 始终返回最新状态）。
-          useBriefStreamStore.getState().append(profileId, requestId, event.delta);
+        // 每次 onEvent 重新 getState()，确保拿到最新 store 实例
+        // （Zustand store 是单例，getState() 始终返回最新状态）。
+        const store = useBriefStreamStore.getState();
+        switch (event.type) {
+          case 'brief.summary.delta':
+            store.append(profileId, requestId, event.delta);
+            break;
+          case 'brief.action.ready':
+            store.appendAction(profileId, requestId, event.index, event.action);
+            break;
+          case 'brief.forecast.started':
+            store.markForecastStarted(profileId, requestId);
+            break;
+          case 'brief.future_suggestion.ready':
+            store.appendFutureSuggestion(profileId, requestId, event.index, event.suggestion);
+            break;
+          // brief.started / brief.completed / brief.failed 仍由外层
+          // try/finally + streamMorningBrief 的 resolve/reject 处理。
         }
-        // brief.started / brief.completed / brief.failed 不需要 store 操作：
-        // completed/failed 由外层 try/finally + streamMorningBrief 的 resolve/reject 处理。
       },
     });
     store.complete(profileId, requestId);
