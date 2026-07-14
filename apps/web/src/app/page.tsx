@@ -7,7 +7,9 @@ import { HealthHero } from '@/components/homepage/HealthHero';
 import { SwitchStatusDialog } from '@/components/homepage/SwitchStatusDialog';
 import { BriefTimeline } from '@/components/homepage/BriefTimeline';
 import { ActionCard } from '@/components/homepage/ActionCard';
+import { ActionCardSkeleton } from '@/components/homepage/ActionCardSkeleton';
 import { FutureTimelineBlock } from '@/components/homepage/FutureTimelineBlock';
+import { FutureTimelineBlockSkeleton } from '@/components/homepage/FutureTimelineBlockSkeleton';
 import { ActionTimerSheet } from '@/components/homepage/ActionTimerSheet';
 import { AppointmentSheet } from '@/components/homepage/AppointmentSheet';
 import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
@@ -22,7 +24,6 @@ import { useActionInteractions } from '@/hooks/use-action-interactions';
 import { useUIStore } from '@/stores/ui.store';
 import { useBriefStreamStore } from '@/stores/brief-stream.store';
 import { useTranslations } from 'next-intl';
-import type { ActionOption } from '@health-advisor/shared';
 
 /**
  * 首页：四态 Hero + Switch Status + 简报 / Action 卡 / Timer。
@@ -138,10 +139,23 @@ export default function HomePage() {
     : effectiveData?.summary ||
       (error && !effectiveData ? t('briefNetworkError') : t('briefPreparing'));
 
-  // actions/futureSuggestions 始终来自 effectiveData（旧值），终态后原子替换
-  const actions = effectiveData?.actions ?? [];
-  // 未来时间点建议：LLM 基于今日已发生活动推断，缺失时降级为静态 Figma 文案
-  const futureSuggestions = effectiveData?.futureSuggestions ?? [];
+  // —— 渐进式流式渲染阶段推导（任务 3.2）——
+  // isStreaming 基于 phase 判断（而非 draftSummary 长度）：
+  // 即使 summary delta 尚未到达，只要 phase=streaming，actions/forecast 就进入渐进态。
+  const isStreaming = draftEntry?.phase === 'streaming';
+
+  // actions 来源：流式中取 draftActions（SSE 逐步累积），非流式取 effectiveData（终态 cache）。
+  const actions = isStreaming && draftEntry
+    ? draftEntry.draftActions
+    : (effectiveData?.actions ?? []);
+  // futureSuggestions 同型：流式中取 draftFutureSuggestions，非流式取终态。
+  const futureSuggestions = isStreaming && draftEntry
+    ? draftEntry.draftFutureSuggestions
+    : (effectiveData?.futureSuggestions ?? []);
+
+  // forecast 阶段是否已开始：收到 brief.forecast.started 后才显示预测区骨架。
+  // 非流式时 forecastVisible 无意义（由 futureSuggestions.length 驱动渲染）。
+  const forecastVisible = isStreaming && Boolean(draftEntry?.forecastStarted);
 
   // 已记录/已加入日历/正在 Timer 或 Appointment 中 的 action 不再渲染为可交互卡片，
   // 避免用户在浮层打开期间重复点击 Yes。
@@ -153,6 +167,22 @@ export default function HomePage() {
       a.id !== interactions.timerAction?.id &&
       a.id !== interactions.appointmentAction?.id,
   );
+
+  // —— 卡片位 / 预测位的"已就绪 + 骨架占位"统一数组（任务 3.2）——
+  // 流式中：把已到达的 draft 元素补足到最少 2 位（null 位由 Skeleton 渲染）；
+  //         draft 元素多于 2 个时按实际数量展示（不截断）。
+  // 非流式：直接用终态数据，无 Skeleton。
+  // null 代表"此位等待中"，对应位置渲染 ActionCardSkeleton / FutureTimelineBlockSkeleton。
+  const cardSlots = isStreaming
+    ? Array.from({ length: Math.max(2, visibleActions.length) }, (_, i) =>
+        visibleActions[i] ?? null,
+      )
+    : visibleActions.map((a) => a);
+  const forecastSlots = forecastVisible
+    ? Array.from({ length: Math.max(2, futureSuggestions.length) }, (_, i) =>
+        futureSuggestions[i] ?? null,
+      )
+    : futureSuggestions.map((s) => s);
 
   // 当前 Timer 的总秒数
   const timerDurationSeconds =
@@ -204,29 +234,55 @@ export default function HomePage() {
               isStreaming={hasDraft}
             />
 
-            {visibleActions.length > 0 ? (
+            {cardSlots.length > 0 ? (
               <div className="-mt-2 ml-8 overflow-hidden" data-valo-action-tips-viewport="">
                 <ul
                   className="flex list-none gap-3 overflow-x-auto overscroll-x-none p-0 pb-1 after:block after:w-5 after:shrink-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                   data-valo-action-tips=""
                 >
-                  {visibleActions.map((action: ActionOption) => (
-                    <ActionCard
-                      key={action.id}
-                      action={action}
-                      onYes={interactions.handleYes}
-                      onNotNow={interactions.handleNotNow}
-                      pending={interactions.pendingActionId === action.id}
-                    />
-                  ))}
+                  {cardSlots.map((action, i) =>
+                    action ? (
+                      <ActionCard
+                        key={action.id}
+                        action={action}
+                        onYes={interactions.handleYes}
+                        onNotNow={interactions.handleNotNow}
+                        pending={interactions.pendingActionId === action.id}
+                      />
+                    ) : (
+                      <ActionCardSkeleton key={`skeleton-card-${i}`} />
+                    ),
+                  )}
                 </ul>
               </div>
             ) : null}
 
-            {/* 下午/晚间：LLM futureSuggestions 优先；响应到达后仍缺失才降级到 Figma 静态文案 */}
-            {futureSuggestions.length > 0 ? (
+            {/* 下午/晚间预测区（任务 3.2 渐进式）：
+                - 流式中 forecastStarted 后：渲染 Skeleton + 已到达的 FutureTimelineBlock（打字机）。
+                - 流式中 forecastStarted 前：整段隐藏（等用户先看到 summary + 卡片渐进）。
+                - 非流式且 futureSuggestions>0：渲染终态 FutureTimelineBlock（done=true，全文）。
+                - 非流式且无 futureSuggestions：降级 Figma 静态文案（首次加载除外）。 */}
+            {isStreaming && !forecastVisible ? null : forecastVisible ? (
+              forecastSlots.map((suggestion, i) =>
+                suggestion ? (
+                  <FutureTimelineBlock
+                    key={suggestion.action.id}
+                    suggestion={suggestion}
+                    animate={isStreaming}
+                    done={!isStreaming}
+                  />
+                ) : (
+                  <FutureTimelineBlockSkeleton key={`skeleton-forecast-${i}`} />
+                ),
+              )
+            ) : futureSuggestions.length > 0 ? (
               futureSuggestions.map((suggestion) => (
-                <FutureTimelineBlock key={suggestion.action.id} suggestion={suggestion} />
+                <FutureTimelineBlock
+                  key={suggestion.action.id}
+                  suggestion={suggestion}
+                  animate={isStreaming}
+                  done={!isStreaming}
+                />
               ))
             ) : isInitialBriefLoading ? // LLM 响应中：暂不展示静态降级，避免响应到达后被替换造成闪烁
             null : (
