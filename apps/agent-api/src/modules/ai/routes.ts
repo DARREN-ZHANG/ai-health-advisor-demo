@@ -13,6 +13,7 @@ import { buildMeta } from '../../utils/meta.js';
 import { AiOrchestrator, type AiExecutionTimings } from '../../services/ai-orchestrator.js';
 import type { AiRequestMeta } from '../../plugins/request-context.js';
 import { SseWriter } from '../../utils/sse-writer.js';
+import { resolveCorsHeaders } from '../../plugins/cors.js';
 
 interface MorningBriefBody {
   profileId: string;
@@ -174,7 +175,13 @@ export async function aiRoutes(app: FastifyInstance) {
     reply.hijack();
 
     const writer = new SseWriter({ reply, requestId: request.ctx.requestId });
-    writer.startSseHeaders(request.ctx.sessionId);
+    // hijack 后 @fastify/cors 的 onSend hook 不触发，手动注入 CORS headers，
+    // 复用与普通 JSON route 相同的白名单逻辑（resolveCorsHeaders）。
+    const corsHeaders = resolveCorsHeaders(
+      request.headers.origin as string | undefined,
+      app.config,
+    );
+    writer.startSseHeaders(request.ctx.sessionId, corsHeaders);
 
     // 3. 监听断连：request.raw 的 'aborted' + reply.raw 的 'close'。
     //    仅在尚未发送终态且 response 未结束时 abort runtime，避免 abort 一个

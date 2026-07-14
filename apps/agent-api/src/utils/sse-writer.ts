@@ -55,8 +55,15 @@ export class SseWriter {
    * 不再设置 headers 或处理 payload，因此 SSE headers 通过 reply.raw.writeHead
    * 一次性写入。X-Session-Id 需在此时写入——onSend hook 在 hijack 后不会触发，
    * 因此原 JSON route 中 onSend 设置 session 的机制对 SSE 不生效。
+   *
+   * extraHeaders 用于注入 hijack 后同样绕过 Fastify hook 的响应头，最典型的
+   * 是 CORS headers（@fastify/cors 在 onSend 注入，hijack 后失效）。SseWriter
+   * 本身不感知 CORS，由调用方通过 resolveCorsHeaders 计算后传入。
    */
-  startSseHeaders(sessionId?: string): void {
+  startSseHeaders(
+    sessionId?: string,
+    extraHeaders: Record<string, string> = {},
+  ): void {
     if (this.closed) {
       throw new Error('SseWriter 已关闭，不能写入 headers');
     }
@@ -65,6 +72,7 @@ export class SseWriter {
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
+      ...extraHeaders,
     };
     if (sessionId) {
       headers['X-Session-Id'] = sessionId;

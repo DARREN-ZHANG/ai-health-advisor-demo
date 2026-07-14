@@ -141,6 +141,10 @@ describe('Morning Brief Stream 集成测试', () => {
         FALLBACK_ONLY_MODE: 'true',
         ENABLE_GOD_MODE: 'true',
         NODE_ENV: 'test',
+        // 配置 CORS 白名单供场景 8 验证 stream route 的 CORS headers。
+        // 其他场景不带 Origin header，@fastify/cors 与 resolveCorsHeaders 都
+        // 不注入 CORS 头，原断言不受影响。
+        CORS_ALLOWED_ORIGINS: 'http://localhost:3000',
         DATA_DIR: dataDir,
       },
     });
@@ -542,5 +546,73 @@ describe('Morning Brief Stream 集成测试', () => {
     expect(completed?.requestId).toBe(explicitRequestId);
 
     assertExactlyOneTerminal(frames);
+  });
+
+  /**
+   * 场景 8：stream route 的 CORS headers。
+   *
+   * 核心问题：reply.hijack() 后 @fastify/cors 的 onSend hook 不触发，
+   * 若不手动注入 CORS headers，浏览器会拦截跨域 text/event-stream 响应。
+   * 本场景锁定 stream route 通过 resolveCorsHeaders + SseWriter.extraHeaders
+   * 注入 CORS headers 的链路：
+   *   - 白名单内 origin → 响应包含 access-control-allow-origin 等
+   *   - 白名单外 origin → 响应不含 CORS headers
+   */
+  test('白名单内 origin 的响应包含 CORS headers（hijack 后手动注入）', async () => {
+    mockedExecuteAgent.mockReset();
+    app.briefCache.clearAll();
+    app.runtime.getSessionSandbox('sess-int-cors').overrideStore.reset('all');
+
+    mockedExecuteAgent.mockResolvedValueOnce(validEnvelope);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/ai/morning-brief/stream',
+      payload: {
+        profileId: 'profile-a',
+        pageContext: defaultPageContext,
+        bustCache: true,
+      },
+      headers: {
+        'x-session-id': 'sess-int-cors',
+        origin: 'http://localhost:3000',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    // 核心：hijack 后 CORS headers 仍被写入
+    expect(response.headers['access-control-allow-origin']).toBe('http://localhost:3000');
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+    expect(response.headers['access-control-expose-headers']).toContain('X-Session-Id');
+    expect(response.headers['vary']).toContain('Origin');
+    // SSE 自有 headers 不受影响
+    expect(response.headers['content-type']).toContain('text/event-stream');
+    expect(response.headers['x-session-id']).toBe('sess-int-cors');
+  });
+
+  test('白名单外 origin 的响应不含 CORS headers', async () => {
+    mockedExecuteAgent.mockReset();
+    app.briefCache.clearAll();
+    app.runtime.getSessionSandbox('sess-int-cors-evil').overrideStore.reset('all');
+
+    mockedExecuteAgent.mockResolvedValueOnce(validEnvelope);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/ai/morning-brief/stream',
+      payload: {
+        profileId: 'profile-a',
+        pageContext: defaultPageContext,
+        bustCache: true,
+      },
+      headers: {
+        'x-session-id': 'sess-int-cors-evil',
+        origin: 'http://evil.example.com',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['access-control-allow-origin']).toBeUndefined();
+    expect(response.headers['access-control-allow-credentials']).toBeUndefined();
   });
 });
