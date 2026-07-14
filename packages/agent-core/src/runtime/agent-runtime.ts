@@ -1,5 +1,11 @@
 import type { AgentRequest } from '../types/agent-request';
-import type { AgentResponseEnvelope, DataTab, Locale } from '@health-advisor/shared';
+import type {
+  ActionOption,
+  AgentResponseEnvelope,
+  DataTab,
+  FutureSuggestion,
+  Locale,
+} from '@health-advisor/shared';
 import { AgentTaskType, DEFAULT_LOCALE } from '@health-advisor/shared';
 import type { ContextBuilderDeps } from '../context/context-types';
 import type { HealthAgent } from '../executor/create-agent';
@@ -25,6 +31,10 @@ import { buildCustomerFacingEvidencePacket } from '../context/customer-facing-ev
 import { withTimeout, TimeoutError } from './timeout-controller';
 import { AGENT_SLA_TIMEOUT_MS } from '../constants/limits';
 import { StreamingSummaryExtractor, StreamingSummaryParseError } from '../output/streaming-summary-extractor';
+import {
+  StreamingStructureExtractor,
+  type StructureSignal,
+} from '../output/streaming-structure-extractor';
 
 /** H-10: ReAct 最大步骤数（设计文档要求固定为 3） */
 const MAX_REACT_STEPS = 3;
@@ -147,10 +157,21 @@ export interface AgentRuntimeObserver {
  * - `onSummaryDelta`：summary 文本增量回调。仅在 `taskType === HOMEPAGE_SUMMARY`
  *   且提供该回调时进入 stream 分支；每个 delta 都会 `await`，用于传递 HTTP
  *   backpressure（消费端慢时阻塞迭代）。
+ * - `onActionReady`：actions 数组中单个元素就绪时触发（index 为数组下标）。
+ * - `onForecastStarted`：futureSuggestions 区段开始（首个元素就绪）时触发一次，
+ *   先于紧随其后的 `onFutureSuggestionReady`；若 LLM 未生成 futureSuggestions 则不触发。
+ * - `onFutureSuggestionReady`：futureSuggestions 数组中单个元素就绪时触发。
+ *
+ * 结构回调仅决定是否在 stream 分支并行运行 `StreamingStructureExtractor`；不改变
+ * useStream 触发条件（仍是 `HOMEPAGE_SUMMARY + onSummaryDelta`）。route 层总是
+ * 同时提供 summary 与结构回调。
  */
 export interface AgentExecutionOptions {
   signal?: AbortSignal;
   onSummaryDelta?: (delta: string) => void | Promise<void>;
+  onActionReady?: (index: number, action: ActionOption) => void | Promise<void>;
+  onForecastStarted?: () => void | Promise<void>;
+  onFutureSuggestionReady?: (index: number, suggestion: FutureSuggestion) => void | Promise<void>;
 }
 
 /**
@@ -836,7 +857,13 @@ async function obtainRawOutput(
     throw new Error('unreachable: onSummaryDelta missing in stream branch');
   }
   const onSummaryDelta = options.onSummaryDelta;
-  const extractor = new StreamingSummaryExtractor();
+  const summaryExtractor = new StreamingSummaryExtractor();
+  // 仅当 route 层提供至少一个结构回调时才并行构造 structure 提取器，避免无谓开销。
+  // useStream 触发条件仍由 HOMEPAGE_SUMMARY + onSummaryDelta 决定，不受结构回调影响。
+  const hasStructureCallback = Boolean(
+    options?.onActionReady || options?.onForecastStarted || options?.onFutureSuggestionReady,
+  );
+  const structureExtractor = hasStructureCallback ? new StreamingStructureExtractor() : null;
   let rawContent = '';
 
   // stream 分支自己管理 timeout：合并内部 timeout signal + 外部 request signal
@@ -856,20 +883,60 @@ async function obtainRawOutput(
       signal: mergedSignal,
     })) {
       rawContent += chunk.content;
-      // 把 chunk 喂给 extractor，获取本次新产生的 summary delta
-      const deltas = extractor.push(chunk.content);
+      // summary 提取器先 push：其错误（StreamingSummaryParseError 等）由 runtime
+      // 上层 catch 统一处理，会驱动 fallback。
+      const deltas = summaryExtractor.push(chunk.content);
       for (const delta of deltas) {
         // await 每个回调，传递 backpressure（慢消费端会阻塞迭代）
         await onSummaryDelta(delta);
       }
+      // structure 提取器后 push：任何错误都吞掉，绝不中断 summary 流式。
+      // 结构信号是渐进式 UI 的优化，丢失不应降级整条 SSE。
+      if (structureExtractor) {
+        let structureSignals: StructureSignal[] = [];
+        try {
+          structureSignals = structureExtractor.push(chunk.content);
+        } catch {
+          // 结构提取器任何错误都吞掉（含 MarkdownFenceError）——
+          // 不能中断 summary 流式，summary 提取器的错误由现有 runtime 机制单独处理
+        }
+        for (const signal of structureSignals) {
+          await dispatchStructureSignal(signal, options);
+        }
+      }
     }
-    // 通知 extractor 输入结束；JSON 不完整/重复 key/类型错误会抛 StreamingSummaryParseError
-    extractor.finish();
+    // 通知 summary extractor 输入结束；JSON 不完整/重复 key/类型错误会抛 StreamingSummaryParseError
+    summaryExtractor.finish();
+    // structure extractor 的 finish 本身吞错，不会抛
+    structureExtractor?.finish();
   } finally {
     clearTimeout(timer);
   }
 
   return { content: rawContent };
+}
+
+/**
+ * 把单个结构信号派发给 route 层提供的回调。
+ *
+ * - `Record<string, unknown>` → `ActionOption` / `FutureSuggestion` 的类型断言
+ *   由 route 层负责单元素业务校验；runtime 不做 zod 校验（终态 parser 的职责）。
+ * - 回调的 reject 顺着 await 冒泡（与 onSummaryDelta 一致），runtime catch 会兜底。
+ */
+async function dispatchStructureSignal(
+  signal: StructureSignal,
+  options: AgentExecutionOptions | undefined,
+): Promise<void> {
+  if (signal.kind === 'action') {
+    await options?.onActionReady?.(signal.index, signal.action as unknown as ActionOption);
+  } else if (signal.kind === 'forecastStarted') {
+    await options?.onForecastStarted?.();
+  } else {
+    await options?.onFutureSuggestionReady?.(
+      signal.index,
+      signal.suggestion as unknown as FutureSuggestion,
+    );
+  }
 }
 
 function evaluateRules(context: AgentContext): RuleEvaluationResult {
