@@ -210,6 +210,36 @@ function checkEvidenceConsistency(input: VerifierInput): QualityViolation[] {
     });
   }
 
+  const outputText = buildMatchText(input.envelope);
+  const reviewedKnowledgeFacts = (input.packet.advisorChat?.relevantFacts ?? []).filter(
+    (fact) => fact.factType === 'knowledge' || fact.factType === 'product',
+  );
+  const citedKnowledgeFacts = reviewedKnowledgeFacts.filter((fact) =>
+    outputText.includes(fact.summary),
+  );
+  const availableEvidenceIds = new Set(
+    evidence.filter((fact) => fact.source === 'knowledge_base').map((fact) => fact.id),
+  );
+  const unsupportedFacts = citedKnowledgeFacts.filter(
+    (fact) => !fact.evidenceIds.some((evidenceId) => availableEvidenceIds.has(evidenceId)),
+  );
+
+  if (citedKnowledgeFacts.length > 0) {
+    violations.push({
+      ruleId: 'knowledge:claim_without_evidence',
+      severity: 'hard',
+      passed: unsupportedFacts.length === 0,
+      message:
+        unsupportedFacts.length === 0
+          ? '引用的 reviewed knowledge 均有知识证据'
+          : '输出引用了缺少知识证据的 reviewed knowledge',
+      details:
+        unsupportedFacts.length === 0
+          ? undefined
+          : { unsupportedEvidenceIds: unsupportedFacts.flatMap((fact) => fact.evidenceIds) },
+    });
+  }
+
   return violations;
 }
 

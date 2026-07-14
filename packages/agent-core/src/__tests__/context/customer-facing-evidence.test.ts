@@ -7,6 +7,7 @@ import {
   type PublicQualitativeFact,
   type PublicFact,
 } from '../../context/customer-facing-evidence';
+import { CustomerFacingUnitValidationError } from '../../context/customer-facing-unit-policy';
 import type { TaskContextPacket } from '../../context/context-packet';
 import { ChartTokenId } from '@health-advisor/shared';
 
@@ -260,7 +261,7 @@ function makePacketWithScoreLeakage(): TaskContextPacket {
 describe('CustomerFacingEvidencePacket 类型契约', () => {
   it('PublicMetricUnit 是封闭集合，不包含 score', () => {
     // 编译时类型检查：score 不在集合中
-    const validUnits: PublicMetricUnit[] = ['bpm', 'ms', '%', 'steps', 'min'];
+    const validUnits: PublicMetricUnit[] = ['bpm', 'ms', '%', 'steps', 'h', 'min', 'km', 'kcal'];
     expect(validUnits).not.toContain('score');
   });
 
@@ -306,6 +307,90 @@ describe('CustomerFacingEvidencePacket 类型契约', () => {
 // ────────────────────────────────────────────
 
 describe('buildCustomerFacingEvidencePacket', () => {
+  it('在公开投影阶段统一转换 sleep、duration 与常见物理单位', () => {
+    const packet: TaskContextPacket = {
+      ...makeBasePacket(),
+      homepage: {
+        recentEvents: [],
+        latest24h: {
+          date: '2026-07-13',
+          metrics: [
+            {
+              metric: 'sleep_total',
+              value: 450,
+              unit: 'min',
+              status: 'normal',
+              evidenceId: 'sleep-total',
+            },
+            {
+              metric: 'active_minutes',
+              value: 90,
+              unit: 'min',
+              status: 'normal',
+              evidenceId: 'active-duration',
+            },
+            {
+              metric: 'steps',
+              value: 2998.4,
+              unit: 'steps',
+              status: 'normal',
+              evidenceId: 'steps',
+            },
+          ],
+        },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+      },
+    };
+
+    const projected = buildCustomerFacingEvidencePacket(packet, 'en');
+
+    expect(projected.userContext.baselines.avgSleep).toEqual({ value: 7, unit: 'h' });
+    expect(projected.homepage?.latest24h.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ metric: 'sleep_total', value: 7.5, unit: 'h' }),
+        expect.objectContaining({ metric: 'active_minutes', value: 1.5, unit: 'h' }),
+        expect.objectContaining({ metric: 'steps', value: 2998, unit: 'steps' }),
+      ]),
+    );
+    expect(projected.facts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'numeric', metric: 'sleep_total', value: 7.5, unit: 'h' }),
+        expect.objectContaining({ kind: 'numeric', metric: 'active_minutes', value: 1.5, unit: 'h' }),
+      ]),
+    );
+    expect(JSON.stringify(projected)).not.toContain('450min');
+  });
+
+  it('未知 metric/unit 组合阻断公开包构建', () => {
+    const packet: TaskContextPacket = {
+      ...makeBasePacket(),
+      homepage: {
+        recentEvents: [],
+        latest24h: {
+          date: '2026-07-13',
+          metrics: [
+            {
+              metric: 'resp_rate',
+              value: 18,
+              unit: 'min',
+              status: 'normal',
+              evidenceId: 'unsupported',
+            },
+          ],
+        },
+        trend7d: [],
+        rulesInsights: [],
+        suggestedChartTokens: [],
+      },
+    };
+
+    expect(() => buildCustomerFacingEvidencePacket(packet, 'zh')).toThrowError(
+      CustomerFacingUnitValidationError,
+    );
+  });
+
   it('物理单位指标 → PublicNumericFact（保留 value）', () => {
     const packet = makePacketWithScoreLeakage();
     const projected = buildCustomerFacingEvidencePacket(packet, 'zh');

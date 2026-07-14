@@ -140,9 +140,14 @@ export type {
 export {
   buildCustomerFacingEvidencePacket,
 } from './context/customer-facing-evidence';
+export {
+  CustomerFacingUnitValidationError,
+  formatCustomerFacingMetric,
+  formatCustomerFacingValue,
+} from './context/customer-facing-unit-policy';
 export type {
   CustomerFacingEvidencePacket,
-  PublicMetricUnit,
+  PublicUserContextPacket,
   PublicNumericFact,
   PublicQualitativeFact,
   PublicFact,
@@ -154,12 +159,19 @@ export type {
   PublicHomepageEventTransitionContext,
   PublicHomepageEventInsight,
   PublicHomepageContextPacket,
+  PublicRuleInsightPacket,
   PublicMetricValue,
   PublicMetricSummary,
   PublicVisibleChartPacket,
   PublicViewSummaryContextPacket,
   PublicAdvisorChatContextPacket,
+  PublicReviewedRelevantFactPacket,
 } from './context/customer-facing-evidence';
+export type {
+  PublicMetricUnit,
+  CustomerFacingMetricValue,
+  CustomerFacingUnitValidationCode,
+} from './context/customer-facing-unit-policy';
 
 // Constants
 export {

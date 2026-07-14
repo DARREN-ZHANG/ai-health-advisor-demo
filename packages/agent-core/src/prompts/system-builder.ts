@@ -3,6 +3,10 @@ import type { PromptLoader } from './prompt-loader';
 import type { MissingDataItem } from '../context/context-packet';
 import type { Locale } from '@health-advisor/shared';
 import { AgentTaskType } from '@health-advisor/shared';
+import {
+  formatCustomerFacingMetric,
+  formatCustomerFacingValue,
+} from '../context/customer-facing-unit-policy';
 
 // 双语标签映射
 function t(locale: Locale, zh: string, en: string): string {
@@ -15,6 +19,10 @@ export function buildSystemPrompt(
   missingData?: MissingDataItem[],
 ): string {
   const locale = context.locale;
+  const displayMetric = (metric: string, value: number, sourceUnit: string): string => {
+    const projected = formatCustomerFacingMetric(metric, value, sourceUnit, locale);
+    return formatCustomerFacingValue(projected.value, projected.unit, locale);
+  };
   const baseTemplate = loader.load('system');
 
   const sections: string[] = [baseTemplate];
@@ -37,16 +45,16 @@ export function buildSystemPrompt(
     '## Personal Reference Levels (internal only)',
   ));
   if (context.task.type === AgentTaskType.HOMEPAGE_SUMMARY) {
-    sections.push(`- ${t(locale, '静息心率通常水平', 'Resting HR usual level')}: ${context.profile.baselines.restingHR} bpm — ${t(locale, '可用于数据引用，但用生活化比喻包装', 'may reference in response, but wrap with relatable analogies')}`);
-    sections.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}: ${context.profile.baselines.hrv} ms — ${t(locale, '可用于数据引用，但用生活化比喻包装', 'may reference in response, but wrap with relatable analogies')}`);
-    sections.push(`- ${t(locale, 'SpO2 参考水平', 'SpO2 reference level')}: ${context.profile.baselines.spo2}% — ${t(locale, '可用于数据引用，但注意临床阈值提醒', 'may reference in response, but note clinical thresholds')}`);
+    sections.push(`- ${t(locale, '静息心率通常水平', 'Resting HR usual level')}: ${displayMetric('resting_hr', context.profile.baselines.restingHR, 'bpm')} — ${t(locale, '可用于数据引用，但用生活化比喻包装', 'may reference in response, but wrap with relatable analogies')}`);
+    sections.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}: ${displayMetric('hrv', context.profile.baselines.hrv, 'ms')} — ${t(locale, '可用于数据引用，但用生活化比喻包装', 'may reference in response, but wrap with relatable analogies')}`);
+    sections.push(`- ${t(locale, 'SpO2 参考水平', 'SpO2 reference level')}: ${displayMetric('spo2', context.profile.baselines.spo2, '%')} — ${t(locale, '可用于数据引用，但注意临床阈值提醒', 'may reference in response, but note clinical thresholds')}`);
   } else {
-    sections.push(`- ${t(locale, '静息心率通常水平', 'Resting HR usual level')}: ${context.profile.baselines.restingHR} bpm`);
-    sections.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}: ${context.profile.baselines.hrv} ms`);
-    sections.push(`- ${t(locale, 'SpO2 参考水平', 'SpO2 reference level')}: ${context.profile.baselines.spo2}%`);
+    sections.push(`- ${t(locale, '静息心率通常水平', 'Resting HR usual level')}: ${displayMetric('resting_hr', context.profile.baselines.restingHR, 'bpm')}`);
+    sections.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}: ${displayMetric('hrv', context.profile.baselines.hrv, 'ms')}`);
+    sections.push(`- ${t(locale, 'SpO2 参考水平', 'SpO2 reference level')}: ${displayMetric('spo2', context.profile.baselines.spo2, '%')}`);
   }
-  sections.push(`- ${t(locale, '平均睡眠', 'Average sleep')}: ${context.profile.baselines.avgSleepMinutes} min`);
-  sections.push(`- ${t(locale, '平均步数', 'Average steps')}: ${context.profile.baselines.avgSteps} steps`);
+  sections.push(`- ${t(locale, '平均睡眠', 'Average sleep')}: ${displayMetric('avg_sleep', context.profile.baselines.avgSleepMinutes, 'min')}`);
+  sections.push(`- ${t(locale, '平均步数', 'Average steps')}: ${displayMetric('steps', context.profile.baselines.avgSteps, 'steps')}`);
 
   // 数据质量约束（优先使用结构化 missingData）
   sections.push('');

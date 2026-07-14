@@ -177,7 +177,7 @@ describe('renderTaskContextPacket', () => {
     const output = render(packet);
     expect(output).toContain('Evidence Facts');
     expect(output).toContain('latest_hrv');
-    expect(output).toContain('hrv=58ms');
+    expect(output).toContain('hrv=58 ms');
   });
 
   it('renders homepage packet in zh', () => {
@@ -450,7 +450,8 @@ describe('renderTaskContextPacket', () => {
     expect(output).toContain('这个图说明什么');
     expect(output).toContain('问题意图');
     expect(output).toContain('explain_chart');
-    expect(output).toContain('相关事实');
+    expect(output).not.toContain('相关事实');
+    expect(output).not.toContain('HRV 趋势稳定');
     expect(output).toContain('回答约束');
   });
 
@@ -508,7 +509,7 @@ describe('renderTaskContextPacket', () => {
     expect(output).toContain('User Question');
     expect(output).toContain('What does this chart mean');
     expect(output).toContain('Question Intent');
-    expect(output).toContain('Relevant Facts');
+    expect(output).not.toContain('Relevant Facts');
     expect(output).toContain('Response Constraints');
   });
 
@@ -632,18 +633,18 @@ describe('renderTaskContextPacket', () => {
     const output = render(packet);
     // Task 3.1：Evidence Facts 区段渲染投影后的 facts
     expect(output).toContain('Evidence Facts');
-    expect(output).toContain('e1: hrv=58ms');
+    expect(output).toContain('e1: hrv=58 ms');
     // User context baselines
     expect(output).toContain('60 bpm');
     expect(output).toContain('60 ms');
     expect(output).toContain('98%');
     // Latest 24h
-    expect(output).toContain('hrv：58ms');
-    expect(output).toContain('resting_hr：62bpm');
+    expect(output).toContain('hrv：58 ms');
+    expect(output).toContain('resting_hr：62 bpm');
     expect(output).toContain('spo2：97%');
     // Trend 7d（投影后仍保留 latest value）
-    expect(output).toContain('latest 58ms on 2026-04-10');
-    expect(output).toContain('avg 59ms');
+    expect(output).toContain('latest 58 ms on 2026-04-10');
+    expect(output).toContain('avg 59 ms');
     // Visible charts
     expect(output).toContain('  hrv:');
   });
@@ -730,14 +731,14 @@ describe('renderTaskContextPacket', () => {
     expect(output).not.toContain('偏离基线');
     expect(output).not.toContain('baseline');
     // latest/average 仍渲染
-    expect(output).toContain('58ms');
-    expect(output).toContain('59ms');
+    expect(output).toContain('58 ms');
+    expect(output).toContain('59 ms');
     // Task 3.1：投影后 baseline/deltaPctVsBaseline 不再渲染到 prompt（防止内部 delta 泄漏）
-    // 但 latest24h 中的 deltaPctVsBaseline 仍保留（客户可见的"相对平时"文案）
     const hrvLine = output.split('\n').find((line) => line.startsWith('- hrv：')) ?? '';
     expect(hrvLine).toContain('58');
-    expect(hrvLine).toContain('相对平时');
-    expect(output).toContain('sleep_total：420min（相对平时 0%）');
+    expect(hrvLine).not.toContain('相对平时');
+    expect(output).toContain('sleep_total：7 h');
+    expect(output).not.toContain('sleep_total：420 min');
     // Task 3.1：trend7d 的 baseline 不再渲染"通常水平"文案（投影移除 baseline 字段）
     expect(output).not.toContain('仅用于解读');
   });
@@ -1166,8 +1167,8 @@ describe('renderTaskContextPacket', () => {
                   evidenceId: 'ew_label',
                 },
                 {
-                  // 未知 metric（走 default 分支）：average 存在 → 'average'
-                  metric: 'resp_rate',
+                  // 已登记 duration metric：average 存在 → 'average'
+                  metric: 'active_minutes',
                   unit: 'min',
                   sampleCount: 3,
                   latest: 16,
@@ -1175,7 +1176,7 @@ describe('renderTaskContextPacket', () => {
                   max: 30,
                   average: 18,
                   qualifier: 'normal',
-                  interpretation: '呼吸频率均值 18min',
+                  interpretation: '活动时长均值 18 min',
                   evidenceId: 'ew_label',
                 },
               ],
@@ -1194,19 +1195,19 @@ describe('renderTaskContextPacket', () => {
 
     // 中文：max→峰值，latest→最新，average→平均
     const zh = render(packet, 'zh', '2026-05-31T18:35');
-    expect(zh).toContain('峰值：150bpm');
-    expect(zh).toContain('最新：45ms');
-    expect(zh).toContain('平均：18min');
+    expect(zh).toContain('峰值：150 bpm');
+    expect(zh).toContain('最新：45 ms');
+    expect(zh).toContain('平均：18 min');
     // 不应把 latest/average 误标为峰值
-    expect(zh).not.toContain('峰值：45ms');
-    expect(zh).not.toContain('峰值：18min');
+    expect(zh).not.toContain('峰值：45 ms');
+    expect(zh).not.toContain('峰值：18 min');
 
     // 英文：max/latest/average
     const en = render(packet, 'en', '2026-05-31T18:35');
-    expect(en).toContain('max: 150bpm');
-    expect(en).toContain('latest: 45ms');
-    expect(en).toContain('average: 18min');
-    expect(en).not.toContain('max: 45ms');
+    expect(en).toContain('max: 150 bpm');
+    expect(en).toContain('latest: 45 ms');
+    expect(en).toContain('average: 18 min');
+    expect(en).not.toContain('max: 45 ms');
   });
 
   it('does not render sleep latest24h or tonight sleep action context for a 13:00 walk event', () => {
@@ -1536,8 +1537,8 @@ describe('renderTaskContextPacket — todayOccurredActivities 区段', () => {
     expect(output).toContain(
       '## 今日已发生活动（仅供 futureSuggestions 推断，禁止用于 summary 或 actions）',
     );
-    expect(output).toContain('23:00–07:05 sleep (8.1h)');
-    expect(output).toContain('08:30–08:35 caffeine_intake (5min)');
+    expect(output).toContain('23:00–07:05 sleep (8.1 h)');
+    expect(output).toContain('08:30–08:35 caffeine_intake (5 min)');
   });
 
   it('英文 locale 同样渲染区段标题与禁用约束', () => {
@@ -1549,7 +1550,7 @@ describe('renderTaskContextPacket — todayOccurredActivities 区段', () => {
     expect(output).toContain(
       "## Today's Occurred Activities (futureSuggestions reasoning only, do not use in summary or actions)",
     );
-    expect(output).toContain('12:30–13:00 meal_intake (30min)');
+    expect(output).toContain('12:30–13:00 meal_intake (30 min)');
   });
 
   it('durationMin < 60 时用 min 单位', () => {
@@ -1558,7 +1559,7 @@ describe('renderTaskContextPacket — todayOccurredActivities 区段', () => {
     ]);
     const output = render(packet, 'zh', '2026-07-08T15:00');
 
-    expect(output).toContain('14:00–14:20 nap (20min)');
+    expect(output).toContain('14:00–14:20 nap (20 min)');
   });
 
   it('区段不出现在非 homepage 任务中（ advisor chat packet 不含该字段）', () => {
@@ -2288,8 +2289,8 @@ describe('renderTaskContextPacket — CustomerFacingEvidencePacket 评分隔离'
     };
     const projected = buildCustomerFacingEvidencePacket(packet, 'zh');
     const output = renderTaskContextPacket(projected, 'zh');
-    // 注：relevantFacts.summary 是客户可见的；如果它包含 score，需要源端清理
-    // 这里验证投影不会放大泄漏（relevantFacts 不在投影清理范围，但 facts 不含）
     expect(output).not.toContain('unit=score');
+    expect(output).not.toContain('stress load 72');
+    expect(output).not.toContain('(score)');
   });
 });

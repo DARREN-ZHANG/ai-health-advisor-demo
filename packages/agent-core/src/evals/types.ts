@@ -230,6 +230,18 @@ export interface AgentEvalExpectations {
       forbidCapabilityDisclosure?: {
         capabilityPatterns?: string[];
       };
+      /**
+       * 指标级展示单位合同。只检查同时包含该 metric 与数值的文本片段，
+       * 避免跨指标使用全局单位正则。
+       */
+      requiredDisplayUnits?: Record<
+        string,
+        { metricPatterns: string[]; unitPatterns: string[] }
+      >;
+      forbiddenDisplayUnits?: Record<
+        string,
+        { metricPatterns: string[]; unitPatterns: string[] }
+      >;
     };
     viewSummary?: {
       requiredTab?: string;

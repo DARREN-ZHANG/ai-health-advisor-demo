@@ -61,8 +61,9 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('62 bpm');
     expect(prompt).toContain('58 ms');
     expect(prompt).toContain('98%');
-    expect(prompt).toContain('420'); // avgSleepMinutes
-    expect(prompt).toContain('8500'); // avgSteps
+    expect(prompt).toContain('7 h');
+    expect(prompt).not.toContain('420 min');
+    expect(prompt).toContain('8,500 steps');
     expect(prompt).not.toContain('禁止输出具体数值');
     expect(prompt).not.toContain('基线');
     expect(prompt).not.toContain('基准线');

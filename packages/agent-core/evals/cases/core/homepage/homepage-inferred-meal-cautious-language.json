@@ -114,6 +114,26 @@
         },
         "forbidInternalDerivedScores": {},
         "forbidCapabilityDisclosure": {},
+        "requiredDisplayUnits": {
+          "sleep": {
+            "metricPatterns": ["睡眠", "深睡", "REM", "快速眼动"],
+            "unitPatterns": ["\\d+(?:\\.\\d+)?\\s*(?:h|小时)"]
+          },
+          "meal_duration": {
+            "metricPatterns": ["进餐", "餐后", "吃饭"],
+            "unitPatterns": ["20\\s*(?:min|分钟)"]
+          }
+        },
+        "forbiddenDisplayUnits": {
+          "sleep": {
+            "metricPatterns": ["睡眠", "深睡", "REM", "快速眼动"],
+            "unitPatterns": ["\\d+(?:\\.\\d+)?\\s*(?:min|分钟)"]
+          },
+          "meal_duration": {
+            "metricPatterns": ["进餐", "餐后", "吃饭"],
+            "unitPatterns": ["20\\s*(?:h|小时)"]
+          }
+        },
         "forbidDailyStatusFirstPatterns": [
           "过去24小时",
           "整体状态",

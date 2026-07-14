@@ -401,6 +401,28 @@ const HomepageTaskExpectationSchema = z
       })
       .strict()
       .optional(),
+    requiredDisplayUnits: z
+      .record(
+        z.string().min(1),
+        z
+          .object({
+            metricPatterns: z.array(z.string().min(1)).min(1),
+            unitPatterns: z.array(z.string().min(1)).min(1),
+          })
+          .strict(),
+      )
+      .optional(),
+    forbiddenDisplayUnits: z
+      .record(
+        z.string().min(1),
+        z
+          .object({
+            metricPatterns: z.array(z.string().min(1)).min(1),
+            unitPatterns: z.array(z.string().min(1)).min(1),
+          })
+          .strict(),
+      )
+      .optional(),
   })
   .strict()
   // requireRecentEventFirst 为 true 时，recentEventPatterns 必须非空

@@ -13,7 +13,11 @@ import {
   buildClaimLedger,
   type RealtimeBriefPolicyInput,
 } from '../realtime-brief-content-policy';
-import type { CustomerFacingEvidencePacket, PublicFact } from '../../context/customer-facing-evidence';
+import type {
+  CustomerFacingEvidencePacket,
+  PublicFact,
+  PublicMetricUnit,
+} from '../../context/customer-facing-evidence';
 import type { AgentResponseEnvelope, ActionOption } from '@health-advisor/shared';
 import { ChartTokenId } from '@health-advisor/shared';
 
@@ -22,7 +26,7 @@ import { ChartTokenId } from '@health-advisor/shared';
 function makeNumericFact(
   metric: string,
   value: number,
-  unit: 'bpm' | 'ms' | '%' | 'steps' | 'min',
+  unit: PublicMetricUnit,
 ): PublicFact {
   return {
     kind: 'numeric',
@@ -52,7 +56,13 @@ function makePacket(facts: PublicFact[] = [], eventOverrides: any[] = []): Custo
       name: '张健康',
       age: 32,
       tags: [],
-      baselines: { restingHR: 62, hrv: 58, spo2: 98, avgSleepMinutes: 420, avgSteps: 8500 },
+      baselines: {
+        restingHR: { value: 62, unit: 'bpm' },
+        hrv: { value: 58, unit: 'ms' },
+        spo2: { value: 98, unit: '%' },
+        avgSleep: { value: 7, unit: 'h' },
+        avgSteps: { value: 8500, unit: 'steps' },
+      },
     },
     dataWindow: { start: '2026-04-18', end: '2026-04-24', recordCount: 7, completenessPct: 100 },
     missingData: [],
@@ -109,13 +119,14 @@ describe('realtime-brief-content-policy', () => {
       expect(ledger.allowedNumbers).toContain(45);
     });
 
-    it('忽略 qualitative facts（无数值的 score 类指标）', () => {
+    it('忽略 qualitative facts（不会把 score 数值加入 ledger）', () => {
       const packet = makePacket([
         makeQualitativeFact('motion', 'elevated'),
         makeQualitativeFact('stress_load', 'normal'),
       ]);
       const ledger = buildClaimLedger(packet, []);
-      expect(ledger.allowedNumbers.size).toBe(0);
+      expect(ledger.allowedNumbers).not.toContain(72);
+      expect(ledger.allowedNumbers).not.toContain(85);
     });
 
     it('从 action candidates 提取 duration 分钟数', () => {
@@ -613,6 +624,39 @@ describe('realtime-brief-content-policy', () => {
       const v = result.violations.find((x) => x.code === 'unattributed_numeric_claim');
       expect(v).toBeDefined();
       expect(v!.code === 'unattributed_numeric_claim' && v!.value).toBe('75');
+    });
+
+    it('数值相同但单位与公开事实不一致 → 违规', () => {
+      const packet = makePacket([makeNumericFact('sleep_total', 7, 'h')]);
+      const envelope = makeEnvelope({ summary: '昨晚睡眠约 7 min。' });
+      const result = enforceCustomerContentPolicy({
+        envelope,
+        evidencePacket: packet,
+        actionCandidates: [],
+        locale: 'en',
+        taskType: 'homepage_summary',
+      });
+
+      expect(result.violations).toContainEqual({
+        code: 'unattributed_numeric_claim',
+        value: '7',
+      });
+    });
+
+    it('sleep 使用公开投影后的 h 单位 → 数值归因通过', () => {
+      const packet = makePacket([makeNumericFact('sleep_total', 7.5, 'h')]);
+      const envelope = makeEnvelope({ summary: '昨晚睡眠约 7.5 h。' });
+      const result = enforceCustomerContentPolicy({
+        envelope,
+        evidencePacket: packet,
+        actionCandidates: [],
+        locale: 'zh',
+        taskType: 'homepage_summary',
+      });
+
+      expect(
+        result.violations.find((violation) => violation.code === 'unattributed_numeric_claim'),
+      ).toBeUndefined();
     });
 
     it('actions 中的建议时长不属于健康事实 → 不要求 evidence ledger 归因', () => {

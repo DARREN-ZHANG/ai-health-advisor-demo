@@ -102,6 +102,26 @@
         ],
         "forbidInternalDerivedScores": {},
         "forbidCapabilityDisclosure": {},
+        "requiredDisplayUnits": {
+          "sleep": {
+            "metricPatterns": ["sleep", "deep sleep", "REM"],
+            "unitPatterns": ["\\d+(?:\\.\\d+)?\\s*h\\b"]
+          },
+          "workout_duration": {
+            "metricPatterns": ["cardio", "workout", "session"],
+            "unitPatterns": ["35\\s*(?:min|minutes)\\b"]
+          }
+        },
+        "forbiddenDisplayUnits": {
+          "sleep": {
+            "metricPatterns": ["sleep", "deep sleep", "REM"],
+            "unitPatterns": ["\\d+(?:\\.\\d+)?\\s*(?:min|minutes)\\b"]
+          },
+          "workout_duration": {
+            "metricPatterns": ["cardio", "workout", "session"],
+            "unitPatterns": ["35\\s*h\\b"]
+          }
+        },
         "forbidDailyStatusFirstPatterns": [
           "past 24 hours",
           "overall status",

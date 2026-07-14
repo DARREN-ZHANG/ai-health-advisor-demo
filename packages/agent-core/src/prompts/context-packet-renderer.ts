@@ -1,6 +1,5 @@
 import type {
   TaskPacket,
-  UserContextPacket,
   DataWindowPacket,
   MissingDataItem,
 } from '../context/context-packet';
@@ -17,7 +16,12 @@ import type {
   PublicMetricSummary,
   PublicVisibleChartPacket,
   PublicMetricValue,
+  PublicUserContextPacket,
 } from '../context/customer-facing-evidence';
+import {
+  formatCustomerFacingMetric,
+  formatCustomerFacingValue,
+} from '../context/customer-facing-unit-policy';
 import type { EventCertaintyBand } from '../context/context-packet';
 import type { RecentRecommendedAction } from '../types/memory';
 import { ACTION_SEMANTIC_GROUPS } from '../context/homepage-event-insights';
@@ -97,7 +101,7 @@ export function renderTaskContextPacket(
   sections.push(renderDataWindow(packet.dataWindow, locale));
   sections.push(renderMissingData(packet.missingData, locale));
   sections.push(renderVisibleCharts(packet.visibleCharts, locale, hasHomepageEvents));
-  sections.push(renderPublicFacts(packet.facts));
+  sections.push(renderPublicFacts(packet.facts, locale));
 
   if (packet.homepage) sections.push(renderHomepage(packet.homepage, locale));
   if (packet.viewSummary) sections.push(renderViewSummary(packet.viewSummary, locale));
@@ -133,7 +137,7 @@ function renderTaskPacket(task: TaskPacket, locale: Locale): string {
 // ────────────────────────────────────────────
 
 function renderUserContext(
-  user: UserContextPacket,
+  user: PublicUserContextPacket,
   locale: Locale,
   hasHomepageEvents: boolean = false,
 ): string {
@@ -160,8 +164,8 @@ function renderUserContext(
     lines.push(
       t(
         locale,
-        `静息心率 ${bl.restingHR}bpm, HRV ${bl.hrv}ms, SpO2 ${bl.spo2}%, 睡眠 ${bl.avgSleepMinutes}min, 步数 ${bl.avgSteps}`,
-        `resting HR ${bl.restingHR}bpm, HRV ${bl.hrv}ms, SpO2 ${bl.spo2}%, sleep ${bl.avgSleepMinutes}min, steps ${bl.avgSteps}`,
+        `静息心率 ${formatMetricValue(bl.restingHR, locale)}, HRV ${formatMetricValue(bl.hrv, locale)}, SpO2 ${formatMetricValue(bl.spo2, locale)}, 睡眠 ${formatMetricValue(bl.avgSleep, locale)}, 步数 ${formatMetricValue(bl.avgSteps, locale)}`,
+        `resting HR ${formatMetricValue(bl.restingHR, locale)}, HRV ${formatMetricValue(bl.hrv, locale)}, SpO2 ${formatMetricValue(bl.spo2, locale)}, sleep ${formatMetricValue(bl.avgSleep, locale)}, steps ${formatMetricValue(bl.avgSteps, locale)}`,
       ),
     );
   } else {
@@ -173,16 +177,16 @@ function renderUserContext(
       ),
     );
     lines.push(
-      `- ${t(locale, '静息心率通常水平', 'Resting HR usual level')}${c}${user.baselines.restingHR} bpm`,
+      `- ${t(locale, '静息心率通常水平', 'Resting HR usual level')}${c}${formatMetricValue(user.baselines.restingHR, locale)}`,
     );
-    lines.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}${c}${user.baselines.hrv} ms`);
+    lines.push(`- ${t(locale, 'HRV 通常水平', 'HRV usual level')}${c}${formatMetricValue(user.baselines.hrv, locale)}`);
     lines.push(
-      `- ${t(locale, 'SpO2 参考水平', 'SpO2 reference level')}${c}${user.baselines.spo2}%`,
+      `- ${t(locale, 'SpO2 参考水平', 'SpO2 reference level')}${c}${formatMetricValue(user.baselines.spo2, locale)}`,
     );
     lines.push(
-      `- ${t(locale, '平均睡眠', 'Average sleep')}${c}${user.baselines.avgSleepMinutes} min`,
+      `- ${t(locale, '平均睡眠', 'Average sleep')}${c}${formatMetricValue(user.baselines.avgSleep, locale)}`,
     );
-    lines.push(`- ${t(locale, '平均步数', 'Average steps')}${c}${user.baselines.avgSteps} steps`);
+    lines.push(`- ${t(locale, '平均步数', 'Average steps')}${c}${formatMetricValue(user.baselines.avgSteps, locale)}`);
   }
 
   return lines.join('\n');
@@ -252,7 +256,7 @@ function renderVisibleCharts(
     // 有事件时：压缩为单行摘要，降低图表数据的视觉权重
     for (const chart of charts) {
       const latest = chart.dataSummary.latest;
-      const valStr = latest ? `${latest.value}${latest.unit}` : 'N/A';
+      const valStr = latest ? formatMetricValue(latest, locale) : 'N/A';
       lines.push(
         `- ${chart.chartToken}: ${valStr}, ${t(locale, '趋势', 'trend')} ${chart.dataSummary.trendDirection}`,
       );
@@ -271,14 +275,14 @@ function renderVisibleCharts(
 // Public Facts（取代原 Evidence Facts）
 // ────────────────────────────────────────────
 
-function renderPublicFacts(facts: PublicFact[]): string {
+function renderPublicFacts(facts: PublicFact[], locale: Locale = 'zh'): string {
   if (facts.length === 0) return '';
 
   const lines = ['## Evidence Facts'];
   for (const fact of facts) {
     if (fact.kind === 'numeric') {
       lines.push(
-        `- ${fact.evidenceId}: ${fact.metric}=${fact.value}${fact.unit} — ${fact.interpretation}`,
+        `- ${fact.evidenceId}: ${fact.metric}=${formatCustomerFacingValue(fact.value, fact.unit, locale)} — ${fact.interpretation}`,
       );
     } else {
       lines.push(
@@ -352,7 +356,12 @@ function renderDisplayableHomepageEvent(
   }
   for (const focus of current.recommendedFocus) {
     const timing =
-      focus.durationMin !== undefined ? `${focus.durationMin} min` : (focus.timing ?? '');
+      focus.durationMin !== undefined
+        ? formatMetricValue(
+            formatCustomerFacingMetric('action_duration', focus.durationMin, 'min', locale),
+            locale,
+          )
+        : (focus.timing ?? '');
     lines.push(
       `  - ${t(locale, '建议方向', 'Recommended focus')}${colon(locale)}${focus.category} ${timing} — ${focus.action}；${focus.rationale}`,
     );
@@ -378,7 +387,7 @@ function renderPublicEventWindowMetric(metric: PublicEventWindowMetric, locale: 
   if (metric.unit && metric.value !== undefined) {
     const roleLabel = valueRoleLabel(metric.valueRole, locale);
     // 事件窗口指标：heart_rate elevated — 峰值：172bpm — interpretation
-    return `  - ${t(locale, '事件窗口指标', 'Event-window metric')}${c}${metric.metric} ${metric.qualifier}, ${roleLabel}${metric.value}${metric.unit} — ${metric.interpretation}`;
+    return `  - ${t(locale, '事件窗口指标', 'Event-window metric')}${c}${metric.metric} ${metric.qualifier}, ${roleLabel}${formatCustomerFacingValue(metric.value, metric.unit, locale)} — ${metric.interpretation}`;
   }
   // score 类指标：仅展示 qualifier
   return `  - ${t(locale, '事件窗口指标', 'Event-window metric')}${c}${metric.metric} ${metric.qualifier} — ${metric.interpretation}`;
@@ -407,7 +416,7 @@ function renderPublicPhysiology(item: PublicEventPhysiologySummary, locale: Loca
   const c = colon(locale);
   // 物理单位 + value 保留
   if (item.unit && item.value !== undefined) {
-    return `  - ${t(locale, '生理特征', 'Physiology')}${c}${item.metric} ${item.qualifier} ${item.value}${item.unit} — ${item.interpretation}`;
+    return `  - ${t(locale, '生理特征', 'Physiology')}${c}${item.metric} ${item.qualifier} ${formatCustomerFacingValue(item.value, item.unit, locale)} — ${item.interpretation}`;
   }
   // score 类或无 value：仅展示 qualifier
   return `  - ${t(locale, '生理特征', 'Physiology')}${c}${item.metric} ${item.qualifier} — ${item.interpretation}`;
@@ -515,8 +524,10 @@ function renderTodayOccurredActivities(
   for (const act of activities) {
     const startHm = toHHmm(act.start);
     const endHm = toHHmm(act.end);
-    const durationLabel =
-      act.durationMin >= 60 ? `${(act.durationMin / 60).toFixed(1)}h` : `${act.durationMin}min`;
+    const durationLabel = formatMetricValue(
+      formatCustomerFacingMetric('activity_duration', act.durationMin, 'min', locale),
+      locale,
+    );
     lines.push(`- ${startHm}–${endHm} ${act.type} (${durationLabel})`);
   }
 
@@ -606,11 +617,13 @@ function renderHomepage(homepage: PublicHomepageContextPacket, locale: Locale): 
   if (hasEvents) {
     // 有事件时：只渲染异常指标 + 一句话概括正常指标
     for (const m of notableMetrics) {
-      const parts: string[] = [`- ${m.metric}${c}${m.value}${m.unit}`];
-      if (m.baseline !== undefined && m.deltaPctVsBaseline !== undefined) {
-        const sign = m.deltaPctVsBaseline > 0 ? '+' : '';
-        parts.push(`（${t(locale, '相对平时', 'vs usual')} ${sign}${m.deltaPctVsBaseline}%）`);
-      }
+      const parts: string[] = [
+        `- ${m.metric}${c}${
+          m.value !== undefined && m.unit
+            ? formatCustomerFacingValue(m.value, m.unit, locale)
+            : t(locale, '定性状态', 'qualitative status')
+        }`,
+      ];
       if (m.status === 'attention') parts.push(`[${t(locale, '注意', 'attention')}]`);
       if (m.status === 'critical')
         parts.push(
@@ -638,11 +651,9 @@ function renderHomepage(homepage: PublicHomepageContextPacket, locale: Locale): 
         const statusLabel = m.status === 'normal' ? t(locale, '正常', 'normal') : m.status;
         lines.push(`- ${m.metric}${c}${statusLabel}`);
       } else {
-        const parts: string[] = [`- ${m.metric}${c}${m.value}${m.unit}`];
-        if (m.baseline !== undefined && m.deltaPctVsBaseline !== undefined) {
-          const sign = m.deltaPctVsBaseline > 0 ? '+' : '';
-          parts.push(`（${t(locale, '相对平时', 'vs usual')} ${sign}${m.deltaPctVsBaseline}%）`);
-        }
+        const parts: string[] = [
+          `- ${m.metric}${c}${formatCustomerFacingValue(m.value, m.unit!, locale)}`,
+        ];
         if (m.status === 'attention') parts.push(`[${t(locale, '注意', 'attention')}]`);
         if (m.status === 'critical')
           parts.push(
@@ -772,12 +783,21 @@ function renderAdvisorChat(chat: PublicAdvisorChatContextPacket, locale: Locale)
     );
   }
 
-  if (chat.relevantFacts.length > 0) {
+  const knowledgeFacts = chat.relevantFacts.filter((fact) => fact.factType === 'knowledge');
+  if (knowledgeFacts.length > 0) {
     lines.push('');
-    lines.push(t(locale, '## 相关事实', '## Relevant Facts'));
-    for (const fact of chat.relevantFacts) {
-      lines.push(`- [${fact.factType}] ${fact.label}`);
-      lines.push(`  ${fact.summary}`);
+    lines.push('## Reviewed Knowledge Facts');
+    for (const fact of knowledgeFacts) {
+      lines.push(`- [${fact.evidenceIds.join(', ')}] ${fact.summary}`);
+    }
+  }
+
+  const productFacts = chat.relevantFacts.filter((fact) => fact.factType === 'product');
+  if (productFacts.length > 0) {
+    lines.push('');
+    lines.push('## Product Facts');
+    for (const fact of productFacts) {
+      lines.push(`- [${fact.evidenceIds.join(', ')}] ${fact.summary}`);
     }
   }
 
@@ -803,8 +823,12 @@ function renderAdvisorChat(chat: PublicAdvisorChatContextPacket, locale: Locale)
 // PublicMetricSummary 渲染（公共辅助）
 // ────────────────────────────────────────────
 
-function formatPublicMetricValue(v: PublicMetricValue): string {
-  return `${v.value}${v.unit}${v.date ? ` on ${v.date}` : ''}`;
+function formatMetricValue(v: PublicMetricValue, locale: Locale): string {
+  return formatCustomerFacingValue(v.value, v.unit, locale);
+}
+
+function formatPublicMetricValue(v: PublicMetricValue, locale: Locale): string {
+  return `${formatMetricValue(v, locale)}${v.date ? ` on ${v.date}` : ''}`;
 }
 
 function renderPublicMetricSummary(
@@ -814,8 +838,8 @@ function renderPublicMetricSummary(
 ): string {
   const parts: string[] = [];
   parts.push(`${prefix}${ms.metric}:`);
-  if (ms.latest) parts.push(`latest ${formatPublicMetricValue(ms.latest)}`);
-  if (ms.average) parts.push(`avg ${ms.average.value}${ms.average.unit}`);
+  if (ms.latest) parts.push(`latest ${formatPublicMetricValue(ms.latest, locale)}`);
+  if (ms.average) parts.push(`avg ${formatMetricValue(ms.average, locale)}`);
   parts.push(`trend ${ms.trendDirection}`);
   if (ms.anomalyPoints.length > 0) {
     parts.push(`anomalies: ${ms.anomalyPoints.map((a) => a.date).join(', ')}`);
@@ -838,7 +862,7 @@ function renderPublicMetricSummaryCompact(
   void locale;
   const parts: string[] = [];
   parts.push(`${prefix}${ms.metric}:`);
-  if (ms.latest) parts.push(`${ms.latest.value}${ms.latest.unit}`);
+  if (ms.latest) parts.push(formatMetricValue(ms.latest, locale));
   parts.push(`trend ${ms.trendDirection}`);
   return parts.join(' ');
 }

@@ -147,7 +147,80 @@ function checkHomepage(
     );
   }
 
+  if (homepage.requiredDisplayUnits) {
+    results.push(
+      ...checkMetricDisplayUnits(
+        caseId,
+        text,
+        homepage.requiredDisplayUnits,
+        'required',
+      ),
+    );
+  }
+
+  if (homepage.forbiddenDisplayUnits) {
+    results.push(
+      ...checkMetricDisplayUnits(
+        caseId,
+        text,
+        homepage.forbiddenDisplayUnits,
+        'forbidden',
+      ),
+    );
+  }
+
   return results;
+}
+
+type DisplayUnitExpectations = Record<
+  string,
+  { metricPatterns: string[]; unitPatterns: string[] }
+>;
+
+function checkMetricDisplayUnits(
+  caseId: string,
+  text: string,
+  expectations: DisplayUnitExpectations,
+  mode: 'required' | 'forbidden',
+): EvalCheckResult[] {
+  const fragments = text
+    .split(/[。！？!?;；\n]+/)
+    .map((fragment) => fragment.trim())
+    .filter(Boolean);
+
+  return Object.entries(expectations).map(([metric, config]) => {
+    const metricFragments = fragments.filter(
+      (fragment) =>
+        /\d/.test(fragment) &&
+        config.metricPatterns.some((pattern) => new RegExp(pattern, 'i').test(fragment)),
+    );
+    const violatingFragments = metricFragments.filter((fragment) => {
+      const unitMatched = config.unitPatterns.some((pattern) =>
+        new RegExp(pattern, 'i').test(fragment),
+      );
+      return mode === 'required' ? !unitMatched : unitMatched;
+    });
+    const passed = violatingFragments.length === 0;
+
+    return {
+      checkId: `${caseId}:task:homepage:${mode}_display_unit:${metric}`,
+      severity: 'hard',
+      passed,
+      score: passed ? 1 : 0,
+      maxScore: 1,
+      message: passed
+        ? `${metric} 的展示单位符合 ${mode} 合同`
+        : `${metric} 的展示单位违反 ${mode} 合同`,
+      details: passed
+        ? undefined
+        : {
+            metric,
+            metricPatterns: config.metricPatterns,
+            unitPatterns: config.unitPatterns,
+            violatingFragments,
+          },
+    };
+  });
 }
 
 /** 检查 summary 前 40 字符内命中 recentEventPatterns */

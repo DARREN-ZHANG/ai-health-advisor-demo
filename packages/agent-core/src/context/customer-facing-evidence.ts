@@ -29,11 +29,16 @@ import type {
   OccurredActivity,
   QuestionIntentPacket,
   CurrentPagePacket,
-  RelevantFactPacket,
   ConversationPacket,
   AdvisorConstraintPacket,
 } from './context-packet';
 import type { RecentRecommendedAction } from '../types/memory';
+import {
+  formatCustomerFacingMetric,
+  type PublicMetricUnit,
+} from './customer-facing-unit-policy';
+
+export type { PublicMetricUnit } from './customer-facing-unit-policy';
 
 // ────────────────────────────────────────────
 // 公开类型定义：封闭单位集合 + 判别联合事实
@@ -46,7 +51,25 @@ import type { RecentRecommendedAction } from '../types/memory';
  * 任何试图将 motion intensity / stress load / sleep score / quality score
  * 作为数值暴露给 LLM 的代码都会因为类型不匹配而无法编译。
  */
-export type PublicMetricUnit = 'bpm' | 'ms' | '%' | 'steps' | 'min';
+export interface PublicMetricValue {
+  value: number;
+  unit: PublicMetricUnit;
+  date?: string;
+}
+
+export interface PublicUserContextPacket {
+  profileId: string;
+  name: string;
+  age: number;
+  tags: string[];
+  baselines: {
+    restingHR: PublicMetricValue;
+    hrv: PublicMetricValue;
+    spo2: PublicMetricValue;
+    avgSleep: PublicMetricValue;
+    avgSteps: PublicMetricValue;
+  };
+}
 
 /**
  * 投影后的 latest24h 指标 — unit 收紧为 PublicMetricUnit 封闭集合。
@@ -60,8 +83,6 @@ export interface PublicLatest24hMetric {
   value?: number;
   /** 仅保留物理单位；score 类指标此处为 undefined */
   unit: PublicMetricUnit | undefined;
-  baseline?: number;
-  deltaPctVsBaseline?: number;
   status: 'normal' | 'attention' | 'critical' | 'missing';
   /** 临床严重程度说明（如 SpO2 绝对阈值触发的分级描述） */
   clinicalNote?: string;
@@ -189,20 +210,22 @@ export interface PublicHomepageEventInsight {
 export interface PublicHomepageContextPacket {
   latest24h: PublicLatest24hPacket;
   trend7d: PublicMetricSummary[];
-  rulesInsights: RuleInsightPacket[];
+  rulesInsights: PublicRuleInsightPacket[];
   suggestedChartTokens: ChartTokenId[];
   eventInsights: PublicHomepageEventInsight[];
   previousRecommendedActions?: RecentRecommendedAction[];
   todayOccurredActivities?: OccurredActivity[];
 }
 
-/** 投影后的 MetricSummary — score 类指标移除 latest/average/baseline 数值 */
-export interface PublicMetricValue {
-  value: number;
-  unit: PublicMetricUnit;
-  date?: string;
+export interface PublicRuleInsightPacket {
+  category: string;
+  severity: string;
+  metric?: string;
+  /** 由结构化字段生成，不透传可能包含内部评分的原始 message。 */
+  message: string;
 }
 
+/** 投影后的 MetricSummary — score 类指标移除 latest/average/baseline 数值 */
 export interface PublicMetricSummary {
   metric: string;
   latest?: PublicMetricValue;
@@ -226,17 +249,23 @@ export interface PublicViewSummaryContextPacket {
   selectedMetric?: PublicMetricSummary;
   overviewMetrics?: PublicMetricSummary[];
   visibleCharts: PublicVisibleChartPacket[];
-  rulesInsights: RuleInsightPacket[];
+  rulesInsights: PublicRuleInsightPacket[];
   suggestedChartTokens: ChartTokenId[];
 }
 
 export interface PublicAdvisorChatContextPacket {
   userMessage: string;
   questionIntent: QuestionIntentPacket;
-  currentPage: CurrentPagePacket;
-  relevantFacts: RelevantFactPacket[];
+  currentPage: Omit<CurrentPagePacket, 'chartDataSummaries'>;
+  relevantFacts: PublicReviewedRelevantFactPacket[];
   recentConversation: ConversationPacket[];
   constraints: AdvisorConstraintPacket[];
+}
+
+export interface PublicReviewedRelevantFactPacket {
+  factType: 'knowledge' | 'product';
+  summary: string;
+  evidenceIds: string[];
 }
 
 /**
@@ -251,7 +280,7 @@ export interface PublicAdvisorChatContextPacket {
  */
 export interface CustomerFacingEvidencePacket {
   task: TaskPacket;
-  userContext: UserContextPacket;
+  userContext: PublicUserContextPacket;
   dataWindow: DataWindowPacket;
   missingData: MissingDataItem[];
   /** 扁平化的客户可见事实列表（取代原始 EvidenceFact） */
@@ -267,15 +296,6 @@ export interface CustomerFacingEvidencePacket {
 // ────────────────────────────────────────────
 // 内部 → 公开单位映射
 // ────────────────────────────────────────────
-
-/** 物理单位白名单映射；不在映射表中的视为 score/未知 → 降级为 qualitative */
-const UNIT_PROJECTION: Record<string, PublicMetricUnit> = {
-  bpm: 'bpm',
-  ms: 'ms',
-  '%': '%',
-  steps: 'steps',
-  min: 'min',
-};
 
 /**
  * score 类指标集合：motion intensity、stress load、sleep score、quality score。
@@ -297,11 +317,6 @@ function isScoreMetric(metric: string): boolean {
   return SCORE_METRICS.has(metric);
 }
 
-function projectUnit(unit: string | undefined): PublicMetricUnit | undefined {
-  if (!unit) return undefined;
-  return UNIT_PROJECTION[unit];
-}
-
 /**
  * 将一个内部 (value, unit, metric) 三元组投影为 PublicFact。
  *
@@ -315,8 +330,9 @@ function projectMetricToFact(params: {
   qualifier: PublicQualitativeFact['qualifier'];
   interpretation: string;
   evidenceId: string;
+  locale: Locale;
 }): PublicFact {
-  const { metric, value, unit, qualifier, interpretation, evidenceId } = params;
+  const { metric, value, unit, qualifier, interpretation, evidenceId, locale } = params;
 
   // score 类指标强制降级为 qualitative，无论 unit 是什么
   if (isScoreMetric(metric)) {
@@ -329,9 +345,7 @@ function projectMetricToFact(params: {
     };
   }
 
-  const projectedUnit = projectUnit(unit);
-  // unit 不是物理白名单 → 降级为 qualitative
-  if (!projectedUnit || value === undefined) {
+  if (unit === undefined || value === undefined) {
     return {
       kind: 'qualitative',
       metric,
@@ -341,11 +355,13 @@ function projectMetricToFact(params: {
     };
   }
 
+  const projected = formatCustomerFacingMetric(metric, value, unit, locale);
+
   return {
     kind: 'numeric',
     metric,
-    value,
-    unit: projectedUnit,
+    value: projected.value,
+    unit: projected.unit,
     interpretation,
     evidenceId,
   };
@@ -357,9 +373,9 @@ function projectMetricToFact(params: {
 
 function projectEventWindowMetric(
   metric: HomepageEventWindowMetric,
+  locale: Locale,
 ): PublicEventWindowMetric {
   const isScore = isScoreMetric(metric.metric);
-  const projectedUnit = isScore ? undefined : projectUnit(metric.unit);
   // score 类指标：移除 interpretation 中的数值，仅保留定性描述
   const interpretation = isScore
     ? stripNumbersFromInterpretation(metric.metric, metric.interpretation, metric.qualifier)
@@ -368,7 +384,7 @@ function projectEventWindowMetric(
   // 物理指标：提取代表性数值与角色
   let value: number | undefined;
   let valueRole: 'max' | 'latest' | 'average' | undefined;
-  if (!isScore && projectedUnit) {
+  if (!isScore) {
     switch (metric.metric) {
       case 'heart_rate':
         value = metric.max ?? metric.latest;
@@ -392,10 +408,16 @@ function projectEventWindowMetric(
     }
   }
 
+
+  const projected =
+    !isScore && value !== undefined
+      ? formatCustomerFacingMetric(metric.metric, value, metric.unit, locale)
+      : undefined;
+
   return {
     metric: metric.metric,
-    unit: projectedUnit,
-    value,
+    unit: projected?.unit,
+    value: projected?.value,
     valueRole,
     qualifier: metric.qualifier,
     interpretation,
@@ -428,6 +450,7 @@ function stripNumbersFromInterpretation(
 
 function projectEventWindow(
   window: HomepageEventWindowSummary | undefined,
+  locale: Locale,
 ): PublicEventWindowSummary | undefined {
   if (!window) return undefined;
   return {
@@ -436,15 +459,19 @@ function projectEventWindow(
     end: window.end,
     durationMin: window.durationMin,
     sampleCount: window.sampleCount,
-    metrics: window.metrics.map(projectEventWindowMetric),
+    metrics: window.metrics.map((metric) => projectEventWindowMetric(metric, locale)),
   };
 }
 
-function projectPhysiology(item: EventPhysiologySummary): PublicEventPhysiologySummary {
+function projectPhysiology(
+  item: EventPhysiologySummary,
+  locale: Locale,
+): PublicEventPhysiologySummary {
   const isScore = isScoreMetric(item.metric);
-  const projectedUnit = isScore ? undefined : projectUnit(item.unit);
-  // score 类指标不保留 value
-  const value = isScore || !projectedUnit ? undefined : item.value;
+  const projected =
+    !isScore && item.value !== undefined
+      ? formatCustomerFacingMetric(item.metric, item.value, item.unit ?? '', locale)
+      : undefined;
   // score 类指标：清理 interpretation 中的数值
   const interpretation = isScore
     ? stripNumbersFromInterpretation(item.metric, item.interpretation, item.qualifier)
@@ -452,8 +479,8 @@ function projectPhysiology(item: EventPhysiologySummary): PublicEventPhysiologyS
 
   return {
     metric: item.metric,
-    unit: projectedUnit,
-    value,
+    unit: projected?.unit,
+    value: projected?.value,
     qualifier: item.qualifier,
     interpretation,
   };
@@ -488,7 +515,10 @@ function projectTransitionContext(
   };
 }
 
-function projectEventInsight(insight: HomepageEventInsight): PublicHomepageEventInsight {
+function projectEventInsight(
+  insight: HomepageEventInsight,
+  locale: Locale,
+): PublicHomepageEventInsight {
   return {
     eventId: insight.eventId,
     eventType: insight.eventType,
@@ -496,8 +526,8 @@ function projectEventInsight(insight: HomepageEventInsight): PublicHomepageEvent
     priority: insight.priority,
     timeRelation: insight.timeRelation,
     headline: insight.headline,
-    eventWindow: projectEventWindow(insight.eventWindow),
-    physiology: insight.physiology.map(projectPhysiology),
+    eventWindow: projectEventWindow(insight.eventWindow, locale),
+    physiology: insight.physiology.map((item) => projectPhysiology(item, locale)),
     recoveryContext: insight.recoveryContext.map(projectRecoveryContext),
     tension: projectTension(insight.tension),
     recommendedFocus: insight.recommendedFocus,
@@ -507,7 +537,10 @@ function projectEventInsight(insight: HomepageEventInsight): PublicHomepageEvent
   };
 }
 
-function projectLatest24hMetric(metric: Latest24hMetric): PublicLatest24hMetric {
+function projectLatest24hMetric(
+  metric: Latest24hMetric,
+  locale: Locale,
+): PublicLatest24hMetric {
   // score 类指标：移除 value/baseline/deltaPctVsBaseline，unit 置为 undefined
   if (isScoreMetric(metric.metric)) {
     return {
@@ -518,46 +551,49 @@ function projectLatest24hMetric(metric: Latest24hMetric): PublicLatest24hMetric 
       clinicalNote: metric.clinicalNote,
     };
   }
-  // 物理单位指标：投影 unit 到封闭集合
+  const projected =
+    metric.value !== undefined
+      ? formatCustomerFacingMetric(metric.metric, metric.value, metric.unit, locale)
+      : undefined;
+
+  // 物理单位指标：按 metric 语义转换，不透传上游 unit
   return {
     metric: metric.metric,
-    value: metric.value,
-    unit: projectUnit(metric.unit),
-    baseline: metric.baseline,
-    deltaPctVsBaseline: metric.deltaPctVsBaseline,
+    value: projected?.value,
+    unit: projected?.unit,
     status: metric.status,
     evidenceId: metric.evidenceId,
     clinicalNote: metric.clinicalNote,
   };
 }
 
-function projectLatest24h(packet: Latest24hPacket): PublicLatest24hPacket {
+function projectLatest24h(packet: Latest24hPacket, locale: Locale): PublicLatest24hPacket {
   return {
     date: packet.date,
-    metrics: packet.metrics.map(projectLatest24hMetric),
+    metrics: packet.metrics.map((metric) => projectLatest24hMetric(metric, locale)),
   };
 }
 
 function projectMetricValue(
   metric: string,
   value: { value: number; unit: string; date?: string } | undefined,
+  locale: Locale,
 ): PublicMetricValue | undefined {
   if (!value) return undefined;
   if (isScoreMetric(metric)) return undefined;
-  const projectedUnit = projectUnit(value.unit);
-  if (!projectedUnit) return undefined;
+  const projected = formatCustomerFacingMetric(metric, value.value, value.unit, locale);
   return {
-    value: value.value,
-    unit: projectedUnit,
+    value: projected.value,
+    unit: projected.unit,
     date: value.date,
   };
 }
 
-function projectMetricSummary(ms: MetricSummary): PublicMetricSummary {
+function projectMetricSummary(ms: MetricSummary, locale: Locale): PublicMetricSummary {
   return {
     metric: ms.metric,
-    latest: projectMetricValue(ms.metric, ms.latest),
-    average: projectMetricValue(ms.metric, ms.average),
+    latest: projectMetricValue(ms.metric, ms.latest, locale),
+    average: projectMetricValue(ms.metric, ms.average, locale),
     trendDirection: ms.trendDirection,
     anomalyPoints: ms.anomalyPoints.map((a) => ({
       date: a.date,
@@ -567,36 +603,49 @@ function projectMetricSummary(ms: MetricSummary): PublicMetricSummary {
   };
 }
 
-function projectVisibleChart(chart: VisibleChartPacket): PublicVisibleChartPacket {
+function projectVisibleChart(chart: VisibleChartPacket, locale: Locale): PublicVisibleChartPacket {
   return {
     chartToken: chart.chartToken,
     metric: chart.metric,
     timeframe: chart.timeframe,
     visible: chart.visible,
-    dataSummary: projectMetricSummary(chart.dataSummary),
+    dataSummary: projectMetricSummary(chart.dataSummary, locale),
   };
 }
 
-function projectHomepage(homepage: HomepageContextPacket): PublicHomepageContextPacket {
+function projectRuleInsight(insight: RuleInsightPacket, locale: Locale): PublicRuleInsightPacket {
+  const subject = insight.metric ?? (locale === 'zh' ? '整体状态' : 'overall status');
   return {
-    latest24h: projectLatest24h(homepage.latest24h),
-    trend7d: homepage.trend7d.map(projectMetricSummary),
-    rulesInsights: homepage.rulesInsights,
+    category: insight.category,
+    severity: insight.severity,
+    metric: insight.metric,
+    message:
+      locale === 'zh'
+        ? `${subject}：${insight.category}（${insight.severity}）`
+        : `${subject}: ${insight.category} (${insight.severity})`,
+  };
+}
+
+function projectHomepage(homepage: HomepageContextPacket, locale: Locale): PublicHomepageContextPacket {
+  return {
+    latest24h: projectLatest24h(homepage.latest24h, locale),
+    trend7d: homepage.trend7d.map((summary) => projectMetricSummary(summary, locale)),
+    rulesInsights: homepage.rulesInsights.map((insight) => projectRuleInsight(insight, locale)),
     suggestedChartTokens: homepage.suggestedChartTokens,
-    eventInsights: (homepage.eventInsights ?? []).map(projectEventInsight),
+    eventInsights: (homepage.eventInsights ?? []).map((insight) => projectEventInsight(insight, locale)),
     previousRecommendedActions: homepage.previousRecommendedActions,
     todayOccurredActivities: homepage.todayOccurredActivities,
   };
 }
 
-function projectViewSummary(vs: ViewSummaryContextPacket): PublicViewSummaryContextPacket {
+function projectViewSummary(vs: ViewSummaryContextPacket, locale: Locale): PublicViewSummaryContextPacket {
   return {
     tab: vs.tab,
     timeframe: vs.timeframe,
-    selectedMetric: vs.selectedMetric ? projectMetricSummary(vs.selectedMetric) : undefined,
-    overviewMetrics: vs.overviewMetrics?.map(projectMetricSummary),
-    visibleCharts: vs.visibleCharts.map(projectVisibleChart),
-    rulesInsights: vs.rulesInsights,
+    selectedMetric: vs.selectedMetric ? projectMetricSummary(vs.selectedMetric, locale) : undefined,
+    overviewMetrics: vs.overviewMetrics?.map((summary) => projectMetricSummary(summary, locale)),
+    visibleCharts: vs.visibleCharts.map((chart) => projectVisibleChart(chart, locale)),
+    rulesInsights: vs.rulesInsights.map((insight) => projectRuleInsight(insight, locale)),
     suggestedChartTokens: vs.suggestedChartTokens,
   };
 }
@@ -605,10 +654,46 @@ function projectAdvisorChat(chat: AdvisorChatContextPacket): PublicAdvisorChatCo
   return {
     userMessage: chat.userMessage,
     questionIntent: chat.questionIntent,
-    currentPage: chat.currentPage,
-    relevantFacts: chat.relevantFacts,
+    currentPage: {
+      page: chat.currentPage.page,
+      tab: chat.currentPage.tab,
+      timeframe: chat.currentPage.timeframe,
+      visibleChartTokens: [...chat.currentPage.visibleChartTokens],
+    },
+    relevantFacts: chat.relevantFacts
+      .filter(
+        (fact): fact is typeof fact & { factType: 'knowledge' | 'product' } =>
+          fact.factType === 'knowledge' || fact.factType === 'product',
+      )
+      .map((fact) => ({
+        factType: fact.factType,
+        summary: fact.summary,
+        evidenceIds: [...fact.evidenceIds],
+      })),
     recentConversation: chat.recentConversation,
     constraints: chat.constraints,
+  };
+}
+
+function projectUserContext(user: UserContextPacket, locale: Locale): PublicUserContextPacket {
+  const { baselines } = user;
+  return {
+    profileId: user.profileId,
+    name: user.name,
+    age: user.age,
+    tags: [...user.tags],
+    baselines: {
+      restingHR: formatCustomerFacingMetric('resting_hr', baselines.restingHR, 'bpm', locale),
+      hrv: formatCustomerFacingMetric('hrv', baselines.hrv, 'ms', locale),
+      spo2: formatCustomerFacingMetric('spo2', baselines.spo2, '%', locale),
+      avgSleep: formatCustomerFacingMetric(
+        'avg_sleep',
+        baselines.avgSleepMinutes,
+        'min',
+        locale,
+      ),
+      avgSteps: formatCustomerFacingMetric('steps', baselines.avgSteps, 'steps', locale),
+    },
   };
 }
 
@@ -623,8 +708,6 @@ function collectLatest24hFacts(packet: TaskContextPacket, locale: Locale): Publi
   if (!homepage) return facts;
 
   const metrics = homepage.latest24h.metrics;
-  const baselineMap = packet.userContext.baselines;
-
   // 当有 displayable event 时，只收集 material recovery metrics（与旧 renderer 过滤一致）
   const hasDisplayableEvent = (homepage.eventInsights ?? []).some(
     (i) => i.mentionPolicy?.summary === 'allowed',
@@ -647,7 +730,7 @@ function collectLatest24hFacts(packet: TaskContextPacket, locale: Locale): Publi
       continue;
     }
     const qualifier = statusToQualifier(m.status);
-    const interpretation = buildLatest24hInterpretation(m, baselineMap, locale);
+    const interpretation = buildLatest24hInterpretation(m, locale);
     facts.push(
       projectMetricToFact({
         metric: m.metric,
@@ -656,6 +739,7 @@ function collectLatest24hFacts(packet: TaskContextPacket, locale: Locale): Publi
         qualifier,
         interpretation,
         evidenceId: m.evidenceId ?? `latest24h_${m.metric}`,
+        locale,
       }),
     );
   }
@@ -677,27 +761,15 @@ function statusToQualifier(status: Latest24hMetric['status']): PublicQualitative
 
 function buildLatest24hInterpretation(
   m: Latest24hMetric,
-  baselines: UserContextPacket['baselines'],
   locale: Locale,
 ): string {
-  if (isScoreMetric(m.metric)) {
-    return locale === 'zh'
-      ? `${m.metric} 状态：${m.status}`
-      : `${m.metric} status: ${m.status}`;
-  }
-  const deltaPart =
-    m.deltaPctVsBaseline !== undefined && m.baseline !== undefined
-      ? locale === 'zh'
-        ? `相对平时 ${m.deltaPctVsBaseline > 0 ? '+' : ''}${m.deltaPctVsBaseline}%`
-        : `vs usual ${m.deltaPctVsBaseline > 0 ? '+' : ''}${m.deltaPctVsBaseline}%`
-      : '';
   return locale === 'zh'
-    ? `${m.metric} 当前 ${m.value}${m.unit}${deltaPart ? `（${deltaPart}）` : ''}`
-    : `${m.metric} current ${m.value}${m.unit}${deltaPart ? ` (${deltaPart})` : ''}`;
+    ? `${m.metric} 状态：${m.status}`
+    : `${m.metric} status: ${m.status}`;
 }
 
 /** 从事件窗口收集公开事实（同时扫描 recentEvents 和 eventInsights 的 eventWindow） */
-function collectEventWindowFacts(packet: TaskContextPacket, _locale: Locale): PublicFact[] {
+function collectEventWindowFacts(packet: TaskContextPacket, locale: Locale): PublicFact[] {
   const facts: PublicFact[] = [];
   const seenEvidenceIds = new Set<string>();
 
@@ -730,6 +802,7 @@ function collectEventWindowFacts(packet: TaskContextPacket, _locale: Locale): Pu
           qualifier,
           interpretation,
           evidenceId: m.evidenceId,
+          locale,
         }),
       );
     }
@@ -755,7 +828,7 @@ function pickEventWindowValue(m: HomepageEventWindowMetric): number | undefined 
 }
 
 /** 从 view summary 收集公开事实 */
-function collectViewSummaryFacts(packet: TaskContextPacket, _locale: Locale): PublicFact[] {
+function collectViewSummaryFacts(packet: TaskContextPacket, locale: Locale): PublicFact[] {
   const facts: PublicFact[] = [];
   const vs = packet.viewSummary;
   if (!vs) return facts;
@@ -772,8 +845,8 @@ function collectViewSummaryFacts(packet: TaskContextPacket, _locale: Locale): Pu
       });
       return;
     }
-    const latest = projectMetricValue(ms.metric, ms.latest);
-    const average = projectMetricValue(ms.metric, ms.average);
+    const latest = projectMetricValue(ms.metric, ms.latest, locale);
+    const average = projectMetricValue(ms.metric, ms.average, locale);
     if (latest) {
       facts.push({
         kind: 'numeric',
@@ -801,12 +874,12 @@ function collectViewSummaryFacts(packet: TaskContextPacket, _locale: Locale): Pu
 }
 
 /** 从 trend7d 收集公开事实（仅物理指标 latest） */
-function collectTrend7dFacts(packet: TaskContextPacket, _locale: Locale): PublicFact[] {
+function collectTrend7dFacts(packet: TaskContextPacket, locale: Locale): PublicFact[] {
   const facts: PublicFact[] = [];
   const trends = packet.homepage?.trend7d ?? [];
   for (const ms of trends) {
     if (isScoreMetric(ms.metric)) continue;
-    const latest = projectMetricValue(ms.metric, ms.latest);
+    const latest = projectMetricValue(ms.metric, ms.latest, locale);
     if (latest) {
       facts.push({
         kind: 'numeric',
@@ -818,6 +891,37 @@ function collectTrend7dFacts(packet: TaskContextPacket, _locale: Locale): Public
       });
     }
   }
+  return facts;
+}
+
+/** Advisor chat 的自由文本 relevantFacts 不进入公开包；只重建可追溯的结构化 evidence。 */
+function collectAdvisorChatFacts(packet: TaskContextPacket, locale: Locale): PublicFact[] {
+  const chat = packet.advisorChat;
+  if (!chat) return [];
+
+  const requestedEvidenceIds = new Set(chat.relevantFacts.flatMap((fact) => fact.evidenceIds));
+  const facts: PublicFact[] = [];
+
+  for (const evidence of packet.evidence) {
+    if (!requestedEvidenceIds.has(evidence.id)) continue;
+    if (!evidence.metric || typeof evidence.value !== 'number') continue;
+
+    facts.push(
+      projectMetricToFact({
+        metric: evidence.metric,
+        value: evidence.value,
+        unit: evidence.unit,
+        qualifier: 'normal',
+        interpretation:
+          locale === 'zh'
+            ? `${evidence.metric} 的可追溯事实`
+            : `traceable ${evidence.metric} fact`,
+        evidenceId: evidence.id,
+        locale,
+      }),
+    );
+  }
+
   return facts;
 }
 
@@ -846,21 +950,24 @@ export function buildCustomerFacingEvidencePacket(
     ...collectEventWindowFacts(packet, locale),
     ...collectTrend7dFacts(packet, locale),
     ...collectViewSummaryFacts(packet, locale),
+    ...collectAdvisorChatFacts(packet, locale),
   ];
 
   // 投影事件洞察为公开版本（移除内部字段）
-  const events = (packet.homepage?.eventInsights ?? []).map(projectEventInsight);
+  const events = (packet.homepage?.eventInsights ?? []).map((insight) =>
+    projectEventInsight(insight, locale),
+  );
 
   return {
     task: packet.task,
-    userContext: packet.userContext,
+    userContext: projectUserContext(packet.userContext, locale),
     dataWindow: packet.dataWindow,
     missingData: packet.missingData,
     facts,
     events,
-    visibleCharts: packet.visibleCharts.map(projectVisibleChart),
-    homepage: packet.homepage ? projectHomepage(packet.homepage) : undefined,
-    viewSummary: packet.viewSummary ? projectViewSummary(packet.viewSummary) : undefined,
+    visibleCharts: packet.visibleCharts.map((chart) => projectVisibleChart(chart, locale)),
+    homepage: packet.homepage ? projectHomepage(packet.homepage, locale) : undefined,
+    viewSummary: packet.viewSummary ? projectViewSummary(packet.viewSummary, locale) : undefined,
     advisorChat: packet.advisorChat ? projectAdvisorChat(packet.advisorChat) : undefined,
   };
 }

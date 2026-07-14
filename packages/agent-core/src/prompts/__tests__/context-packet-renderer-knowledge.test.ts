@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { renderTaskContextPacket } from '../context-packet-renderer';
+import { buildCustomerFacingEvidencePacket } from '../../context/customer-facing-evidence';
+import type { TaskContextPacket } from '../../context/context-packet';
 
 describe('context packet renderer knowledge facts', () => {
   it('renders knowledge and product relevant facts in Advisor Chat packet', () => {
-    const rendered = renderTaskContextPacket({
+    const packet: TaskContextPacket = {
       task: { type: 'advisor_chat', page: 'advisor', userMessage: 'HRV 下降是什么意思？' },
       userContext: {
         profileId: 'profile-a',
@@ -60,7 +62,11 @@ describe('context packet renderer knowledge facts', () => {
         recentConversation: [],
         constraints: [],
       },
-    }, 'zh');
+    };
+    const rendered = renderTaskContextPacket(
+      buildCustomerFacingEvidencePacket(packet, 'zh'),
+      'zh',
+    );
 
     expect(rendered).toContain('## Reviewed Knowledge Facts');
     expect(rendered).toContain('[knowledge_health-hrv-general-001]');

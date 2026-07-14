@@ -18,6 +18,10 @@ import type {
   PublicFact,
   PublicHomepageEventInsight,
 } from '../context/customer-facing-evidence';
+import {
+  formatCustomerFacingMetric,
+  type PublicMetricUnit,
+} from '../context/customer-facing-unit-policy';
 // Task 4.1：长度策略与计数器的唯一来源
 import {
   HOMEPAGE_SUMMARY_LENGTH,
@@ -167,6 +171,8 @@ const PROBABILISTIC_CUE_PATTERNS_EN: RegExp[] = [
 export interface ClaimLedger {
   /** 允许的数值集合（含来自 facts 和 action 文本的数字） */
   readonly allowedNumbers: ReadonlySet<number>;
+  /** 允许的物理量；数值与单位必须同时匹配。 */
+  readonly allowedClaims: ReadonlyArray<{ value: number; unit: PublicMetricUnit }>;
 }
 
 /**
@@ -178,13 +184,32 @@ export function buildClaimLedger(
   actionCandidates: ActionOption[],
 ): ClaimLedger {
   const allowedNumbers = new Set<number>();
+  const allowedClaims: Array<{ value: number; unit: PublicMetricUnit }> = [];
+
+  const addClaim = (value: number, unit: PublicMetricUnit): void => {
+    allowedNumbers.add(value);
+    if (!allowedClaims.some((claim) => claim.value === value && claim.unit === unit)) {
+      allowedClaims.push({ value, unit });
+    }
+  };
 
   // 来源 1：facts 中的 numeric 值
   for (const fact of evidencePacket.facts) {
     if (fact.kind === 'numeric') {
-      allowedNumbers.add(fact.value);
+      addClaim(fact.value, fact.unit);
     }
     // qualitative facts 没有数值，跳过
+  }
+
+  const baselines = evidencePacket.userContext.baselines;
+  for (const baseline of [
+    baselines.restingHR,
+    baselines.hrv,
+    baselines.spo2,
+    baselines.avgSleep,
+    baselines.avgSteps,
+  ]) {
+    addClaim(baseline.value, baseline.unit);
   }
 
   // 来源 2：action candidates 文本中的数字（duration 等）
@@ -202,16 +227,25 @@ export function buildClaimLedger(
   // 来源 3：events 中 eventWindow/physiology 的公开数值（物理指标）
   for (const evt of evidencePacket.events) {
     if (evt.eventWindow) {
-      allowedNumbers.add(evt.eventWindow.durationMin);
+      const duration = formatCustomerFacingMetric(
+        'event_duration',
+        evt.eventWindow.durationMin,
+        'min',
+        'en',
+      );
+      addClaim(duration.value, duration.unit);
       for (const m of evt.eventWindow.metrics) {
-        if (m.value !== undefined) {
-          allowedNumbers.add(m.value);
+        if (m.value !== undefined && m.unit) {
+          addClaim(m.value, m.unit);
         }
       }
     }
+    for (const item of evt.physiology) {
+      if (item.value !== undefined && item.unit) addClaim(item.value, item.unit);
+    }
   }
 
-  return { allowedNumbers };
+  return { allowedNumbers, allowedClaims };
 }
 
 /** 从文本中抽取整数（含小数），写入目标集合 */
@@ -446,7 +480,26 @@ interface NumericAttributionSegment {
   allowUnattributedActionDuration: boolean;
 }
 
-const ACTION_DURATION_UNITS = new Set(['min', '分钟', '分', '小时']);
+const ACTION_DURATION_UNITS = new Set(['min', '分钟', '分', 'h', '小时']);
+
+const UNIT_ALIASES: Readonly<Record<string, PublicMetricUnit>> = {
+  bpm: 'bpm',
+  ms: 'ms',
+  '%': '%',
+  steps: 'steps',
+  步: 'steps',
+  min: 'min',
+  分钟: 'min',
+  分: 'min',
+  h: 'h',
+  小时: 'h',
+  km: 'km',
+  公里: 'km',
+  kcal: 'kcal',
+  cal: 'kcal',
+  大卡: 'kcal',
+  千卡: 'kcal',
+};
 
 function checkNumericAttribution(
   segments: NumericAttributionSegment[],
@@ -455,7 +508,7 @@ function checkNumericAttribution(
   const violations: RealtimeBriefBoundaryViolation[] = [];
 
   // 带单位的数值正则：支持中英文单位
-  const numericWithUnit = /(\d+(?:\.\d+)?)\s*(bpm|ms|%|steps|min|分钟|分|小时|步|公里|km|cal|大卡|千卡|次)/gi;
+  const numericWithUnit = /(\d+(?:\.\d+)?)\s*(bpm|ms|%|steps|min|分钟|分|h|小时|步|公里|km|kcal|cal|大卡|千卡)/gi;
   const seen = new Set<string>();
 
   for (const segment of segments) {
@@ -463,19 +516,20 @@ function checkNumericAttribution(
     let match: RegExpExecArray | null;
     while ((match = numericWithUnit.exec(segment.text)) !== null) {
       const valueStr = match[1]!;
-      const unit = match[2]!.toLowerCase();
+      const rawUnit = match[2]!.toLowerCase();
+      const unit = UNIT_ALIASES[rawUnit];
       const value = parseFloat(valueStr);
-      if (Number.isNaN(value)) continue;
+      if (Number.isNaN(value) || !unit) continue;
 
       // 行动字段里的时间单位描述的是建议本身，不是健康测量结论。
-      if (segment.allowUnattributedActionDuration && ACTION_DURATION_UNITS.has(unit)) {
+      if (segment.allowUnattributedActionDuration && ACTION_DURATION_UNITS.has(rawUnit)) {
         continue;
       }
 
       if (seen.has(valueStr)) continue;
       seen.add(valueStr);
       // 不在 ledger 中 → 违规
-      if (!isNumberAllowed(value, ledger)) {
+      if (!isClaimAllowed(value, unit, ledger)) {
         violations.push({ code: 'unattributed_numeric_claim', value: valueStr });
       }
     }
@@ -491,11 +545,15 @@ function checkNumericAttribution(
  * 允许模型对数值进行合理的四舍五入（如 54.8ms→55ms, 8123步→8000步），
  * 同时拒绝明显编造的数值（如 evidence 65bpm 时声称 120bpm）。
  */
-function isNumberAllowed(value: number, ledger: ClaimLedger): boolean {
-  if (ledger.allowedNumbers.has(value)) return true;
-  for (const allowed of ledger.allowedNumbers) {
-    const tolerance = Math.max(1, allowed * 0.05);
-    if (Math.abs(allowed - value) <= tolerance) return true;
+function isClaimAllowed(
+  value: number,
+  unit: PublicMetricUnit,
+  ledger: ClaimLedger,
+): boolean {
+  for (const allowed of ledger.allowedClaims) {
+    if (allowed.unit !== unit) continue;
+    const tolerance = Math.max(1, allowed.value * 0.05);
+    if (Math.abs(allowed.value - value) <= tolerance) return true;
   }
   return false;
 }

@@ -111,6 +111,13 @@ export function buildTaskPrompt(
       '- Drinking water alone (without walking), temperature adjustment alone (without showering), and high-stimulus gaming actions must not be assigned a micro_event interaction; however, combined behaviors like "hydration walk", "warm shower", "cool shower" are allowed',
     ),
   );
+  sections.push(
+    t(
+      locale,
+      '- 所有客户可见数值必须原样使用公开上下文给出的值和单位；睡眠时长始终使用 h，禁止换算回 min、混用单位或自行换算',
+      '- Preserve every customer-facing value and unit exactly as provided by the public context. Sleep durations must remain in h; do not convert them back to min, mix units, or perform additional conversions',
+    ),
+  );
   if (taskType === AgentTaskType.HOMEPAGE_SUMMARY) {
     sections.push(
       t(
@@ -156,7 +163,7 @@ export function buildTaskPrompt(
   }
 
   // 规则引擎 insights（兼容旧测试，后续迁移到 packet）
-  if (rulesResult.insights.length > 0) {
+  if (!packet && rulesResult.insights.length > 0) {
     sections.push('');
     sections.push(t(locale, '## 预处理信号', '## Pre-processed Signals'));
     for (const insight of rulesResult.insights) {
