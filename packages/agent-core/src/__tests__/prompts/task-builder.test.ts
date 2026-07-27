@@ -127,6 +127,9 @@ describe('buildTaskPrompt', () => {
     expect(prompt).toContain('"groups"');
     expect(prompt).toContain('"tasks"');
     expect(prompt).toContain('满足计划请求时必须追加');
+    expect(prompt).toContain('"chartTokens": []');
+    expect(prompt).toContain('"microTips": []');
+    expect(prompt).toContain('不得混入额外健康分析、趋势图表或贴士');
   });
 
   it('使用 packet 时渲染 TaskContextPacket section', () => {

@@ -23,6 +23,8 @@ interface MessageBubbleProps {
  *   good / active → `--valo-active`（绿光谱，积极恢复）
  *   无状态 → 不渲染徽标。
  * - 行为完全保留：图表 token、记忆候选卡、framer-motion 入场动画。
+ * - 计划消息是排他的响应形态：存在 planDraft 时，只展示结构化计划与操作区，
+ *   不再叠加通用回复气泡、图表或记忆候选卡。
  * - 稳定测试锚点：
  *   `data-valo-message-role` / `data-valo-message-id` / `data-valo-message-status` /
  *   `data-valo-message-source` / `data-valo-message-timestamp` /
@@ -33,6 +35,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
   const isSystem = message.role === 'system';
+  const isPlanResponse = isAssistant && Boolean(message.planDraft);
 
   // 系统消息：居中淡化的提示气泡（错误 / 提示走 system 角色）。
   if (isSystem) {
@@ -93,23 +96,29 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           isUser ? 'items-end' : 'items-start'
         }`}
       >
-        <div
-          className={
-            'px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ' +
-            (isUser
-              ? 'rounded-tr-none text-[var(--valo-canvas)]'
-              : 'rounded-tl-none border border-[var(--valo-border)] text-[var(--valo-text-primary)]')
-          }
-          style={
-            isUser
-              ? { backgroundColor: 'var(--valo-prime)' }
-              : { backgroundColor: 'var(--valo-surface)' }
-          }
-        >
-          {message.content}
-        </div>
+        {!isPlanResponse && (
+          <div
+            data-valo-message-content="true"
+            className={
+              'px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ' +
+              (isUser
+                ? 'rounded-tr-none text-[var(--valo-canvas)]'
+                : 'rounded-tl-none border border-[var(--valo-border)] text-[var(--valo-text-primary)]')
+            }
+            style={
+              isUser
+                ? { backgroundColor: 'var(--valo-prime)' }
+                : { backgroundColor: 'var(--valo-surface)' }
+            }
+          >
+            {message.content}
+          </div>
+        )}
 
-        {isAssistant && message.chartTokens && message.chartTokens.length > 0 && (
+        {isAssistant &&
+          !isPlanResponse &&
+          message.chartTokens &&
+          message.chartTokens.length > 0 && (
           <div
             data-valo-message-charts="true"
             className="w-full mt-2 flex flex-col gap-2"
@@ -121,6 +130,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         )}
 
         {isAssistant &&
+          !isPlanResponse &&
           message.memoryCandidates &&
           message.memoryCandidates.length > 0 && (
             <div

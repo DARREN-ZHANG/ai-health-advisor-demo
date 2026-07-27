@@ -31,6 +31,10 @@ vi.mock('./MemoryCandidateCard', () => ({
   ),
 }));
 
+vi.mock('./PlanDraftCard', () => ({
+  PlanDraftCard: () => <div data-mock-plan-draft="true" />,
+}));
+
 const MESSAGES = {
   advisor: {
     statusLabel: {
@@ -226,6 +230,34 @@ describe('MessageBubble', () => {
     expect(
       document.querySelector('[data-valo-message-memory="true"]'),
     ).not.toBeNull();
+  });
+
+  it('planDraft 响应只展示计划，不渲染普通文案、图表或记忆候选卡', () => {
+    renderBubble(
+      baseMessage({
+        role: 'assistant',
+        content: '这段睡眠质量分析不应显示',
+        chartTokens: ['sleep-duration' as never],
+        memoryCandidates: [
+          { id: 'mem-plan', proposedConfirmationText: 'x', evidenceQuote: 'y' } as never,
+        ],
+        planDraft: {
+          status: 'executable',
+          draft: {
+            draftId: 'draft-1',
+            title: '7-Day Sleep Plan',
+            summary: 'Plan summary',
+            groups: [{ title: 'Day 1', tasks: [{ title: 'Set a wake time' }] }],
+            createdAt: '2026-07-27T00:00:00.000Z',
+          },
+        },
+      }),
+    );
+
+    expect(document.querySelector('[data-mock-plan-draft="true"]')).not.toBeNull();
+    expect(document.querySelector('[data-valo-message-content="true"]')).toBeNull();
+    expect(document.querySelector('[data-valo-message-charts="true"]')).toBeNull();
+    expect(document.querySelector('[data-valo-message-memory="true"]')).toBeNull();
   });
 
   // ---------- 错误分支 ----------

@@ -275,14 +275,12 @@ export function buildTaskPrompt(
     sections.push(
       t(
         locale,
-        '  "summary": "计划总览或顾问回复",',
-        '  "summary": "Plan overview or advisor response",',
+        '  "summary": "用户请求的计划已准备好",',
+        '  "summary": "The requested plan is ready",',
       ),
     );
-    sections.push('  "chartTokens": ["CHART_TOKEN_1"],');
-    sections.push(
-      t(locale, '  "microTips": ["贴士1", "贴士2"],', '  "microTips": ["Tip 1", "Tip 2"],'),
-    );
+    sections.push('  "chartTokens": [],');
+    sections.push('  "microTips": [],');
     sections.push('  "planDraft": {');
     sections.push(t(locale, '    "title": "7天恢复计划",', '    "title": "7-Day Recovery Plan",'));
     sections.push(
@@ -336,8 +334,8 @@ export function buildTaskPrompt(
     sections.push(
       t(
         locale,
-        '满足计划请求时必须追加 planDraft；需要继续澄清或不是计划请求时，必须从 JSON 中完整省略 planDraft 字段。',
-        'When the plan request is sufficiently specified, planDraft is required. Omit the entire planDraft field when clarification is still needed or the request is not for a plan.',
+        '满足计划请求时必须追加 planDraft，并将 chartTokens 与 microTips 设为空数组；计划响应是独立形态，不得混入额外健康分析、趋势图表或贴士。需要继续澄清或不是计划请求时，必须从 JSON 中完整省略 planDraft 字段。',
+        'When the plan request is sufficiently specified, planDraft is required and chartTokens and microTips must be empty arrays. A plan response is a standalone response mode: do not mix in extra health analysis, trend charts, or tips. Omit the entire planDraft field when clarification is still needed or the request is not for a plan.',
       ),
     );
   }

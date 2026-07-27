@@ -33,9 +33,9 @@ function envelopeWithDraft(draftId: string) {
   return {
     success: true,
     data: {
-      summary: '已为你准备好 7 天计划。',
-      chartTokens: [],
-      microTips: [],
+      summary: '这段通用健康分析在计划响应中不应显示。',
+      chartTokens: ['SLEEP_7DAYS'],
+      microTips: ['这条额外贴士不应显示'],
       source: 'llm',
       statusColor: 'good',
       planDraft: {
@@ -160,6 +160,10 @@ test.describe('Plan generation & execution', () => {
     await expect(page.locator(visible('[data-valo-plan-draft-group="1"]'))).toContainText(
       '23:00 前入睡',
     );
+    await expect(
+      page.getByText('这段通用健康分析在计划响应中不应显示。'),
+    ).toHaveCount(0);
+    await expect(page.locator('[data-valo-message-charts="true"]')).toHaveCount(0);
     await expect(page.locator(visible('[data-valo-plan-draft-execute="true"]'))).toBeVisible();
 
     // 第二轮 chat 产出新 draft → 旧 draftId 应变为 revoked
