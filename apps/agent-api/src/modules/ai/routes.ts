@@ -465,7 +465,10 @@ export async function aiRoutes(app: FastifyInstance) {
 
     const memoryCandidates = [];
 
-    if (app.memoryServices.extractor && parseResult.data.userMessage) {
+    // 计划生成已经由 Plan 模块承载，属于本轮即时操作，
+    // 不能再把同一请求复制成长期记忆候选。
+    const hasPlanDraft = Boolean(result.planDraftPreview ?? result.planDraft);
+    if (app.memoryServices.extractor && parseResult.data.userMessage && !hasPlanDraft) {
       const extraction = await app.memoryServices.extractor.extract({
         userMessage: parseResult.data.userMessage,
         profileId,

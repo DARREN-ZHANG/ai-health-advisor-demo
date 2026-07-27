@@ -705,6 +705,68 @@ describe('AI Routes', () => {
       await app.close();
     });
 
+    it('响应含 planDraftPreview 时跳过 memory extractor（计划操作不应重复成为长期目标）', async () => {
+      const app = await buildApp({
+        env: {
+          FALLBACK_ONLY_MODE: 'true',
+          ENABLE_GOD_MODE: 'false',
+          MEMORY_BACKEND: 'memory',
+        },
+      });
+
+      const extract = vi.fn(async () => ({
+        candidates: [
+          {
+            kind: 'goal',
+            canonicalKey: 'goal:improve-sleep-in-seven-days',
+            payload: { goal: '在7天内改善睡眠浅和白天疲惫' },
+            evidenceQuote: '生成一个可执行的7天睡眠恢复计划',
+            source: 'user_declared' as const,
+            confidence: 'explicit' as const,
+            proposedConfirmationText: '是否记录您的目标：在7天内改善睡眠浅和白天疲惫？',
+            requiresConfirmation: true,
+          },
+        ],
+        rejectedCount: 0,
+      }));
+      app.memoryServices.extractor = { extract };
+
+      mockedExecuteAgent.mockResolvedValueOnce({
+        ...chatResponse(),
+        planDraftPreview: {
+          title: '7天睡眠恢复计划',
+          summary: '通过一致的作息改善睡眠体验。',
+          groups: [
+            {
+              title: '第 1 天',
+              tasks: [{ title: '固定起床时间', estimatedMinutes: 5 }],
+            },
+          ],
+        },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/chat',
+        headers: { 'x-session-id': 'sess-plan-memory-1' },
+        payload: {
+          profileId: 'profile-a',
+          pageContext: { profileId: 'profile-a', page: 'advisor', timeframe: 'week' },
+          userMessage: '请为睡眠浅、白天疲惫生成一个可执行的7天睡眠恢复计划。',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(extract).not.toHaveBeenCalled();
+      expect(body.data.memoryCandidates).toBeUndefined();
+      expect(body.data.planDraft).toMatchObject({
+        title: '7天睡眠恢复计划',
+      });
+
+      await app.close();
+    });
+
     test('合法 uiContext 原样透传给 orchestrator', async () => {
       mockedExecuteAgent.mockReset();
       mockedExecuteAgent.mockResolvedValueOnce(chatResponse());
