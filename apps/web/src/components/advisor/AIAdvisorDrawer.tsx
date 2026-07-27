@@ -63,6 +63,7 @@ export function AIAdvisorDrawer() {
     clearMessages,
     pendingPrompt,
     setPendingPrompt,
+    markPlanDraftExecuted,
   } = useAIAdvisorStore();
   const { currentProfileId } = useProfileStore();
   const { activeTab, timeframe } = useDataCenterStore();
@@ -151,6 +152,12 @@ export function AIAdvisorDrawer() {
           source: response.source,
           statusColor: response.statusColor,
           meta: response.meta,
+          // 仅在 envelope 通过审核且 route 层注入了 draftId 时挂载 planDraft。
+          // store.addMessage 内部会把历史消息中的 executable draft 自动转为 revoked。
+          planDraft:
+            response.planDraft && response.meta.finishReason === 'complete'
+              ? { status: 'executable', draft: response.planDraft }
+              : undefined,
         });
 
         // 6. 应用首页 Trends Brief UI 指令（仅当 finishReason=complete 且 profile 匹配）。
@@ -362,7 +369,7 @@ function ChatContent({
                     aria-label={t('composerLabel')}
                     placeholder={t('composerPlaceholder')}
                     data-valo-advisor-composer="true"
-                    className="min-h-[18px] flex-1 resize-none bg-transparent text-[14px] leading-[18px] font-medium text-[var(--valo-text-primary)] placeholder:text-[var(--valo-text-secondary)] focus:outline-none"
+                    className="min-h-[18px] flex-1 resize-none bg-transparent text-[14px] leading-[18px] font-medium text-[var(--valo-text-primary)] placeholder:text-[var(--valo-text-secondary)] focus:outline-none focus-visible:outline-none focus-visible:shadow-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();

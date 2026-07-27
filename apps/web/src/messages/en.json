@@ -319,6 +319,16 @@
       "error": "Serious",
       "warning": "Concern",
       "good": "Active"
+    },
+    "planDraft": {
+      "badge": "Structured Plan",
+      "taskCount": "{count} tasks",
+      "minutes": "min",
+      "execute": "Execute Plan",
+      "executing": "Executing…",
+      "executeFailed": "Failed to execute, please try again",
+      "viewPlan": "View Plan",
+      "revoked": "Replaced by a newer version"
     }
   },
   "demoControl": {

@@ -319,6 +319,16 @@
       "error": "严重",
       "warning": "关注",
       "good": "活跃"
+    },
+    "planDraft": {
+      "badge": "结构化计划",
+      "taskCount": "{count} 项任务",
+      "minutes": "分钟",
+      "execute": "执行计划",
+      "executing": "执行中…",
+      "executeFailed": "执行失败，请稍后重试",
+      "viewPlan": "查看计划",
+      "revoked": "已替换为新版本"
     }
   },
   "demoControl": {

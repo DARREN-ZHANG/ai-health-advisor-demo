@@ -6,6 +6,7 @@ import type { Message } from '@/stores/ai-advisor.store';
 
 import { ChartTokenRenderer } from './ChartTokenRenderer';
 import { MemoryCandidateCard } from './MemoryCandidateCard';
+import { PlanDraftCard } from './PlanDraftCard';
 
 interface MessageBubbleProps {
   message: Message;
@@ -131,6 +132,10 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               ))}
             </div>
           )}
+
+        {isAssistant && message.planDraft && (
+          <PlanDraftCard planDraft={message.planDraft} />
+        )}
 
         <span
           data-valo-message-timestamp={new Date(message.timestamp).toISOString()}
