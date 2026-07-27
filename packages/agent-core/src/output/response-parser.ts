@@ -4,8 +4,14 @@ import {
   ActionOptionSchema,
   FutureSuggestionSchema,
   AgentTaskType,
+  PlanDraftInputSchema,
 } from '@health-advisor/shared';
-import type { AgentResponseEnvelope, PageContext, FutureSuggestion } from '@health-advisor/shared';
+import type {
+  AgentResponseEnvelope,
+  PageContext,
+  FutureSuggestion,
+  PlanDraftInput,
+} from '@health-advisor/shared';
 import { ChartTokenIdSchema } from '@health-advisor/shared';
 import {
   MAX_ACTIONS,
@@ -72,6 +78,22 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
   }
 
   const obj = parsed as Record<string, unknown>;
+
+  let planDraftPreview: PlanDraftInput | undefined;
+  try {
+    planDraftPreview = extractPlanDraft(obj.planDraft, meta.taskType);
+  } catch (error) {
+    const message =
+      error instanceof Error && error.name === 'PlanDraftParseError'
+        ? error.message
+        : 'planDraft 解析失败';
+    return { success: false, error: message, raw };
+  }
+  // 提前移除字段，避免后续构造 envelope 时再次进入解析逻辑。
+  if (obj.planDraft !== undefined) {
+    delete obj.planDraft;
+  }
+  void planDraftPreview; // 真正使用处在 envelope 构造时引用
 
   // chartToken 白名单过滤
   const rawTokens = Array.isArray(obj.chartTokens) ? obj.chartTokens : [];
@@ -177,6 +199,7 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
     actions,
     actionsSectionTitle,
     futureSuggestions,
+    planDraftPreview,
     meta: {
       taskType: meta.taskType,
       pageContext: meta.pageContext,
@@ -245,6 +268,42 @@ function extractHhMm(iso: string | undefined): string | null {
   if (!iso || iso.length < 16) return null;
   const hhmm = iso.slice(11, 16);
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(hhmm) ? hhmm : null;
+}
+
+/**
+ * 解析 ADVISOR_CHAT 输出中的 planDraft 字段。
+ *
+ * 严格策略：
+ * - 仅 ADVISOR_CHAT 任务接受 planDraft；其他任务出现该字段视为非法（不解析）。
+ * - 字段必须通过 PlanDraftInputSchema；任何非法或超限结构整体 envelope 失败。
+ * - 不做启发式修复、不截断、不补字段。
+ *
+ * 当 taskType 不是 ADVISOR_CHAT 时一律返回 undefined，无视 LLM 输出。
+ */
+function extractPlanDraft(
+  raw: unknown,
+  taskType: AgentTaskType,
+): PlanDraftInput | undefined {
+  if (taskType !== AgentTaskType.ADVISOR_CHAT) return undefined;
+  if (raw === undefined) return undefined;
+
+  const parsed = PlanDraftInputSchema.safeParse(raw);
+  if (!parsed.success) {
+    // 抛出受检错误，调用方（parseAgentResponse）的 try 之外会接收。
+    // 由于本函数签名是返回值而非抛错，这里用对象包装并通过 throw 表达。
+    throw new PlanDraftParseError(
+      `planDraft 校验失败: ${parsed.error.issues.map((i) => i.message).join(', ')}`,
+    );
+  }
+  return parsed.data;
+}
+
+/** 内部错误类型：planDraft 解析失败时抛出，由 parseAgentResponse 转 ParseFailure。 */
+class PlanDraftParseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PlanDraftParseError';
+  }
 }
 
 function extractJson(text: string): string | null {

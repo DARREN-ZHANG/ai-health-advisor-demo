@@ -313,6 +313,17 @@ export function enforceCustomerContentPolicy(
       textParts.push(s.predictedState, s.rationale, s.action.title, s.action.description, s.action.aiPromise);
     }
   }
+  if (envelope.planDraftPreview) {
+    textParts.push(envelope.planDraftPreview.title, envelope.planDraftPreview.summary);
+    for (const group of envelope.planDraftPreview.groups) {
+      textParts.push(group.title);
+      for (const task of group.tasks) {
+        textParts.push(task.title);
+        if (task.description) textParts.push(task.description);
+        if (task.suggestedTimeOfDay) textParts.push(task.suggestedTimeOfDay);
+      }
+    }
+  }
   const fullText = textParts.join('\n');
 
   // 数值归因按字段语义检查。ActionOption 中的时长是用户可执行的处方参数，

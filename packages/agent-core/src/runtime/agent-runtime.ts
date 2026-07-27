@@ -23,6 +23,7 @@ import { buildTaskPrompt } from '../prompts/task-builder';
 import { parseAgentResponse } from '../output/response-parser';
 import { validateChartTokens } from '../output/token-validator';
 import { cleanSafetyIssues } from '../output/safety-cleaner';
+import { cleanPlanDraftSafety } from '../output/plan-draft-cleaner';
 import {
   enforceCustomerContentPolicy,
   buildRegenerationFeedback,
@@ -481,11 +482,19 @@ export async function executeAgent(
       safeEnvelope.actions ?? [],
     );
 
+    // 计划草稿文本也走同一套安全清洗：诊断/用药/缺失数据幻觉必须同步处理。
+    // 任何字段被触碰都记入 flags；审核链路据此决定是否升级拒绝（这里不直接拒绝）。
+    const planDraftCleaned =
+      safeEnvelope.planDraftPreview !== undefined
+        ? cleanPlanDraftSafety(safeEnvelope.planDraftPreview, context.dataWindow.missingFields)
+        : undefined;
+
     const cleanedEnvelope: AgentResponseEnvelope = {
       ...safeEnvelope,
       summary: cleaned.cleaned,
       microTips: cleaned.cleanedTips.length > 0 ? cleaned.cleanedTips : undefined,
       actions: cleaned.cleanedActions.length > 0 ? cleaned.cleanedActions : undefined,
+      planDraftPreview: planDraftCleaned?.cleaned,
       meta: {
         ...safeEnvelope.meta,
         finishReason: 'complete',
