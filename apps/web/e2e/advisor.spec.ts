@@ -21,7 +21,15 @@ function mockEnvelope(overrides: Record<string, unknown> = {}) {
     memoryCandidates: [],
     source: 'llm',
     statusColor: 'good',
-    meta: { taskType: 'chat', pageContext: {}, finishReason: 'stop' },
+    meta: {
+      taskType: 'advisor_chat',
+      pageContext: {
+        profileId: 'profile-a',
+        page: 'homepage',
+        timeframe: 'week',
+      },
+      finishReason: 'complete',
+    },
     ...overrides,
   };
 }
@@ -98,8 +106,9 @@ test.describe('AI Advisor E2E', () => {
   /** 等待 trigger 可见并打开 Drawer。 */
   async function openDrawer(page: Page) {
     await page.locator(visible('[data-valo-advisor-trigger="true"]')).click();
+    // drawer 打开后 chat shell 可见
     await expect(
-      page.locator(visible('[data-valo-advisor-title="true"]')),
+      page.locator(visible('[data-valo-chat-shell="true"]')),
     ).toBeVisible();
   }
 

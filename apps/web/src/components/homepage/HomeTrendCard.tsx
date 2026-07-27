@@ -6,7 +6,6 @@ import type { HomeTrendCardDisplay } from '@health-advisor/shared';
 import {
   HOME_TREND_CARD_MOCK_ACTIVITY,
   HOME_TREND_CARD_MOCK_SLEEP,
-  type HomeTrendCardMock,
 } from './home-trend-card.mock';
 
 /**
