@@ -12,6 +12,7 @@ import type { MessagePlanDraft } from '@/stores/ai-advisor.store';
 import { useAIAdvisorStore } from '@/stores/ai-advisor.store';
 import { useExecutePlanDraft } from '@/hooks/use-plan-query';
 import { useProfileStore } from '@/stores/profile.store';
+import { useUIStore } from '@/stores/ui.store';
 
 interface PlanDraftCardProps {
   planDraft: MessagePlanDraft;
@@ -34,6 +35,7 @@ export function PlanDraftCard({ planDraft }: PlanDraftCardProps) {
   const { currentProfileId } = useProfileStore();
   const executeMutation = useExecutePlanDraft(currentProfileId);
   const markPlanDraftExecuted = useAIAdvisorStore((s) => s.markPlanDraftExecuted);
+  const closeAdvisor = useUIStore((s) => s.toggleAdvisorDrawer);
   const [error, setError] = useState<string | null>(null);
 
   const { draft, status } = planDraft;
@@ -48,6 +50,8 @@ export function PlanDraftCard({ planDraft }: PlanDraftCardProps) {
     try {
       await executeMutation.mutateAsync({ draftId: draft.draftId });
       markPlanDraftExecuted(draft.draftId);
+      // 执行成功后必须先关掉 advisor drawer，否则抽屉遮罩会拦截 /plan 页面的点击事件。
+      closeAdvisor(false);
       router.push('/plan');
     } catch (err) {
       const message = err instanceof Error ? err.message : t('executeFailed');

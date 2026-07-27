@@ -7,7 +7,7 @@ import { useUIStore } from '@/stores/ui.store';
 /**
  * BottomNav 单元测试。
  *
- * I6.2 起，底部导航 IA 统一为 Home / Trends / My 三项；
+ * I6.2 起，底部导航 IA 统一为 Home / Trends / Plan / My 四项；
  * 颜色全部走 var(--valo-*) token。
  */
 
@@ -18,6 +18,7 @@ const ZH_MESSAGES = {
   nav: {
     home: '首页',
     trends: '趋势',
+    plan: '计划',
     my: '我的',
   },
 } as const;
@@ -48,12 +49,13 @@ describe('BottomNav', () => {
     vi.clearAllMocks();
   });
 
-  it('渲染三个导航项：Home / Trends / My', () => {
+  it('渲染四个导航项：Home / Trends / Plan / My', () => {
     renderWithIntl(<BottomNav />);
     const items = screen.getAllByRole('link');
-    expect(items).toHaveLength(3);
+    expect(items).toHaveLength(4);
     expect(screen.getByText('首页')).toBeInTheDocument();
     expect(screen.getByText('趋势')).toBeInTheDocument();
+    expect(screen.getByText('计划')).toBeInTheDocument();
     expect(screen.getByText('我的')).toBeInTheDocument();
   });
 
