@@ -16,6 +16,7 @@ import { AiOrchestrator, type AiExecutionTimings } from '../../services/ai-orche
 import type { AiRequestMeta } from '../../plugins/request-context.js';
 import { SseWriter } from '../../utils/sse-writer.js';
 import { resolveCorsHeaders } from '../../plugins/cors.js';
+import { PlanService } from '../plans/service.js';
 
 interface MorningBriefBody {
   profileId: string;
@@ -63,6 +64,7 @@ export async function aiRoutes(app: FastifyInstance) {
     memoryServices: app.memoryServices,
     modelVersion: app.config.LLM_MODEL,
   });
+  const planService = new PlanService(app.runtime);
 
   /** 将 AI 结果元数据附加到请求上下文，供 onResponse 日志使用 */
   function attachAiLogMeta(
@@ -499,9 +501,41 @@ export async function aiRoutes(app: FastifyInstance) {
       }
     }
 
+    // Plan draft injection：当 LLM 在 ADVISOR_CHAT 输出验证通过的 planDraftPreview 时，
+    // 注册到 plan-store 得到 draftId，构造可执行的 PlanDraft 返回给前端。
+    // fallback / timeout / 安全审核失败响应不携带 planDraftPreview，因此不会触发注入。
+    let planDraft = result.planDraft;
+    if (
+      result.meta.finishReason === 'complete' &&
+      result.planDraftPreview &&
+      request.ctx.sessionId &&
+      !result.planDraft
+    ) {
+      try {
+        planDraft = planService.saveDraft(
+          request.ctx.sessionId,
+          profileId,
+          result.planDraftPreview,
+        );
+      } catch (err) {
+        // saveDraft 失败不应影响主响应；记录后跳过注入。
+        request.log.warn(
+          { err, requestId: request.ctx.requestId, profileId },
+          'plan draft save failed; skipping injection',
+        );
+      }
+    }
+
+    const { planDraftPreview: _unusedPreview, ...resultWithoutPreview } = result;
+    void _unusedPreview;
+
     return createSuccessResponse(
       attachSessionMeta(
-        { ...result, ...(memoryCandidates.length > 0 ? { memoryCandidates } : {}) },
+        {
+          ...resultWithoutPreview,
+          ...(memoryCandidates.length > 0 ? { memoryCandidates } : {}),
+          ...(planDraft ? { planDraft } : {}),
+        },
         request.ctx.sessionId,
       ),
       buildMeta(request),

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ChartTokenIdSchema } from './chart-token';
 import { AgentTaskType } from '../types/agent';
 import { MicroEventParamsSchema, MicroEventTypeSchema } from './micro-event';
-import { PlanDraftInputSchema } from './plan';
+import { PlanDraftInputSchema, PlanDraftSchema } from './plan';
 
 export const AgentTaskTypeSchema = z.nativeEnum(AgentTaskType);
 
@@ -128,7 +128,10 @@ export const AgentResponseEnvelopeSchema = z.object({
   memoryCandidates: z.array(MemoryCandidateConfirmationSchema).optional(),
   futureSuggestions: z.array(FutureSuggestionSchema).max(2).optional(),
   uiDirectives: z.array(UiDirectiveSchema).max(1).optional(),
+  /** Agent-core 内部使用的草稿预览（无 draftId）；route 层注入 draftId 后转为 planDraft。 */
   planDraftPreview: PlanDraftInputSchema.optional(),
+  /** Agent-api 注入的可执行计划草稿：含 draftId，调用 /plans/drafts/:draftId/execute 使用。 */
+  planDraft: PlanDraftSchema.optional(),
   meta: z.object({
     taskType: AgentTaskTypeSchema,
     pageContext: PageContextSchema,

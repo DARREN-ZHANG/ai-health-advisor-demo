@@ -1,6 +1,6 @@
 import type { ChartTokenId } from './chart-token';
 import type { MicroEventParams, MicroEventType } from './micro-event';
-import type { PlanDraftInput } from './plan';
+import type { PlanDraft, PlanDraftInput } from './plan';
 
 export enum AgentTaskType {
   HOMEPAGE_SUMMARY = 'homepage_summary',
@@ -101,6 +101,12 @@ export interface AgentResponseEnvelope {
    * - fallback / timeout / 安全审核失败 / 解析失败时绝不携带此字段。
    */
   planDraftPreview?: PlanDraftInput;
+  /**
+   * Agent-api 注入的可执行草稿：含 draftId；前端据此调用
+   * POST /sessions/:sessionId/profiles/:profileId/plans/drafts/:draftId/execute。
+   * 该字段仅出现在 chat 响应中，且仅当 planDraftPreview 验证通过后注入。
+   */
+  planDraft?: PlanDraft;
   meta: {
     taskType: AgentTaskType;
     pageContext: PageContext;

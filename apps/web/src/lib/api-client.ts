@@ -23,6 +23,16 @@ function getSessionId(): string {
   return pageSessionId;
 }
 
+/**
+ * 取得当前页面 session 的稳定 ID（不会副作用创建新 session）。
+ *
+ * 用于在 plan hooks 中作为 query key 一部分；若尚未初始化（如 SSR 或首次访问），
+ * 返回 undefined，调用方据此决定是否启用查询。
+ */
+export function peekSessionId(): string | undefined {
+  return pageSessionId;
+}
+
 /** 接受后端回传的 sessionId，并仅在当前页面实例内保存。 */
 export function setSessionId(id: string) {
   pageSessionId = id;
@@ -165,6 +175,13 @@ export const apiClient = {
     request<T>(path, {
       ...options,
       method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+
+  patch: <T>(path: string, body?: unknown, options?: RequestInit) =>
+    request<T>(path, {
+      ...options,
+      method: 'PATCH',
       body: JSON.stringify(body),
     }),
 

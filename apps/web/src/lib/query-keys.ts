@@ -34,4 +34,10 @@ export const queryKeys = {
     state: () => [...queryKeys.godMode.all, 'state'] as const,
 
   },
+  plan: {
+    all: ['plan'] as const,
+    /** 当前会话 + profile 维度的当前计划；不存在时 data=null。 */
+    current: (sessionId: string, profileId: string) =>
+      [...queryKeys.plan.all, 'current', sessionId, profileId] as const,
+  },
 } as const;
