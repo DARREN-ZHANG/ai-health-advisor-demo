@@ -81,6 +81,17 @@ export function AIAdvisorDrawer() {
     }
   }, [messages, isLoading]);
 
+  // 抽屉打开时隐藏页面级滚动条：抽屉自身已有内部滚动（消息列表 no-scrollbar），
+  // 此时背景页面的 html 滚动条是多余的视觉干扰，隐藏它避免出现两条滚动条。
+  // 仍保留 html 的滚动能力（no-scrollbar 只隐藏视觉条），关闭后恢复。
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isAdvisorDrawerOpen) {
+      root.classList.add('no-scrollbar');
+      return () => root.classList.remove('no-scrollbar');
+    }
+  }, [isAdvisorDrawerOpen]);
+
   // 处理 Active Sensing 触发的自动发送逻辑
   useEffect(() => {
     if (isAdvisorDrawerOpen && pendingPrompt && !isLoading && currentProfileId) {
@@ -368,7 +379,7 @@ function ChatContent({
                     aria-label={t('composerLabel')}
                     placeholder={t('composerPlaceholder')}
                     data-valo-advisor-composer="true"
-                    className="min-h-[18px] flex-1 resize-none bg-transparent text-[14px] leading-[18px] font-medium text-[var(--valo-text-primary)] placeholder:text-[var(--valo-text-secondary)] focus:outline-none focus-visible:outline-none focus-visible:shadow-none"
+                    className="min-h-[18px] flex-1 resize-none bg-transparent text-[14px] leading-[18px] font-medium text-[var(--valo-text-primary)] placeholder:text-[var(--valo-text-secondary)] focus:outline-none no-scrollbar"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();

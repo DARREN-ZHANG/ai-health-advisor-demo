@@ -110,11 +110,13 @@ body {
 /* ---------- 可访问性：焦点环与最小触达区 ---------- */
 
 /* 所有原生可交互元素都展示可见焦点环 */
+/* AI 顾问输入框（data-valo-advisor-composer）由其胶囊容器承担视觉焦点，
+   这里排除它，避免 focus 时出现多余边框 */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible,
+textarea:not([data-valo-advisor-composer]):focus-visible,
 [role='button']:focus-visible,
 [role='link']:focus-visible,
 [role='radio']:focus-visible,
@@ -148,6 +150,20 @@ textarea:focus-visible,
 .valo-bottomnav-safe,
 [data-valo-bottomnav='true'] {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/*
+ * 隐藏滚动条工具类。
+ * 用于需要内部滚动但不显示可见滚动条的容器（如 AI 顾问消息列表、横向滚动条）。
+ * 仍可正常滚动（滚轮/触控），仅视觉上隐藏滚动条。
+ * 跨浏览器：Firefox 用 scrollbar-width，WebKit/Chromium 用 ::-webkit-scrollbar。
+ */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes valo-brief-update-breathe {
