@@ -8,9 +8,9 @@ import { gotoAndWait } from './_app-ready';
  * - Chat 响应、plan lifecycle 端点全部走网络层 mock，保证确定性。
  * - draftId 用稳定字符串，便于在 chat 调整场景下断言旧 draftId 失效。
  * - 关键 UI 锚点：
- *   - advisor drawer 内 [data-valo-plan-draft]：渲染卡片
+ *   - advisor drawer 内 [data-valo-plan-draft-content]：渲染完整计划正文
  *   - [data-valo-plan-draft-execute]：执行按钮
- *   - /plan 页面 [data-valo-plan-screen]：固定三层 checklist
+ *   - 首页 [data-valo-home-plan]：执行后的 Day 1 计划管理卡
  *   - [data-valo-plan-task-toggle]：叶子任务勾选按钮
  *   - [data-valo-plan-end]：结束当前计划按钮
  */
@@ -23,10 +23,7 @@ const validDraftPayload = {
   groups: [
     {
       title: '第 1 天',
-      tasks: [
-        { title: '餐后散步 15 分钟', estimatedMinutes: 15 },
-        { title: '记录晨起 HRV' },
-      ],
+      tasks: [{ title: '餐后散步 15 分钟', estimatedMinutes: 15 }, { title: '记录晨起 HRV' }],
     },
     { title: '第 2 天', tasks: [{ title: '23:00 前入睡', suggestedTimeOfDay: '夜间' }] },
   ],
@@ -100,7 +97,9 @@ async function sendMessage(page: Page, text: string) {
 }
 
 test.describe('Plan generation & execution', () => {
-  test('produces a draft, executes it, and renders the /plan checklist', async ({ page }) => {
+  test('produces a visible draft, executes it, and renders the homepage checklist', async ({
+    page,
+  }) => {
     let draftCounter = 0;
     let executed = false;
 
@@ -118,7 +117,12 @@ test.describe('Plan generation & execution', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: executedPlan, error: null, meta: { timestamp: new Date().toISOString() } }),
+        body: JSON.stringify({
+          success: true,
+          data: executedPlan,
+          error: null,
+          meta: { timestamp: new Date().toISOString() },
+        }),
       });
     });
 
@@ -143,13 +147,20 @@ test.describe('Plan generation & execution', () => {
     await openDrawer(page);
     await sendMessage(page, '给我一份 7 天计划');
 
-    // chat 响应带 planDraft → 卡片渲染，旧 draftId 仍可执行
+    // chat 响应带 planDraft → 完整正文与操作按钮均渲染
     await expect(page.locator(visible('[data-valo-plan-draft="executable"]'))).toBeVisible({
       timeout: 10_000,
     });
-    await expect(
-      page.locator(visible('[data-valo-plan-draft-execute="true"]')),
-    ).toBeVisible();
+    await expect(page.locator(visible('[data-valo-plan-draft-content="true"]'))).toContainText(
+      '7 天恢复计划',
+    );
+    await expect(page.locator(visible('[data-valo-plan-draft-group="0"]'))).toContainText(
+      '餐后散步 15 分钟',
+    );
+    await expect(page.locator(visible('[data-valo-plan-draft-group="1"]'))).toContainText(
+      '23:00 前入睡',
+    );
+    await expect(page.locator(visible('[data-valo-plan-draft-execute="true"]'))).toBeVisible();
 
     // 第二轮 chat 产出新 draft → 旧 draftId 应变为 revoked
     await sendMessage(page, '改成 5 天');
@@ -158,13 +169,15 @@ test.describe('Plan generation & execution', () => {
     });
 
     // 执行最新 draft
-    await page.locator(visible('[data-valo-plan-draft="executable"] [data-valo-plan-draft-execute="true"]')).click();
+    await page
+      .locator(visible('[data-valo-plan-draft="executable"] [data-valo-plan-draft-execute="true"]'))
+      .click();
 
-    // 跳转到 /plan，渲染 checklist
-    await expect(page).toHaveURL(/\/plan$/, { timeout: 10_000 });
-    await expect(page.locator('[data-valo-plan-screen="true"]')).toBeVisible();
-    await expect(page.locator('[data-valo-plan-group-id="g1"]')).toBeVisible();
-    await expect(page.locator('[data-valo-plan-task-id="t1"]')).toBeVisible();
+    // 执行后关闭 Chat，留在首页并展示默认 Day 1 的计划管理卡。
+    await expect(page).toHaveURL(/\/$/, { timeout: 10_000 });
+    await expect(page.locator('[data-valo-home-plan="true"]')).toBeVisible();
+    await expect(page.locator('[data-valo-home-plan-day="1"]')).toBeVisible();
+    await expect(page.locator('[data-valo-home-plan-task="t1"]')).toBeVisible();
 
     // 勾选任务：服务端 PATCH 返回 version+1
     await page.route('**/sessions/*/profiles/*/plans/*/groups/*/tasks/*', async (route) => {
@@ -188,12 +201,17 @@ test.describe('Plan generation & execution', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: next, error: null, meta: { timestamp: new Date().toISOString() } }),
+        body: JSON.stringify({
+          success: true,
+          data: next,
+          error: null,
+          meta: { timestamp: new Date().toISOString() },
+        }),
       });
     });
 
-    await page.locator('[data-valo-plan-task-toggle="t1"]').click();
-    await expect(page.locator('[data-valo-plan-task-completed="true"]')).toHaveCount(1, {
+    await page.locator('[data-valo-home-plan-task="t1"] button').click();
+    await expect(page.locator('[data-valo-home-plan-task-completed="true"]')).toHaveCount(1, {
       timeout: 10_000,
     });
   });
@@ -203,14 +221,24 @@ test.describe('Plan generation & execution', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: executedPlan, error: null, meta: { timestamp: new Date().toISOString() } }),
+        body: JSON.stringify({
+          success: true,
+          data: executedPlan,
+          error: null,
+          meta: { timestamp: new Date().toISOString() },
+        }),
       });
     });
     await page.route('**/sessions/*/profiles/profile-b/plans/current', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: null, error: null, meta: { timestamp: new Date().toISOString() } }),
+        body: JSON.stringify({
+          success: true,
+          data: null,
+          error: null,
+          meta: { timestamp: new Date().toISOString() },
+        }),
       });
     });
 
@@ -253,7 +281,12 @@ test.describe('Plan generation & execution', () => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ success: true, data: { ended: true }, error: null, meta: { timestamp: new Date().toISOString() } }),
+          body: JSON.stringify({
+            success: true,
+            data: { ended: true },
+            error: null,
+            meta: { timestamp: new Date().toISOString() },
+          }),
         });
       } else {
         await route.continue();

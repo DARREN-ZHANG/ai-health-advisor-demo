@@ -16,10 +16,10 @@ interface PlanDraftCardProps {
 }
 
 /**
- * AI Chat 计划操作区。
+ * AI Chat 计划草稿。
  *
  * Figma: Valo App Demo / Activity - AI Plan / Frame 1948760695。
- * - 计划正文由上方 assistant message 展示，这里只保留紧随正文的操作按钮；
+ * - 直接展示 planDraft 的标题、摘要、分组与任务，避免把结构化计划藏在操作按钮后；
  * - executable 状态下显示 Start Plan + Modify Session；
  * - 执行成功后关闭 Chat，并回到首页展示计划管理卡片；
  * - revoked 状态下不可点击（旧 draftId 失效）。
@@ -64,7 +64,74 @@ export function PlanDraftCard({ planDraft }: PlanDraftCardProps) {
       data-valo-plan-draft-id={draft.draftId}
       className="mt-3 w-full text-left"
     >
-      <div className="flex h-7 items-center gap-3">
+      <article
+        data-valo-plan-draft-content="true"
+        aria-labelledby={`plan-draft-title-${draft.draftId}`}
+        className="rounded-xl border border-[var(--valo-border)] bg-[var(--valo-surface)] px-4 py-3.5"
+      >
+        <h3
+          id={`plan-draft-title-${draft.draftId}`}
+          className="text-[14px] font-semibold leading-5 text-[var(--valo-text-primary)]"
+        >
+          {draft.title}
+        </h3>
+        <p className="mt-1 text-[12px] leading-[18px] text-[var(--valo-text-secondary)]">
+          {draft.summary}
+        </p>
+
+        <div className="mt-4 space-y-4">
+          {draft.groups.map((group, groupIndex) => (
+            <section
+              key={`${group.title}-${groupIndex}`}
+              data-valo-plan-draft-group={groupIndex}
+              aria-labelledby={`plan-draft-group-${draft.draftId}-${groupIndex}`}
+            >
+              <h4
+                id={`plan-draft-group-${draft.draftId}-${groupIndex}`}
+                className="text-[12px] font-semibold leading-4 text-[var(--valo-text-primary)]"
+              >
+                {group.title}
+              </h4>
+              <ul className="mt-2 space-y-2">
+                {group.tasks.map((task, taskIndex) => (
+                  <li
+                    key={`${task.title}-${taskIndex}`}
+                    data-valo-plan-draft-task={taskIndex}
+                    className="flex items-start gap-2.5"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--valo-prime)]"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-[12px] leading-[18px] text-[var(--valo-text-primary)]">
+                        {task.title}
+                      </p>
+                      {task.description && (
+                        <p className="mt-0.5 text-[11px] leading-4 text-[var(--valo-text-secondary)]">
+                          {task.description}
+                        </p>
+                      )}
+                      {(task.suggestedTimeOfDay || task.estimatedMinutes) && (
+                        <p className="mt-0.5 text-[10px] leading-4 text-[var(--valo-text-secondary)]">
+                          {[
+                            task.suggestedTimeOfDay,
+                            task.estimatedMinutes ? `${task.estimatedMinutes} min` : undefined,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </article>
+
+      <div className="mt-3 flex h-7 items-center gap-3">
         {isRevoked && (
           <span
             data-valo-plan-draft-revoked="true"

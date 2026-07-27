@@ -43,7 +43,18 @@ const planDraft: MessagePlanDraft = {
     groups: [
       {
         title: 'Day 1',
-        tasks: [{ title: 'Walk' }],
+        tasks: [
+          {
+            title: 'Walk',
+            description: 'Take an easy walk after dinner',
+            suggestedTimeOfDay: 'Evening',
+            estimatedMinutes: 15,
+          },
+        ],
+      },
+      {
+        title: 'Day 2',
+        tasks: [{ title: 'Keep a consistent wake time' }],
       },
     ],
     createdAt: '2026-07-27T00:00:00.000Z',
@@ -70,6 +81,21 @@ describe('PlanDraftCard', () => {
   afterEach(() => {
     cleanup();
     useUIStore.setState({ isAdvisorDrawerOpen: false });
+  });
+
+  it('在操作按钮前展示完整的结构化计划正文', () => {
+    renderCard();
+
+    expect(screen.getByRole('heading', { name: 'Recovery Plan' })).toBeInTheDocument();
+    expect(screen.getByText('A short recovery plan')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Day 1' })).toBeInTheDocument();
+    expect(screen.getByText('Walk')).toBeInTheDocument();
+    expect(screen.getByText('Take an easy walk after dinner')).toBeInTheDocument();
+    expect(screen.getByText('Evening · 15 min')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Day 2' })).toBeInTheDocument();
+    expect(screen.getByText('Keep a consistent wake time')).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-valo-plan-draft-group]')).toHaveLength(2);
+    expect(document.querySelectorAll('[data-valo-plan-draft-task]')).toHaveLength(2);
   });
 
   it('按 Figma 参数渲染 Start Plan 与 Modify Session', () => {
