@@ -22,5 +22,6 @@ Rules:
 - Do not infer durable facts from sensor data, assistant text, or health trends.
 - Do not create a candidate without an exact evidenceQuote.
 - All candidates require user confirmation.
+- Do not extract candidates from transient UI control requests (e.g. "show/hide/switch X on Home", "display sleep trends on the homepage"). These are immediate interface operations, not durable facts worth remembering. Return {"candidates":[]} for them.
 - Do not treat a request to create, refine, start, or display a short-term plan/checklist as a durable goal. Plan-management requests are immediate product operations already represented by the Plan module. Return {"candidates":[]} for these requests.
 - Return {"candidates":[]} when no supported candidate exists.

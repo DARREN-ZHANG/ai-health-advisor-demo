@@ -465,42 +465,57 @@ export async function aiRoutes(app: FastifyInstance) {
 
     const memoryCandidates = [];
 
-    // 计划生成已经由 Plan 模块承载，属于本轮即时操作，
+    // UI 控制与计划生成都已经由专属产品状态承载，属于本轮即时操作，
     // 不能再把同一请求复制成长期记忆候选。
+    const hasUiDirective = Array.isArray(result.uiDirectives) && result.uiDirectives.length > 0;
     const hasPlanDraft = Boolean(result.planDraftPreview ?? result.planDraft);
-    if (app.memoryServices.extractor && parseResult.data.userMessage && !hasPlanDraft) {
-      const extraction = await app.memoryServices.extractor.extract({
-        userMessage: parseResult.data.userMessage,
-        profileId,
-        sessionId: request.ctx.sessionId!,
-      });
+    const hasTransientProductAction = hasUiDirective || hasPlanDraft;
 
-      for (const extracted of extraction.candidates) {
-        const now = Date.now();
-        const candidate = await app.memoryServices.candidates.saveCandidate({
-          id: randomUUID(),
-          userScopeId: app.memoryServices.userScopeId,
+    if (
+      app.memoryServices.extractor &&
+      parseResult.data.userMessage &&
+      !hasTransientProductAction
+    ) {
+      try {
+        const extraction = await app.memoryServices.extractor.extract({
+          userMessage: parseResult.data.userMessage,
           profileId,
           sessionId: request.ctx.sessionId!,
-          sourceMessageId: request.ctx.requestId,
-          kind: extracted.kind as import('@health-advisor/agent-core').MemoryKind,
-          canonicalKey: extracted.canonicalKey,
-          payload: extracted.payload,
-          evidenceQuote: extracted.evidenceQuote,
-          confidence: extracted.confidence,
-          proposedConfirmationText: extracted.proposedConfirmationText,
-          status: 'pending',
-          createdAt: now,
-          updatedAt: now,
-          expiresAt: now + app.memoryServices.candidateTtlMs,
         });
 
-        memoryCandidates.push({
-          id: candidate.id,
-          kind: candidate.kind,
-          proposedConfirmationText: candidate.proposedConfirmationText,
-          evidenceQuote: candidate.evidenceQuote,
-        });
+        for (const extracted of extraction.candidates) {
+          const now = Date.now();
+          const candidate = await app.memoryServices.candidates.saveCandidate({
+            id: randomUUID(),
+            userScopeId: app.memoryServices.userScopeId,
+            profileId,
+            sessionId: request.ctx.sessionId!,
+            sourceMessageId: request.ctx.requestId,
+            kind: extracted.kind as import('@health-advisor/agent-core').MemoryKind,
+            canonicalKey: extracted.canonicalKey,
+            payload: extracted.payload,
+            evidenceQuote: extracted.evidenceQuote,
+            confidence: extracted.confidence,
+            proposedConfirmationText: extracted.proposedConfirmationText,
+            status: 'pending',
+            createdAt: now,
+            updatedAt: now,
+            expiresAt: now + app.memoryServices.candidateTtlMs,
+          });
+
+          memoryCandidates.push({
+            id: candidate.id,
+            kind: candidate.kind,
+            proposedConfirmationText: candidate.proposedConfirmationText,
+            evidenceQuote: candidate.evidenceQuote,
+          });
+        }
+      } catch (err) {
+        // extractor 失败不应影响主响应；记录后跳过候选注入。
+        request.log.warn(
+          { err, requestId: request.ctx.requestId, profileId },
+          'memory extractor failed; skipping candidate injection',
+        );
       }
     }
 

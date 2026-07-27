@@ -705,6 +705,53 @@ describe('AI Routes', () => {
       await app.close();
     });
 
+    it('响应含 uiDirectives 时跳过 memory extractor（UI 控制意图不应被抽为记忆）', async () => {
+      // 回归：用户说"我想在首页看Sleep"时，Planner 产出 uiDirectives，
+      // 这种瞬时界面操作不应触发记忆抽取，避免误生成"是否将首页显示内容设置为 Sleep?"候选卡。
+      const app = await buildApp({
+        env: {
+          FALLBACK_ONLY_MODE: 'true',
+          ENABLE_GOD_MODE: 'false',
+          MEMORY_BACKEND: 'memory',
+        },
+      });
+
+      const extract = vi.fn(async () => ({ candidates: [], rejectedCount: 0 }));
+      app.memoryServices.extractor = { extract };
+
+      // 构造携带 uiDirectives 的响应（模拟纯 UI 控制计划）
+      mockedExecuteAgent.mockResolvedValueOnce({
+        ...chatResponse(),
+        summary: '已在首页展示睡眠趋势简报。',
+        source: 'planner',
+        uiDirectives: [{ type: 'homepage.trend-card.set', display: 'sleep' }],
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/chat',
+        headers: { 'x-session-id': 'sess-ui-1' },
+        payload: {
+          profileId: 'profile-a',
+          pageContext: { profileId: 'profile-a', page: 'advisor', timeframe: 'week' },
+          userMessage: '我想在首页看Sleep',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      // 主响应正常返回，UI 指令透传
+      expect(body.data.uiDirectives).toEqual([
+        { type: 'homepage.trend-card.set', display: 'sleep' },
+      ]);
+      // extractor 被短路，从未调用
+      expect(extract).not.toHaveBeenCalled();
+      // 不应出现记忆候选卡
+      expect(body.data.memoryCandidates).toBeUndefined();
+
+      await app.close();
+    });
+
     it('响应含 planDraftPreview 时跳过 memory extractor（计划操作不应重复成为长期目标）', async () => {
       const app = await buildApp({
         env: {
@@ -763,6 +810,45 @@ describe('AI Routes', () => {
       expect(body.data.planDraft).toMatchObject({
         title: '7天睡眠恢复计划',
       });
+
+      await app.close();
+    });
+
+    it('memory extractor 抛错时不影响主响应（只跳过候选注入）', async () => {
+      // 回归：extractor 失败不应让 /ai/chat 退化为 500，主 AI 响应仍要正常返回。
+      const app = await buildApp({
+        env: {
+          FALLBACK_ONLY_MODE: 'true',
+          ENABLE_GOD_MODE: 'false',
+          MEMORY_BACKEND: 'memory',
+        },
+      });
+
+      app.memoryServices.extractor = {
+        async extract() {
+          throw new Error('extractor LLM 不可用');
+        },
+      };
+
+      mockedExecuteAgent.mockResolvedValueOnce(chatResponse());
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/chat',
+        headers: { 'x-session-id': 'sess-err-1' },
+        payload: {
+          profileId: 'profile-a',
+          pageContext: { profileId: 'profile-a', page: 'advisor', timeframe: 'week' },
+          userMessage: '我最近的睡眠怎么样？',
+        },
+      });
+
+      // 主响应仍 200，summary 正常
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.data.summary).toBe('你的 HRV 趋势稳定');
+      // extractor 抛错，候选未注入
+      expect(body.data.memoryCandidates).toBeUndefined();
 
       await app.close();
     });
