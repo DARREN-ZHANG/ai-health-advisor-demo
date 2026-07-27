@@ -89,6 +89,8 @@ export interface AgentResponseEnvelope {
   memoryCandidates?: MemoryCandidateConfirmation[];
   /** 当天剩余时间的 1-2 个未来时间点建议（homepage 任务输出） */
   futureSuggestions?: FutureSuggestion[];
+  /** Advisor 控制的首页 UI 副作用；每次最多一条，由 Planner verifier 校验 */
+  uiDirectives?: UiDirective[];
   meta: {
     taskType: AgentTaskType;
     pageContext: PageContext;
@@ -96,3 +98,33 @@ export interface AgentResponseEnvelope {
     sessionId?: string;
   };
 }
+
+/**
+ * 首页 Trends Brief 卡片的可显示状态。
+ * - hidden：不渲染、不占布局
+ * - sleep：展示 7 日睡眠简报
+ * - activity：展示 7 日活动简报
+ */
+export type HomeTrendCardDisplay = 'hidden' | 'sleep' | 'activity';
+
+/**
+ * 客户端发送给 Advisor 的当前 UI 状态快照。
+ * 字段保持封闭枚举，不允许自由文本，避免启发式解析。
+ */
+export interface ClientUiContext {
+  homepageTrendCard: HomeTrendCardDisplay;
+}
+
+/**
+ * Planner verifier 通过后，runtime 附带给客户端执行的 UI 指令。
+ * type 即协议名，display 决定下一帧首页卡片状态。
+ */
+export interface HomeTrendCardSetDirective {
+  type: 'homepage.trend-card.set';
+  display: HomeTrendCardDisplay;
+}
+
+/**
+ * 当前唯一支持的 UI 指令类型；保留 union 形态用于未来扩展。
+ */
+export type UiDirective = HomeTrendCardSetDirective;

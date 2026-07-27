@@ -99,6 +99,23 @@ export const MemoryCandidateConfirmationSchema = z.object({
   evidenceQuote: z.string().min(1),
 });
 
+export const HomeTrendCardDisplaySchema = z.enum(['hidden', 'sleep', 'activity']);
+
+export const ClientUiContextSchema = z
+  .object({
+    homepageTrendCard: HomeTrendCardDisplaySchema,
+  })
+  .strict();
+
+export const HomeTrendCardSetDirectiveSchema = z
+  .object({
+    type: z.literal('homepage.trend-card.set'),
+    display: HomeTrendCardDisplaySchema,
+  })
+  .strict();
+
+export const UiDirectiveSchema = HomeTrendCardSetDirectiveSchema;
+
 export const AgentResponseEnvelopeSchema = z.object({
   summary: z.string().min(1),
   source: z.string().min(1),
@@ -109,6 +126,7 @@ export const AgentResponseEnvelopeSchema = z.object({
   actionsSectionTitle: z.string().optional(),
   memoryCandidates: z.array(MemoryCandidateConfirmationSchema).optional(),
   futureSuggestions: z.array(FutureSuggestionSchema).max(2).optional(),
+  uiDirectives: z.array(UiDirectiveSchema).max(1).optional(),
   meta: z.object({
     taskType: AgentTaskTypeSchema,
     pageContext: PageContextSchema,

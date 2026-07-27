@@ -9,6 +9,10 @@ import {
   TimeframeSchema,
   PageContextSchema,
   FutureSuggestionSchema,
+  ClientUiContextSchema,
+  UiDirectiveSchema,
+  HomeTrendCardDisplaySchema,
+  HomeTrendCardSetDirectiveSchema,
 } from '../schemas/agent';
 import { ErrorCodeSchema, ApiResponseSchema } from '../schemas/api';
 import {
@@ -1617,5 +1621,189 @@ describe('isBriefStreamTerminalEvent', () => {
       delta: '增量',
     });
     expect(isBriefStreamTerminalEvent(event)).toBe(false);
+  });
+});
+
+describe('HomeTrendCardDisplaySchema', () => {
+  it('accepts hidden, sleep and activity', () => {
+    expect(HomeTrendCardDisplaySchema.parse('hidden')).toBe('hidden');
+    expect(HomeTrendCardDisplaySchema.parse('sleep')).toBe('sleep');
+    expect(HomeTrendCardDisplaySchema.parse('activity')).toBe('activity');
+  });
+
+  it('rejects overview and other strings', () => {
+    expect(HomeTrendCardDisplaySchema.safeParse('overview').success).toBe(false);
+    expect(HomeTrendCardDisplaySchema.safeParse('Steps').success).toBe(false);
+  });
+
+  it('rejects empty string', () => {
+    expect(HomeTrendCardDisplaySchema.safeParse('').success).toBe(false);
+  });
+});
+
+describe('ClientUiContextSchema', () => {
+  it('accepts hidden, sleep and activity contexts', () => {
+    expect(
+      ClientUiContextSchema.parse({ homepageTrendCard: 'hidden' }),
+    ).toStrictEqual({ homepageTrendCard: 'hidden' });
+    expect(
+      ClientUiContextSchema.parse({ homepageTrendCard: 'sleep' }),
+    ).toStrictEqual({ homepageTrendCard: 'sleep' });
+    expect(
+      ClientUiContextSchema.parse({ homepageTrendCard: 'activity' }),
+    ).toStrictEqual({ homepageTrendCard: 'activity' });
+  });
+
+  it('rejects overview display', () => {
+    expect(
+      ClientUiContextSchema.safeParse({ homepageTrendCard: 'overview' }).success,
+    ).toBe(false);
+  });
+
+  it('rejects empty string display', () => {
+    expect(
+      ClientUiContextSchema.safeParse({ homepageTrendCard: '' }).success,
+    ).toBe(false);
+  });
+
+  it('rejects missing homepageTrendCard', () => {
+    expect(ClientUiContextSchema.safeParse({}).success).toBe(false);
+  });
+
+  it('rejects extra fields beyond the strict contract', () => {
+    expect(
+      ClientUiContextSchema.safeParse({
+        homepageTrendCard: 'sleep',
+        visible: true,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('HomeTrendCardSetDirectiveSchema', () => {
+  it('accepts each valid display', () => {
+    for (const display of ['hidden', 'sleep', 'activity'] as const) {
+      expect(
+        HomeTrendCardSetDirectiveSchema.safeParse({
+          type: 'homepage.trend-card.set',
+          display,
+        }).success,
+      ).toBe(true);
+    }
+  });
+
+  it('rejects unknown directive payloads with wrong display', () => {
+    expect(
+      HomeTrendCardSetDirectiveSchema.safeParse({
+        type: 'homepage.trend-card.set',
+        display: 'overview',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects payload with extra fields', () => {
+    expect(
+      HomeTrendCardSetDirectiveSchema.safeParse({
+        type: 'homepage.trend-card.set',
+        display: 'sleep',
+        target: 'sidebar',
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('UiDirectiveSchema', () => {
+  it('accepts only homepage.trend-card.set', () => {
+    expect(
+      UiDirectiveSchema.safeParse({
+        type: 'homepage.trend-card.set',
+        display: 'sleep',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects unknown directive type', () => {
+    expect(
+      UiDirectiveSchema.safeParse({
+        type: 'homepage.unknown.set',
+        display: 'sleep',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects string component ids in place of typed directive', () => {
+    expect(UiDirectiveSchema.safeParse('homepage.trend-card.set').success).toBe(
+      false,
+    );
+  });
+});
+
+describe('AgentResponseEnvelopeSchema — uiDirectives', () => {
+  const validPageContext = {
+    profileId: 'profile-a',
+    page: 'homepage',
+    timeframe: 'week' as const,
+  };
+
+  const baseEnvelope = {
+    summary: '已在首页展示睡眠趋势简报。',
+    source: 'planner',
+    statusColor: 'good' as const,
+    chartTokens: [],
+    meta: {
+      taskType: AgentTaskType.ADVISOR_CHAT,
+      pageContext: validPageContext,
+      finishReason: 'complete' as const,
+    },
+  };
+
+  it('accepts a single valid directive', () => {
+    const result = AgentResponseEnvelopeSchema.safeParse({
+      ...baseEnvelope,
+      uiDirectives: [
+        { type: 'homepage.trend-card.set', display: 'sleep' },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.uiDirectives).toEqual([
+        { type: 'homepage.trend-card.set', display: 'sleep' },
+      ]);
+    }
+  });
+
+  it('rejects two directives to enforce single-side-effect per response', () => {
+    const result = AgentResponseEnvelopeSchema.safeParse({
+      ...baseEnvelope,
+      uiDirectives: [
+        { type: 'homepage.trend-card.set', display: 'sleep' },
+        { type: 'homepage.trend-card.set', display: 'activity' },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects invalid directive payload', () => {
+    const result = AgentResponseEnvelopeSchema.safeParse({
+      ...baseEnvelope,
+      uiDirectives: [{ type: 'homepage.unknown.set', display: 'sleep' }],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('remains backward compatible when uiDirectives is absent', () => {
+    const result = AgentResponseEnvelopeSchema.safeParse(baseEnvelope);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.uiDirectives).toBeUndefined();
+    }
+  });
+
+  it('does not inject uiDirectives field when payload omits it', () => {
+    const result = AgentResponseEnvelopeSchema.parse(baseEnvelope);
+    expect(result).not.toHaveProperty('uiDirectives');
   });
 });

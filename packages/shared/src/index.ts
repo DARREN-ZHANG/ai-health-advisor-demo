@@ -65,6 +65,10 @@ export type {
   MemoryCandidateKind,
   MemoryCandidateConfirmation,
   FutureSuggestion,
+  HomeTrendCardDisplay,
+  ClientUiContext,
+  HomeTrendCardSetDirective,
+  UiDirective,
 } from './types/agent';
 
 // Types — brief-stream
@@ -171,6 +175,10 @@ export {
   ActionInteractionSchema,
   MemoryCandidateConfirmationSchema,
   FutureSuggestionSchema,
+  HomeTrendCardDisplaySchema,
+  ClientUiContextSchema,
+  HomeTrendCardSetDirectiveSchema,
+  UiDirectiveSchema,
 } from './schemas/agent';
 
 // Schemas — brief-stream
