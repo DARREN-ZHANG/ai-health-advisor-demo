@@ -45,7 +45,22 @@
     "home": "Home",
     "homeShort": "Home",
     "trends": "Trends",
+    "plan": "Plan",
     "my": "My"
+  },
+  "plan": {
+    "title": "My Plan",
+    "subtitle": "Executable plan for this page session",
+    "empty": "No plan yet. Ask the AI advisor for a structured plan and confirm to execute.",
+    "openAdvisor": "Open AI Advisor",
+    "completedBadge": "Completed",
+    "activeBadge": "In Progress",
+    "progressLabel": "{done} / {total} tasks",
+    "endPlan": "End current plan",
+    "endConfirm": "This will clear the current plan. Are you sure?",
+    "replaceConfirm": "The current plan is not finished. Replace it with the new one?",
+    "tasks": "Tasks",
+    "minutes": "min"
   },
   "homepage": {
     "morningBriefTitle": "Today's Health Overview",

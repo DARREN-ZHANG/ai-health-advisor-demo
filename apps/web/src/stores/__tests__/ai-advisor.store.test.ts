@@ -38,7 +38,7 @@ describe('useAIAdvisorStore plan draft lifecycle', () => {
 
     const state = getState();
     expect(state.messages).toHaveLength(1);
-    expect(state.messages[0].planDraft).toEqual({
+    expect(state.messages[0]!.planDraft).toEqual({
       status: 'executable',
       draft: makeDraft('d1'),
     });
@@ -59,8 +59,8 @@ describe('useAIAdvisorStore plan draft lifecycle', () => {
 
     const state = getState();
     expect(state.messages).toHaveLength(2);
-    expect(state.messages[0].planDraft?.status).toBe('revoked');
-    expect(state.messages[1].planDraft?.status).toBe('executable');
+    expect(state.messages[0]!.planDraft?.status).toBe('revoked');
+    expect(state.messages[1]!.planDraft?.status).toBe('executable');
   });
 
   it('markPlanDraftExecuted flips the matching draft and leaves others untouched', () => {
@@ -79,8 +79,8 @@ describe('useAIAdvisorStore plan draft lifecycle', () => {
     markPlanDraftExecuted('d2');
 
     const state = getState();
-    expect(state.messages[0].planDraft?.status).toBe('revoked');
-    expect(state.messages[1].planDraft?.status).toBe('executed');
+    expect(state.messages[0]!.planDraft?.status).toBe('revoked');
+    expect(state.messages[1]!.planDraft?.status).toBe('executed');
   });
 
   it('markPlanDraftsRevokedExcept revokes all executable drafts but the active one', () => {
@@ -100,8 +100,8 @@ describe('useAIAdvisorStore plan draft lifecycle', () => {
     markPlanDraftsRevokedExcept('d3');
 
     const state = getState();
-    expect(state.messages[0].planDraft?.status).toBe('revoked');
-    expect(state.messages[1].planDraft?.status).toBe('revoked');
+    expect(state.messages[0]!.planDraft?.status).toBe('revoked');
+    expect(state.messages[1]!.planDraft?.status).toBe('revoked');
   });
 
   it('clearMessages wipes the message list but does not touch plan-store on the server', () => {

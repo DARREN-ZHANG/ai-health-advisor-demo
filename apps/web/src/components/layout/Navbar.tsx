@@ -16,6 +16,7 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 const NAV_KEYS = [
   { href: '/', key: 'home' as const },
   { href: '/data-center', key: 'trends' as const },
+  { href: '/plan', key: 'plan' as const },
   { href: '/my', key: 'my' as const },
 ];
 
@@ -24,8 +25,9 @@ export function Navbar() {
   const t = useTranslations('nav');
   const isHome = pathname === '/';
   const isDataCenter = pathname === '/data-center';
+  const isPlan = pathname === '/plan';
   const isMy = pathname === '/my';
-  const isHidden = isHome || isDataCenter || isMy;
+  const isHidden = isHome || isDataCenter || isPlan || isMy;
 
   return (
     <nav

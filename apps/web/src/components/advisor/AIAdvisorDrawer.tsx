@@ -63,7 +63,6 @@ export function AIAdvisorDrawer() {
     clearMessages,
     pendingPrompt,
     setPendingPrompt,
-    markPlanDraftExecuted,
   } = useAIAdvisorStore();
   const { currentProfileId } = useProfileStore();
   const { activeTab, timeframe } = useDataCenterStore();

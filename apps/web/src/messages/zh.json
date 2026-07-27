@@ -45,7 +45,22 @@
     "home": "首页",
     "homeShort": "首页",
     "trends": "趋势",
+    "plan": "计划",
     "my": "我的"
+  },
+  "plan": {
+    "title": "我的计划",
+    "subtitle": "当前页面会话内的可执行计划",
+    "empty": "当前没有计划。在 AI 顾问中请求一份计划，确认后即可执行。",
+    "openAdvisor": "打开 AI 顾问",
+    "completedBadge": "已完成",
+    "activeBadge": "进行中",
+    "progressLabel": "{done} / {total} 项任务",
+    "endPlan": "结束当前计划",
+    "endConfirm": "结束后将清除当前计划，确定吗？",
+    "replaceConfirm": "当前计划还未完成，确定要用新计划替换吗？",
+    "tasks": "任务",
+    "minutes": "分钟"
   },
   "homepage": {
     "morningBriefTitle": "今日健康概览",

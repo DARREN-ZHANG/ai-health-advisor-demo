@@ -4,16 +4,22 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { HomeIcon, ChartBarIcon, UserIcon } from '@heroicons/react/24/outline';
+import {
+  HomeIcon,
+  ChartBarIcon,
+  ClipboardDocumentCheckIcon,
+  UserIcon,
+} from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeSolidIcon,
   ChartBarIcon as ChartBarSolidIcon,
+  ClipboardDocumentCheckIcon as ClipboardSolidIcon,
   UserIcon as UserSolidIcon,
 } from '@heroicons/react/24/solid';
 import { useUIStore } from '@/stores/ui.store';
 
 /**
- * Valo 底部导航信息架构：Home / Trends / My，右侧独立 Advisor Chat 入口。
+ * Valo 底部导航信息架构：Home / Trends / Plan / My，右侧独立 Advisor Chat 入口。
  *
  * I6.2 起与桌面端 Navbar 共用同一导航 IA；
  * 主状态色走 var(--valo-*) token；玻璃背景使用 Figma 原稿的半透明深色面。
@@ -25,6 +31,12 @@ const navItems = [
     labelKey: 'trends' as const,
     icon: ChartBarIcon,
     activeIcon: ChartBarSolidIcon,
+  },
+  {
+    href: '/plan',
+    labelKey: 'plan' as const,
+    icon: ClipboardDocumentCheckIcon,
+    activeIcon: ClipboardSolidIcon,
   },
   { href: '/my', labelKey: 'my' as const, icon: UserIcon, activeIcon: UserSolidIcon },
 ];
@@ -81,7 +93,7 @@ export function BottomNav() {
       <div className="flex h-[70px] items-center gap-5">
         <nav
           aria-label="Primary"
-          className="grid h-full flex-1 grid-cols-3 items-center gap-1 rounded-[35px]
+          className="grid h-full flex-1 grid-cols-4 items-center gap-1 rounded-[35px]
                      border border-white/10 px-[8px] py-[6px] backdrop-blur-xl"
           style={{
             backgroundColor: 'rgba(21, 21, 29, 0.62)',
