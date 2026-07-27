@@ -166,3 +166,198 @@ describe('verifyAnalysisPlan', () => {
     );
   });
 });
+
+describe('verifyAnalysisPlan — UI 控制计划', () => {
+  function createUiPlan(overrides?: Record<string, unknown>): AnalysisPlan {
+    return AnalysisPlanSchema.parse({
+      planId: 'plan-ui-001',
+      taskType: 'advisor_chat',
+      userIntent: {
+        action: 'control_ui',
+        riskLevel: 'general',
+        needsClarification: false,
+      },
+      evidenceNeeds: [],
+      safetyConstraints: ['no_diagnosis'],
+      answerShape: {
+        includeMissingDataDisclosure: false,
+        includeChartTokens: false,
+        maxSummaryLength: 120,
+        tone: 'concise',
+      },
+      clientAction: { type: 'homepage.trend-card.set', display: 'sleep' },
+      ...overrides,
+    });
+  }
+
+  it('合法纯 UI sleep 计划通过校验', () => {
+    const result = verifyAnalysisPlan(createUiPlan(), createValidContext());
+    expect(result.valid).toBe(true);
+    expect(result.violations).toHaveLength(0);
+  });
+
+  it('合法纯 UI activity 计划通过校验', () => {
+    const plan = createUiPlan({
+      clientAction: { type: 'homepage.trend-card.set', display: 'activity' },
+    });
+    const result = verifyAnalysisPlan(plan, createValidContext());
+    expect(result.valid).toBe(true);
+  });
+
+  it('合法纯 UI hidden 计划通过校验', () => {
+    const plan = createUiPlan({
+      clientAction: { type: 'homepage.trend-card.set', display: 'hidden' },
+    });
+    const result = verifyAnalysisPlan(plan, createValidContext());
+    expect(result.valid).toBe(true);
+  });
+
+  it('control_ui 缺失 clientAction 触发 ui_action_required', () => {
+    const plan = createUiPlan();
+    const mutated = { ...plan, clientAction: undefined } as unknown as AnalysisPlan;
+    const result = verifyAnalysisPlan(mutated, createValidContext());
+    expect(result.valid).toBe(false);
+    expect(result.violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ rule: 'ui_action_required' }),
+      ]),
+    );
+  });
+
+  it('control_ui 同时携带 evidence 触发 ui_control_has_evidence', () => {
+    const plan = createUiPlan({
+      evidenceNeeds: [
+        {
+          metric: 'sleep',
+          timeScope: 'week',
+          reason: '不该出现',
+          required: true,
+        },
+      ],
+    });
+    const result = verifyAnalysisPlan(plan, createValidContext());
+    expect(result.valid).toBe(false);
+    expect(result.violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ rule: 'ui_control_has_evidence' }),
+      ]),
+    );
+  });
+
+  it('control_ui 同时携带 webSearchNeeds 触发 ui_control_has_evidence', () => {
+    const plan = createUiPlan({
+      webSearchNeeds: [
+        {
+          query: 'sleep research',
+          reason: '不该出现',
+          required: true,
+        },
+      ],
+    });
+    const result = verifyAnalysisPlan(plan, createValidContext());
+    expect(result.valid).toBe(false);
+    expect(result.violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ rule: 'ui_control_has_evidence' }),
+      ]),
+    );
+  });
+
+  it('control_ui riskLevel 非 general 触发 ui_control_risk_mismatch', () => {
+    const plan = createUiPlan({
+      userIntent: {
+        action: 'control_ui',
+        riskLevel: 'safety_boundary',
+        needsClarification: false,
+      },
+    });
+    const result = verifyAnalysisPlan(plan, createValidContext());
+    expect(result.valid).toBe(false);
+    expect(result.violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ rule: 'ui_control_risk_mismatch' }),
+      ]),
+    );
+  });
+
+  it('clarification 携带 clientAction 触发 ui_action_during_clarification', () => {
+    const plan = createUiPlan({
+      userIntent: {
+        action: 'control_ui',
+        riskLevel: 'general',
+        needsClarification: true,
+        clarificationQuestion: '你想看 Sleep 还是 Activity？',
+      },
+    });
+    const result = verifyAnalysisPlan(plan, createValidContext());
+    expect(result.valid).toBe(false);
+    expect(result.violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ rule: 'ui_action_during_clarification' }),
+      ]),
+    );
+  });
+
+  it('clarification 且无 clientAction 时合法（不触发 ui_action_during_clarification）', () => {
+    const plan = AnalysisPlanSchema.parse({
+      planId: 'plan-clar',
+      taskType: 'advisor_chat',
+      userIntent: {
+        action: 'general',
+        riskLevel: 'general',
+        needsClarification: true,
+        clarificationQuestion: '你想看哪个？',
+      },
+      evidenceNeeds: [],
+      safetyConstraints: ['no_diagnosis'],
+      answerShape: {
+        includeMissingDataDisclosure: false,
+        includeChartTokens: false,
+        maxSummaryLength: 120,
+        tone: 'concise',
+      },
+    });
+    const result = verifyAnalysisPlan(plan, createValidContext());
+    expect(result.valid).toBe(true);
+  });
+});
+
+describe('verifyAnalysisPlan — 混合 UI + 健康问答', () => {
+  it('健康 action 携带 clientAction 通过校验（mixed 意图）', () => {
+    const plan = AnalysisPlanSchema.parse({
+      planId: 'plan-mix-001',
+      taskType: 'advisor_chat',
+      userIntent: {
+        action: 'status_summary',
+        riskLevel: 'general',
+        needsClarification: false,
+      },
+      evidenceNeeds: [
+        {
+          metric: 'sleep',
+          timeScope: 'week',
+          dateRange: { start: '2025-06-01', end: '2025-06-07' },
+          reason: '用户询问睡眠',
+          required: true,
+        },
+      ],
+      safetyConstraints: ['no_diagnosis'],
+      answerShape: {
+        includeMissingDataDisclosure: true,
+        includeChartTokens: false,
+        maxSummaryLength: 300,
+        tone: 'concise',
+      },
+      clientAction: { type: 'homepage.trend-card.set', display: 'sleep' },
+    });
+    const result = verifyAnalysisPlan(plan, createValidContext());
+    expect(result.valid).toBe(true);
+  });
+
+  it('普通健康问答无 clientAction 通过校验', () => {
+    const plan = createValidPlan();
+    const result = verifyAnalysisPlan(plan, createValidContext());
+    expect(result.valid).toBe(true);
+    expect(plan.clientAction).toBeUndefined();
+  });
+});

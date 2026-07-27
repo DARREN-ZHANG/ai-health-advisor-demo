@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { HealthAgent } from '../executor/create-agent';
 import type { TaskContextPacket } from '../context/context-packet';
+import type { ClientUiContext } from '@health-advisor/shared';
 import { AnalysisPlanSchema } from './analysis-plan';
 import type { AnalysisPlan, PlanVerificationResult } from './analysis-plan';
 import { verifyAnalysisPlan } from './analysis-plan-verifier';
@@ -27,6 +28,8 @@ export interface PlanBuilderInput {
   availableDateRange: { start: string; end: string };
   /** 重试时传入上一轮的 violations */
   previousViolations?: PlanVerificationResult['violations'];
+  /** 当前客户端 UI 状态；Planner 借此避免启发式猜测 */
+  uiContext?: ClientUiContext;
 }
 
 /** Plan Builder 输出 */
@@ -148,6 +151,13 @@ function buildPlannerUserPrompt(input: PlanBuilderInput): string {
   const packetSummary = buildPacketSummary(input.basePacket);
   if (packetSummary.length > 0) {
     sections.push(`## 当前数据概况\n${packetSummary.join('\n')}`);
+  }
+
+  // 当前客户端 UI 状态：Planner 借此理解上下文，但禁止基于关键词启发式判定
+  if (input.uiContext) {
+    sections.push(
+      `## 当前客户端 UI 状态\nhomepageTrendCard: ${input.uiContext.homepageTrendCard}`,
+    );
   }
 
   // 重试时的 violations 修正指引

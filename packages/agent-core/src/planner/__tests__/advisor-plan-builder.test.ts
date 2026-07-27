@@ -213,7 +213,83 @@ describe('buildAnalysisPlan', () => {
     expect(userPrompt).toContain('上次校验失败');
     expect(userPrompt).toContain('unsupported_metric');
   });
+
+  it('uiContext.homepageTrendCard 出现在 userPrompt 中', async () => {
+    const validPlan = createValidPlanJson();
+    const mockInvoke = vi.fn().mockResolvedValue({ content: JSON.stringify(validPlan) });
+    const agent = { invoke: mockInvoke } as unknown as HealthAgent;
+
+    const input = createValidInput({
+      uiContext: { homepageTrendCard: 'sleep' },
+    });
+    await buildAnalysisPlan(createDeps(agent), input);
+
+    const userPrompt = mockInvoke.mock.calls[0][0].userPrompt;
+    expect(userPrompt).toContain('当前客户端 UI 状态');
+    expect(userPrompt).toContain('homepageTrendCard: sleep');
+  });
+
+  it('不传 uiContext 时 userPrompt 中不出现 UI 状态区块', async () => {
+    const validPlan = createValidPlanJson();
+    const mockInvoke = vi.fn().mockResolvedValue({ content: JSON.stringify(validPlan) });
+    const agent = { invoke: mockInvoke } as unknown as HealthAgent;
+
+    await buildAnalysisPlan(createDeps(agent), createValidInput());
+
+    const userPrompt = mockInvoke.mock.calls[0][0].userPrompt;
+    expect(userPrompt).not.toContain('当前客户端 UI 状态');
+  });
+
+  it('fake planner 返回纯 UI clientAction 时 builder 解析并通过 verifier', async () => {
+    const uiPlan = {
+      ...createValidPlan(),
+      userIntent: {
+        action: 'control_ui',
+        riskLevel: 'general',
+        needsClarification: false,
+      },
+      evidenceNeeds: [],
+      clientAction: { type: 'homepage.trend-card.set', display: 'sleep' },
+    };
+    const agent = createMockAgent(JSON.stringify(uiPlan));
+    const result = await buildAnalysisPlan(createDeps(agent), createValidInput());
+
+    expect(result.success).toBe(true);
+    expect(result.plan?.userIntent.action).toBe('control_ui');
+    expect(result.plan?.clientAction).toStrictEqual({
+      type: 'homepage.trend-card.set',
+      display: 'sleep',
+    });
+  });
 });
+
+function createValidPlan(): Record<string, unknown> {
+  return {
+    planId: 'plan-test-001',
+    taskType: 'advisor_chat',
+    userIntent: {
+      action: 'status_summary',
+      riskLevel: 'general',
+      needsClarification: false,
+    },
+    evidenceNeeds: [
+      {
+        metric: 'hrv',
+        timeScope: 'week',
+        dateRange: { start: '2025-06-01', end: '2025-06-07' },
+        reason: '用户询问最近 HRV 数据',
+        required: true,
+      },
+    ],
+    safetyConstraints: ['no_diagnosis', 'no_medication_advice'],
+    answerShape: {
+      includeMissingDataDisclosure: true,
+      includeChartTokens: false,
+      maxSummaryLength: 300,
+      tone: 'concise',
+    },
+  };
+}
 
 describe('buildAnalysisPlanWithRetry', () => {
   it('第一次成功直接返回', async () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { AnalysisPlanSchema, MetricType, TimeScope, ActionIntent, SafetyConstraint, WebSearchNeedSchema } from '../analysis-plan';
+import type { UiDirective } from '@health-advisor/shared';
 
 /** 构造最小合法的 AnalysisPlan */
 function createValidPlan(overrides?: Record<string, unknown>) {
@@ -79,6 +80,21 @@ describe('AnalysisPlanSchema', () => {
     }
   });
 
+  it('actionIntent 支持 control_ui（首页 Trends Brief 控制）', () => {
+    const result = AnalysisPlanSchema.safeParse(
+      createValidPlan({
+        userIntent: { action: 'control_ui', riskLevel: 'general', needsClarification: false },
+        evidenceNeeds: [],
+        clientAction: { type: 'homepage.trend-card.set', display: 'sleep' },
+      }),
+    );
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.userIntent.action).toBe('control_ui');
+      expect(result.data.clientAction?.type).toBe('homepage.trend-card.set');
+    }
+  });
+
   it('evidenceNeeds 为空数组时校验通过', () => {
     const result = AnalysisPlanSchema.safeParse(createValidPlan({ evidenceNeeds: [] }));
     expect(result.success).toBe(true);
@@ -114,7 +130,9 @@ describe('导出的枚举', () => {
   it('ActionIntent 包含 6 种意图', () => {
     const values = ActionIntent.options;
     expect(values).toContain('compare_periods');
-    expect(values).toHaveLength(6);
+    // 包含 control_ui 后共 7 种
+    expect(values).toContain('control_ui');
+    expect(values).toHaveLength(7);
   });
 
   it('SafetyConstraint 包含 5 种约束', () => {
@@ -179,6 +197,80 @@ describe('webSearchNeeds', () => {
       ],
     }));
 
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('clientAction — UI 指令字段', () => {
+  it('接受合法 homepage.trend-card.set 指令', () => {
+    for (const display of ['hidden', 'sleep', 'activity'] as const) {
+      const directive: UiDirective = {
+        type: 'homepage.trend-card.set',
+        display,
+      };
+      const result = AnalysisPlanSchema.safeParse(
+        createValidPlan({
+          userIntent: { action: 'control_ui', riskLevel: 'general', needsClarification: false },
+          evidenceNeeds: [],
+          clientAction: directive,
+        }),
+      );
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.clientAction).toStrictEqual(directive);
+      }
+    }
+  });
+
+  it('clientAction 缺失时为 undefined', () => {
+    const result = AnalysisPlanSchema.safeParse(createValidPlan());
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.clientAction).toBeUndefined();
+    }
+  });
+
+  it('clientAction 接受 null（用于显式标记无 UI 副作用）', () => {
+    const result = AnalysisPlanSchema.safeParse(
+      createValidPlan({ clientAction: null }),
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it('拒绝未知指令 type', () => {
+    const result = AnalysisPlanSchema.safeParse(
+      createValidPlan({
+        userIntent: { action: 'control_ui', riskLevel: 'general', needsClarification: false },
+        evidenceNeeds: [],
+        clientAction: { type: 'homepage.unknown.set', display: 'sleep' },
+      }),
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it('拒绝非法 display 值', () => {
+    const result = AnalysisPlanSchema.safeParse(
+      createValidPlan({
+        userIntent: { action: 'control_ui', riskLevel: 'general', needsClarification: false },
+        evidenceNeeds: [],
+        clientAction: { type: 'homepage.trend-card.set', display: 'overview' },
+      }),
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it('拒绝 clientAction 上的额外字段', () => {
+    const result = AnalysisPlanSchema.safeParse(
+      createValidPlan({
+        userIntent: { action: 'control_ui', riskLevel: 'general', needsClarification: false },
+        evidenceNeeds: [],
+        clientAction: {
+          type: 'homepage.trend-card.set',
+          display: 'sleep',
+          target: 'sidebar',
+        },
+      }),
+    );
     expect(result.success).toBe(false);
   });
 });

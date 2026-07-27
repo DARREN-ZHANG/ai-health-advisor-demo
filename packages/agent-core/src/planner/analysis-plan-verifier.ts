@@ -93,5 +93,65 @@ export function verifyAnalysisPlan(
     }
   }
 
+  // 7. UI 控制计划约束（首页 Trends Brief）
+  verifyUiControlPlan(plan, violations);
+
   return { valid: violations.length === 0, violations };
+}
+
+/**
+ * 校验 control_ui / clientAction 的业务约束。
+ *
+ * 约束总结（与 advisor-plan.md prompt 对齐）：
+ * - action='control_ui' 时必须有 clientAction（ui_action_required）
+ * - action='control_ui' 时不得有 evidence/webSearch（ui_control_has_evidence）
+ * - action='control_ui' 时 riskLevel 必须是 general（ui_control_risk_mismatch）
+ * - clarification=true 时不得带 clientAction（ui_action_during_clarification）
+ * - 健康 action（非 control_ui）允许带 clientAction（mixed 意图），不视为违规
+ */
+function verifyUiControlPlan(
+  plan: AnalysisPlan,
+  violations: PlanVerificationResult['violations'],
+): void {
+  const isControlUiAction = plan.userIntent.action === 'control_ui';
+  const hasClientAction = plan.clientAction != null;
+
+  if (isControlUiAction && !hasClientAction) {
+    violations.push({
+      rule: 'ui_action_required',
+      message: 'action="control_ui" 必须提供 clientAction',
+      path: 'clientAction',
+    });
+  }
+
+  if (isControlUiAction) {
+    // 纯 UI 不允许携带 evidence 或 webSearch
+    const hasEvidence = plan.evidenceNeeds.length > 0;
+    const hasWebSearch = (plan.webSearchNeeds?.length ?? 0) > 0;
+    if (hasEvidence || hasWebSearch) {
+      violations.push({
+        rule: 'ui_control_has_evidence',
+        message: 'control_ui 计划不得携带 evidenceNeeds 或 webSearchNeeds',
+        path: hasEvidence ? 'evidenceNeeds' : 'webSearchNeeds',
+      });
+    }
+
+    // riskLevel 必须是 general（UI 控制与安全语义无关）
+    if (plan.userIntent.riskLevel !== 'general') {
+      violations.push({
+        rule: 'ui_control_risk_mismatch',
+        message: `control_ui riskLevel 必须为 general，实际为 ${plan.userIntent.riskLevel}`,
+        path: 'userIntent.riskLevel',
+      });
+    }
+  }
+
+  // clarification 时禁止 clientAction（避免澄清前产生副作用）
+  if (plan.userIntent.needsClarification && hasClientAction) {
+    violations.push({
+      rule: 'ui_action_during_clarification',
+      message: 'clarification 阶段不得附带 clientAction',
+      path: 'clientAction',
+    });
+  }
 }

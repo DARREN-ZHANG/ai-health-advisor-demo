@@ -26,3 +26,35 @@ describe('advisor planner prompt web search rules', () => {
     expect(prompt).toContain('不能支持个性化医疗指令');
   });
 });
+
+describe('advisor planner prompt — UI 控制计划', () => {
+  it('documents control_ui action and clientAction schema', () => {
+    const prompt = readFileSync(promptPath, 'utf-8');
+
+    expect(prompt).toContain('control_ui');
+    expect(prompt).toContain('homepage.trend-card.set');
+    expect(prompt).toContain('clientAction');
+    expect(prompt).toContain('当前客户端 UI 状态');
+  });
+
+  it('provides positive examples for sleep/activity/hidden control', () => {
+    const prompt = readFileSync(promptPath, 'utf-8');
+
+    expect(prompt).toContain('在首页展示睡眠趋势简报');
+    expect(prompt).toContain('在首页展示活动趋势简报');
+    expect(prompt).toContain('隐藏首页趋势简报');
+  });
+
+  it('explicitly rejects keyword-based triggering for normal health questions', () => {
+    const prompt = readFileSync(promptPath, 'utf-8');
+
+    expect(prompt).toContain('不要基于单个关键词（如"睡眠"或"活动"）直接判定为 control_ui');
+  });
+
+  it('documents clarification boundary for ambiguous display requests', () => {
+    const prompt = readFileSync(promptPath, 'utf-8');
+
+    expect(prompt).toContain('显示趋势简报');
+    expect(prompt).toContain('clarificationQuestion');
+  });
+});

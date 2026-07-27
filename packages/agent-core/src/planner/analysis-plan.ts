@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { UiDirectiveSchema } from '@health-advisor/shared';
 
 /** 指标类型 */
 export const MetricType = z.enum([
@@ -14,6 +15,8 @@ export const TimeScope = z.enum([
 export const ActionIntent = z.enum([
   'status_summary', 'explain_chart', 'ask_why',
   'exercise_readiness', 'compare_periods', 'general',
+  // 控制首页 UI 副作用（无健康数据推理）
+  'control_ui',
 ]);
 
 /** 安全约束 */
@@ -75,6 +78,13 @@ export const AnalysisPlanSchema = z.object({
     maxSummaryLength: z.number().int().positive(),
     tone: z.enum(['concise', 'explanatory']),
   }),
+  /**
+   * Planner verifier 通过的 UI 指令。
+   * - 纯 UI 请求：userIntent.action === 'control_ui'，必填。
+   * - 混合请求：保留实际 health action，可选附带一条指令。
+   * - clarification 或 fallback 路径必须为 null/undefined。
+   */
+  clientAction: UiDirectiveSchema.nullable().optional(),
 });
 
 /** AnalysisPlan 推断类型 */
