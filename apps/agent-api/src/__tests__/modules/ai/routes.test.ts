@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { buildApp } from '../../../app.js';
 import type { FastifyInstance } from 'fastify';
 import type { AgentResponseEnvelope, PageContext } from '@health-advisor/shared';
-import { AgentTaskType } from '@health-advisor/shared';
+import { AgentTaskType, ErrorCode } from '@health-advisor/shared';
 
 // mock executeAgent
 vi.mock('@health-advisor/agent-core', async (importOriginal) => {
@@ -703,6 +703,73 @@ describe('AI Routes', () => {
       expect(body.data.memoryCandidates[0].proposedConfirmationText).toContain('花生');
 
       await app.close();
+    });
+
+    test('合法 uiContext 原样透传给 orchestrator', async () => {
+      mockedExecuteAgent.mockReset();
+      mockedExecuteAgent.mockResolvedValueOnce(chatResponse());
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/chat',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          userMessage: '在首页展示睡眠趋势简报',
+          uiContext: { homepageTrendCard: 'sleep' },
+        },
+        headers: { 'x-session-id': 'sess-ui-1' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(mockedExecuteAgent).toHaveBeenCalledTimes(1);
+      const forwarded = mockedExecuteAgent.mock.calls[0]?.[0];
+      expect(forwarded.uiContext).toStrictEqual({
+        homepageTrendCard: 'sleep',
+      });
+    });
+
+    test('非法 homepageTrendCard 状态返回 400 VALIDATION_ERROR', async () => {
+      mockedExecuteAgent.mockReset();
+      mockedExecuteAgent.mockResolvedValueOnce(chatResponse());
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/chat',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          userMessage: '在首页展示概览',
+          uiContext: { homepageTrendCard: 'overview' },
+        },
+        headers: { 'x-session-id': 'sess-ui-2' },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe(ErrorCode.VALIDATION_ERROR);
+      expect(mockedExecuteAgent).not.toHaveBeenCalled();
+    });
+
+    test('请求不带 uiContext 沿用现有成功路径', async () => {
+      mockedExecuteAgent.mockReset();
+      mockedExecuteAgent.mockResolvedValueOnce(chatResponse());
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/chat',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          userMessage: '最近感觉怎样',
+        },
+        headers: { 'x-session-id': 'sess-ui-3' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const forwarded = mockedExecuteAgent.mock.calls[0]?.[0];
+      expect(forwarded.uiContext).toBeUndefined();
     });
   });
 });

@@ -4,6 +4,7 @@ import {
   PageContextSchema,
   DataTabSchema,
   TimeframeSchema,
+  ClientUiContextSchema,
 } from '@health-advisor/shared';
 
 const DateRangeSchema = z.object({
@@ -23,6 +24,7 @@ export const AgentRequestSchema = z.object({
   userMessage: z.string().optional(),
   smartPromptId: z.string().optional(),
   visibleChartIds: z.array(z.string()).optional(),
+  uiContext: ClientUiContextSchema.optional(),
 });
 
 export type AgentRequest = z.infer<typeof AgentRequestSchema>;

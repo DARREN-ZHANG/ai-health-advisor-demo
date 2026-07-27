@@ -13,6 +13,7 @@ import type {
   PageContext,
   DataTab,
   Timeframe,
+  ClientUiContext,
 } from '@health-advisor/shared';
 
 export interface ChatRequest {
@@ -21,6 +22,7 @@ export interface ChatRequest {
   userMessage: string;
   smartPromptId?: string;
   visibleChartIds?: string[];
+  uiContext?: ClientUiContext;
 }
 
 /**
