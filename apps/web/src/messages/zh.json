@@ -97,6 +97,19 @@
     "night": {
       "title": "晚间",
       "body": "已就绪放松流程，建议降低屏幕亮度。"
+    },
+    "trendBrief": {
+      "sleepTitle": "Sleep",
+      "activityTitle": "Activity",
+      "period": "7 日简报",
+      "sleepDuration": "睡眠时长",
+      "score": "Score",
+      "deepSleep": "Deep Sleep",
+      "efficiency": "Efficiency",
+      "steps": "Steps",
+      "distance": "Distance",
+      "calories": "Calories",
+      "activeMinutes": "Active Minutes"
     }
   },
   "lifeLog": {

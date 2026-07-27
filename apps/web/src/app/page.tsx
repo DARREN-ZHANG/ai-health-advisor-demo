@@ -12,6 +12,7 @@ import { FutureTimelineBlock } from '@/components/homepage/FutureTimelineBlock';
 import { FutureTimelineBlockSkeleton } from '@/components/homepage/FutureTimelineBlockSkeleton';
 import { ActionTimerSheet } from '@/components/homepage/ActionTimerSheet';
 import { AppointmentSheet } from '@/components/homepage/AppointmentSheet';
+import { HomeTrendCardSlot } from '@/components/homepage/HomeTrendCardSlot';
 import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
 import { LifeLogPanel } from '@/components/life-log/LifeLogPanel';
 import { useProfileStore } from '@/stores/profile.store';
@@ -350,6 +351,15 @@ export default function HomePage() {
               </>
             )}
           </div>
+
+          {/*
+            Home Trends Brief（首页 AI 可控卡片）—— 任务 3.2
+            按 Profile 分区、仅内存保存的 Zustand store 控制 display 状态。
+            display=hidden 时本组件不渲染任何 DOM，不占布局；
+            Advisor Chat 通过 uiDirectives 在 store 中切换 display。
+            刷新页面后所有 Profile 状态回到 hidden。
+          */}
+          <HomeTrendCardSlot profileId={currentProfileId} />
 
           {/*
             Life Log（profile-scoped，仅当前会话）—— I3.3

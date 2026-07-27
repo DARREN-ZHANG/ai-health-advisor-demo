@@ -97,6 +97,19 @@
     "night": {
       "title": "Night",
       "body": "Wind-down routine ready. Reduce screen brightness."
+    },
+    "trendBrief": {
+      "sleepTitle": "Sleep",
+      "activityTitle": "Activity",
+      "period": "7-day brief",
+      "sleepDuration": "Sleep Duration",
+      "score": "Score",
+      "deepSleep": "Deep Sleep",
+      "efficiency": "Efficiency",
+      "steps": "Steps",
+      "distance": "Distance",
+      "calories": "Calories",
+      "activeMinutes": "Active Minutes"
     }
   },
   "lifeLog": {
