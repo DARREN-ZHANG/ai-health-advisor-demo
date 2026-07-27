@@ -34,6 +34,10 @@ describe('advisor planner prompt — UI 控制计划', () => {
     expect(prompt).toContain('control_ui');
     expect(prompt).toContain('homepage.trend-card.set');
     expect(prompt).toContain('clientAction');
+    expect(prompt).toContain(
+      '"action": "<status_summary|explain_chart|ask_why|exercise_readiness|compare_periods|general|control_ui>"',
+    );
+    expect(prompt).toContain('"display": "<hidden|sleep|activity>"');
     expect(prompt).toContain('当前客户端 UI 状态');
   });
 
@@ -43,6 +47,16 @@ describe('advisor planner prompt — UI 控制计划', () => {
     expect(prompt).toContain('在首页展示睡眠趋势简报');
     expect(prompt).toContain('在首页展示活动趋势简报');
     expect(prompt).toContain('隐藏首页趋势简报');
+  });
+
+  it('documents sleep-to-activity replacement as an activity target transition', () => {
+    const prompt = readFileSync(promptPath, 'utf-8');
+
+    expect(prompt).toContain('homepageTrendCard: sleep');
+    expect(prompt).toContain('把 Sleep 模块替换成 Activity 模块');
+    expect(prompt).toContain('display:"activity"');
+    expect(prompt).toContain('`display` 必须取用户指定的**目标模块**');
+    expect(prompt).toContain('不能保留当前值');
   });
 
   it('explicitly rejects keyword-based triggering for normal health questions', () => {

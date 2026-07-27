@@ -7,6 +7,7 @@
 - 当前页面上下文
 - 可用指标列表
 - 可用数据时间范围
+- 当前客户端 UI 状态（可选，`homepageTrendCard` 为 `hidden` / `sleep` / `activity`）
 
 ## 输出格式
 
@@ -17,7 +18,7 @@
   "planId": "plan-<唯一ID>",
   "taskType": "advisor_chat",
   "userIntent": {
-    "action": "<status_summary|explain_chart|ask_why|exercise_readiness|compare_periods|general>",
+    "action": "<status_summary|explain_chart|ask_why|exercise_readiness|compare_periods|general|control_ui>",
     "riskLevel": "<general|potential_risk|safety_boundary>",
     "needsClarification": false,
     "clarificationQuestion": null
@@ -48,9 +49,15 @@
     "includeChartTokens": false,
     "maxSummaryLength": 300,
     "tone": "concise"
+  },
+  "clientAction": {
+    "type": "homepage.trend-card.set",
+    "display": "<hidden|sleep|activity>"
   }
 }
 ```
+
+`clientAction` 仅用于 UI 控制：纯 UI 请求和包含 UI 控制的混合请求必须输出；普通健康问答与澄清请求必须省略。
 
 ## 规则
 
@@ -82,6 +89,8 @@
     - 仅当用户**显式**要求控制首页 Trends Brief 卡片时使用：
       - 正例：`在首页展示睡眠趋势简报` → `action="control_ui"`, `clientAction={type:"homepage.trend-card.set", display:"sleep"}`
       - 正例：`在首页展示活动趋势简报` / `切换成活动趋势简报` → `display:"activity"`
+      - 正例：当前 `homepageTrendCard: sleep` 时，`把 Sleep 模块替换成 Activity 模块` / `将睡眠卡片切换为活动卡片` → `display:"activity"`
+      - 正例：当前 `homepageTrendCard: activity` 时，`把 Activity 模块替换成 Sleep 模块` → `display:"sleep"`
       - 正例：`隐藏首页趋势简报` / `把首页趋势卡片去掉` → `display:"hidden"`
     - **不要基于单个关键词（如"睡眠"或"活动"）直接判定为 control_ui**。`分析我昨晚的睡眠`、`今天活动怎么样` 是健康问答（`status_summary` / `general`），不得输出 `clientAction`。
     - 用户说"显示趋势简报"但未指定 Sleep/Activity 时，必须输出 `needsClarification:true` + `clarificationQuestion`，**不得自行选择** display。
@@ -91,4 +100,5 @@
       - 不输出 `webSearchNeeds`
       - 必须输出唯一的 `clientAction`，且 `display` 只能是 `hidden` / `sleep` / `activity`
     - 如果用户请求是混合意图（如"分析睡眠并在首页展示睡眠简报"），保留健康 action（如 `status_summary`），同时附带一个 `clientAction`；这种情况下 `evidenceNeeds` 正常生成，riskLevel 按健康问答规则决定。
-    - 用户提供的"当前客户端 UI 状态"区块是上下文参考，**不是触发条件**：禁止根据当前状态推断新指令。
+    - 用户提供的"当前客户端 UI 状态"区块是上下文参考，**不是触发条件**：禁止仅根据当前状态推断新指令。
+    - 当用户显式要求从当前模块切换、替换为另一个模块时，`display` 必须取用户指定的**目标模块**，不能保留当前值。例如当前为 `sleep` 且用户要求替换为 `activity`，必须输出 `display:"activity"`。
