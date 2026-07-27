@@ -35,6 +35,7 @@ import {
 import type { AppConfig } from '../config/env.js';
 import { createSessionStore, type SessionStoreService } from './session-store.js';
 import { SessionSandboxStore, type SessionSandbox } from './session-sandbox-store.js';
+import { InMemoryPlanStore } from './plan-store.js';
 import type { MetricsStore } from '../plugins/metrics.js';
 
 /**
@@ -141,6 +142,8 @@ export interface RuntimeRegistry extends AgentRuntimeDeps {
   sessionStore: SessionStoreService;
   sessionSandboxes: SessionSandboxStore;
   profiles: Map<string, ProfileData>;
+  /** 会话级计划存储：每个 (sessionId, profileId) 独立隔离，进程内内存态。 */
+  planStore: InMemoryPlanStore;
   getSessionSandbox(sessionId: string): SessionSandbox;
   /** 不含 override 的原始 profile 数据 */
   getRawProfile(profileId: string, sessionId: string): ProfileData;
@@ -155,6 +158,7 @@ export function createRuntimeRegistry(config: AppConfig, metrics: MetricsStore):
   // 2. 创建 session / analytical memory
   const sessionStore = createSessionStore();
   const analyticalMemory = new InMemoryAnalyticalMemoryStore();
+  const planStore = new InMemoryPlanStore();
 
   // 3. 每个页面 Session 拥有独立的 profile 与 demo 状态
   const sessionSandboxes = new SessionSandboxStore(config.dataDir, () => profiles);
@@ -375,6 +379,7 @@ export function createRuntimeRegistry(config: AppConfig, metrics: MetricsStore):
     sessionStore,
     sessionSandboxes,
     profiles,
+    planStore,
     getSessionSandbox: (sessionId: string) => sessionSandboxes.get(sessionId),
     getRawProfile,
     reloadProfiles,
