@@ -1,5 +1,6 @@
 import type { ChartTokenId } from './chart-token';
 import type { MicroEventParams, MicroEventType } from './micro-event';
+import type { PlanDraftInput } from './plan';
 
 export enum AgentTaskType {
   HOMEPAGE_SUMMARY = 'homepage_summary',
@@ -91,6 +92,15 @@ export interface AgentResponseEnvelope {
   futureSuggestions?: FutureSuggestion[];
   /** Advisor 控制的首页 UI 副作用；每次最多一条，由 Planner verifier 校验 */
   uiDirectives?: UiDirective[];
+  /**
+   * Advisor 输出的结构化计划草稿预览。
+   *
+   * - 仅当 LLM 明确产出符合 PlanDraftInput schema 的结构时才会出现。
+   * - 不含 draftId：agent-api route 层会注册到 plan-store 后注入 draftId，
+   *   再以 PlanDraft 形态返回给前端。
+   * - fallback / timeout / 安全审核失败 / 解析失败时绝不携带此字段。
+   */
+  planDraftPreview?: PlanDraftInput;
   meta: {
     taskType: AgentTaskType;
     pageContext: PageContext;

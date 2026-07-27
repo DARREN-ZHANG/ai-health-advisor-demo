@@ -71,6 +71,20 @@ export type {
   UiDirective,
 } from './types/agent';
 
+// Types — plan
+export type {
+  PlanTimeOfDay,
+  PlanTaskDraft,
+  PlanGroupDraft,
+  PlanDraftInput,
+  PlanDraft,
+  PlanTask,
+  PlanGroup,
+  PlanStatus,
+  Plan,
+  PlanProgress,
+} from './types/plan';
+
 // Types — brief-stream
 // 运行时常量（BRIEF_STREAM_ERROR_CODES）放 types 区，沿用 micro-event 先例
 export { BRIEF_STREAM_ERROR_CODES } from './types/brief-stream';
@@ -180,6 +194,23 @@ export {
   HomeTrendCardSetDirectiveSchema,
   UiDirectiveSchema,
 } from './schemas/agent';
+
+// Schemas — plan
+export {
+  MAX_PLAN_GROUPS,
+  MAX_PLAN_TASKS_PER_GROUP,
+  PlanTaskDraftSchema,
+  PlanGroupDraftSchema,
+  PlanDraftInputSchema,
+  PlanTaskSchema,
+  PlanGroupSchema,
+  PlanProgressSchema,
+  PlanStatusSchema,
+  PlanSchema,
+  PlanDraftSchema,
+  PlanTaskUpdateRequestSchema,
+  PlanReplaceConfirmSchema,
+} from './schemas/plan';
 
 // Schemas — brief-stream
 export {

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ChartTokenIdSchema } from './chart-token';
 import { AgentTaskType } from '../types/agent';
 import { MicroEventParamsSchema, MicroEventTypeSchema } from './micro-event';
+import { PlanDraftInputSchema } from './plan';
 
 export const AgentTaskTypeSchema = z.nativeEnum(AgentTaskType);
 
@@ -127,6 +128,7 @@ export const AgentResponseEnvelopeSchema = z.object({
   memoryCandidates: z.array(MemoryCandidateConfirmationSchema).optional(),
   futureSuggestions: z.array(FutureSuggestionSchema).max(2).optional(),
   uiDirectives: z.array(UiDirectiveSchema).max(1).optional(),
+  planDraftPreview: PlanDraftInputSchema.optional(),
   meta: z.object({
     taskType: AgentTaskTypeSchema,
     pageContext: PageContextSchema,
