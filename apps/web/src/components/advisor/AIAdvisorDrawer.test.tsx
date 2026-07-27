@@ -6,6 +6,7 @@ import { AIAdvisorDrawer } from './AIAdvisorDrawer';
 import { useUIStore } from '@/stores/ui.store';
 import { useAIAdvisorStore } from '@/stores/ai-advisor.store';
 import { useProfileStore } from '@/stores/profile.store';
+import { useHomeTrendCardStore } from '@/stores/home-trend-card.store';
 
 /**
  * AI Advisor Drawer 测试用 next-intl 包装器。
@@ -394,6 +395,167 @@ describe('AIAdvisorDrawer', () => {
       expect(cls).not.toContain('bg-blue-');
       expect(cls).not.toContain('text-blue-');
       expect(cls).not.toContain('border-slate-');
+    });
+  });
+
+  describe('Trends Brief UI 指令', () => {
+    it('请求 payload 携带发送时的 homepageTrendCard 状态', async () => {
+      useUIStore.setState({ isAdvisorDrawerOpen: true });
+      const { useHomeTrendCardStore } = await import('@/stores/home-trend-card.store');
+      useHomeTrendCardStore.setState({ displayByProfile: { 'profile-1': 'sleep' } });
+
+      renderWithIntl(<AIAdvisorDrawer />);
+      const mobile = getMobileContainer();
+      const textarea = within(mobile).getByPlaceholderText('输入你的问题...') as HTMLTextAreaElement;
+      fireEvent.change(textarea, { target: { value: '隐藏首页趋势简报' } });
+      fireEvent.click(within(mobile).getByRole('button', { name: '发送' }));
+
+      await waitFor(() => {
+        expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+      });
+      const payload = mockMutateAsync.mock.calls[0]?.[0];
+      expect(payload?.uiContext).toStrictEqual({ homepageTrendCard: 'sleep' });
+    });
+
+    it('complete sleep 响应更新对应 profile 的 store', async () => {
+      useUIStore.setState({ isAdvisorDrawerOpen: true });
+      const { useHomeTrendCardStore, selectHomeTrendCardDisplay } = await import(
+        '@/stores/home-trend-card.store'
+      );
+      useHomeTrendCardStore.setState({ displayByProfile: {} });
+
+      mockMutateAsync.mockResolvedValueOnce({
+        summary: '已在首页展示睡眠趋势简报。',
+        source: 'planner',
+        statusColor: 'good',
+        chartTokens: [],
+        microTips: [],
+        uiDirectives: [{ type: 'homepage.trend-card.set', display: 'sleep' }],
+        meta: {
+          taskType: 'advisor_chat',
+          pageContext: { profileId: 'profile-1', page: 'homepage', timeframe: 'week' },
+          finishReason: 'complete',
+        },
+      });
+
+      renderWithIntl(<AIAdvisorDrawer />);
+      const mobile = getMobileContainer();
+      const textarea = within(mobile).getByPlaceholderText('输入你的问题...') as HTMLTextAreaElement;
+      fireEvent.change(textarea, { target: { value: '在首页展示睡眠趋势简报' } });
+      fireEvent.click(within(mobile).getByRole('button', { name: '发送' }));
+
+      await waitFor(() => {
+        expect(
+          selectHomeTrendCardDisplay(useHomeTrendCardStore.getState(), 'profile-1'),
+        ).toBe('sleep');
+      });
+    });
+
+    it('fallback 响应即使 mock body 含指令也不更新 store', async () => {
+      useUIStore.setState({ isAdvisorDrawerOpen: true });
+      const { useHomeTrendCardStore, selectHomeTrendCardDisplay } = await import(
+        '@/stores/home-trend-card.store'
+      );
+      useHomeTrendCardStore.setState({ displayByProfile: {} });
+
+      mockMutateAsync.mockResolvedValueOnce({
+        summary: '失败',
+        source: 'fallback',
+        statusColor: 'warning',
+        chartTokens: [],
+        microTips: [],
+        // 故意把指令塞进 fallback；Web 网络边界必须根据 finishReason 拒绝
+        uiDirectives: [{ type: 'homepage.trend-card.set', display: 'sleep' }],
+        meta: {
+          taskType: 'advisor_chat',
+          pageContext: { profileId: 'profile-1', page: 'homepage', timeframe: 'week' },
+          finishReason: 'fallback',
+        },
+      });
+
+      renderWithIntl(<AIAdvisorDrawer />);
+      const mobile = getMobileContainer();
+      const textarea = within(mobile).getByPlaceholderText('输入你的问题...') as HTMLTextAreaElement;
+      fireEvent.change(textarea, { target: { value: '在首页展示睡眠趋势简报' } });
+      fireEvent.click(within(mobile).getByRole('button', { name: '发送' }));
+
+      await waitFor(() => {
+        expect(useAIAdvisorStore.getState().messages.some((m) => m.role === 'assistant')).toBe(true);
+      });
+      expect(
+        selectHomeTrendCardDisplay(useHomeTrendCardStore.getState(), 'profile-1'),
+      ).toBe('hidden');
+    });
+
+    it('请求期间 Profile 从 A 切到 B，A 的迟到响应只更新 A', async () => {
+      useUIStore.setState({ isAdvisorDrawerOpen: true });
+      const { useHomeTrendCardStore, selectHomeTrendCardDisplay } = await import(
+        '@/stores/home-trend-card.store'
+      );
+      useHomeTrendCardStore.setState({ displayByProfile: {} });
+
+      let resolveA!: (value: unknown) => void;
+      const pendingA = new Promise((resolve) => {
+        resolveA = resolve;
+      });
+      mockMutateAsync.mockReturnValueOnce(pendingA);
+
+      renderWithIntl(<AIAdvisorDrawer />);
+      const mobile = getMobileContainer();
+      const textarea = within(mobile).getByPlaceholderText('输入你的问题...') as HTMLTextAreaElement;
+      fireEvent.change(textarea, { target: { value: '在首页展示睡眠趋势简报' } });
+      fireEvent.click(within(mobile).getByRole('button', { name: '发送' }));
+
+      // 等待请求发起后切换到 profile-2
+      await waitFor(() => {
+        expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+      });
+      useProfileStore.setState({ currentProfileId: 'profile-2' });
+
+      // A 的迟到响应到达
+      resolveA({
+        summary: '已在首页展示睡眠趋势简报。',
+        source: 'planner',
+        statusColor: 'good',
+        chartTokens: [],
+        microTips: [],
+        uiDirectives: [{ type: 'homepage.trend-card.set', display: 'sleep' }],
+        meta: {
+          taskType: 'advisor_chat',
+          pageContext: { profileId: 'profile-1', page: 'homepage', timeframe: 'week' },
+          finishReason: 'complete',
+        },
+      });
+
+      await waitFor(() => {
+        expect(
+          selectHomeTrendCardDisplay(useHomeTrendCardStore.getState(), 'profile-1'),
+        ).toBe('sleep');
+      });
+      // profile-2 未受影响
+      expect(
+        selectHomeTrendCardDisplay(useHomeTrendCardStore.getState(), 'profile-2'),
+      ).toBe('hidden');
+    });
+
+    it('清空聊天不清空 Trends Brief 状态', () => {
+      useUIStore.setState({ isAdvisorDrawerOpen: true });
+      useHomeTrendCardStore.getState().setDisplay('profile-1', 'sleep');
+
+      useAIAdvisorStore.setState({
+        messages: [
+          { id: 'm1', role: 'user', content: 'hi', timestamp: Date.now() },
+        ],
+      });
+      renderWithIntl(<AIAdvisorDrawer />);
+      const mobile = getMobileContainer();
+      fireEvent.click(within(mobile).getByRole('button', { name: '更多选项' }));
+      fireEvent.click(within(mobile).getByText('清空对话'));
+
+      expect(useAIAdvisorStore.getState().messages).toHaveLength(0);
+      expect(
+        useHomeTrendCardStore.getState().displayByProfile['profile-1'],
+      ).toBe('sleep');
     });
   });
 });

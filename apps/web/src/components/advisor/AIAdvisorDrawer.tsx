@@ -10,6 +10,11 @@ import { useProfileStore } from '@/stores/profile.store';
 import { useDataCenterStore } from '@/stores/data-center.store';
 import { useAdvisorChat } from '@/hooks/use-ai-query';
 import { clearSessionId, AI_UI_TIMEOUT_MS } from '@/lib/api-client';
+import { applyAdvisorUiDirectives } from '@/lib/advisor-ui-directives';
+import {
+  selectHomeTrendCardDisplay,
+  useHomeTrendCardStore,
+} from '@/stores/home-trend-card.store';
 import { ValoSheet } from '@/components/valo/ValoSheet';
 import { ValoDialog } from '@/components/valo/ValoDialog';
 import type { Message } from '@/stores/ai-advisor.store';
@@ -108,8 +113,13 @@ export function AIAdvisorDrawer() {
       setIsTimeoutHint(false);
 
       // 2. 构造上下文
+      const requestProfileId = currentProfileId;
+      const homepageTrendCard = selectHomeTrendCardDisplay(
+        useHomeTrendCardStore.getState(),
+        requestProfileId,
+      );
       const pageContext: PageContext = {
-        profileId: currentProfileId,
+        profileId: requestProfileId,
         page: pathname === '/' ? 'homepage' : pathname.replace('/', ''),
         dataTab: activeTab as DataTab,
         timeframe: timeframe as Timeframe,
@@ -123,11 +133,12 @@ export function AIAdvisorDrawer() {
       try {
         // 4. 发送请求（网络超时已改为 30 秒兜底，给后端充足时间返回 fallback）
         const response = await sendChatRequest({
-          profileId: currentProfileId,
+          profileId: requestProfileId,
           pageContext,
           userMessage: text,
           smartPromptId,
           visibleChartIds: pageContext.page === 'data-center' ? [activeTab] : undefined,
+          uiContext: { homepageTrendCard },
         });
 
         // 5. 添加助手回答（包括后端返回的 fallback 内容）
@@ -141,6 +152,10 @@ export function AIAdvisorDrawer() {
           statusColor: response.statusColor,
           meta: response.meta,
         });
+
+        // 6. 应用首页 Trends Brief UI 指令（仅当 finishReason=complete 且 profile 匹配）。
+        // 用发送时的 requestProfileId，避免等待期间切换 Profile 后污染当前视图。
+        applyAdvisorUiDirectives(response, requestProfileId);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : t('networkError');
         addMessage({
