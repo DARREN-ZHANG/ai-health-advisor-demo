@@ -153,6 +153,16 @@ function buildPlannerUserPrompt(input: PlanBuilderInput): string {
     sections.push(`## 当前数据概况\n${packetSummary.join('\n')}`);
   }
 
+  // Planner 必须看到前序澄清轮次，才能把当前补充信息与最初的计划请求关联起来。
+  // recentConversation 已由 session memory 按 profile 隔离并限制轮数，这里原样传递语义上下文。
+  const recentConversation = input.basePacket.advisorChat?.recentConversation ?? [];
+  if (recentConversation.length > 0) {
+    const conversationLines = recentConversation.map(
+      (message) => `- ${message.role === 'user' ? '用户' : '助手'}：${message.text}`,
+    );
+    sections.push(`## 最近对话\n${conversationLines.join('\n')}`);
+  }
+
   // 当前客户端 UI 状态：Planner 借此理解上下文，但禁止基于关键词启发式判定
   if (input.uiContext) {
     sections.push(

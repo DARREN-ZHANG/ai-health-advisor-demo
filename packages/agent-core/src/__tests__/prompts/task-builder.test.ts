@@ -112,6 +112,23 @@ describe('buildTaskPrompt', () => {
     expect(prompt).toContain('健康顾问对话');
   });
 
+  it('advisor_chat 的最终 JSON 契约包含条件式 planDraft 字段', () => {
+    const ctx = makeContext({
+      task: {
+        type: AgentTaskType.ADVISOR_CHAT,
+        pageContext: { profileId: 'profile-a', page: 'home', timeframe: 'week' },
+        userMessage: '帮我做一个7天的恢复计划',
+      },
+    });
+
+    const prompt = buildTaskPrompt(ctx, mockLoader, emptyRules);
+
+    expect(prompt).toContain('planDraft');
+    expect(prompt).toContain('"groups"');
+    expect(prompt).toContain('"tasks"');
+    expect(prompt).toContain('满足计划请求时必须追加');
+  });
+
   it('使用 packet 时渲染 TaskContextPacket section', () => {
     const packet = makePacket();
     const prompt = buildTaskPrompt(makeContext(), mockLoader, emptyRules, packet);

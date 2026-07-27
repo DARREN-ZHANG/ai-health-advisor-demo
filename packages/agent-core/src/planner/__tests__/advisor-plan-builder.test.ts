@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import type { HealthAgent } from '../../executor/create-agent';
 import type { PlanBuilderDeps, PlanBuilderInput } from '../advisor-plan-builder';
 import { buildAnalysisPlan, buildAnalysisPlanWithRetry } from '../advisor-plan-builder';
-import { AnalysisPlanSchema } from '../analysis-plan';
 import type { TaskContextPacket } from '../../context/context-packet';
 
 /** 构造最小合法的 PlanBuilderInput */
@@ -112,7 +111,8 @@ describe('buildAnalysisPlan', () => {
   });
 
   it('Schema 校验失败 — 缺少 evidenceNeeds', async () => {
-    const { evidenceNeeds, ...planWithoutEvidence } = createValidPlanJson();
+    const planWithoutEvidence = { ...createValidPlanJson() };
+    Reflect.deleteProperty(planWithoutEvidence, 'evidenceNeeds');
     const agent = createMockAgent(JSON.stringify(planWithoutEvidence));
     const result = await buildAnalysisPlan(createDeps(agent), createValidInput());
 
@@ -238,6 +238,40 @@ describe('buildAnalysisPlan', () => {
 
     const userPrompt = mockInvoke.mock.calls[0][0].userPrompt;
     expect(userPrompt).not.toContain('当前客户端 UI 状态');
+  });
+
+  it('把最近对话传给 planner，使澄清后的回复仍保留原始计划意图', async () => {
+    const validPlan = createValidPlanJson();
+    const mockInvoke = vi.fn().mockResolvedValue({ content: JSON.stringify(validPlan) });
+    const agent = { invoke: mockInvoke } as unknown as HealthAgent;
+
+    const input = createValidInput({
+      userMessage: '问题是睡眠浅，白天疲惫，我希望计划是短期的，一周',
+      basePacket: {
+        advisorChat: {
+          recentConversation: [
+            { role: 'user', text: '帮我做一个7天的康复计划' },
+            {
+              role: 'assistant',
+              text: '请问康复的重点目标是什么？',
+            },
+            { role: 'user', text: '提升睡眠质量的康复计划' },
+            {
+              role: 'assistant',
+              text: '请告诉我最困扰的睡眠问题和计划周期。',
+            },
+          ],
+        },
+      } as TaskContextPacket,
+    });
+
+    await buildAnalysisPlan(createDeps(agent), input);
+
+    const userPrompt = mockInvoke.mock.calls[0][0].userPrompt;
+    expect(userPrompt).toContain('最近对话');
+    expect(userPrompt).toContain('帮我做一个7天的康复计划');
+    expect(userPrompt).toContain('请告诉我最困扰的睡眠问题和计划周期');
+    expect(userPrompt).toContain('问题是睡眠浅，白天疲惫，我希望计划是短期的，一周');
   });
 
   it('fake planner 返回纯 UI clientAction 时 builder 解析并通过 verifier', async () => {

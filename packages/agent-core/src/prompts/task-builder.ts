@@ -268,6 +268,57 @@ export function buildTaskPrompt(
       ),
     );
     sections.push('}');
+  } else if (taskType === AgentTaskType.ADVISOR_CHAT) {
+    sections.push('{');
+    sections.push('  "source": "llm",');
+    sections.push('  "statusColor": "good",');
+    sections.push(
+      t(
+        locale,
+        '  "summary": "计划总览或顾问回复",',
+        '  "summary": "Plan overview or advisor response",',
+      ),
+    );
+    sections.push('  "chartTokens": ["CHART_TOKEN_1"],');
+    sections.push(
+      t(locale, '  "microTips": ["贴士1", "贴士2"],', '  "microTips": ["Tip 1", "Tip 2"],'),
+    );
+    sections.push('  "planDraft": {');
+    sections.push(t(locale, '    "title": "7天恢复计划",', '    "title": "7-Day Recovery Plan",'));
+    sections.push(
+      t(
+        locale,
+        '    "summary": "根据用户目标制定的可执行计划总览",',
+        '    "summary": "An actionable plan overview based on the user goal",',
+      ),
+    );
+    sections.push('    "groups": [');
+    sections.push('      {');
+    sections.push(t(locale, '        "title": "第 1 天",', '        "title": "Day 1",'));
+    sections.push('        "tasks": [');
+    sections.push('          {');
+    sections.push(t(locale, '            "title": "任务标题",', '            "title": "Task title",'));
+    sections.push(
+      t(
+        locale,
+        '            "description": "具体且安全的执行说明",',
+        '            "description": "Specific and safe instructions",',
+      ),
+    );
+    sections.push(
+      t(
+        locale,
+        '            "suggestedTimeOfDay": "晚间",',
+        '            "suggestedTimeOfDay": "Evening",',
+      ),
+    );
+    sections.push('            "estimatedMinutes": 10');
+    sections.push('          }');
+    sections.push('        ]');
+    sections.push('      }');
+    sections.push('    ]');
+    sections.push('  }');
+    sections.push('}');
   } else {
     sections.push('{');
     sections.push('  "source": "llm",');
@@ -281,6 +332,15 @@ export function buildTaskPrompt(
   }
 
   sections.push('```');
+  if (taskType === AgentTaskType.ADVISOR_CHAT) {
+    sections.push(
+      t(
+        locale,
+        '满足计划请求时必须追加 planDraft；需要继续澄清或不是计划请求时，必须从 JSON 中完整省略 planDraft 字段。',
+        'When the plan request is sufficiently specified, planDraft is required. Omit the entire planDraft field when clarification is still needed or the request is not for a plan.',
+      ),
+    );
+  }
 
   return sections.join('\n');
 }
