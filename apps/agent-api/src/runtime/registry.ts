@@ -360,17 +360,21 @@ export function createRuntimeRegistry(config: AppConfig, metrics: MetricsStore):
       reactPrompt: loadPromptFile(join(config.dataDir, 'prompts', 'react-tool-select.md')),
     };
 
-    syncReviewer = new SyncReflectionReviewer({
-      reviewerAgent: agents!.reviewerAgent,
-      gatePrompt: loadPromptFile(join(config.dataDir, 'prompts', 'sync-gate.md')),
-    });
+    if (config.REVIEWER_MODE === 'sync' || config.REVIEWER_MODE === 'full') {
+      syncReviewer = new SyncReflectionReviewer({
+        reviewerAgent: agents!.reviewerAgent,
+        gatePrompt: loadPromptFile(join(config.dataDir, 'prompts', 'sync-gate.md')),
+      });
+    }
 
-    // C-1: 注入 P0 异步 ReflectionObserver
-    reflectionObserver = new ReflectionObserver({
-      reviewerAgent: agents!.reviewerAgent,
-      reviewerPrompt: loadPromptFile(join(config.dataDir, 'prompts', 'reflection-reviewer.md')),
-      reviewerModelName: config.REVIEWER_LLM_MODEL || config.LLM_MODEL,
-    });
+    if (config.REVIEWER_MODE === 'full') {
+      // C-1: full 模式下注入 P0 异步 ReflectionObserver
+      reflectionObserver = new ReflectionObserver({
+        reviewerAgent: agents!.reviewerAgent,
+        reviewerPrompt: loadPromptFile(join(config.dataDir, 'prompts', 'reflection-reviewer.md')),
+        reviewerModelName: config.REVIEWER_LLM_MODEL || config.LLM_MODEL,
+      });
+    }
   }
 
   return {

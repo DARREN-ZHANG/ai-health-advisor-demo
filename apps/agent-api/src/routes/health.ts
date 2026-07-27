@@ -13,6 +13,7 @@ export async function healthRoutes(app: FastifyInstance) {
       env: config.NODE_ENV,
       provider: config.LLM_PROVIDER,
       fallbackOnly: config.FALLBACK_ONLY_MODE,
+      reviewerMode: config.REVIEWER_MODE,
       profilesLoaded: app.runtime.profiles.size,
       uptimeMs: Math.round(process.uptime() * 1000),
     }, buildMeta(request));

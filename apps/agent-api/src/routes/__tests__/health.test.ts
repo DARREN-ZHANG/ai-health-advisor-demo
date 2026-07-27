@@ -12,6 +12,7 @@ describe('GET /health', () => {
     app = await buildApp({
       env: {
         FALLBACK_ONLY_MODE: 'true',
+        REVIEWER_MODE: 'off',
         NODE_ENV: 'test',
         DATA_DIR,
       },
@@ -45,6 +46,7 @@ describe('GET /health', () => {
     expect(body.data.env).toBe('test');
     expect(body.data.provider).toBe('openai');
     expect(body.data.fallbackOnly).toBe(true);
+    expect(body.data.reviewerMode).toBe('off');
     expect(body.data.profilesLoaded).toBeGreaterThanOrEqual(3);
     expect(typeof body.data.uptimeMs).toBe('number');
   });

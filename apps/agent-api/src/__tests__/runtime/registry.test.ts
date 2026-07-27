@@ -149,6 +149,49 @@ describe('RuntimeRegistry', () => {
     });
   });
 
+  it('REVIEWER_MODE=off 时不注入同步或异步 Reviewer', () => {
+    const config = loadConfig({
+      FALLBACK_ONLY_MODE: 'false',
+      LLM_API_KEY: 'sk-test',
+      REVIEWER_MODE: 'off',
+      DATA_DIR,
+    });
+
+    const registryWithoutReviewer = createRuntimeRegistry(config, registry.metrics);
+
+    expect(registryWithoutReviewer.syncReviewer).toBeUndefined();
+    expect(registryWithoutReviewer.reflectionObserver).toBeUndefined();
+    expect(registryWithoutReviewer.planBuilder).toBeDefined();
+  });
+
+  it('REVIEWER_MODE=sync 时仅注入同步 Reviewer', () => {
+    const config = loadConfig({
+      FALLBACK_ONLY_MODE: 'false',
+      LLM_API_KEY: 'sk-test',
+      REVIEWER_MODE: 'sync',
+      DATA_DIR,
+    });
+
+    const registryWithSyncReviewer = createRuntimeRegistry(config, registry.metrics);
+
+    expect(registryWithSyncReviewer.syncReviewer).toBeDefined();
+    expect(registryWithSyncReviewer.reflectionObserver).toBeUndefined();
+  });
+
+  it('REVIEWER_MODE=full 时注入同步和异步 Reviewer', () => {
+    const config = loadConfig({
+      FALLBACK_ONLY_MODE: 'false',
+      LLM_API_KEY: 'sk-test',
+      REVIEWER_MODE: 'full',
+      DATA_DIR,
+    });
+
+    const registryWithFullReviewer = createRuntimeRegistry(config, registry.metrics);
+
+    expect(registryWithFullReviewer.syncReviewer).toBeDefined();
+    expect(registryWithFullReviewer.reflectionObserver).toBeDefined();
+  });
+
   it('getTimelineSync exposes synced device samples after manual sync', () => {
     const overrideStore = registry.getSessionSandbox(SESSION_ID).overrideStore;
     try {

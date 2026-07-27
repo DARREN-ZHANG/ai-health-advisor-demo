@@ -31,6 +31,7 @@ LLM_MODEL=gpt-4o-mini             # 模型名称
 
 # === 功能开关 ===
 FALLBACK_ONLY_MODE=false          # true=使用预置回复（无需API Key）; false=调用真实 LLM
+REVIEWER_MODE=off                 # off=关闭; sync=仅高风险同步审核; full=同步+异步审核
 ENABLE_GOD_MODE=true              # 是否启用 God-Mode 管理面板
 AI_TIMEOUT_MS=15000               # AI 请求超时（毫秒），推理模型建议 ≥ 15s
 

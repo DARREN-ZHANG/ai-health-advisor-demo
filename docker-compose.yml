@@ -14,6 +14,7 @@ services:
       - LLM_API_KEY=${LLM_API_KEY:-}
       - AI_TIMEOUT_MS=6000
       - FALLBACK_ONLY_MODE=${FALLBACK_ONLY_MODE:-true}
+      - REVIEWER_MODE=${REVIEWER_MODE:-off}
       - ENABLE_GOD_MODE=${ENABLE_GOD_MODE:-true}
       - LOG_LEVEL=info
     healthcheck:

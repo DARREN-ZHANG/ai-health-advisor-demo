@@ -38,6 +38,8 @@ const AppConfigSchema = z.object({
   REVIEWER_LLM_TEMPERATURE: z.coerce.number().min(0).max(2).optional(),
   REVIEWER_LLM_TIMEOUT_MS: z.coerce.number().positive().optional(),
   REVIEWER_LLM_MAX_RETRIES: z.coerce.number().int().min(0).max(5).optional(),
+  // Reviewer 运行模式：off=完全关闭，sync=仅高风险同步审核，full=同步审核+异步质量观测
+  REVIEWER_MODE: z.enum(['off', 'sync', 'full']).default('full'),
   AI_TIMEOUT_MS: z.coerce.number().positive().default(60000),
   ENABLE_GOD_MODE: envBool,
   FALLBACK_ONLY_MODE: envBool,

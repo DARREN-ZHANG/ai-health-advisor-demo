@@ -23,6 +23,7 @@ describe('loadConfig', () => {
     expect(config.LLM_TIMEOUT_MS).toBe(60000);
     expect(config.ENABLE_GOD_MODE).toBe(true);
     expect(config.FALLBACK_ONLY_MODE).toBe(false);
+    expect(config.REVIEWER_MODE).toBe('full');
   });
 
   it('使用默认值填充缺失字段（fallbackOnly 模式）', () => {
@@ -72,6 +73,15 @@ describe('loadConfig', () => {
   it('布尔值正确解析："1" 为 true', () => {
     const config = loadConfig({ ...validEnv, ENABLE_GOD_MODE: '1' });
     expect(config.ENABLE_GOD_MODE).toBe(true);
+  });
+
+  it.each(['off', 'sync', 'full'] as const)('接受 REVIEWER_MODE=%s', (mode) => {
+    const config = loadConfig({ ...validEnv, REVIEWER_MODE: mode });
+    expect(config.REVIEWER_MODE).toBe(mode);
+  });
+
+  it('拒绝无效的 REVIEWER_MODE', () => {
+    expect(() => loadConfig({ ...validEnv, REVIEWER_MODE: 'disabled' })).toThrow();
   });
 
   it('CORS_ALLOWED_ORIGINS 解析为去空白的列表', () => {
