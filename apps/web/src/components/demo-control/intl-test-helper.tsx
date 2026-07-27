@@ -36,6 +36,11 @@ const ZH_MESSAGES = {
     resetConfirmDescription: '将清空当前 Profile 的全部演示时间轴数据。',
     resetConfirmAction: '重置',
     resetConfirmCancel: '取消',
+    planDayTitle: '首页计划',
+    planDayDescription: '切换首页当前展示的任务',
+    planDayCount: '共 {count} 天',
+    planDayPickerLabel: '选择首页计划天数',
+    planDay: '第 {day} 天',
   },
   godMode: {
     segments: {

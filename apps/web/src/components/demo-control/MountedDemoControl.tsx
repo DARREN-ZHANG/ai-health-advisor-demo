@@ -13,16 +13,29 @@
  * 如果未来 HomeHeader 也成为全局 layout 的一部分，可以把 Drawer 直接
  * 挪到 HomeHeader，移除本 wrapper。
  */
+import { useEffect } from 'react';
 import { useDemoControlActions } from '@/hooks/use-demo-control-actions';
+import { useCurrentPlan } from '@/hooks/use-plan-query';
+import { useGodModeStore } from '@/stores/god-mode.store';
+import { useProfileStore } from '@/stores/profile.store';
 import { DemoControlDrawer } from './DemoControlDrawer';
 
 export function MountedDemoControl() {
   const { onSegmentClick, onResetTimeline, isResettingTimeline } = useDemoControlActions();
+  const currentProfileId = useProfileStore((state) => state.currentProfileId);
+  const { data: plan } = useCurrentPlan(currentProfileId ?? undefined);
+  const setSelectedPlanDayIndex = useGodModeStore((state) => state.setSelectedPlanDayIndex);
+
+  useEffect(() => {
+    setSelectedPlanDayIndex(0);
+  }, [plan?.id, setSelectedPlanDayIndex]);
+
   return (
     <DemoControlDrawer
       onSegmentClick={onSegmentClick}
       onResetTimeline={onResetTimeline}
       isResettingTimeline={isResettingTimeline}
+      planDays={plan?.groups.map((group) => ({ id: group.id, title: group.title })) ?? []}
     />
   );
 }

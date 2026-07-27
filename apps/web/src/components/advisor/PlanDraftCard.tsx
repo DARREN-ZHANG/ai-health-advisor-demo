@@ -3,11 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import {
-  CheckCircleIcon,
-  ClipboardDocumentCheckIcon,
-  ArrowRightCircleIcon,
-} from '@heroicons/react/24/outline';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import { PlayIcon } from '@heroicons/react/24/solid';
 import type { MessagePlanDraft } from '@/stores/ai-advisor.store';
 import { useAIAdvisorStore } from '@/stores/ai-advisor.store';
 import { useExecutePlanDraft } from '@/hooks/use-plan-query';
@@ -19,15 +16,14 @@ interface PlanDraftCardProps {
 }
 
 /**
- * 计划草稿预览卡片。
+ * AI Chat 计划操作区。
  *
- * - 展示标题、摘要与三层结构（分组→任务）。
- * - executable 状态下显示「执行」按钮；执行成功后跳转 /plan。
+ * Figma: Valo App Demo / Activity - AI Plan / Frame 1948760695。
+ * - 计划正文由上方 assistant message 展示，这里只保留紧随正文的操作按钮；
+ * - executable 状态下显示 Start Plan + Modify Session；
+ * - 执行成功后关闭 Chat，并回到首页展示计划管理卡片；
  * - revoked 状态下不可点击（旧 draftId 失效）。
- * - executed 状态下提示「已执行」，可点击「查看计划」跳转 /plan。
- *
- * 卡片不持有计划状态本身，所有持久化通过 plan-store；UI 只反映本次消息里
- * draftId 的可执行性。
+ * - executed 状态下可回到首页查看计划。
  */
 export function PlanDraftCard({ planDraft }: PlanDraftCardProps) {
   const t = useTranslations('advisor.planDraft');
@@ -39,7 +35,6 @@ export function PlanDraftCard({ planDraft }: PlanDraftCardProps) {
   const [error, setError] = useState<string | null>(null);
 
   const { draft, status } = planDraft;
-  const totalTasks = draft.groups.reduce((sum, g) => sum + g.tasks.length, 0);
   const isExecutable = status === 'executable';
   const isExecuted = status === 'executed';
   const isRevoked = status === 'revoked';
@@ -50,74 +45,30 @@ export function PlanDraftCard({ planDraft }: PlanDraftCardProps) {
     try {
       await executeMutation.mutateAsync({ draftId: draft.draftId });
       markPlanDraftExecuted(draft.draftId);
-      // 执行成功后必须先关掉 advisor drawer，否则抽屉遮罩会拦截 /plan 页面的点击事件。
+      // 执行成功后先关闭 advisor drawer，让首页计划卡片立即可见。
       closeAdvisor(false);
-      router.push('/plan');
+      router.push('/');
     } catch (err) {
       const message = err instanceof Error ? err.message : t('executeFailed');
       setError(message);
     }
   }
 
+  function handleModify() {
+    document.querySelector<HTMLTextAreaElement>('[data-valo-advisor-composer="true"]')?.focus();
+  }
+
   return (
     <div
       data-valo-plan-draft={status}
       data-valo-plan-draft-id={draft.draftId}
-      className="mt-2 w-full rounded-2xl border border-[var(--valo-border)] bg-[var(--valo-surface)] p-4 text-left"
+      className="mt-3 w-full text-left"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-wider text-[var(--valo-text-secondary)]">
-            {t('badge')}
-          </p>
-          <p className="mt-1 text-sm font-semibold text-[var(--valo-text-primary)]">
-            {draft.title}
-          </p>
-        </div>
-        <span className="shrink-0 rounded-full bg-[var(--valo-border)] px-2 py-0.5 text-[10px] text-[var(--valo-text-secondary)]">
-          {t('taskCount', { count: totalTasks })}
-        </span>
-      </div>
-
-      <p className="mt-2 text-xs leading-relaxed text-[var(--valo-text-secondary)]">
-        {draft.summary}
-      </p>
-
-      <ol
-        data-valo-plan-draft-groups="true"
-        className="mt-3 space-y-2 text-xs text-[var(--valo-text-primary)]"
-      >
-        {draft.groups.map((group, idx) => (
-          <li key={`${group.title}-${idx}`} className="space-y-1">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--valo-text-secondary)]">
-              {group.title}
-            </p>
-            <ul className="space-y-1 pl-3">
-              {group.tasks.map((task, tIdx) => (
-                <li
-                  key={`${task.title}-${tIdx}`}
-                  className="flex items-start gap-2 leading-relaxed"
-                >
-                  <CheckCircleIcon className="mt-0.5 h-3 w-3 shrink-0 text-[var(--valo-active)]" />
-                  <span>
-                    {task.title}
-                    {task.estimatedMinutes
-                      ? ` · ${task.estimatedMinutes} ${t('minutes')}`
-                      : null}
-                    {task.suggestedTimeOfDay ? ` · ${task.suggestedTimeOfDay}` : null}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ol>
-
-      <div className="mt-3 flex items-center justify-end gap-2">
+      <div className="flex h-7 items-center gap-3">
         {isRevoked && (
           <span
             data-valo-plan-draft-revoked="true"
-            className="text-[11px] text-[var(--valo-text-secondary)]"
+            className="text-[12px] leading-4 text-[var(--valo-text-secondary)]"
           >
             {t('revoked')}
           </span>
@@ -125,24 +76,38 @@ export function PlanDraftCard({ planDraft }: PlanDraftCardProps) {
         {isExecuted && (
           <button
             type="button"
-            onClick={() => router.push('/plan')}
-            className="inline-flex items-center gap-1 rounded-full bg-[var(--valo-active)] px-3 py-1.5 text-[11px] font-semibold text-[var(--valo-canvas)]"
+            onClick={() => {
+              closeAdvisor(false);
+              router.push('/');
+            }}
+            className="inline-flex h-7 items-center gap-2 rounded bg-white px-3 text-[12px] font-semibold leading-4 text-[#1c1924] transition-opacity hover:opacity-90"
           >
-            <ClipboardDocumentCheckIcon className="h-3 w-3" />
+            <PlayIcon className="h-3.5 w-3.5" />
             {t('viewPlan')}
           </button>
         )}
         {isExecutable && (
-          <button
-            type="button"
-            onClick={handleExecute}
-            disabled={executeMutation.isPending}
-            data-valo-plan-draft-execute="true"
-            className="inline-flex items-center gap-1 rounded-full bg-[var(--valo-prime)] px-3 py-1.5 text-[11px] font-semibold text-[var(--valo-canvas)] transition-opacity hover:opacity-90 disabled:opacity-60"
-          >
-            <ArrowRightCircleIcon className="h-3 w-3" />
-            {executeMutation.isPending ? t('executing') : t('execute')}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={handleExecute}
+              disabled={executeMutation.isPending}
+              data-valo-plan-draft-execute="true"
+              className="inline-flex h-7 min-w-[105px] items-center justify-center gap-2 rounded bg-white px-3 text-[12px] font-semibold leading-4 text-[#1c1924] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <PlayIcon className="h-3.5 w-3.5" />
+              {executeMutation.isPending ? t('executing') : t('execute')}
+            </button>
+            <button
+              type="button"
+              onClick={handleModify}
+              data-valo-plan-draft-modify="true"
+              className="inline-flex h-7 min-w-[121px] items-center justify-center gap-1 rounded border border-white bg-[#322a3f] px-2 text-[12px] font-semibold leading-4 text-white transition-colors hover:bg-[#413650]"
+            >
+              <ArrowPathIcon className="h-3.5 w-3.5" strokeWidth={2} />
+              {t('modify')}
+            </button>
+          </>
         )}
       </div>
 

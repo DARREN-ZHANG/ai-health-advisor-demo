@@ -12,6 +12,7 @@ export interface DemoControlDrawerProps {
   onSegmentClick?: (segment: TimelineSegmentConfig) => void;
   onResetTimeline?: () => void;
   isResettingTimeline?: boolean;
+  planDays?: Array<{ id: string; title: string }>;
 }
 
 /**
@@ -25,6 +26,7 @@ export function DemoControlDrawer({
   onSegmentClick,
   onResetTimeline,
   isResettingTimeline = false,
+  planDays = [],
 }: DemoControlDrawerProps) {
   const t = useTranslations('demoControl');
   const tSegments = useTranslations('godMode.segments');
@@ -32,6 +34,8 @@ export function DemoControlDrawer({
   const isOpen = useGodModeStore((state) => state.isOpen);
   const toggleOpen = useGodModeStore((state) => state.toggleOpen);
   const pendingSegmentType = useGodModeStore((state) => state.pendingSegmentType);
+  const selectedPlanDayIndex = useGodModeStore((state) => state.selectedPlanDayIndex);
+  const setSelectedPlanDayIndex = useGodModeStore((state) => state.setSelectedPlanDayIndex);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   if (!isEnabled || !isOpen) return null;
@@ -62,6 +66,49 @@ export function DemoControlDrawer({
             {t('title')}
           </h2>
         </header>
+
+        {planDays.length > 0 ? (
+          <section className="mt-3 shrink-0" aria-labelledby="demo-plan-day-title">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 id="demo-plan-day-title" className="text-[13px] font-medium text-[#f4f2f7]">
+                  {t('planDayTitle')}
+                </h3>
+                <p className="mt-0.5 text-[11px] leading-4 text-[#8c8b94]">
+                  {t('planDayDescription')}
+                </p>
+              </div>
+              <span className="shrink-0 text-[11px] text-[#8c8b94]">
+                {t('planDayCount', { count: planDays.length })}
+              </span>
+            </div>
+
+            <div
+              role="group"
+              aria-label={t('planDayPickerLabel')}
+              className="mt-3 flex gap-2 overflow-x-auto rounded-lg bg-[#111116] p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {planDays.map((day, index) => {
+                const selected = index === Math.min(selectedPlanDayIndex, planDays.length - 1);
+                return (
+                  <button
+                    key={day.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setSelectedPlanDayIndex(index)}
+                    className={`h-8 min-w-[64px] shrink-0 rounded px-3 text-[12px] font-semibold leading-4 transition-colors ${
+                      selected
+                        ? 'bg-white text-[#1c1924]'
+                        : 'bg-[#322a3f] text-white hover:bg-[#413650]'
+                    }`}
+                  >
+                    {t('planDay', { day: index + 1 })}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         <div
           data-testid="demo-event-list"

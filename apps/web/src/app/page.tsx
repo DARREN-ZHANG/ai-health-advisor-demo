@@ -13,6 +13,7 @@ import { FutureTimelineBlockSkeleton } from '@/components/homepage/FutureTimelin
 import { ActionTimerSheet } from '@/components/homepage/ActionTimerSheet';
 import { AppointmentSheet } from '@/components/homepage/AppointmentSheet';
 import { HomeTrendCardSlot } from '@/components/homepage/HomeTrendCardSlot';
+import { HomePlanCard } from '@/components/homepage/HomePlanCard';
 import { ActiveSensingBanner } from '@/components/layout/ActiveSensingBanner';
 import { LifeLogPanel } from '@/components/life-log/LifeLogPanel';
 import { useProfileStore } from '@/stores/profile.store';
@@ -21,6 +22,7 @@ import { useGodModeState } from '@/hooks/use-god-mode-actions';
 import { useHealthStatusStore, selectActiveVisualState } from '@/stores/health-status.store';
 import { mapApiStatusToVisualState } from '@/lib/health-visual-state';
 import { useMorningBrief, useRefetchBrief } from '@/hooks/use-ai-query';
+import { useCurrentPlan } from '@/hooks/use-plan-query';
 import { useActionInteractions } from '@/hooks/use-action-interactions';
 import { useUIStore } from '@/stores/ui.store';
 import { useBriefStreamStore } from '@/stores/brief-stream.store';
@@ -47,6 +49,7 @@ export default function HomePage() {
   const { currentProfileId } = useProfileStore();
   const { showToast } = useUIStore();
   const { data, isLoading, error, isFetching, dataUpdatedAt } = useMorningBrief(currentProfileId);
+  const { data: currentPlan } = useCurrentPlan(currentProfileId);
   const refetchBrief = useRefetchBrief(currentProfileId);
   const { data: godModeState } = useGodModeState();
   const t = useTranslations('homepage');
@@ -351,6 +354,8 @@ export default function HomePage() {
               </>
             )}
           </div>
+
+          {currentPlan ? <HomePlanCard plan={currentPlan} /> : null}
 
           {/*
             Home Trends Brief（首页 AI 可控卡片）—— 任务 3.2

@@ -102,6 +102,15 @@
       "cancel": "Cancel",
       "disclaimer": "Demo only — won't open your calendar app"
     },
+    "planCard": {
+      "day": "Day {day}",
+      "progress": "{done}/{total} complete",
+      "focus": "Today's focus",
+      "minutes": "{count} min",
+      "markComplete": "Complete {task}",
+      "markIncomplete": "Mark {task} incomplete",
+      "adjust": "Adjust Today's Plan"
+    },
     "morning": {
       "title": "Morning"
     },
@@ -336,11 +345,9 @@
       "good": "Active"
     },
     "planDraft": {
-      "badge": "Structured Plan",
-      "taskCount": "{count} tasks",
-      "minutes": "min",
-      "execute": "Execute Plan",
-      "executing": "Executing…",
+      "execute": "Start Plan",
+      "executing": "Starting…",
+      "modify": "Modify Session",
       "executeFailed": "Failed to execute, please try again",
       "viewPlan": "View Plan",
       "revoked": "Replaced by a newer version"
@@ -370,7 +377,12 @@
     "resetConfirmTitle": "Reset Timeline?",
     "resetConfirmDescription": "This will clear all demo timeline data for the current profile.",
     "resetConfirmAction": "Reset",
-    "resetConfirmCancel": "Cancel"
+    "resetConfirmCancel": "Cancel",
+    "planDayTitle": "Homepage Plan",
+    "planDayDescription": "Choose which day's tasks appear on Home",
+    "planDayCount": "{count} days",
+    "planDayPickerLabel": "Choose homepage plan day",
+    "planDay": "Day {day}"
   },
   "godMode": {
     "title": "God Mode",

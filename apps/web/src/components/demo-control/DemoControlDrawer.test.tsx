@@ -23,6 +23,7 @@ describe('DemoControlDrawer', () => {
       isOpen: true,
       pendingSegmentType: null,
       pendingAction: null,
+      selectedPlanDayIndex: 0,
     });
   });
 
@@ -33,6 +34,7 @@ describe('DemoControlDrawer', () => {
       isOpen: false,
       pendingSegmentType: null,
       pendingAction: null,
+      selectedPlanDayIndex: 0,
     });
   });
 
@@ -85,6 +87,25 @@ describe('DemoControlDrawer', () => {
       '[scrollbar-width:none]',
       '[&::-webkit-scrollbar]:hidden',
     );
+  });
+
+  it('有计划时可切换首页展示的天数', () => {
+    render(
+      <DemoControlIntlProvider>
+        <DemoControlDrawer
+          planDays={[
+            { id: 'day-1', title: 'Day 1' },
+            { id: 'day-2', title: 'Day 2' },
+          ]}
+        />
+      </DemoControlIntlProvider>,
+    );
+
+    const dayTwo = screen.getByRole('button', { name: '第 2 天' });
+    expect(screen.getByRole('button', { name: '第 1 天' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(dayTwo);
+    expect(dayTwo).toHaveAttribute('aria-pressed', 'true');
+    expect(useGodModeStore.getState().selectedPlanDayIndex).toBe(1);
   });
 
   it('点击添加按钮传递对应事件配置', () => {

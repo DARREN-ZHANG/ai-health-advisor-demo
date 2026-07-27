@@ -25,10 +25,13 @@ interface GodModeState {
   pendingAction: 'advance' | 'reset' | null;
   /** 首页简报正在强制刷新；驱动 page.tsx 的更新指示 */
   isBriefRefreshing: boolean;
+  /** God Mode 当前指定首页展示的计划天数，0 表示 Day 1 */
+  selectedPlanDayIndex: number;
   toggleOpen: (open?: boolean) => void;
   setPendingSegmentType: (type: TimelineSegmentType | null) => void;
   setPendingAction: (action: 'advance' | 'reset' | null) => void;
   setIsBriefRefreshing: (refreshing: boolean) => void;
+  setSelectedPlanDayIndex: (index: number) => void;
 }
 
 export const useGodModeStore = create<GodModeState>((set) => ({
@@ -37,8 +40,10 @@ export const useGodModeStore = create<GodModeState>((set) => ({
   pendingSegmentType: null,
   pendingAction: null,
   isBriefRefreshing: false,
+  selectedPlanDayIndex: 0,
   toggleOpen: (open) => set((state) => ({ isOpen: open ?? !state.isOpen })),
   setPendingSegmentType: (type) => set({ pendingSegmentType: type }),
   setPendingAction: (action) => set({ pendingAction: action }),
   setIsBriefRefreshing: (refreshing) => set({ isBriefRefreshing: refreshing }),
+  setSelectedPlanDayIndex: (index) => set({ selectedPlanDayIndex: index }),
 }));
