@@ -312,6 +312,14 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
 
       // solver 没有被调用，onModelOutput 不触发
       expect(onModelOutput).not.toHaveBeenCalled();
+
+      // 回归保护：澄清轮次也必须写回 session memory，
+      // 否则下一轮请求会因 recentConversation 为空而退化为单轮问答
+      const messages = runtimeDeps.sessionMemory.getRecentMessages('sess-advisor-1');
+      expect(messages).toHaveLength(2);
+      expect(messages[0]).toMatchObject({ role: 'user', text: '我最近的睡眠怎么样？' });
+      expect(messages[1]).toMatchObject({ role: 'assistant' });
+      expect(messages[1].text).toContain('您是想了解睡眠时长还是睡眠质量？');
     });
   });
 
@@ -362,6 +370,13 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
 
       // solver 没有被调用
       expect(onModelOutput).not.toHaveBeenCalled();
+
+      // 回归保护：plan 失败的 fallback 轮次也必须写回 session memory
+      const messages = runtimeDeps.sessionMemory.getRecentMessages('sess-advisor-1');
+      expect(messages).toHaveLength(2);
+      expect(messages[0]).toMatchObject({ role: 'user', text: '我最近的睡眠怎么样？' });
+      expect(messages[1]).toMatchObject({ role: 'assistant' });
+      expect(messages[1].text).toContain('暂时无法理解');
     });
 
     it('planner 调用异常时 onPlanFailed 收到 invocation_error', async () => {
@@ -785,5 +800,320 @@ describe('Advisor Chat WebSearch runtime', () => {
     );
 
     expect(tool.execute).not.toHaveBeenCalled();
+  });
+});
+
+describe('ADVISOR_CHAT — UI 控制计划（homepage.trend-card.set）', () => {
+  function makeUiPlan(display: 'sleep' | 'activity' | 'hidden'): AnalysisPlan {
+    return makeAnalysisPlan({
+      userIntent: {
+        action: 'control_ui',
+        riskLevel: 'general',
+        needsClarification: false,
+        clarificationQuestion: undefined,
+      },
+      evidenceNeeds: [],
+      webSearchNeeds: undefined,
+      clientAction: { type: 'homepage.trend-card.set', display },
+    });
+  }
+
+  function makeLowDataDeps(
+    agentOverrides: Partial<HealthAgent> = {},
+    planBuilder?: PlanBuilderDeps,
+  ): AgentRuntimeDeps {
+    const emptyData: ProfileData = {
+      profile: {
+        profileId: 'profile-a',
+        name: '张健康',
+        age: 32,
+        gender: 'male',
+        avatar: '👨‍💻',
+        tags: ['test'],
+        baseline: { restingHr: 62, hrv: 58, spo2: 98, avgSleepMinutes: 420, avgSteps: 8500 },
+      },
+      records: [],
+    };
+    return {
+      getProfile: () => emptyData,
+      selectByTimeframe: (records: DailyRecord[]) => records,
+      applyOverrides: (records: DailyRecord[]) => records,
+      mergeEvents: (base: DatedEvent[], injected: DatedEvent[]) => [...base, ...injected],
+      sessionMemory: new InMemorySessionMemoryStore(),
+      analyticalMemory: new InMemoryAnalyticalMemoryStore(),
+      getActiveOverrides: () => [],
+      getInjectedEvents: () => [],
+      referenceDate: '2026-04-24',
+      agent: agentOverrides,
+      promptLoader: mockPromptLoader,
+      fallbackEngine: mockFallbackEngine,
+      planBuilder,
+    } as unknown as AgentRuntimeDeps;
+  }
+
+  describe('纯 UI 计划 — 确定性回复', () => {
+    it('sleep display 返回固定中文 summary 和 uiDirectives，solver 不调用', async () => {
+      const plan = makeUiPlan('sleep');
+      const solverInvoke = vi.fn(async () => ({ content: 'never' }));
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+      const sessionMemory = new InMemorySessionMemoryStore();
+
+      const runtimeDeps: AgentRuntimeDeps = {
+        ...makeDeps({ invoke: solverInvoke }, planBuilder),
+        sessionMemory,
+      };
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest({ userMessage: '在首页展示睡眠趋势简报' }),
+        runtimeDeps,
+      );
+
+      expect(solverInvoke).not.toHaveBeenCalled();
+      expect(result.source).toBe('planner');
+      expect(result.statusColor).toBe('good');
+      expect(result.meta.finishReason).toBe('complete');
+      expect(result.chartTokens).toEqual([]);
+      expect(result.summary).toBe('已在首页展示睡眠趋势简报。');
+      expect(result.uiDirectives).toEqual([
+        { type: 'homepage.trend-card.set', display: 'sleep' },
+      ]);
+    });
+
+    it('activity display 返回固定 summary', async () => {
+      const plan = makeUiPlan('activity');
+      const solverInvoke = vi.fn(async () => ({ content: 'never' }));
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest(),
+        makeDeps({ invoke: solverInvoke }, planBuilder),
+      );
+
+      expect(solverInvoke).not.toHaveBeenCalled();
+      expect(result.summary).toBe('已在首页展示活动趋势简报。');
+      expect(result.uiDirectives).toEqual([
+        { type: 'homepage.trend-card.set', display: 'activity' },
+      ]);
+    });
+
+    it('hidden display 返回固定 summary', async () => {
+      const plan = makeUiPlan('hidden');
+      const solverInvoke = vi.fn(async () => ({ content: 'never' }));
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest(),
+        makeDeps({ invoke: solverInvoke }, planBuilder),
+      );
+
+      expect(result.summary).toBe('已隐藏首页趋势简报。');
+      expect(result.uiDirectives).toEqual([
+        { type: 'homepage.trend-card.set', display: 'hidden' },
+      ]);
+    });
+
+    it('英文 locale 返回英文 summary', async () => {
+      const plan = makeUiPlan('activity');
+      const solverInvoke = vi.fn(async () => ({ content: 'never' }));
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest(),
+        makeDeps({ invoke: solverInvoke }, planBuilder),
+        undefined,
+        undefined,
+        'en' as never,
+      );
+
+      expect(result.summary).toBe('The Activity trends brief is now shown on Home.');
+    });
+
+    it('纯 UI 在 low-data profile 下仍能完成', async () => {
+      const plan = makeUiPlan('sleep');
+      const solverInvoke = vi.fn(async () => ({ content: 'never' }));
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest({ userMessage: '在首页展示睡眠趋势简报' }),
+        makeLowDataDeps({ invoke: solverInvoke }, planBuilder),
+      );
+
+      expect(solverInvoke).not.toHaveBeenCalled();
+      expect(result.meta.finishReason).toBe('complete');
+      expect(result.uiDirectives).toEqual([
+        { type: 'homepage.trend-card.set', display: 'sleep' },
+      ]);
+    });
+
+    it('纯 UI 写入一条 user 和一条 assistant session message', async () => {
+      const plan = makeUiPlan('sleep');
+      const solverInvoke = vi.fn(async () => ({ content: 'never' }));
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+      const sessionMemory = new InMemorySessionMemoryStore();
+      const sessionId = 'sess-ui-memory';
+      const profileId = 'profile-a';
+
+      await executeAgent(
+        makeAdvisorChatRequest({
+          sessionId,
+          profileId,
+          pageContext: { profileId, page: 'advisor', timeframe: 'week' },
+          userMessage: '在首页展示睡眠趋势简报',
+        }),
+        { ...makeDeps({ invoke: solverInvoke }, planBuilder), sessionMemory },
+      );
+
+      const history = sessionMemory.getRecentMessages(sessionId);
+      expect(history).toHaveLength(2);
+      expect(history[0]!.role).toBe('user');
+      expect(history[0]!.text).toBe('在首页展示睡眠趋势简报');
+      expect(history[1]!.role).toBe('assistant');
+      expect(history[1]!.text).toBe('已在首页展示睡眠趋势简报。');
+    });
+  });
+
+  describe('混合 UI + 健康问答', () => {
+    it('健康 action 携带 clientAction 时正常调用 solver，附加 Planner 指令', async () => {
+      const plan = makeAnalysisPlan({
+        userIntent: { action: 'status_summary', riskLevel: 'general', needsClarification: false },
+        evidenceNeeds: [
+          { metric: 'sleep', timeScope: 'week', reason: '分析睡眠', required: true },
+        ],
+        clientAction: { type: 'homepage.trend-card.set', display: 'sleep' },
+      });
+      const solverInvoke = vi.fn(async () => ({
+        content: JSON.stringify({
+          summary: '您最近睡眠稳定。',
+          chartTokens: [ChartTokenId.SLEEP_7DAYS],
+          microTips: [],
+        }),
+      }));
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest({ userMessage: '分析睡眠并在首页展示睡眠简报' }),
+        makeDeps({ invoke: solverInvoke }, planBuilder),
+      );
+
+      expect(solverInvoke).toHaveBeenCalledTimes(1);
+      expect(result.meta.finishReason).toBe('complete');
+      expect(result.uiDirectives).toEqual([
+        { type: 'homepage.trend-card.set', display: 'sleep' },
+      ]);
+    });
+
+    it('模型输出自行携带 uiDirectives 但 Planner 没有 clientAction 时不得附加', async () => {
+      const plan = makeAnalysisPlan({
+        // 普通 health plan，无 clientAction
+        clientAction: undefined,
+      });
+      const solverInvoke = vi.fn(async () => ({
+        // 故意输出模型编造的 UI 字段
+        content: JSON.stringify({
+          summary: '您最近睡眠稳定。',
+          chartTokens: [ChartTokenId.SLEEP_7DAYS],
+          microTips: [],
+          uiDirectives: [{ type: 'homepage.trend-card.set', display: 'sleep' }],
+        }),
+      }));
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest(),
+        makeDeps({ invoke: solverInvoke }, planBuilder),
+      );
+
+      expect(result.uiDirectives).toBeUndefined();
+    });
+  });
+
+  describe('UI 指令不携带的边界', () => {
+    it('clarification 不携带 uiDirectives', async () => {
+      const plan = makeAnalysisPlan({
+        userIntent: {
+          action: 'general',
+          riskLevel: 'general',
+          needsClarification: true,
+          clarificationQuestion: '你想看 Sleep 还是 Activity？',
+        },
+        clientAction: undefined,
+      });
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest(),
+        makeDeps({}, planBuilder),
+      );
+
+      expect(result.uiDirectives).toBeUndefined();
+      expect(result.meta.finishReason).toBe('complete');
+    });
+
+    it('planner failure 不携带 uiDirectives', async () => {
+      const plannerInvoke = vi.fn(async () => ({ content: 'not json' }));
+      const planBuilder: PlanBuilderDeps = {
+        plannerAgent: { invoke: plannerInvoke },
+        plannerPrompt: 'p',
+      };
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest(),
+        makeDeps({}, planBuilder),
+      );
+
+      expect(result.meta.finishReason).toBe('fallback');
+      expect(result.uiDirectives).toBeUndefined();
+    });
+
+    it('普通健康问答（无 clientAction）不携带 uiDirectives', async () => {
+      const plan = makeAnalysisPlan();
+      const solverInvoke = vi.fn(async () => ({
+        content: JSON.stringify({ summary: 'sleep looks good', chartTokens: [], microTips: [] }),
+      }));
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest(),
+        makeDeps({ invoke: solverInvoke }, planBuilder),
+      );
+
+      expect(result.uiDirectives).toBeUndefined();
+    });
+
+    it('solver 走 fallback envelope 时不携带 uiDirectives', async () => {
+      const plan = makeAnalysisPlan();
+      const solverInvoke = vi.fn(async () => ({ content: 'invalid output' }));
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest(),
+        makeDeps({ invoke: solverInvoke }, planBuilder),
+      );
+
+      expect(result.meta.finishReason).toBe('fallback');
+      expect(result.uiDirectives).toBeUndefined();
+    });
+  });
+
+  describe('uiContext 透传', () => {
+    it('runtime 把 request.uiContext 传给 planBuilder', async () => {
+      const plan = makeUiPlan('activity');
+      const plannerInvoke = vi.fn(async () => ({ content: JSON.stringify(plan) }));
+      const planBuilder: PlanBuilderDeps = {
+        plannerAgent: { invoke: plannerInvoke },
+        plannerPrompt: 'p',
+      };
+
+      await executeAgent(
+        makeAdvisorChatRequest({
+          userMessage: '在首页展示活动趋势简报',
+          uiContext: { homepageTrendCard: 'sleep' },
+        }),
+        makeDeps({}, planBuilder),
+      );
+
+      const userPrompt = plannerInvoke.mock.calls[0]![0].userPrompt;
+      expect(userPrompt).toContain('homepageTrendCard: sleep');
+    });
   });
 });

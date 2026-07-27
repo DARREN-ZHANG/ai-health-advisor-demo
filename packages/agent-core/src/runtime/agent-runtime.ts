@@ -225,10 +225,19 @@ export async function executeAgent(
     const context = buildAgentContext(request, deps, deps.referenceDate, locale, durableFacts);
     tryNotify(() => observer?.onContextBuilt?.(context));
 
-    // 3. low-data 快速 fallback：数据不足时跳过 LLM 调用
-    if (context.signals.lowData) {
+    // 3. low-data 快速 fallback：数据不足时跳过 LLM 调用。
+    // ADVISOR_CHAT + planBuilder 是例外：纯 UI 控制不依赖健康数据，
+    // 必须先执行 Planner 才能识别 control_ui 意图，因此跳过 low-data 快速 fallback。
+    // 没有 planBuilder 的 ADVISOR_CHAT 保持原有降级路径，避免回退到无 Planner 的盲调用。
+    const allowLowDataShortcut =
+      request.taskType !== AgentTaskType.ADVISOR_CHAT || !deps.planBuilder;
+    if (context.signals.lowData && allowLowDataShortcut) {
       tryNotify(() => observer?.onFallback?.('low_data'));
-      return toLowDataFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
+      return persistChatTurnAndReturn(
+        deps,
+        request,
+        toLowDataFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale),
+      );
     }
 
     // 4. 执行规则引擎
@@ -251,6 +260,7 @@ export async function executeAgent(
           start: context.dataWindow.start,
           end: context.dataWindow.end,
         },
+        ...(request.uiContext ? { uiContext: request.uiContext } : {}),
       });
 
       if (!planResult.success) {
@@ -261,17 +271,21 @@ export async function executeAgent(
         tryNotify(() => observer?.onPlanFailed?.(reason));
 
         // 返回安全响应（不绕过 planner 直接回答复杂问题）
-        return toClarificationOrSafeResponse(
-          deps.fallbackEngine,
+        return persistChatTurnAndReturn(
+          deps,
           request,
-          planResult as {
-            success: false;
-            parseError?: string;
-            verificationResult?: PlanVerificationResult;
-            failureType?: string;
-          },
-          fallbackKey,
-          locale,
+          toClarificationOrSafeResponse(
+            deps.fallbackEngine,
+            request,
+            planResult as {
+              success: false;
+              parseError?: string;
+              verificationResult?: PlanVerificationResult;
+              failureType?: string;
+            },
+            fallbackKey,
+            locale,
+          ),
         );
       }
 
@@ -281,7 +295,11 @@ export async function executeAgent(
         tryNotify(() =>
           observer?.onClarification?.(analysisPlan!.userIntent.clarificationQuestion ?? ''),
         );
-        return toClarificationResponse(request, analysisPlan);
+        return persistChatTurnAndReturn(
+          deps,
+          request,
+          toClarificationResponse(request, analysisPlan),
+        );
       }
 
       tryNotify(() => observer?.onPlanBuilt?.(analysisPlan!));
@@ -289,6 +307,18 @@ export async function executeAgent(
       tryNotify(() =>
         observer?.onPlanVerified?.(analysisPlan!, { supportedMetrics: getSupportedMetrics() }),
       );
+
+      // 纯 UI 控制：Planner verifier 通过的 clientAction 即最终结果，不调用健康 solver。
+      // persistChatTurnAndReturn 会写 user + assistant 两条 session message，
+      // 保证后续 "隐藏它" 等指代本轮指令的消息有上下文。
+      if (
+        analysisPlan.userIntent.action === 'control_ui' &&
+        analysisPlan.clientAction
+      ) {
+        const uiEnvelope = toControlUiEnvelope(request, analysisPlan, locale);
+        tryNotify(() => observer?.onParsed?.(uiEnvelope));
+        return persistChatTurnAndReturn(deps, request, uiEnvelope);
+      }
     }
 
     // P2: Evidence Resolver + ReAct Loop（仅在 plan 成功后执行）
@@ -421,7 +451,11 @@ export async function executeAgent(
 
     if (!parseResult.success) {
       tryNotify(() => observer?.onFallback?.('invalid_output'));
-      return toFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale);
+      return persistChatTurnAndReturn(
+        deps,
+        request,
+        toFallback(deps.fallbackEngine, request.taskType, fallbackKey, locale),
+      );
     }
 
     // 9. 校验 chart tokens（只能来自 visibleCharts 或 suggestedChartTokens）
@@ -705,10 +739,12 @@ export async function executeAgent(
               } catch {
                 // verifier 异常不得影响重生成返回
               }
+              // 重生成路径同样需要附加 Planner verifier 通过的 UI 指令。
+              const regeneratedWithUi = attachVerifiedUiDirective(regenerated, analysisPlan);
               // 注意：重生成的结果也需要写回 memory
-              writeSessionMemory(deps, request, regenerated.summary);
-              writeAnalyticalMemory(deps, request, context, regenerated.summary, rulesResult);
-              return regenerated;
+              writeSessionMemory(deps, request, regeneratedWithUi.summary);
+              writeAnalyticalMemory(deps, request, context, regeneratedWithUi.summary, rulesResult);
+              return regeneratedWithUi;
             }
           }
 
@@ -760,7 +796,9 @@ export async function executeAgent(
         });
     }
 
-    return result;
+    // solver 成功路径：附加 Planner verifier 通过的 UI 指令（如有）。
+    // 仅当 finishReason === 'complete' 才附加，fallback/timeout 不携带副作用。
+    return attachVerifiedUiDirective(result, analysisPlan);
   } catch (error) {
     if (error instanceof TimeoutError) {
       tryNotify(() => observer?.onFallback?.('timeout'));
@@ -993,6 +1031,101 @@ function writeSessionMemory(
     text: assistantSummary,
     createdAt: now + 1,
   });
+}
+
+/**
+ * 纯 UI 控制计划的确定性 envelope。
+ *
+ * - summary 是固定双语字符串，由 runtime 决定，**不调用** LLM。
+ * - statusColor 固定 'good'，source 标记 'planner'，chartTokens 为空。
+ * - finishReason 始终 'complete'，因此 Web 客户端会应用 uiDirectives。
+ * - uiDirectives 只携带 Planner verifier 通过的 clientAction（一条）。
+ */
+function toControlUiEnvelope(
+  request: AgentRequest,
+  plan: AnalysisPlan,
+  locale: Locale,
+): AgentResponseEnvelope {
+  const directive = plan.clientAction!;
+  const summary =
+    locale === 'en'
+      ? controlUiSummaryEn(directive.display)
+      : controlUiSummaryZh(directive.display);
+
+  return {
+    summary,
+    source: 'planner',
+    statusColor: 'good',
+    chartTokens: [],
+    microTips: [],
+    uiDirectives: [directive],
+    meta: {
+      taskType: request.taskType,
+      pageContext: request.pageContext,
+      finishReason: 'complete',
+      sessionId: request.sessionId,
+    },
+  };
+}
+
+function controlUiSummaryZh(
+  display: 'hidden' | 'sleep' | 'activity',
+): string {
+  if (display === 'sleep') return '已在首页展示睡眠趋势简报。';
+  if (display === 'activity') return '已在首页展示活动趋势简报。';
+  return '已隐藏首页趋势简报。';
+}
+
+function controlUiSummaryEn(
+  display: 'hidden' | 'sleep' | 'activity',
+): string {
+  if (display === 'sleep') return 'The Sleep trends brief is now shown on Home.';
+  if (display === 'activity') return 'The Activity trends brief is now shown on Home.';
+  return 'The Home trends brief is now hidden.';
+}
+
+/**
+ * 把 Planner verifier 通过的 clientAction 附加到 complete envelope。
+ *
+ * 仅当 envelope.meta.finishReason === 'complete' 且 plan?.clientAction 存在时返回新对象；
+ * fallback / timeout / clarification / safety boundary / customer policy 错误都不调用本 helper。
+ *
+ * 注意：solver 输出中模型自行编造的 uiDirectives 字段在 parseAgentResponse 阶段
+ * 就被丢弃（schema 未声明），本 helper 只信任 plan.clientAction。
+ */
+function attachVerifiedUiDirective(
+  envelope: AgentResponseEnvelope,
+  plan: AnalysisPlan | undefined,
+): AgentResponseEnvelope {
+  if (
+    envelope.meta.finishReason !== 'complete' ||
+    !plan?.clientAction
+  ) {
+    return envelope;
+  }
+  return {
+    ...envelope,
+    uiDirectives: [plan.clientAction],
+  };
+}
+
+/**
+ * ADVISOR_CHAT 的早返回路径（澄清 / plan 失败 / low_data / parse 失败）必须
+ * 也要把本轮「用户输入 + 助手回复」写回 session memory，否则下一轮请求会
+ * 因为 recentConversation 为空而退化为单轮问答，丢失对话上下文。
+ *
+ * 注意：customer-policy 失败（toCustomerPolicyError）刻意不写 memory，
+ * 这是 fail-closed 设计，不要在这里统一处理。
+ */
+function persistChatTurnAndReturn(
+  deps: AgentRuntimeDeps,
+  request: AgentRequest,
+  envelope: AgentResponseEnvelope,
+): AgentResponseEnvelope {
+  if (request.taskType === AgentTaskType.ADVISOR_CHAT) {
+    writeSessionMemory(deps, request, envelope.summary);
+  }
+  return envelope;
 }
 
 function writeAnalyticalMemory(
