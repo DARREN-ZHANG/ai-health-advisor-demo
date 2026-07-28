@@ -14,7 +14,7 @@ export const TimeScope = z.enum([
 /** 用户动作意图 */
 export const ActionIntent = z.enum([
   'status_summary', 'explain_chart', 'ask_why',
-  'exercise_readiness', 'compare_periods', 'general',
+  'exercise_readiness', 'compare_periods', 'create_plan', 'general',
   // 控制首页 UI 副作用（无健康数据推理）
   'control_ui',
 ]);

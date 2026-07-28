@@ -255,6 +255,117 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
       expect(promptInput.taskPrompt).toContain('需要引用的证据');
       expect(promptInput.taskPrompt).toContain('sleep');
     });
+
+    it('create_plan 意图拒绝睡眠分析与图表，并按结构化计划契约重生成', async () => {
+      const plan = makeAnalysisPlan({
+        userIntent: {
+          action: 'create_plan',
+          riskLevel: 'general',
+          needsClarification: false,
+        },
+        answerShape: {
+          includeMissingDataDisclosure: false,
+          includeChartTokens: false,
+          maxSummaryLength: 300,
+          tone: 'concise',
+        },
+      });
+      const planDraft = {
+        title: '7-Day Sleep Improvement Plan',
+        summary: 'A gradual routine for more consistent sleep.',
+        groups: [
+          {
+            title: 'Days 1-7',
+            tasks: [
+              {
+                title: 'Keep a consistent wake time',
+                description: 'Wake at the same time each day.',
+                suggestedTimeOfDay: 'Morning',
+              },
+            ],
+          },
+        ],
+      };
+      const solverInvoke = vi
+        .fn()
+        .mockResolvedValueOnce({
+          content: JSON.stringify({
+            summary: 'Your sleep trend has been analyzed.',
+            chartTokens: [ChartTokenId.SLEEP_7DAYS],
+            microTips: [],
+          }),
+        })
+        .mockResolvedValueOnce({
+          content: JSON.stringify({
+            summary: 'Your requested sleep plan is ready.',
+            chartTokens: [],
+            microTips: [],
+            planDraft,
+          }),
+        });
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest({
+          userMessage: 'can you help me out with a sleep improvement plan?',
+        }),
+        makeDeps({ invoke: solverInvoke }, planBuilder),
+        undefined,
+        undefined,
+        'en',
+      );
+
+      expect(solverInvoke).toHaveBeenCalledTimes(2);
+      expect(solverInvoke.mock.calls[0]![0].userPrompt).toContain(
+        '响应模式: structured_plan',
+      );
+      expect(solverInvoke.mock.calls[1]![0].userPrompt).toContain(
+        'The Planner classified this request as plan creation',
+      );
+      expect(result.planDraftPreview).toEqual(planDraft);
+      expect(result.chartTokens).toEqual([]);
+      expect(result.microTips).toBeUndefined();
+    });
+
+    it('create_plan 连续违反响应契约时返回显式错误，不退化成趋势分析', async () => {
+      const plan = makeAnalysisPlan({
+        userIntent: {
+          action: 'create_plan',
+          riskLevel: 'general',
+          needsClarification: false,
+        },
+        answerShape: {
+          includeMissingDataDisclosure: false,
+          includeChartTokens: false,
+          maxSummaryLength: 300,
+          tone: 'concise',
+        },
+      });
+      const solverInvoke = vi.fn(async () => ({
+        content: JSON.stringify({
+          summary: 'Your sleep trend has been analyzed.',
+          chartTokens: [ChartTokenId.SLEEP_7DAYS],
+          microTips: [],
+        }),
+      }));
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest({
+          userMessage: 'can you help me out with a sleep improvement plan?',
+        }),
+        makeDeps({ invoke: solverInvoke }, planBuilder),
+        undefined,
+        undefined,
+        'en',
+      );
+
+      expect(solverInvoke).toHaveBeenCalledTimes(2);
+      expect(result.meta.finishReason).toBe('fallback');
+      expect(result.summary).toContain('could not generate a valid structured plan');
+      expect(result.chartTokens).toEqual([]);
+      expect(result.planDraftPreview).toBeUndefined();
+    });
   });
 
   describe('ADVISOR_CHAT + needsClarification', () => {

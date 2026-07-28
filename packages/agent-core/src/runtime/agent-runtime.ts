@@ -432,7 +432,12 @@ export async function executeAgent(
     // 7. 获取模型完整 raw 输出。
     // HOMEPAGE_SUMMARY 且提供 onSummaryDelta 时走 stream 分支（边收集边推送 summary delta），
     // 否则走 invoke 分支（带超时的单次调用）。两个分支都返回完整 raw 供后续 parser 处理。
-    const raw = await obtainRawOutput(
+    const responseMode = analysisPlan
+      ? analysisPlan.userIntent.action === 'create_plan'
+        ? 'structured_plan'
+        : 'standard'
+      : undefined;
+    let raw = await obtainRawOutput(
       deps,
       systemPrompt,
       taskPrompt,
@@ -443,15 +448,48 @@ export async function executeAgent(
     tryNotify(() => observer?.onModelOutput?.(raw.content));
 
     // 8. 解析结构化输出
-    const parseResult = parseAgentResponse(raw.content, {
+    let parseResult = parseAgentResponse(raw.content, {
       taskType: request.taskType,
       pageContext: request.pageContext,
       defaultStatusColor: toEnvelopeStatusColor(rulesResult.statusColor),
       demoNow: context.demoNow,
+      responseMode,
     });
+
+    // Planner 已确定响应形态后，Solver 的随机采样不得改变产品行为。
+    // 形态不匹配时只允许按同一结构化契约重生成一次；仍不匹配则走 fail-closed。
+    if (
+      !parseResult.success &&
+      (parseResult.failureType === 'response_mode' || responseMode === 'structured_plan')
+    ) {
+      const regeneratedTaskPrompt = `${taskPrompt}\n\n${buildResponseModeRegenerationFeedback(responseMode!, locale)}`;
+      raw = await withTimeout(
+        (signal) => deps.agent.invoke({
+          systemPrompt,
+          userPrompt: regeneratedTaskPrompt,
+          signal,
+        }),
+        timeoutMs,
+      );
+      tryNotify(() => observer?.onModelOutput?.(raw.content));
+      parseResult = parseAgentResponse(raw.content, {
+        taskType: request.taskType,
+        pageContext: request.pageContext,
+        defaultStatusColor: toEnvelopeStatusColor(rulesResult.statusColor),
+        demoNow: context.demoNow,
+        responseMode,
+      });
+    }
 
     if (!parseResult.success) {
       tryNotify(() => observer?.onFallback?.('invalid_output'));
+      if (responseMode === 'structured_plan') {
+        return persistChatTurnAndReturn(
+          deps,
+          request,
+          toStructuredPlanContractError(request, locale),
+        );
+      }
       return persistChatTurnAndReturn(
         deps,
         request,
@@ -546,6 +584,7 @@ export async function executeAgent(
         pageContext: request.pageContext,
         defaultStatusColor: toEnvelopeStatusColor(rulesResult.statusColor),
         demoNow: context.demoNow,
+        responseMode,
       });
 
       if (!regeneratedParsed.success) {
@@ -674,6 +713,7 @@ export async function executeAgent(
             pageContext: request.pageContext,
             defaultStatusColor: toEnvelopeStatusColor(rulesResult.statusColor),
             demoNow: context.demoNow,
+            responseMode,
           });
 
           // H-1: 跟踪重生成审核结果，用于安全边界 violations
@@ -1291,6 +1331,15 @@ function appendPlanContextToPrompt(
 
   // 回答格式
   sections.push('### 回答格式要求');
+  if (plan.userIntent.action === 'create_plan') {
+    sections.push('- 响应模式: structured_plan');
+    sections.push('- 必须输出完整且符合 schema 的 planDraft');
+    sections.push('- chartTokens、microTips 必须为空数组，且不得输出顶层 actions');
+    sections.push('- 不得用睡眠数据分析、趋势总结或图表替代结构化计划');
+  } else {
+    sections.push('- 响应模式: standard');
+    sections.push('- 必须完整省略 planDraft 字段');
+  }
   sections.push(`- 语气: ${plan.answerShape.tone === 'concise' ? '简洁' : '详细解释'}`);
   sections.push(`- 最大长度: ${plan.answerShape.maxSummaryLength} 字`);
   if (plan.answerShape.includeMissingDataDisclosure) {
@@ -1301,6 +1350,43 @@ function appendPlanContextToPrompt(
   }
 
   return sections.join('\n');
+}
+
+function buildResponseModeRegenerationFeedback(
+  responseMode: 'structured_plan' | 'standard',
+  locale: Locale,
+): string {
+  if (responseMode === 'structured_plan') {
+    return locale === 'zh'
+      ? '## 响应形态校验失败\n本次请求已由 Planner 确认为创建计划。请重新输出完整 planDraft；chartTokens 与 microTips 必须为空数组，不得输出顶层 actions，也不得用健康数据分析或趋势图替代计划。'
+      : '## Response mode validation failed\nThe Planner classified this request as plan creation. Regenerate a complete planDraft; chartTokens and microTips must be empty arrays, top-level actions must be omitted, and health analysis or trend charts must not replace the plan.';
+  }
+
+  return locale === 'zh'
+    ? '## 响应形态校验失败\n本次请求是普通健康问答。请重新输出回答，并完整省略 planDraft 字段。'
+    : '## Response mode validation failed\nThis request is a standard health answer. Regenerate the answer and omit the entire planDraft field.';
+}
+
+function toStructuredPlanContractError(
+  request: AgentRequest,
+  locale: Locale,
+): AgentResponseEnvelope {
+  return {
+    summary:
+      locale === 'zh'
+        ? '暂时无法生成符合结构化契约的计划，请重试。'
+        : 'I could not generate a valid structured plan. Please try again.',
+    source: 'fallback',
+    statusColor: 'warning',
+    chartTokens: [],
+    microTips: [],
+    meta: {
+      taskType: request.taskType,
+      pageContext: request.pageContext,
+      finishReason: 'fallback',
+      sessionId: request.sessionId,
+    },
+  };
 }
 
 /** required=true 的 WebSearch 搜索不可用时的安全响应 */

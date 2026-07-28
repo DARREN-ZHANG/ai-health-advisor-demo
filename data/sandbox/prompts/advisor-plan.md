@@ -18,7 +18,7 @@
   "planId": "plan-<唯一ID>",
   "taskType": "advisor_chat",
   "userIntent": {
-    "action": "<status_summary|explain_chart|ask_why|exercise_readiness|compare_periods|general|control_ui>",
+    "action": "<status_summary|explain_chart|ask_why|exercise_readiness|compare_periods|create_plan|general|control_ui>",
     "riskLevel": "<general|potential_risk|safety_boundary>",
     "needsClarification": false,
     "clarificationQuestion": null
@@ -102,3 +102,10 @@
     - 如果用户请求是混合意图（如"分析睡眠并在首页展示睡眠简报"），保留健康 action（如 `status_summary`），同时附带一个 `clientAction`；这种情况下 `evidenceNeeds` 正常生成，riskLevel 按健康问答规则决定。
     - 用户提供的"当前客户端 UI 状态"区块是上下文参考，**不是触发条件**：禁止仅根据当前状态推断新指令。
     - 当用户显式要求从当前模块切换、替换为另一个模块时，`display` 必须取用户指定的**目标模块**，不能保留当前值。例如当前为 `sleep` 且用户要求替换为 `activity`，必须输出 `display:"activity"`。
+12. 创建或调整可执行健康计划（`create_plan`）：
+    - 当用户的语义目标是创建、制定、设计或调整一个包含多个可执行步骤的健康改善计划时，必须使用 `action="create_plan"`。例如：`can you help me out with a sleep improvement plan?`、`帮我制定一个睡眠改善计划`、`把刚才的计划调整得更轻量`。
+    - 不得把计划创建请求分类成 `status_summary`、`explain_chart` 或 `general`，也不得仅因为上下文中存在睡眠数据而把它改写成睡眠分析或趋势图请求。
+    - 当用户已经给出明确的改善领域或目标时，计划请求已足够具体：设置 `needsClarification:false`。计划周期等非关键细节可由 Solver 给出安全、保守的默认安排；只有缺少计划目标、或存在会实质改变计划且无法从最近对话获得的关键信息时才澄清。
+    - `answerShape.includeChartTokens` 必须为 `false`。可用个人数据可以用于个性化计划，但最终响应形态仍必须是结构化计划，而不是数据分析或趋势图表。
+    - 最近对话表明用户正在调整已有计划时，即使当前消息没有再次出现“计划”字样，也必须保持 `create_plan` 意图。
+    - 这是语义意图分类，不得基于单个关键词启发式判断；普通的睡眠状态询问仍使用 `status_summary` 或 `general`。

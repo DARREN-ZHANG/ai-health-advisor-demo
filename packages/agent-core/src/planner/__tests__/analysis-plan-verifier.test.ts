@@ -139,6 +139,43 @@ describe('verifyAnalysisPlan', () => {
     );
   });
 
+  it('create_plan 请求图表时产生 plan_response_has_charts violation', () => {
+    const plan = createValidPlan();
+    const mutated: AnalysisPlan = {
+      ...plan,
+      userIntent: {
+        ...plan.userIntent,
+        action: 'create_plan',
+      },
+      answerShape: {
+        ...plan.answerShape,
+        includeChartTokens: true,
+      },
+    };
+
+    const result = verifyAnalysisPlan(mutated, createValidContext());
+
+    expect(result.valid).toBe(false);
+    expect(result.violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ rule: 'plan_response_has_charts' }),
+      ]),
+    );
+  });
+
+  it('create_plan 且不请求图表时通过响应形态校验', () => {
+    const plan = createValidPlan();
+    const mutated: AnalysisPlan = {
+      ...plan,
+      userIntent: {
+        ...plan.userIntent,
+        action: 'create_plan',
+      },
+    };
+
+    expect(verifyAnalysisPlan(mutated, createValidContext()).valid).toBe(true);
+  });
+
   it('unsupported metric 只触发 unsupported_metric，不重复触发 required_evidence_unresolvable', () => {
     const plan = createValidPlan();
     // 使用类型断言模拟 required evidence 不可解析的情况

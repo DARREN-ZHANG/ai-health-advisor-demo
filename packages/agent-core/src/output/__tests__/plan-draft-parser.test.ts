@@ -107,6 +107,68 @@ describe('parseAgentResponse planDraft handling', () => {
       expect(result.envelope.planDraftPreview).toBeUndefined();
     }
   });
+
+  it('structured_plan 模式要求 planDraft 且禁止图表', () => {
+    const missingDraft = parseAgentResponse(
+      makeEnvelopeJson({ chartTokens: ['SLEEP_7DAYS'] }),
+      {
+        taskType: AgentTaskType.ADVISOR_CHAT,
+        pageContext: basePageContext,
+        responseMode: 'structured_plan',
+      },
+    );
+
+    expect(missingDraft.success).toBe(false);
+    if (!missingDraft.success) {
+      expect(missingDraft.failureType).toBe('response_mode');
+      expect(missingDraft.error).toContain('缺少 planDraft');
+    }
+
+    const withChart = parseAgentResponse(
+      makeEnvelopeJson({ planDraft: validDraft, chartTokens: ['SLEEP_7DAYS'] }),
+      {
+        taskType: AgentTaskType.ADVISOR_CHAT,
+        pageContext: basePageContext,
+        responseMode: 'structured_plan',
+      },
+    );
+
+    expect(withChart.success).toBe(false);
+    if (!withChart.success) {
+      expect(withChart.failureType).toBe('response_mode');
+      expect(withChart.error).toContain('不得包含 chartTokens');
+    }
+  });
+
+  it('structured_plan 模式接受排他的结构化计划响应', () => {
+    const result = parseAgentResponse(
+      makeEnvelopeJson({ planDraft: validDraft, chartTokens: [], microTips: [] }),
+      {
+        taskType: AgentTaskType.ADVISOR_CHAT,
+        pageContext: basePageContext,
+        responseMode: 'structured_plan',
+      },
+    );
+
+    expect(result.success).toBe(true);
+  });
+
+  it('standard 模式拒绝模型擅自输出 planDraft', () => {
+    const result = parseAgentResponse(
+      makeEnvelopeJson({ planDraft: validDraft }),
+      {
+        taskType: AgentTaskType.ADVISOR_CHAT,
+        pageContext: basePageContext,
+        responseMode: 'standard',
+      },
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.failureType).toBe('response_mode');
+      expect(result.error).toContain('必须省略 planDraft');
+    }
+  });
 });
 
 describe('cleanPlanDraftSafety', () => {

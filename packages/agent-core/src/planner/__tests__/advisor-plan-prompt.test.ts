@@ -35,7 +35,7 @@ describe('advisor planner prompt — UI 控制计划', () => {
     expect(prompt).toContain('homepage.trend-card.set');
     expect(prompt).toContain('clientAction');
     expect(prompt).toContain(
-      '"action": "<status_summary|explain_chart|ask_why|exercise_readiness|compare_periods|general|control_ui>"',
+      '"action": "<status_summary|explain_chart|ask_why|exercise_readiness|compare_periods|create_plan|general|control_ui>"',
     );
     expect(prompt).toContain('"display": "<hidden|sleep|activity>"');
     expect(prompt).toContain('当前客户端 UI 状态');
@@ -70,5 +70,18 @@ describe('advisor planner prompt — UI 控制计划', () => {
 
     expect(prompt).toContain('显示趋势简报');
     expect(prompt).toContain('clarificationQuestion');
+  });
+});
+
+describe('advisor planner prompt — 结构化计划意图', () => {
+  it('把明确的睡眠改善计划请求分类为 create_plan，而不是数据分析', () => {
+    const prompt = readFileSync(promptPath, 'utf-8');
+
+    expect(prompt).toContain('创建或调整可执行健康计划（`create_plan`）');
+    expect(prompt).toContain('can you help me out with a sleep improvement plan?');
+    expect(prompt).toContain('不得把计划创建请求分类成 `status_summary`、`explain_chart` 或 `general`');
+    expect(prompt).toContain('`answerShape.includeChartTokens` 必须为 `false`');
+    expect(prompt).toContain('最近对话表明用户正在调整已有计划时');
+    expect(prompt).toContain('不得基于单个关键词启发式判断');
   });
 });

@@ -70,8 +70,8 @@ describe('AnalysisPlanSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('actionIntent 支持 6 种值（含 compare_periods，H-6）', () => {
-    const validActions = ['status_summary', 'explain_chart', 'ask_why', 'exercise_readiness', 'compare_periods', 'general'];
+  it('actionIntent 支持健康问答与计划创建意图', () => {
+    const validActions = ['status_summary', 'explain_chart', 'ask_why', 'exercise_readiness', 'compare_periods', 'create_plan', 'general'];
     for (const action of validActions) {
       const result = AnalysisPlanSchema.safeParse(
         createValidPlan({ userIntent: { action, riskLevel: 'general', needsClarification: false } }),
@@ -127,12 +127,12 @@ describe('导出的枚举', () => {
     expect(values).toEqual(['today', 'yesterday', 'week', 'month', 'custom', 'unknown']);
   });
 
-  it('ActionIntent 包含 6 种意图', () => {
+  it('ActionIntent 包含计划创建和 UI 控制意图', () => {
     const values = ActionIntent.options;
     expect(values).toContain('compare_periods');
-    // 包含 control_ui 后共 7 种
+    expect(values).toContain('create_plan');
     expect(values).toContain('control_ui');
-    expect(values).toHaveLength(7);
+    expect(values).toHaveLength(8);
   });
 
   it('SafetyConstraint 包含 5 种约束', () => {

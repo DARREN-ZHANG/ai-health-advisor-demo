@@ -96,6 +96,18 @@ export function verifyAnalysisPlan(
   // 7. UI 控制计划约束（首页 Trends Brief）
   verifyUiControlPlan(plan, violations);
 
+  // 8. 可执行计划是独立响应形态，不允许 Planner 同时要求趋势图表。
+  if (
+    plan.userIntent.action === 'create_plan' &&
+    plan.answerShape.includeChartTokens
+  ) {
+    violations.push({
+      rule: 'plan_response_has_charts',
+      message: 'create_plan 必须将 includeChartTokens 设为 false',
+      path: 'answerShape.includeChartTokens',
+    });
+  }
+
   return { valid: violations.length === 0, violations };
 }
 

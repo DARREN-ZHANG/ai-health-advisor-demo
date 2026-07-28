@@ -27,6 +27,8 @@ export interface ParseMeta {
   defaultStatusColor?: AgentResponseEnvelope['statusColor'];
   /** 当前模拟时间（YYYY-MM-DDTHH:mm），用于校验 futureSuggestions 的 timePoint 区间 */
   demoNow?: string;
+  /** Planner 已验证的最终响应形态；未提供时保留无 Planner 的兼容行为。 */
+  responseMode?: 'structured_plan' | 'standard';
 }
 
 export interface ParseSuccess {
@@ -38,6 +40,7 @@ export interface ParseFailure {
   success: false;
   error: string;
   raw: string;
+  failureType?: 'response_mode';
 }
 
 export type ParseResult = ParseSuccess | ParseFailure;
@@ -87,7 +90,12 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
       error instanceof Error && error.name === 'PlanDraftParseError'
         ? error.message
         : 'planDraft 解析失败';
-    return { success: false, error: message, raw };
+    return {
+      success: false,
+      error: message,
+      raw,
+      ...(meta.responseMode ? { failureType: 'response_mode' as const } : {}),
+    };
   }
   // 提前移除字段，避免后续构造 envelope 时再次进入解析逻辑。
   if (obj.planDraft !== undefined) {
@@ -217,7 +225,45 @@ export function parseAgentResponse(raw: string, meta: ParseMeta): ParseResult {
     };
   }
 
+  const responseModeError = validateResponseMode(result.data, meta.responseMode);
+  if (responseModeError) {
+    return {
+      success: false,
+      error: responseModeError,
+      raw,
+      failureType: 'response_mode',
+    };
+  }
+
   return { success: true, envelope: result.data };
+}
+
+function validateResponseMode(
+  envelope: AgentResponseEnvelope,
+  responseMode: ParseMeta['responseMode'],
+): string | undefined {
+  if (!responseMode) return undefined;
+
+  if (responseMode === 'standard') {
+    return envelope.planDraftPreview
+      ? 'standard 响应必须省略 planDraft'
+      : undefined;
+  }
+
+  if (!envelope.planDraftPreview) {
+    return 'structured_plan 响应缺少 planDraft';
+  }
+  if (envelope.chartTokens.length > 0) {
+    return 'structured_plan 响应不得包含 chartTokens';
+  }
+  if ((envelope.microTips?.length ?? 0) > 0) {
+    return 'structured_plan 响应不得包含 microTips';
+  }
+  if ((envelope.actions?.length ?? 0) > 0) {
+    return 'structured_plan 响应不得包含顶层 actions';
+  }
+
+  return undefined;
 }
 
 function parseStatusColor(
