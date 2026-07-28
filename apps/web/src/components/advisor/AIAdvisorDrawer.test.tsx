@@ -111,6 +111,7 @@ describe('AIAdvisorDrawer', () => {
       pendingPrompt: null,
     });
     useProfileStore.setState({ currentProfileId: 'profile-1' });
+    useHomeTrendCardStore.getState().reset();
     mockMutateAsync.mockReset();
     mockClearSessionId.mockReset();
     // 默认 mutateAsync 解析为最小可用 envelope。
@@ -137,6 +138,7 @@ describe('AIAdvisorDrawer', () => {
       isLoading: false,
       pendingPrompt: null,
     });
+    useHomeTrendCardStore.getState().reset();
   });
 
   it('isAdvisorDrawerOpen=false 时不渲染任何 dialog', () => {
@@ -414,7 +416,118 @@ describe('AIAdvisorDrawer', () => {
         expect(mockMutateAsync).toHaveBeenCalledTimes(1);
       });
       const payload = mockMutateAsync.mock.calls[0]?.[0];
-      expect(payload?.uiContext).toStrictEqual({ homepageTrendCard: 'sleep' });
+      expect(payload?.uiContext).toStrictEqual({
+        homepageTrendCard: 'sleep',
+        sleepHomepageOffer: 'eligible',
+      });
+    });
+
+    it('主动提议按钮回传 typed interaction，成功后执行首页指令并继续展示 Plan 提议', async () => {
+      useUIStore.setState({ isAdvisorDrawerOpen: true });
+      mockMutateAsync
+        .mockResolvedValueOnce({
+          summary: '昨晚睡眠整体稳定。',
+          source: 'llm',
+          statusColor: 'good',
+          chartTokens: [],
+          proactivePrompt: {
+            kind: 'homepage.sleep.show',
+            question: '察觉到您对睡眠数据感兴趣，是否需要将睡眠数据放到首页？',
+            actions: [
+              {
+                id: 'accept',
+                label: '添加到首页',
+                userMessage: '好的，将睡眠数据添加到首页。',
+                interaction: {
+                  type: 'advisor.proactive.respond',
+                  proposal: 'homepage.sleep.show',
+                  decision: 'accept',
+                },
+              },
+              {
+                id: 'decline',
+                label: '暂时不用',
+                userMessage: '暂时不用将睡眠数据添加到首页。',
+                interaction: {
+                  type: 'advisor.proactive.respond',
+                  proposal: 'homepage.sleep.show',
+                  decision: 'decline',
+                },
+              },
+            ],
+          },
+          meta: {
+            taskType: 'advisor_chat',
+            pageContext: { profileId: 'profile-1', page: 'homepage', timeframe: 'week' },
+            finishReason: 'complete',
+          },
+        })
+        .mockResolvedValueOnce({
+          summary: '已添加。您可以随时让我移除或切换为 Activity。',
+          source: 'proactive-flow',
+          statusColor: 'good',
+          chartTokens: [],
+          uiDirectives: [{ type: 'homepage.trend-card.set', display: 'sleep' }],
+          proactivePrompt: {
+            kind: 'plan.activity-three-day.create',
+            question: '今日睡眠极佳，是否需要我帮您创建 3 日运动计划？',
+            actions: [
+              {
+                id: 'accept',
+                label: '创建 3 日计划',
+                userMessage: '创建 3 日运动计划。',
+                interaction: {
+                  type: 'advisor.proactive.respond',
+                  proposal: 'plan.activity-three-day.create',
+                  decision: 'accept',
+                },
+              },
+              {
+                id: 'decline',
+                label: '暂时不用',
+                userMessage: '暂时不用创建。',
+                interaction: {
+                  type: 'advisor.proactive.respond',
+                  proposal: 'plan.activity-three-day.create',
+                  decision: 'decline',
+                },
+              },
+            ],
+          },
+          meta: {
+            taskType: 'advisor_chat',
+            pageContext: { profileId: 'profile-1', page: 'homepage', timeframe: 'week' },
+            finishReason: 'complete',
+          },
+        });
+
+      renderWithIntl(<AIAdvisorDrawer />);
+      const mobile = getMobileContainer();
+      const textarea = within(mobile).getByPlaceholderText('输入你的问题...');
+      fireEvent.change(textarea, { target: { value: '分析我的睡眠' } });
+      fireEvent.click(within(mobile).getByRole('button', { name: '发送' }));
+
+      await waitFor(() => {
+        expect(within(mobile).getByRole('button', { name: '添加到首页' })).toBeEnabled();
+      });
+      fireEvent.click(within(mobile).getByRole('button', { name: '添加到首页' }));
+
+      await waitFor(() => {
+        expect(mockMutateAsync).toHaveBeenCalledTimes(2);
+      });
+      expect(mockMutateAsync.mock.calls[1]?.[0]?.clientInteraction).toStrictEqual({
+        type: 'advisor.proactive.respond',
+        proposal: 'homepage.sleep.show',
+        decision: 'accept',
+      });
+      await waitFor(() => {
+        expect(
+          useHomeTrendCardStore.getState().displayByProfile['profile-1'],
+        ).toBe('sleep');
+        expect(
+          within(mobile).getByText('今日睡眠极佳，是否需要我帮您创建 3 日运动计划？'),
+        ).toBeInTheDocument();
+      });
     });
 
     it('complete sleep 响应更新对应 profile 的 store', async () => {

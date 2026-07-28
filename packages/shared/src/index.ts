@@ -69,6 +69,10 @@ export type {
   ClientUiContext,
   HomeTrendCardSetDirective,
   UiDirective,
+  AdvisorProactiveProposal,
+  AdvisorProactiveInteraction,
+  AdvisorProactiveAction,
+  AdvisorProactivePrompt,
 } from './types/agent';
 
 // Types — plan
@@ -193,6 +197,10 @@ export {
   ClientUiContextSchema,
   HomeTrendCardSetDirectiveSchema,
   UiDirectiveSchema,
+  AdvisorProactiveProposalSchema,
+  AdvisorProactiveInteractionSchema,
+  AdvisorProactiveActionSchema,
+  AdvisorProactivePromptSchema,
 } from './schemas/agent';
 
 // Schemas — plan

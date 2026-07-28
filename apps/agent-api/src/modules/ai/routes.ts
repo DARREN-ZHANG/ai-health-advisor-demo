@@ -9,7 +9,13 @@ import {
   ActionOptionSchema,
   FutureSuggestionSchema,
 } from '@health-advisor/shared';
-import type { PageContext, DataTab, Timeframe, ClientUiContext } from '@health-advisor/shared';
+import type {
+  PageContext,
+  DataTab,
+  Timeframe,
+  ClientUiContext,
+  AdvisorProactiveInteraction,
+} from '@health-advisor/shared';
 import { AgentRequestSchema, type AgentRequest } from '@health-advisor/agent-core';
 import { buildMeta } from '../../utils/meta.js';
 import { AiOrchestrator, type AiExecutionTimings } from '../../services/ai-orchestrator.js';
@@ -38,6 +44,7 @@ interface ChatBody {
   smartPromptId?: string;
   visibleChartIds?: string[];
   uiContext?: ClientUiContext;
+  clientInteraction?: AdvisorProactiveInteraction;
 }
 
 /**
@@ -399,7 +406,15 @@ export async function aiRoutes(app: FastifyInstance) {
   // BE-020: /ai/chat
   app.post<{ Body: ChatBody }>('/ai/chat', async (request, reply) => {
     const routeStartedAt = performance.now();
-    const { profileId, pageContext, userMessage, smartPromptId, visibleChartIds, uiContext } = request.body;
+    const {
+      profileId,
+      pageContext,
+      userMessage,
+      smartPromptId,
+      visibleChartIds,
+      uiContext,
+      clientInteraction,
+    } = request.body;
 
     if (!userMessage || typeof userMessage !== 'string') {
       return reply
@@ -436,6 +451,7 @@ export async function aiRoutes(app: FastifyInstance) {
       ...(smartPromptId ? { smartPromptId } : {}),
       ...(visibleChartIds ? { visibleChartIds } : {}),
       ...(uiContext ? { uiContext } : {}),
+      ...(clientInteraction ? { clientInteraction } : {}),
     };
 
     const parseResult = AgentRequestSchema.safeParse(agentRequest);

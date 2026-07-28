@@ -74,6 +74,10 @@ import {
   hasRequiredUnavailableWebSearch,
 } from './web-search-evidence';
 import type { WebSearchEvidence } from './web-search-evidence';
+import {
+  attachSleepInterestOffer,
+  resolveProactiveInteraction,
+} from './proactive-advisor-flow';
 
 export interface AgentRuntimeDeps extends ContextBuilderDeps {
   agent: HealthAgent;
@@ -249,9 +253,33 @@ export async function executeAgent(
     const packet = buildTaskContextPacket(context, rulesResult);
     tryNotify(() => observer?.onPacketBuilt?.(packet));
 
-    // P1: ADVISOR_CHAT planner 链路
     let analysisPlan: AnalysisPlan | undefined;
-    if (request.taskType === AgentTaskType.ADVISOR_CHAT && deps.planBuilder) {
+
+    // Proactive 按钮携带的是 schema 校验后的封闭事件，不需要把按钮文案再次交给
+    // Planner 猜意图。UI 操作直接返回受控 directive；创建计划则进入同一 structured_plan
+    // solver 契约，保留证据解析、安全清洗与审核链路。
+    const proactiveResolution =
+      request.taskType === AgentTaskType.ADVISOR_CHAT
+        ? resolveProactiveInteraction(request, context, locale)
+        : { kind: 'none' as const };
+    if (proactiveResolution.kind === 'response') {
+      tryNotify(() => observer?.onParsed?.(proactiveResolution.envelope));
+      return persistChatTurnAndReturn(deps, request, proactiveResolution.envelope);
+    }
+    if (proactiveResolution.kind === 'plan') {
+      analysisPlan = proactiveResolution.plan;
+      tryNotify(() => observer?.onPlanBuilt?.(analysisPlan!));
+      tryNotify(() =>
+        observer?.onPlanVerified?.(analysisPlan!, { supportedMetrics: getSupportedMetrics() }),
+      );
+    }
+
+    // P1: ADVISOR_CHAT planner 链路
+    if (
+      !analysisPlan &&
+      request.taskType === AgentTaskType.ADVISOR_CHAT &&
+      deps.planBuilder
+    ) {
       const planResult = await buildAnalysisPlanWithRetry(deps.planBuilder, {
         userMessage: request.userMessage ?? '',
         pageContext: request.pageContext,
@@ -789,7 +817,12 @@ export async function executeAgent(
                 // verifier 异常不得影响重生成返回
               }
               // 重生成路径同样需要附加 Planner verifier 通过的 UI 指令。
-              const regeneratedWithUi = attachVerifiedUiDirective(regenerated, analysisPlan);
+              const regeneratedWithUi = attachSleepInterestOffer(
+                attachVerifiedUiDirective(regenerated, analysisPlan),
+                request,
+                analysisPlan,
+                locale,
+              );
               // 注意：重生成的结果也需要写回 memory
               writeSessionMemory(deps, request, regeneratedWithUi.summary);
               writeAnalyticalMemory(deps, request, context, regeneratedWithUi.summary, rulesResult);
@@ -847,7 +880,12 @@ export async function executeAgent(
 
     // solver 成功路径：附加 Planner verifier 通过的 UI 指令（如有）。
     // 仅当 finishReason === 'complete' 才附加，fallback/timeout 不携带副作用。
-    return attachVerifiedUiDirective(result, analysisPlan);
+    return attachSleepInterestOffer(
+      attachVerifiedUiDirective(result, analysisPlan),
+      request,
+      analysisPlan,
+      locale,
+    );
   } catch (error) {
     if (error instanceof TimeoutError) {
       tryNotify(() => observer?.onFallback?.('timeout'));

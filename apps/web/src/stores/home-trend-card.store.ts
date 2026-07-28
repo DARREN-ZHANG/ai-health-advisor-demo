@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { HomeTrendCardDisplay } from '@health-advisor/shared';
 
+export type SleepHomepageOfferState = 'eligible' | 'offered' | 'accepted' | 'declined';
+
 /**
  * Home Trend Card 内存 store：按 profileId 分区，**不持久化**。
  *
@@ -15,8 +17,11 @@ import type { HomeTrendCardDisplay } from '@health-advisor/shared';
 export interface HomeTrendCardState {
   /** 按 profileId 分区的 display 状态 */
   displayByProfile: Readonly<Record<string, HomeTrendCardDisplay>>;
+  /** 按 profileId 分区的主动式睡眠卡片提议状态 */
+  sleepOfferByProfile: Readonly<Record<string, SleepHomepageOfferState>>;
   /** 写入指定 profile 的最新 display（不可变更新） */
   setDisplay: (profileId: string, display: HomeTrendCardDisplay) => void;
+  setSleepOfferState: (profileId: string, state: SleepHomepageOfferState) => void;
   /** 仅清除指定 profile（其他 profile 不受影响） */
   clearForProfile: (profileId: string) => void;
   /** 清空所有 profile，回到初始状态（测试 / 显式会话重置） */
@@ -25,6 +30,7 @@ export interface HomeTrendCardState {
 
 export const useHomeTrendCardStore = create<HomeTrendCardState>((set) => ({
   displayByProfile: {},
+  sleepOfferByProfile: {},
 
   setDisplay: (profileId, display) =>
     set((state) => ({
@@ -34,15 +40,28 @@ export const useHomeTrendCardStore = create<HomeTrendCardState>((set) => ({
       },
     })),
 
+  setSleepOfferState: (profileId, offerState) =>
+    set((state) => ({
+      sleepOfferByProfile: {
+        ...state.sleepOfferByProfile,
+        [profileId]: offerState,
+      },
+    })),
+
   clearForProfile: (profileId) =>
     set((state) => {
-      if (!(profileId in state.displayByProfile)) return state;
+      if (
+        !(profileId in state.displayByProfile) &&
+        !(profileId in state.sleepOfferByProfile)
+      ) return state;
       const next = { ...state.displayByProfile };
       delete next[profileId];
-      return { displayByProfile: next };
+      const nextOffers = { ...state.sleepOfferByProfile };
+      delete nextOffers[profileId];
+      return { displayByProfile: next, sleepOfferByProfile: nextOffers };
     }),
 
-  reset: () => set({ displayByProfile: {} }),
+  reset: () => set({ displayByProfile: {}, sleepOfferByProfile: {} }),
 }));
 
 /**
@@ -55,4 +74,11 @@ export function selectHomeTrendCardDisplay(
   profileId: string,
 ): HomeTrendCardDisplay {
   return state.displayByProfile[profileId] ?? 'hidden';
+}
+
+export function selectSleepHomepageOfferState(
+  state: HomeTrendCardState,
+  profileId: string,
+): SleepHomepageOfferState {
+  return state.sleepOfferByProfile[profileId] ?? 'eligible';
 }

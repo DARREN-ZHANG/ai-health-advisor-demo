@@ -45,7 +45,11 @@ export function applyAdvisorUiDirectives(
     return;
   }
 
-  useHomeTrendCardStore.getState().setDisplay(requestProfileId, parsed.data.display);
+  const store = useHomeTrendCardStore.getState();
+  store.setDisplay(requestProfileId, parsed.data.display);
+  if (parsed.data.display === 'sleep') {
+    store.setSleepOfferState(requestProfileId, 'accepted');
+  }
 }
 
 // 仅用于测试断言「未知 directive 不更新 store」时验证 selectHomeTrendCardDisplay 的输出。

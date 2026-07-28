@@ -2,13 +2,17 @@
 
 import { m } from 'framer-motion';
 import type { Message } from '@/stores/ai-advisor.store';
+import type { AdvisorProactiveAction } from '@health-advisor/shared';
 
 import { ChartTokenRenderer } from './ChartTokenRenderer';
 import { MemoryCandidateCard } from './MemoryCandidateCard';
 import { PlanDraftCard } from './PlanDraftCard';
+import { ProactivePromptCard } from './ProactivePromptCard';
 
 interface MessageBubbleProps {
   message: Message;
+  interactionDisabled?: boolean;
+  onProactiveAction?: (messageId: string, action: AdvisorProactiveAction) => void;
 }
 
 /**
@@ -29,7 +33,11 @@ interface MessageBubbleProps {
  *   `data-valo-message-source` / `data-valo-message-timestamp` /
  *   `data-valo-message-charts` / `data-valo-message-memory`。
  */
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  interactionDisabled = false,
+  onProactiveAction,
+}: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
   const isSystem = message.role === 'system';
@@ -119,6 +127,15 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
         {isAssistant && message.planDraft && (
           <PlanDraftCard planDraft={message.planDraft} />
+        )}
+
+        {isAssistant && !isPlanResponse && message.proactivePrompt && onProactiveAction && (
+          <ProactivePromptCard
+            prompt={message.proactivePrompt.prompt}
+            status={message.proactivePrompt.status}
+            disabled={interactionDisabled}
+            onAction={(action) => onProactiveAction(message.id, action)}
+          />
         )}
 
         <span

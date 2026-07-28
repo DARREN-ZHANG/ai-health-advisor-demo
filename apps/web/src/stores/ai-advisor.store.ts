@@ -4,6 +4,7 @@ import type {
   AgentResponseEnvelope,
   MemoryCandidateConfirmation,
   PlanDraft,
+  AdvisorProactivePrompt,
 } from '@health-advisor/shared';
 
 /** 消息内 meta 字段，从 AgentResponseEnvelope.meta 派生 */
@@ -33,6 +34,10 @@ export interface Message {
   meta?: MessageMeta;
   /** 当 chat 响应携带可执行 planDraft 时挂这里；不存在为 undefined。 */
   planDraft?: MessagePlanDraft;
+  proactivePrompt?: {
+    status: 'pending' | 'accepted' | 'declined';
+    prompt: AdvisorProactivePrompt;
+  };
   timestamp: number;
 }
 
@@ -52,6 +57,10 @@ interface AIAdvisorState {
   markPlanDraftsRevokedExcept: (activeDraftId: string) => void;
   /** 执行成功时把对应 draft 标记为 executed。 */
   markPlanDraftExecuted: (draftId: string) => void;
+  markProactivePromptResponded: (
+    messageId: string,
+    decision: 'accept' | 'decline',
+  ) => void;
 }
 
 export const useAIAdvisorStore = create<AIAdvisorState>((set) => ({
@@ -101,7 +110,21 @@ export const useAIAdvisorStore = create<AIAdvisorState>((set) => ({
       messages: state.messages.map((m) =>
         m.planDraft && m.planDraft.draft.draftId === draftId
           ? { ...m, planDraft: { ...m.planDraft, status: 'executed' as const } }
-          : m,
+        : m,
+      ),
+    })),
+  markProactivePromptResponded: (messageId, decision) =>
+    set((state) => ({
+      messages: state.messages.map((message) =>
+        message.id === messageId && message.proactivePrompt?.status === 'pending'
+          ? {
+              ...message,
+              proactivePrompt: {
+                ...message.proactivePrompt,
+                status: decision === 'accept' ? 'accepted' as const : 'declined' as const,
+              },
+            }
+          : message,
       ),
     })),
 }));

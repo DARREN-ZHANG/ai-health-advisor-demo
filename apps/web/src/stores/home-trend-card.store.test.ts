@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   selectHomeTrendCardDisplay,
+  selectSleepHomepageOfferState,
   useHomeTrendCardStore,
   type HomeTrendCardState,
 } from './home-trend-card.store';
@@ -16,7 +17,9 @@ function makeState(
 ): HomeTrendCardState {
   return {
     displayByProfile,
+    sleepOfferByProfile: {},
     setDisplay: () => {},
+    setSleepOfferState: () => {},
     clearForProfile: () => {},
     reset: () => {},
   };
@@ -26,6 +29,7 @@ describe('home-trend-card store', () => {
   beforeEach(() => {
     useHomeTrendCardStore.setState({
       displayByProfile: {},
+      sleepOfferByProfile: {},
     });
   });
 
@@ -77,6 +81,24 @@ describe('home-trend-card store', () => {
       useHomeTrendCardStore.getState().setDisplay('profile-a', 'sleep');
       const after = useHomeTrendCardStore.getState().displayByProfile;
       expect(after).not.toBe(before);
+    });
+  });
+
+  describe('sleep homepage offer state', () => {
+    it('未知 profile 默认 eligible', () => {
+      expect(selectSleepHomepageOfferState(makeState(), 'profile-a')).toBe('eligible');
+    });
+
+    it('按 profile 隔离记录 offered / accepted 状态', () => {
+      useHomeTrendCardStore.getState().setSleepOfferState('profile-a', 'offered');
+      useHomeTrendCardStore.getState().setSleepOfferState('profile-b', 'accepted');
+
+      expect(
+        selectSleepHomepageOfferState(useHomeTrendCardStore.getState(), 'profile-a'),
+      ).toBe('offered');
+      expect(
+        selectSleepHomepageOfferState(useHomeTrendCardStore.getState(), 'profile-b'),
+      ).toBe('accepted');
     });
   });
 

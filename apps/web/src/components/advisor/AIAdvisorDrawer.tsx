@@ -13,6 +13,7 @@ import { clearSessionId, AI_UI_TIMEOUT_MS } from '@/lib/api-client';
 import { applyAdvisorUiDirectives } from '@/lib/advisor-ui-directives';
 import {
   selectHomeTrendCardDisplay,
+  selectSleepHomepageOfferState,
   useHomeTrendCardStore,
 } from '@/stores/home-trend-card.store';
 import { ValoSheet } from '@/components/valo/ValoSheet';
@@ -21,7 +22,13 @@ import type { Message } from '@/stores/ai-advisor.store';
 import { MessageBubble } from './MessageBubble';
 import { SmartPrompts } from './SmartPrompts';
 import type { SmartPromptOption } from './SmartPrompts';
-import type { PageContext, DataTab, Timeframe } from '@health-advisor/shared';
+import type {
+  PageContext,
+  DataTab,
+  Timeframe,
+  AdvisorProactiveAction,
+  AdvisorProactiveInteraction,
+} from '@health-advisor/shared';
 import {
   PaperAirplaneIcon,
   TrashIcon,
@@ -31,6 +38,14 @@ import {
   PlusIcon,
 } from '@heroicons/react/24/outline';
 import { useTranslations } from 'next-intl';
+
+interface ProactiveSubmission {
+  text: string;
+  clientInteraction: AdvisorProactiveInteraction;
+  proactiveMessageId: string;
+}
+
+type AdvisorSubmission = string | SmartPromptOption | ProactiveSubmission;
 
 /**
  * AI Advisor Drawer —— Valo 视觉的 AI 对话容器。
@@ -63,6 +78,7 @@ export function AIAdvisorDrawer() {
     clearMessages,
     pendingPrompt,
     setPendingPrompt,
+    markProactivePromptResponded,
   } = useAIAdvisorStore();
   const { currentProfileId } = useProfileStore();
   const { activeTab, timeframe } = useDataCenterStore();
@@ -111,10 +127,15 @@ export function AIAdvisorDrawer() {
   }, [t, clearMessages]);
 
   const handleSendMessage = useCallback(
-    async (content: string | SmartPromptOption) => {
-      const isPromptOption = typeof content === 'object';
-      const text = isPromptOption ? content.text : content || composerValue;
+    async (content: AdvisorSubmission) => {
+      const isObject = typeof content === 'object';
+      const isProactiveSubmission = isObject && 'clientInteraction' in content;
+      const isPromptOption = isObject && !isProactiveSubmission;
+      const text = isObject ? content.text : content || composerValue;
       const smartPromptId = isPromptOption ? content.id : undefined;
+      const clientInteraction = isProactiveSubmission
+        ? content.clientInteraction
+        : undefined;
       if (!text.trim() || isLoading || !currentProfileId) return;
 
       // 1. 添加用户消息
@@ -126,6 +147,10 @@ export function AIAdvisorDrawer() {
       // 2. 构造上下文
       const requestProfileId = currentProfileId;
       const homepageTrendCard = selectHomeTrendCardDisplay(
+        useHomeTrendCardStore.getState(),
+        requestProfileId,
+      );
+      const sleepHomepageOffer = selectSleepHomepageOfferState(
         useHomeTrendCardStore.getState(),
         requestProfileId,
       );
@@ -149,7 +174,8 @@ export function AIAdvisorDrawer() {
           userMessage: text,
           smartPromptId,
           visibleChartIds: pageContext.page === 'data-center' ? [activeTab] : undefined,
-          uiContext: { homepageTrendCard },
+          uiContext: { homepageTrendCard, sleepHomepageOffer },
+          clientInteraction,
         });
 
         // 5. 添加助手回答（包括后端返回的 fallback 内容）
@@ -168,11 +194,35 @@ export function AIAdvisorDrawer() {
             response.planDraft && response.meta.finishReason === 'complete'
               ? { status: 'executable', draft: response.planDraft }
               : undefined,
+          proactivePrompt: response.proactivePrompt
+            ? { status: 'pending', prompt: response.proactivePrompt }
+            : undefined,
         });
 
         // 6. 应用首页 Trends Brief UI 指令（仅当 finishReason=complete 且 profile 匹配）。
         // 用发送时的 requestProfileId，避免等待期间切换 Profile 后污染当前视图。
         applyAdvisorUiDirectives(response, requestProfileId);
+
+        // 只有服务端成功接受 typed interaction 后才锁定原提议；网络失败时按钮保留可重试。
+        if (isProactiveSubmission) {
+          markProactivePromptResponded(
+            content.proactiveMessageId,
+            content.clientInteraction.decision,
+          );
+          if (
+            content.clientInteraction.proposal === 'homepage.sleep.show' &&
+            content.clientInteraction.decision === 'decline'
+          ) {
+            useHomeTrendCardStore
+              .getState()
+              .setSleepOfferState(requestProfileId, 'declined');
+          }
+        }
+        if (response.proactivePrompt?.kind === 'homepage.sleep.show') {
+          useHomeTrendCardStore
+            .getState()
+            .setSleepOfferState(requestProfileId, 'offered');
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : t('networkError');
         addMessage({
@@ -196,8 +246,20 @@ export function AIAdvisorDrawer() {
       setComposerValue,
       setLoading,
       sendChatRequest,
+      markProactivePromptResponded,
       t,
     ],
+  );
+
+  const handleProactiveAction = useCallback(
+    (messageId: string, action: AdvisorProactiveAction) => {
+      void handleSendMessage({
+        text: action.userMessage,
+        clientInteraction: action.interaction,
+        proactiveMessageId: messageId,
+      });
+    },
+    [handleSendMessage],
   );
 
   // 共享内容：移动端与桌面端共用一份 JSX，避免双视口实现漂移。
@@ -214,6 +276,7 @@ export function AIAdvisorDrawer() {
       isMenuOpen={isMenuOpen}
       setIsMenuOpen={setIsMenuOpen}
       onClose={handleClose}
+      onProactiveAction={handleProactiveAction}
     />
   );
 
@@ -267,6 +330,7 @@ interface ChatContentProps {
   isMenuOpen: boolean;
   setIsMenuOpen: (open: boolean) => void;
   onClose: () => void;
+  onProactiveAction: (messageId: string, action: AdvisorProactiveAction) => void;
 }
 
 /**
@@ -285,6 +349,7 @@ function ChatContent({
   isMenuOpen,
   setIsMenuOpen,
   onClose,
+  onProactiveAction,
 }: ChatContentProps) {
   const t = useTranslations('advisor');
   const hasMessages = messages.length > 0;
@@ -345,7 +410,12 @@ function ChatContent({
                 ) : (
                   <div className="space-y-4">
                     {messages.map((msg) => (
-                      <MessageBubble key={msg.id} message={msg} />
+                      <MessageBubble
+                        key={msg.id}
+                        message={msg}
+                        interactionDisabled={isLoading}
+                        onProactiveAction={onProactiveAction}
+                      />
                     ))}
                     {isLoading ? <LoadingBubble isTimeoutHint={isTimeoutHint} /> : null}
                   </div>

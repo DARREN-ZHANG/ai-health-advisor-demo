@@ -877,6 +877,63 @@ describe('AI Routes', () => {
       });
     });
 
+    test('合法 Proactive typed interaction 原样透传给 orchestrator', async () => {
+      mockedExecuteAgent.mockReset();
+      mockedExecuteAgent.mockResolvedValueOnce(chatResponse());
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/chat',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          userMessage: '好的，将睡眠数据添加到首页。',
+          uiContext: {
+            homepageTrendCard: 'hidden',
+            sleepHomepageOffer: 'offered',
+          },
+          clientInteraction: {
+            type: 'advisor.proactive.respond',
+            proposal: 'homepage.sleep.show',
+            decision: 'accept',
+          },
+        },
+        headers: { 'x-session-id': 'sess-proactive-1' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const forwarded = mockedExecuteAgent.mock.calls[0]?.[0];
+      expect(forwarded.clientInteraction).toStrictEqual({
+        type: 'advisor.proactive.respond',
+        proposal: 'homepage.sleep.show',
+        decision: 'accept',
+      });
+      expect(forwarded.uiContext?.sleepHomepageOffer).toBe('offered');
+    });
+
+    test('未知 Proactive proposal 被请求 schema 拒绝', async () => {
+      mockedExecuteAgent.mockReset();
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/ai/chat',
+        payload: {
+          profileId: 'profile-a',
+          pageContext: defaultPageContext,
+          userMessage: '执行未知动作',
+          clientInteraction: {
+            type: 'advisor.proactive.respond',
+            proposal: 'homepage.unknown.show',
+            decision: 'accept',
+          },
+        },
+        headers: { 'x-session-id': 'sess-proactive-2' },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(mockedExecuteAgent).not.toHaveBeenCalled();
+    });
+
     test('非法 homepageTrendCard 状态返回 400 VALIDATION_ERROR', async () => {
       mockedExecuteAgent.mockReset();
       mockedExecuteAgent.mockResolvedValueOnce(chatResponse());

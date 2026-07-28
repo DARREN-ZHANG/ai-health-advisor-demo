@@ -1088,6 +1088,7 @@ describe('createEvalRuntime — 真实 fallback assets', () => {
         profileId: 'profile-a',
         pageContext: { profileId: 'profile-a', page: 'advisor', timeframe: 'week' },
       },
+      'zh',
     );
 
     // 真实 advisor-chat.json 中 profile-a 的 summary 包含 "数据"
@@ -1110,6 +1111,7 @@ describe('createEvalRuntime — 真实 fallback assets', () => {
     const fallback = deps.fallbackEngine.getFallback(
       AgentTaskType.HOMEPAGE_SUMMARY,
       { profileId: 'profile-a', pageContext: { profileId: 'profile-a', page: 'home', timeframe: 'week' } },
+      'zh',
     );
 
     // MINIMAL_FALLBACK_ASSETS 为空对象，所以 lookupEntry 返回 GENERIC_FALLBACK
@@ -1146,6 +1148,7 @@ describe('createEvalRuntime — 真实 fallback assets', () => {
     const fallback = deps.fallbackEngine.getFallback(
       AgentTaskType.HOMEPAGE_SUMMARY,
       { profileId: 'profile-a', pageContext: { profileId: 'profile-a', page: 'home', timeframe: 'week' } },
+      'zh',
     );
 
     // strict 模式下也能加载真实 fallback 内容
@@ -1180,6 +1183,7 @@ describe('createEvalRuntime — 真实 fallback assets', () => {
     const fallback = deps.fallbackEngine.getFallback(
       AgentTaskType.HOMEPAGE_SUMMARY,
       { profileId: 'profile-a', pageContext: { profileId: 'profile-a', page: 'home', timeframe: 'week' } },
+      'zh',
     );
     expect(fallback.summary).toContain('HRV');
     // fallback 已迁移为 actions-based 格式，microTips 可能为空；验证 summary 包含健康相关关键词即可

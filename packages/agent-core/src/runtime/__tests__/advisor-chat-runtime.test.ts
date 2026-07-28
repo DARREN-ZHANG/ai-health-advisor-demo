@@ -977,6 +977,9 @@ describe('ADVISOR_CHAT — UI 控制计划（homepage.trend-card.set）', () => 
       const result = await executeAgent(
         makeAdvisorChatRequest({ userMessage: '在首页展示睡眠趋势简报' }),
         runtimeDeps,
+        undefined,
+        undefined,
+        'zh',
       );
 
       expect(solverInvoke).not.toHaveBeenCalled();
@@ -998,6 +1001,9 @@ describe('ADVISOR_CHAT — UI 控制计划（homepage.trend-card.set）', () => 
       const result = await executeAgent(
         makeAdvisorChatRequest(),
         makeDeps({ invoke: solverInvoke }, planBuilder),
+        undefined,
+        undefined,
+        'zh',
       );
 
       expect(solverInvoke).not.toHaveBeenCalled();
@@ -1015,6 +1021,9 @@ describe('ADVISOR_CHAT — UI 控制计划（homepage.trend-card.set）', () => 
       const result = await executeAgent(
         makeAdvisorChatRequest(),
         makeDeps({ invoke: solverInvoke }, planBuilder),
+        undefined,
+        undefined,
+        'zh',
       );
 
       expect(result.summary).toBe('已隐藏首页趋势简报。');
@@ -1072,6 +1081,9 @@ describe('ADVISOR_CHAT — UI 控制计划（homepage.trend-card.set）', () => 
           userMessage: '在首页展示睡眠趋势简报',
         }),
         { ...makeDeps({ invoke: solverInvoke }, planBuilder), sessionMemory },
+        undefined,
+        undefined,
+        'zh',
       );
 
       const history = sessionMemory.getRecentMessages(sessionId);
@@ -1226,5 +1238,152 @@ describe('ADVISOR_CHAT — UI 控制计划（homepage.trend-card.set）', () => 
       const userPrompt = plannerInvoke.mock.calls[0]![0].userPrompt;
       expect(userPrompt).toContain('homepageTrendCard: sleep');
     });
+  });
+});
+
+describe('ADVISOR_CHAT — Proactive 睡眠引导状态流', () => {
+  it('已验证的 sleep 证据需求在普通回答后附加首页卡片提议', async () => {
+    const plan = makeAnalysisPlan();
+    const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+
+    const result = await executeAgent(
+      makeAdvisorChatRequest({
+        uiContext: {
+          homepageTrendCard: 'hidden',
+          sleepHomepageOffer: 'eligible',
+        },
+      }),
+      makeDeps({}, planBuilder),
+      undefined,
+      undefined,
+      'zh',
+    );
+
+    expect(result.summary).toContain('睡眠质量');
+    expect(result.proactivePrompt?.kind).toBe('homepage.sleep.show');
+    expect(result.proactivePrompt?.question).toContain('睡眠数据放到首页');
+    expect(result.uiDirectives).toBeUndefined();
+  });
+
+  it('接受首页睡眠卡片后执行指令、说明可移除/切换，并按良好睡眠提议 3 日运动计划', async () => {
+    const plannerInvoke = vi.fn(async () => ({ content: 'never' }));
+    const planBuilder: PlanBuilderDeps = {
+      plannerAgent: { invoke: plannerInvoke },
+      plannerPrompt: 'p',
+    };
+    const solverInvoke = vi.fn(async () => ({ content: 'never' }));
+
+    const result = await executeAgent(
+      makeAdvisorChatRequest({
+        userMessage: '好的，将睡眠数据添加到首页。',
+        uiContext: {
+          homepageTrendCard: 'hidden',
+          sleepHomepageOffer: 'offered',
+        },
+        clientInteraction: {
+          type: 'advisor.proactive.respond',
+          proposal: 'homepage.sleep.show',
+          decision: 'accept',
+        },
+      }),
+      makeDeps({ invoke: solverInvoke }, planBuilder),
+      undefined,
+      undefined,
+      'zh',
+    );
+
+    expect(plannerInvoke).not.toHaveBeenCalled();
+    expect(solverInvoke).not.toHaveBeenCalled();
+    expect(result.uiDirectives).toEqual([
+      { type: 'homepage.trend-card.set', display: 'sleep' },
+    ]);
+    expect(result.summary).toContain('随时告诉我移除');
+    expect(result.summary).toContain('Activity');
+    expect(result.proactivePrompt?.kind).toBe('plan.activity-three-day.create');
+    expect(result.proactivePrompt?.question).toContain('3 日运动计划');
+  });
+
+  it('睡眠质量需恢复时提议睡眠恢复计划', async () => {
+    const poorRecords = Array.from({ length: 7 }, (_, index) =>
+      makeRecord(`2026-04-${String(18 + index).padStart(2, '0')}`, {
+        sleep: {
+          totalMinutes: 300,
+          startTime: '01:00',
+          endTime: '06:00',
+          stages: { deep: 30, light: 160, rem: 70, awake: 40 },
+          score: 45,
+        },
+      }),
+    );
+    const deps = makeDeps();
+    deps.getProfile = () => makeProfileData(poorRecords);
+
+    const result = await executeAgent(
+      makeAdvisorChatRequest({
+        clientInteraction: {
+          type: 'advisor.proactive.respond',
+          proposal: 'homepage.sleep.show',
+          decision: 'accept',
+        },
+      }),
+      deps,
+      undefined,
+      undefined,
+      'zh',
+    );
+
+    expect(result.proactivePrompt?.kind).toBe('plan.sleep-recovery.create');
+    expect(result.proactivePrompt?.question).toContain('睡眠恢复计划');
+  });
+
+  it('接受主动计划提议后不再猜按钮文案，直接进入 structured_plan 契约', async () => {
+    const planDraft = {
+      title: '3 日运动计划',
+      summary: '依据当前恢复状态逐步增加活动量。',
+      groups: [
+        {
+          title: '第 1-3 日',
+          tasks: [
+            {
+              title: '轻松步行',
+              description: '完成低强度步行并根据体感调整。',
+              suggestedTimeOfDay: 'Morning',
+            },
+          ],
+        },
+      ],
+    };
+    const solverInvoke = vi.fn(async () => ({
+      content: JSON.stringify({
+        summary: '3 日运动计划已准备好。',
+        chartTokens: [],
+        microTips: [],
+        planDraft,
+      }),
+    }));
+
+    const result = await executeAgent(
+      makeAdvisorChatRequest({
+        userMessage: '请根据我当前的恢复状态创建一个 3 日运动计划。',
+        clientInteraction: {
+          type: 'advisor.proactive.respond',
+          proposal: 'plan.activity-three-day.create',
+          decision: 'accept',
+        },
+      }),
+      makeDeps({ invoke: solverInvoke }),
+      undefined,
+      undefined,
+      'zh',
+    );
+
+    expect(solverInvoke).toHaveBeenCalledTimes(1);
+    expect(solverInvoke.mock.calls[0]![0].userPrompt).toContain(
+      '响应模式: structured_plan',
+    );
+    expect(solverInvoke.mock.calls[0]![0].userPrompt).toContain('activity');
+    expect(result.planDraftPreview).toEqual(planDraft);
+    expect(result.chartTokens).toEqual([]);
+    expect(result.proactivePrompt).toBeUndefined();
   });
 });

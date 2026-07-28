@@ -14,6 +14,7 @@ import type {
   DataTab,
   Timeframe,
   ClientUiContext,
+  AdvisorProactiveInteraction,
 } from '@health-advisor/shared';
 
 export interface ChatRequest {
@@ -23,6 +24,7 @@ export interface ChatRequest {
   smartPromptId?: string;
   visibleChartIds?: string[];
   uiContext?: ClientUiContext;
+  clientInteraction?: AdvisorProactiveInteraction;
 }
 
 /**

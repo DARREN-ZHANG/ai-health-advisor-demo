@@ -105,6 +105,7 @@ export const HomeTrendCardDisplaySchema = z.enum(['hidden', 'sleep', 'activity']
 export const ClientUiContextSchema = z
   .object({
     homepageTrendCard: HomeTrendCardDisplaySchema,
+    sleepHomepageOffer: z.enum(['eligible', 'offered', 'accepted', 'declined']).optional(),
   })
   .strict();
 
@@ -117,6 +118,47 @@ export const HomeTrendCardSetDirectiveSchema = z
 
 export const UiDirectiveSchema = HomeTrendCardSetDirectiveSchema;
 
+export const AdvisorProactiveProposalSchema = z.enum([
+  'homepage.sleep.show',
+  'plan.activity-three-day.create',
+  'plan.sleep-recovery.create',
+]);
+
+export const AdvisorProactiveInteractionSchema = z
+  .object({
+    type: z.literal('advisor.proactive.respond'),
+    proposal: AdvisorProactiveProposalSchema,
+    decision: z.enum(['accept', 'decline']),
+  })
+  .strict();
+
+export const AdvisorProactiveActionSchema = z
+  .object({
+    id: z.enum(['accept', 'decline']),
+    label: z.string().min(1),
+    userMessage: z.string().min(1),
+    interaction: AdvisorProactiveInteractionSchema,
+  })
+  .strict();
+
+export const AdvisorProactivePromptSchema = z
+  .object({
+    kind: AdvisorProactiveProposalSchema,
+    question: z.string().min(1),
+    actions: z.tuple([AdvisorProactiveActionSchema, AdvisorProactiveActionSchema]),
+  })
+  .strict()
+  .refine(
+    ({ kind, actions: [first, second] }) =>
+      first.id !== second.id &&
+      first.id === first.interaction.decision &&
+      second.id === second.interaction.decision &&
+      first.interaction.proposal === kind &&
+      second.interaction.proposal === kind &&
+      first.interaction.decision !== second.interaction.decision,
+    'proactive actions must contain accept and decline for the same proposal',
+  );
+
 export const AgentResponseEnvelopeSchema = z.object({
   summary: z.string().min(1),
   source: z.string().min(1),
@@ -128,6 +170,7 @@ export const AgentResponseEnvelopeSchema = z.object({
   memoryCandidates: z.array(MemoryCandidateConfirmationSchema).optional(),
   futureSuggestions: z.array(FutureSuggestionSchema).max(2).optional(),
   uiDirectives: z.array(UiDirectiveSchema).max(1).optional(),
+  proactivePrompt: AdvisorProactivePromptSchema.optional(),
   /** Agent-core 内部使用的草稿预览（无 draftId）；route 层注入 draftId 后转为 planDraft。 */
   planDraftPreview: PlanDraftInputSchema.optional(),
   /** Agent-api 注入的可执行计划草稿：含 draftId，调用 /plans/drafts/:draftId/execute 使用。 */

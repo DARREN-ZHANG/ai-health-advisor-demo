@@ -93,6 +93,13 @@ export interface AgentResponseEnvelope {
   /** Advisor 控制的首页 UI 副作用；每次最多一条，由 Planner verifier 校验 */
   uiDirectives?: UiDirective[];
   /**
+   * Advisor 在正常回答后追加的主动式提议。
+   *
+   * 该字段只由 runtime 基于已验证的 Planner 语义与客户端状态生成，
+   * 不直接采信 LLM 输出。按钮回传封闭枚举 interaction，避免再次从文案猜意图。
+   */
+  proactivePrompt?: AdvisorProactivePrompt;
+  /**
    * Advisor 输出的结构化计划草稿预览。
    *
    * - 仅当 LLM 明确产出符合 PlanDraftInput schema 的结构时才会出现。
@@ -129,6 +136,8 @@ export type HomeTrendCardDisplay = 'hidden' | 'sleep' | 'activity';
  */
 export interface ClientUiContext {
   homepageTrendCard: HomeTrendCardDisplay;
+  /** 当前会话内“睡眠卡片上首页”提议的生命周期。 */
+  sleepHomepageOffer?: 'eligible' | 'offered' | 'accepted' | 'declined';
 }
 
 /**
@@ -144,3 +153,32 @@ export interface HomeTrendCardSetDirective {
  * 当前唯一支持的 UI 指令类型；保留 union 形态用于未来扩展。
  */
 export type UiDirective = HomeTrendCardSetDirective;
+
+export type AdvisorProactiveProposal =
+  | 'homepage.sleep.show'
+  | 'plan.activity-three-day.create'
+  | 'plan.sleep-recovery.create';
+
+/**
+ * Proactive 按钮回传的可信交互事件。
+ * proposal + decision 均为封闭枚举，runtime 不依赖展示文案做意图判断。
+ */
+export interface AdvisorProactiveInteraction {
+  type: 'advisor.proactive.respond';
+  proposal: AdvisorProactiveProposal;
+  decision: 'accept' | 'decline';
+}
+
+export interface AdvisorProactiveAction {
+  id: 'accept' | 'decline';
+  label: string;
+  /** 写入聊天记录的用户侧自然语言文案。 */
+  userMessage: string;
+  interaction: AdvisorProactiveInteraction;
+}
+
+export interface AdvisorProactivePrompt {
+  kind: AdvisorProactiveProposal;
+  question: string;
+  actions: [AdvisorProactiveAction, AdvisorProactiveAction];
+}
