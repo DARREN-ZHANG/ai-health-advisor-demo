@@ -98,19 +98,12 @@ describe('PlanDraftCard', () => {
     expect(document.querySelectorAll('[data-valo-plan-draft-task]')).toHaveLength(2);
   });
 
-  it('按 Figma 参数渲染 Start Plan 与 Modify Session', () => {
+  it('executable 状态渲染 Start Plan，不再渲染 Modify Session', () => {
     renderCard();
     const start = screen.getByRole('button', { name: 'Start Plan' });
-    const modify = screen.getByRole('button', { name: 'Modify Session' });
-
     expect(start).toHaveClass('h-7', 'min-w-[105px]', 'rounded', 'bg-white');
-    expect(modify).toHaveClass('h-7', 'min-w-[121px]', 'rounded', 'border-white', 'bg-[#322a3f]');
-  });
-
-  it('Modify Session 将焦点交回 ChatBox', () => {
-    renderCard();
-    fireEvent.click(screen.getByRole('button', { name: 'Modify Session' }));
-    expect(screen.getByRole('textbox', { name: 'Message' })).toHaveFocus();
+    // 设计变更：Modify Session 按钮已移除。
+    expect(screen.queryByRole('button', { name: 'Modify Session' })).toBeNull();
   });
 
   it('Start Plan 执行成功后关闭 Chat 并回到首页', async () => {

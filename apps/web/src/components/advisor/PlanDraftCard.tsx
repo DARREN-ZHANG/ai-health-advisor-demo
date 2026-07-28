@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { PlayIcon } from '@heroicons/react/24/solid';
 import type { MessagePlanDraft } from '@/stores/ai-advisor.store';
 import { useAIAdvisorStore } from '@/stores/ai-advisor.store';
@@ -52,10 +51,6 @@ export function PlanDraftCard({ planDraft }: PlanDraftCardProps) {
       const message = err instanceof Error ? err.message : t('executeFailed');
       setError(message);
     }
-  }
-
-  function handleModify() {
-    document.querySelector<HTMLTextAreaElement>('[data-valo-advisor-composer="true"]')?.focus();
   }
 
   return (
@@ -154,27 +149,16 @@ export function PlanDraftCard({ planDraft }: PlanDraftCardProps) {
           </button>
         )}
         {isExecutable && (
-          <>
-            <button
-              type="button"
-              onClick={handleExecute}
-              disabled={executeMutation.isPending}
-              data-valo-plan-draft-execute="true"
-              className="inline-flex h-7 min-w-[105px] items-center justify-center gap-2 rounded bg-white px-3 text-[12px] font-semibold leading-4 text-[#1c1924] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <PlayIcon className="h-3.5 w-3.5" />
-              {executeMutation.isPending ? t('executing') : t('execute')}
-            </button>
-            <button
-              type="button"
-              onClick={handleModify}
-              data-valo-plan-draft-modify="true"
-              className="inline-flex h-7 min-w-[121px] items-center justify-center gap-1 rounded border border-white bg-[#322a3f] px-2 text-[12px] font-semibold leading-4 text-white transition-colors hover:bg-[#413650]"
-            >
-              <ArrowPathIcon className="h-3.5 w-3.5" strokeWidth={2} />
-              {t('modify')}
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={handleExecute}
+            disabled={executeMutation.isPending}
+            data-valo-plan-draft-execute="true"
+            className="inline-flex h-7 min-w-[105px] items-center justify-center gap-2 rounded bg-white px-3 text-[12px] font-semibold leading-4 text-[#1c1924] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <PlayIcon className="h-3.5 w-3.5" />
+            {executeMutation.isPending ? t('executing') : t('execute')}
+          </button>
         )}
       </div>
 

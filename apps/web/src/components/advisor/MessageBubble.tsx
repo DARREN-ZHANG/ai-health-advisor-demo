@@ -1,7 +1,6 @@
 'use client';
 
 import { m } from 'framer-motion';
-import { useTranslations } from 'next-intl';
 import type { Message } from '@/stores/ai-advisor.store';
 
 import { ChartTokenRenderer } from './ChartTokenRenderer';
@@ -31,7 +30,6 @@ interface MessageBubbleProps {
  *   `data-valo-message-charts` / `data-valo-message-memory`。
  */
 export function MessageBubble({ message }: MessageBubbleProps) {
-  const t = useTranslations('advisor.statusLabel');
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
   const isSystem = message.role === 'system';
@@ -58,30 +56,6 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       </div>
     );
   }
-
-  const sourceLabel = message.source === 'fallback'
-    ? 'Fallback'
-    : message.source === 'llm'
-      ? 'AI Advisor'
-      : message.source;
-
-  const statusLabel = message.statusColor
-    ? t(message.statusColor)
-    : message.statusColor;
-
-  // 状态色：error → depleted；warning → sluggish；其余（active/good）→ active。
-  const statusColorVar =
-    message.statusColor === 'error'
-      ? 'var(--valo-depleted)'
-      : message.statusColor === 'warning'
-        ? 'var(--valo-sluggish)'
-        : 'var(--valo-active)';
-
-  // 源标签背景：surface + 文字次级。
-  const sourceBadgeStyle = {
-    backgroundColor: 'color-mix(in srgb, var(--valo-surface) 70%, transparent)',
-    color: 'var(--valo-text-secondary)',
-  } as const;
 
   return (
     <m.div
@@ -155,39 +129,6 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             hour: '2-digit',
             minute: '2-digit',
           })}
-          {message.statusColor && (
-            <span
-              data-valo-message-status={message.statusColor}
-              className="rounded px-1.5 py-0.5 uppercase tracking-wider font-semibold"
-              style={{
-                color: statusColorVar,
-                backgroundColor: `color-mix(in srgb, ${statusColorVar} 14%, transparent)`,
-              }}
-            >
-              {statusLabel}
-            </span>
-          )}
-          {message.source && (
-            <span
-              data-valo-message-source={message.source}
-              className="rounded px-1.5 py-0.5 uppercase tracking-wider font-semibold"
-              style={sourceBadgeStyle}
-            >
-              {sourceLabel}
-            </span>
-          )}
-          {message.meta?.finishReason === 'fallback' && (
-            <span
-              className="flex items-center gap-1"
-              style={{ color: 'var(--valo-sluggish)' }}
-            >
-              <span
-                className="w-1 h-1 rounded-full"
-                style={{ backgroundColor: 'var(--valo-sluggish)' }}
-              />
-              Fallback
-            </span>
-          )}
         </span>
       </div>
     </m.div>

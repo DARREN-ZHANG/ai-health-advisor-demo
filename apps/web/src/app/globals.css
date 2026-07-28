@@ -26,8 +26,8 @@
   --valo-chat-composer: #2e3039;
   /** AI Chat 关闭 / 更多按钮背景（Figma: #09080C） */
   --valo-chat-close-bg: #09080c;
-  /** AI Chat 关闭 / 更多按钮图标色（Figma: #706C79） */
-  --valo-chat-close-icon: #706c79;
+  /** AI Chat 关闭 / 更多按钮图标色（Figma 原值 #706C79，在 #09080C 背景上对比度不足，调亮以提升可读性） */
+  --valo-chat-close-icon: #a89fb0;
 
   /* ---------- 文本 ---------- */
   /** 标题、重要数值、主要操作 */

@@ -100,30 +100,22 @@ describe('MessageBubble', () => {
   });
 
   // ---------- 状态色映射 ----------
+  // 设计变更：状态徽标（ACTIVE/CONCERN 等）与身份徽标（AI Advisor）已从消息底部移除，
+  // 无论 statusColor / source 如何取值都不再渲染。下列用例锁定这一行为。
 
-  it('error 状态色映射到 var(--valo-depleted) 并挂 data-valo-message-status="error"', () => {
-    renderBubble(
-      baseMessage({ role: 'assistant', statusColor: 'error' }),
-    );
-    const badge = document.querySelector('[data-valo-message-status="error"]');
-    expect(badge).not.toBeNull();
-    expect(badge?.getAttribute('style') ?? '').toContain('var(--valo-depleted)');
+  it('error statusColor 不再渲染状态徽标', () => {
+    renderBubble(baseMessage({ role: 'assistant', statusColor: 'error' }));
+    expect(document.querySelector('[data-valo-message-status]')).toBeNull();
   });
 
-  it('warning 状态色映射到 var(--valo-sluggish)', () => {
-    renderBubble(
-      baseMessage({ role: 'assistant', statusColor: 'warning' }),
-    );
-    const badge = document.querySelector('[data-valo-message-status="warning"]');
-    expect(badge?.getAttribute('style') ?? '').toContain('var(--valo-sluggish)');
+  it('warning statusColor 不再渲染状态徽标', () => {
+    renderBubble(baseMessage({ role: 'assistant', statusColor: 'warning' }));
+    expect(document.querySelector('[data-valo-message-status]')).toBeNull();
   });
 
-  it('active 状态色映射到 var(--valo-active)', () => {
-    renderBubble(
-      baseMessage({ role: 'assistant', statusColor: 'good' }),
-    );
-    const badge = document.querySelector('[data-valo-message-status="good"]');
-    expect(badge?.getAttribute('style') ?? '').toContain('var(--valo-active)');
+  it('good statusColor 不再渲染状态徽标', () => {
+    renderBubble(baseMessage({ role: 'assistant', statusColor: 'good' }));
+    expect(document.querySelector('[data-valo-message-status]')).toBeNull();
   });
 
   it('无 statusColor 时不渲染状态徽标', () => {
@@ -133,19 +125,14 @@ describe('MessageBubble', () => {
 
   // ---------- source 徽标 ----------
 
-  it('source="llm" 渲染 source 徽标并挂 data-valo-message-source', () => {
+  it('source="llm" 不再渲染 source 徽标', () => {
     renderBubble(baseMessage({ role: 'assistant', source: 'llm' }));
-    const badge = document.querySelector('[data-valo-message-source="llm"]');
-    expect(badge).not.toBeNull();
-    expect(badge?.textContent).toContain('AI Advisor');
+    expect(document.querySelector('[data-valo-message-source]')).toBeNull();
   });
 
-  it('source="fallback" 显示 Fallback 文案', () => {
+  it('source="fallback" 不再渲染 source 徽标', () => {
     renderBubble(baseMessage({ role: 'assistant', source: 'fallback' }));
-    const badge = document.querySelector(
-      '[data-valo-message-source="fallback"]',
-    );
-    expect(badge?.textContent).toContain('Fallback');
+    expect(document.querySelector('[data-valo-message-source]')).toBeNull();
   });
 
   // ---------- token-only colors ----------
@@ -282,8 +269,9 @@ describe('MessageBubble', () => {
   });
 
   // ---------- finishReason fallback 提示 ----------
+  // 设计变更：fallback 提示徽标已移除，不再渲染。
 
-  it('meta.finishReason="fallback" 渲染橙色 fallback 提示', () => {
+  it('meta.finishReason="fallback" 不再渲染 fallback 提示', () => {
     renderBubble(
       baseMessage({
         role: 'assistant',
@@ -299,11 +287,7 @@ describe('MessageBubble', () => {
       }),
     );
     const tsNode = document.querySelector('[data-valo-message-timestamp]');
-    expect(tsNode?.textContent).toContain('Fallback');
-    // 检查提示元素是否使用 sluggish 色。
-    const fallbackSpan = tsNode?.querySelector('span[style]');
-    const fallbackStyle =
-      fallbackSpan?.getAttribute('style') ?? '';
-    expect(fallbackStyle).toContain('var(--valo-sluggish)');
+    // 时间戳节点不应再包含 Fallback 文案。
+    expect(tsNode?.textContent ?? '').not.toContain('Fallback');
   });
 });
