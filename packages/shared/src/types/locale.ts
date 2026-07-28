@@ -2,7 +2,7 @@
 export type Locale = 'zh' | 'en';
 
 /** 默认语言 */
-export const DEFAULT_LOCALE: Locale = 'zh';
+export const DEFAULT_LOCALE: Locale = 'en';
 
 /** 支持的语言列表 */
 export const SUPPORTED_LOCALES: readonly Locale[] = ['zh', 'en'] as const;

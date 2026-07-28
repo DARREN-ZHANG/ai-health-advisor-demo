@@ -29,7 +29,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY) as Locale | null;
-    const resolved: Locale = stored === 'en' ? 'en' : 'zh';
+    const resolved: Locale = stored === 'zh' ? 'zh' : 'en';
     setLocale(resolved);
     import(`../messages/${resolved}.json`).then((mod) => {
       setMessages(mod.default);

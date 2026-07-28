@@ -1,6 +1,7 @@
 'use client';
 
-import { CHART_TOKEN_META, ChartTokenId, localize, DEFAULT_LOCALE } from '@health-advisor/shared';
+import { CHART_TOKEN_META, ChartTokenId, localize } from '@health-advisor/shared';
+import type { Locale } from '@health-advisor/shared';
 import {
   MicroChart,
   getChartBuilder,
@@ -9,7 +10,7 @@ import { Card } from '@health-advisor/ui';
 import { useChartDataQuery } from '@/hooks/use-data-query';
 import { useProfileStore } from '@/stores/profile.store';
 import { useMemo } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 interface ChartTokenRendererProps {
   tokenId: ChartTokenId;
@@ -46,13 +47,20 @@ export function ChartTokenRenderer({ tokenId }: ChartTokenRendererProps) {
   const { data, isLoading } = useChartDataQuery(currentProfileId, [tokenId]);
   const tokenMeta = CHART_TOKEN_META[tokenId];
   const t = useTranslations('common');
+  const locale = useLocale() as Locale;
 
   const option = useMemo(() => {
     if (!data) return null;
     const builder = getChartBuilder(tokenId);
     if (!builder) return null;
 
-    const fullOption = builder(data);
+    // 把当前 locale 的 label/unit 显式传给 builder，避免回退到默认 locale
+    const fullOption = tokenMeta
+      ? builder(data, {
+          label: localize(tokenMeta.label, locale),
+          unit: localize(tokenMeta.unit, locale),
+        })
+      : builder(data);
 
     return {
       ...fullOption,
@@ -67,7 +75,7 @@ export function ChartTokenRenderer({ tokenId }: ChartTokenRendererProps) {
         ? fullOption.yAxis.map((axis) => hideAxis(axis as AxisOption))
         : hideAxis(fullOption.yAxis as AxisOption),
     };
-  }, [data, tokenId]);
+  }, [data, tokenId, tokenMeta, locale]);
 
   return (
     <Card
@@ -83,7 +91,7 @@ export function ChartTokenRenderer({ tokenId }: ChartTokenRendererProps) {
             'text-[var(--valo-text-secondary)] border-l-2 border-[var(--valo-border)]'
           }
         >
-          {tokenMeta ? localize(tokenMeta.label, DEFAULT_LOCALE) : tokenId}
+          {tokenMeta ? localize(tokenMeta.label, locale) : tokenId}
         </span>
         <button
           className={

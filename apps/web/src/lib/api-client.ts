@@ -1,5 +1,5 @@
 import { env } from '@/config/env';
-import type { ApiResponse } from '@health-advisor/shared';
+import { type ApiResponse, parseLocale } from '@health-advisor/shared';
 
 /** 网络请求安全兜底超时（毫秒），用于防止请求永远挂起 */
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -90,8 +90,9 @@ export function buildApiHeaders(
   const sessionId = typeof window !== 'undefined' ? getSessionId() : '';
   if (sessionId) headers.set('X-Session-Id', sessionId);
 
-  // 注入语言偏好
-  const locale = typeof window !== 'undefined' ? window.localStorage.getItem('lang') || 'zh' : 'zh';
+  // 注入语言偏好：localStorage 缺失时回退到全局默认 locale（与 providers.tsx 一致）
+  const stored = typeof window !== 'undefined' ? window.localStorage.getItem('lang') : undefined;
+  const locale = parseLocale(stored ?? undefined);
   headers.set('X-Lang', locale);
 
   return headers;
