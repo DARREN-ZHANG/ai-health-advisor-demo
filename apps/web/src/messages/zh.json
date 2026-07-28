@@ -60,7 +60,9 @@
     "endConfirm": "结束后将清除当前计划，确定吗？",
     "replaceConfirm": "当前计划还未完成，确定要用新计划替换吗？",
     "tasks": "任务",
-    "minutes": "分钟"
+    "minutes": "分钟",
+    "markComplete": "完成{task}",
+    "markIncomplete": "将{task}标记为未完成"
   },
   "homepage": {
     "morningBriefTitle": "今日健康概览",

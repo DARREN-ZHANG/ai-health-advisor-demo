@@ -2,15 +2,12 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { CheckIcon } from '@heroicons/react/20/solid';
 import {
-  CheckCircleIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
-import {
-  CheckCircleIcon as CheckCircleSolidIcon,
-} from '@heroicons/react/24/solid';
 import { m, AnimatePresence } from 'framer-motion';
 import type { Plan, PlanGroup } from '@health-advisor/shared';
 import { useProfileStore } from '@/stores/profile.store';
@@ -81,8 +78,14 @@ export function PlanScreen() {
       className="mx-auto w-full max-w-3xl px-5 py-6"
     >
       <header className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] uppercase tracking-wider text-[var(--valo-text-secondary)]">
+        <div className="min-w-0 flex-1">
+          <p
+            className={`text-[11px] uppercase tracking-wider transition-colors ${
+              plan.status === 'completed'
+                ? 'text-[var(--valo-active)]'
+                : 'text-[var(--valo-text-secondary)]'
+            }`}
+          >
             {plan.status === 'completed' ? t('completedBadge') : t('activeBadge')}
           </p>
           <h1
@@ -102,11 +105,12 @@ export function PlanScreen() {
         <button
           type="button"
           onClick={handleEnd}
+          aria-label={t('endPlan')}
+          title={t('endPlan')}
           data-valo-plan-end="true"
-          className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--valo-border)] px-3 py-1.5 text-[11px] font-semibold text-[var(--valo-depleted)] transition-opacity hover:opacity-85"
+          className="inline-flex shrink-0 items-center justify-center rounded-full border border-[var(--valo-border)] p-2 text-[var(--valo-depleted)] transition-colors hover:border-[var(--valo-depleted)]"
         >
-          <TrashIcon className="h-3 w-3" />
-          {t('endPlan')}
+          <TrashIcon className="h-4 w-4" />
         </button>
       </header>
 
@@ -166,29 +170,27 @@ function GroupCard({ plan, group, index }: GroupCardProps) {
           type="button"
           onClick={() => setCollapsed((c) => !c)}
           aria-expanded={!collapsed}
-          className="flex items-center gap-2 text-left"
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
         >
           <span
-            className={`grid h-6 w-6 place-items-center rounded-full text-[11px] font-semibold ${
-              groupDone
-                ? 'bg-[var(--valo-active)] text-[var(--valo-canvas)]'
-                : 'bg-[var(--valo-border)] text-[var(--valo-text-secondary)]'
+            className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border border-white text-[11px] font-semibold transition-colors ${
+              groupDone ? 'bg-[#ffffff] text-[#1c1924]' : 'bg-transparent text-white'
             }`}
           >
-            {groupDone ? <CheckCircleSolidIcon className="h-3 w-3" /> : index}
+            {groupDone ? <CheckIcon className="h-3 w-3" strokeWidth={2.5} /> : index}
           </span>
-          <span className="text-sm font-semibold text-[var(--valo-text-primary)]">
+          <span className="truncate text-sm font-semibold text-[var(--valo-text-primary)]">
             {group.title}
           </span>
         </button>
-        <span className="text-[11px] text-[var(--valo-text-secondary)]">
+        <span className="shrink-0 whitespace-nowrap text-[11px] text-[var(--valo-text-secondary)]">
           {completedInGroup} / {totalInGroup}
         </span>
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
           aria-label="toggle group"
-          className="grid h-6 w-6 place-items-center rounded-full text-[var(--valo-text-secondary)]"
+          className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[var(--valo-text-secondary)]"
         >
           {collapsed ? (
             <ChevronDownIcon className="h-3 w-3" />
@@ -217,22 +219,21 @@ function GroupCard({ plan, group, index }: GroupCardProps) {
                 <button
                   type="button"
                   data-valo-plan-task-toggle={task.id}
-                  onClick={() => handleToggle(task.id, task.completed, plan.version)}
-                  disabled={toggleTask.isPending}
+                  aria-label={t(task.completed ? 'markIncomplete' : 'markComplete', {
+                    task: task.title,
+                  })}
                   aria-pressed={task.completed}
-                  className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full border transition-colors"
+                  disabled={toggleTask.isPending}
+                  onClick={() => handleToggle(task.id, task.completed, plan.version)}
+                  className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full border border-white transition-colors"
                   style={{
-                    borderColor: task.completed
-                      ? 'var(--valo-active)'
-                      : 'var(--valo-border)',
-                    backgroundColor: task.completed
-                      ? 'var(--valo-active)'
-                      : 'transparent',
+                    backgroundColor: task.completed ? '#ffffff' : 'transparent',
+                    color: task.completed ? '#1c1924' : 'transparent',
                   }}
                 >
-                  {task.completed && (
-                    <CheckCircleIcon className="h-3 w-3 text-[var(--valo-canvas)]" />
-                  )}
+                  {task.completed ? (
+                    <CheckIcon className="h-3 w-3" strokeWidth={2.5} />
+                  ) : null}
                 </button>
                 <div className="min-w-0 flex-1">
                   <p

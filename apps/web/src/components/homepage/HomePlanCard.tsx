@@ -1,13 +1,11 @@
 'use client';
 
 import { CheckIcon } from '@heroicons/react/20/solid';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useTranslations } from 'next-intl';
 import type { Plan } from '@health-advisor/shared';
 import { useTogglePlanTask } from '@/hooks/use-plan-query';
 import { useGodModeStore } from '@/stores/god-mode.store';
 import { useProfileStore } from '@/stores/profile.store';
-import { useUIStore } from '@/stores/ui.store';
 
 interface HomePlanCardProps {
   plan: Plan;
@@ -25,7 +23,6 @@ interface HomePlanCardProps {
 export function HomePlanCard({ plan }: HomePlanCardProps) {
   const t = useTranslations('homepage.planCard');
   const currentProfileId = useProfileStore((state) => state.currentProfileId);
-  const toggleAdvisorDrawer = useUIStore((state) => state.toggleAdvisorDrawer);
   const selectedPlanDayIndex = useGodModeStore((state) => state.selectedPlanDayIndex);
   const toggleTask = useTogglePlanTask(currentProfileId);
 
@@ -156,17 +153,6 @@ export function HomePlanCard({ plan }: HomePlanCardProps) {
               ))}
             </ul>
           </div>
-        </div>
-
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => toggleAdvisorDrawer(true)}
-            className="inline-flex h-4 items-center gap-1 text-[11px] leading-4 text-[#aaa5b1] transition-colors hover:text-white"
-          >
-            <ArrowPathIcon className="h-3 w-3" strokeWidth={2} />
-            {t('adjust')}
-          </button>
         </div>
       </article>
     </section>

@@ -60,7 +60,9 @@
     "endConfirm": "This will clear the current plan. Are you sure?",
     "replaceConfirm": "The current plan is not finished. Replace it with the new one?",
     "tasks": "Tasks",
-    "minutes": "min"
+    "minutes": "min",
+    "markComplete": "Complete {task}",
+    "markIncomplete": "Mark {task} incomplete"
   },
   "homepage": {
     "morningBriefTitle": "Today's Health Overview",
