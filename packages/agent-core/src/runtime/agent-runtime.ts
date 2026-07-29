@@ -303,7 +303,7 @@ export async function executeAgent(
         return persistChatTurnAndReturn(
           deps,
           request,
-          toPlannerFailureResponse(request, locale),
+          toPlannerFailureResponse(request),
         );
       }
 
@@ -1464,17 +1464,12 @@ function toClarificationResponse(
 }
 
 /** Planner 失败时返回不携带任何未经本轮分析验证的数据响应。 */
-function toPlannerFailureResponse(
-  request: AgentRequest,
-  locale: Locale,
-): AgentResponseEnvelope {
+function toPlannerFailureResponse(request: AgentRequest): AgentResponseEnvelope {
   // Planner 失败时 fail closed：不得附带与本轮问题无关的 profile fallback 图表，
   // 否则会造成“无法理解”但同时展示趋势图的矛盾响应。
   return {
     summary:
-      locale === 'zh'
-        ? '抱歉，我暂时无法理解您的问题，请尝试更具体地描述您的健康数据问题。'
-        : 'Sorry, I could not interpret your request. Please describe your health data question more specifically.',
+      'Sorry, I could not interpret your request. Please describe your health data question more specifically.',
     source: 'fallback',
     statusColor: 'warning',
     chartTokens: [],

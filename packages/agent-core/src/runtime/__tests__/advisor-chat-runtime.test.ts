@@ -498,7 +498,7 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
 
       // 返回 fallback 响应
       expect(result.meta.finishReason).toBe('fallback');
-      expect(result.summary).toContain('暂时无法理解');
+      expect(result.summary).toContain('could not interpret your request');
 
       // solver 不被调用
       expect(solverInvoke).not.toHaveBeenCalled();
@@ -515,7 +515,7 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
       expect(messages).toHaveLength(2);
       expect(messages[0]).toMatchObject({ role: 'user', text: '我最近的睡眠怎么样？' });
       expect(messages[1]).toMatchObject({ role: 'assistant' });
-      expect(messages[1].text).toContain('暂时无法理解');
+      expect(messages[1].text).toContain('could not interpret your request');
     });
 
     it('英文 locale 的 Planner 失败响应不携带无关 fallback 图表', async () => {
