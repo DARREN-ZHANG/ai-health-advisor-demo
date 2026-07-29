@@ -22,6 +22,12 @@ export function buildAgentContext(
   const profileData = deps.getProfile(request.profileId, request.sessionId);
   const profile = profileData.profile;
 
+  // Demo session 的健康数据时间轴必须以 session demo clock 为基准，
+  // 否则系统日期前进后，mock 历史会被窗口筛选错误地全部排除。
+  // eval/测试显式传入的 referenceDate 仍具有更高优先级。
+  const demoNow = deps.getDemoNow?.(request.profileId, request.sessionId);
+  const effectiveReferenceDate = referenceDate ?? demoNow?.slice(0, 10);
+
   // 2. 获取 overrides 和 events
   const overrides = deps.getActiveOverrides(request.profileId, request.sessionId);
   const injectedEvents = deps.getInjectedEvents(request.profileId, request.sessionId);
@@ -31,7 +37,7 @@ export function buildAgentContext(
   // 3. 选择数据窗口
   const windowRange = selectWindowByTask(
     request.taskType,
-    referenceDate,
+    effectiveReferenceDate,
     request.timeframe ?? request.pageContext.timeframe,
     request.dateRange ?? request.pageContext.customDateRange,
   );
@@ -76,9 +82,6 @@ export function buildAgentContext(
 
   // 9. 获取时间轴同步上下文（可选）
   const timelineSync = deps.getTimelineSync?.(request.profileId, request.sessionId);
-
-  // 10. 获取当前模拟时间（可选）
-  const demoNow = deps.getDemoNow?.(request.profileId, request.sessionId);
 
   return {
     profile: {

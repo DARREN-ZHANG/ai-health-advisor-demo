@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import type { HealthAgent } from '../executor/create-agent';
 import type { TaskContextPacket } from '../context/context-packet';
-import type { ClientUiContext } from '@health-advisor/shared';
+import {
+  DEFAULT_LOCALE,
+  type ClientUiContext,
+  type Locale,
+} from '@health-advisor/shared';
 import { AnalysisPlanSchema } from './analysis-plan';
 import type { AnalysisPlan, PlanVerificationResult } from './analysis-plan';
 import { verifyAnalysisPlan } from './analysis-plan-verifier';
@@ -16,6 +20,8 @@ export interface PlanBuilderDeps {
 /** Plan Builder 输入 */
 export interface PlanBuilderInput {
   userMessage: string;
+  /** 用户当前全局语言；约束 Planner 产生的用户可见字段。 */
+  locale?: Locale;
   pageContext: {
     profileId: string;
     page: string;
@@ -28,6 +34,11 @@ export interface PlanBuilderInput {
   availableDateRange: { start: string; end: string };
   /** 重试时传入上一轮的 violations */
   previousViolations?: PlanVerificationResult['violations'];
+  /** 非业务校验类契约失败，重试时向 Planner 提供结构化修正信息。 */
+  previousFailure?: {
+    failureType: Exclude<NonNullable<PlanBuilderResult['failureType']>, 'verification_failed'>;
+    detail?: string;
+  };
   /** 当前客户端 UI 状态；Planner 借此避免启发式猜测 */
   uiContext?: ClientUiContext;
 }
@@ -103,16 +114,26 @@ export async function buildAnalysisPlanWithRetry(
   const firstAttempt = await buildAnalysisPlan(deps, input);
 
   if (firstAttempt.success) return firstAttempt;
-  if (!firstAttempt.verificationResult) return firstAttempt; // 解析错误不重试
 
-  // 重试一次：将 violations 反馈给 planner
+  // Planner 的输出是严格 JSON 契约。解析、schema、业务校验或调用失败时，
+  // 都允许在同一语义输入上重试一次，并明确告知上一轮的失败类型。
   const retryInput: PlanBuilderInput = {
     ...input,
-    previousViolations: firstAttempt.verificationResult.violations,
+    ...(firstAttempt.verificationResult
+      ? { previousViolations: firstAttempt.verificationResult.violations }
+      : {}),
+    ...(firstAttempt.failureType && firstAttempt.failureType !== 'verification_failed'
+      ? {
+          previousFailure: {
+            failureType: firstAttempt.failureType,
+            ...(firstAttempt.parseError ? { detail: firstAttempt.parseError } : {}),
+          },
+        }
+      : {}),
   };
   const retryResult = await buildAnalysisPlan(deps, retryInput);
 
-  return retryResult.success ? retryResult : firstAttempt;
+  return retryResult;
 }
 
 /**
@@ -125,6 +146,14 @@ function buildPlannerUserPrompt(input: PlanBuilderInput): string {
 
   // 用户消息
   sections.push(`## 用户消息\n${input.userMessage}`);
+
+  // locale 不改变 JSON schema，但会约束 clarificationQuestion 等用户可见字段。
+  const locale = input.locale ?? DEFAULT_LOCALE;
+  sections.push(
+    locale === 'zh'
+      ? '## 输出语言\nlocale: zh\n所有用户可见字段（尤其 clarificationQuestion）必须使用简体中文。'
+      : '## Response locale\nlocale: en\nAll user-visible fields, especially clarificationQuestion, must be written in English.',
+  );
 
   // 页面上下文
   const ctx = input.pageContext;
@@ -176,6 +205,15 @@ function buildPlannerUserPrompt(input: PlanBuilderInput): string {
       (v) => `- [${v.rule}] ${v.message} (路径: ${v.path})`,
     );
     sections.push(`## 上次校验失败，请修正以下问题\n${violationLines.join('\n')}`);
+  }
+
+  if (input.previousFailure) {
+    const detail = input.previousFailure.detail
+      ? `\ndetail: ${input.previousFailure.detail}`
+      : '';
+    sections.push(
+      `## 上次输出未满足 Planner JSON 契约\nfailureType: ${input.previousFailure.failureType}${detail}\n请重新输出一个完整、合法且不含额外文本的 JSON 对象。`,
+    );
   }
 
   return sections.join('\n\n');

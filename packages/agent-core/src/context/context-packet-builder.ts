@@ -782,14 +782,23 @@ function buildRelevantFacts(
     }
   }
 
-  // 3. User asks about week / recent → selected window metric summaries
-  if (
+  // 3. 用户明确聚焦某个指标时，无论使用 "how about..." 还是显式的
+  // status/summary 句式，都必须把该指标的窗口摘要放入证据包。
+  // 未指定指标的 status_summary 才扩展为全部核心指标。
+  const allMetrics: MetricName[] = ['hrv', 'sleep', 'activity', 'stress', 'spo2', 'resting-hr'];
+  const focusedMetrics = intent.metricFocus.filter(
+    (metric): metric is MetricName => allMetrics.includes(metric as MetricName),
+  );
+  const shouldBuildWindowSummary =
     intent.timeScope === 'week' ||
     intent.timeScope === 'month' ||
-    intent.actionIntent === 'status_summary'
-  ) {
-    const allMetrics: MetricName[] = ['hrv', 'sleep', 'activity', 'stress', 'spo2', 'resting-hr'];
-    for (const metric of allMetrics) {
+    intent.actionIntent === 'status_summary' ||
+    (intent.timeScope === 'unknown' && focusedMetrics.length > 0);
+
+  if (shouldBuildWindowSummary) {
+    const metricsToSummarize =
+      focusedMetrics.length > 0 ? focusedMetrics : allMetrics;
+    for (const metric of metricsToSummarize) {
       const summary = buildMetricSummary(
         records,
         metric,

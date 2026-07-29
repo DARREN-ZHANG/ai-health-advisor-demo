@@ -175,6 +175,19 @@ describe('buildAnalysisPlan', () => {
     expect(callArgs.userPrompt).toContain('我最近 HRV 怎么样？');
   });
 
+  it('把英文 locale 作为用户可见字段的语言契约传给 planner', async () => {
+    const validPlan = createValidPlanJson();
+    const mockInvoke = vi.fn().mockResolvedValue({ content: JSON.stringify(validPlan) });
+    const agent = { invoke: mockInvoke } as unknown as HealthAgent;
+
+    await buildAnalysisPlan(createDeps(agent), createValidInput({ locale: 'en' }));
+
+    const userPrompt = mockInvoke.mock.calls[0][0].userPrompt;
+    expect(userPrompt).toContain('locale: en');
+    expect(userPrompt).toContain('clarificationQuestion');
+    expect(userPrompt).toContain('must be written in English');
+  });
+
   it('解析包含 webSearchNeeds 的合法 plan', async () => {
     const planWithSearch = {
       ...createValidPlanJson(),
@@ -400,13 +413,17 @@ describe('buildAnalysisPlanWithRetry', () => {
     expect(mockInvoke).toHaveBeenCalledTimes(2);
   });
 
-  it('解析错误时不重试，直接返回', async () => {
-    const agent = createMockAgent('这不是 JSON');
+  it('解析错误时携带契约失败反馈重试一次', async () => {
+    const validPlan = createValidPlanJson();
+    const mockInvoke = vi
+      .fn()
+      .mockResolvedValueOnce({ content: '这不是 JSON' })
+      .mockResolvedValueOnce({ content: JSON.stringify(validPlan) });
+    const agent = { invoke: mockInvoke } as unknown as HealthAgent;
     const result = await buildAnalysisPlanWithRetry(createDeps(agent), createValidInput());
 
-    expect(result.success).toBe(false);
-    expect(result.parseError).toContain('JSON 解析失败');
-    // 解析错误不触发重试
-    expect(agent.invoke).toHaveBeenCalledTimes(1);
+    expect(result.success).toBe(true);
+    expect(mockInvoke).toHaveBeenCalledTimes(2);
+    expect(mockInvoke.mock.calls[1][0].userPrompt).toContain('failureType: parse_error');
   });
 });

@@ -217,6 +217,41 @@ describe('buildTaskContextPacket', () => {
     expect(chartFacts.length).toBeGreaterThan(0);
   });
 
+  it('advisor chat includes focused metric evidence for a general activity question', () => {
+    const ctx = makeContext({
+      task: {
+        type: AgentTaskType.ADVISOR_CHAT,
+        pageContext: {
+          profileId: 'profile-a',
+          page: 'home',
+          timeframe: 'week',
+        },
+        timeframe: 'week',
+        userMessage: 'how about my activity data',
+      },
+    });
+
+    const packet = buildTaskContextPacket(ctx, emptyRules);
+    const activityFact = packet.advisorChat?.relevantFacts.find(
+      (fact) => fact.label === 'activity 窗口摘要',
+    );
+
+    expect(packet.advisorChat?.questionIntent).toMatchObject({
+      metricFocus: ['activity'],
+      actionIntent: 'general',
+      timeScope: 'unknown',
+    });
+    expect(activityFact?.summary).toContain('8000steps');
+    expect(activityFact?.evidenceIds.length).toBeGreaterThan(0);
+    expect(
+      packet.evidence.some(
+        (evidence) =>
+          evidence.metric === 'activity' &&
+          activityFact?.evidenceIds.includes(evidence.id),
+      ),
+    ).toBe(true);
+  });
+
   it('generates evidence facts', () => {
     const packet = buildTaskContextPacket(makeContext(), emptyRules);
     expect(packet.evidence.length).toBeGreaterThan(0);

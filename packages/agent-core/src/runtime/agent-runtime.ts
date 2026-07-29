@@ -52,7 +52,6 @@ import type { ReflectionArtifact } from '../output/reflection-types';
 import type { PlanBuilderDeps } from '../planner/advisor-plan-builder';
 import { buildAnalysisPlanWithRetry } from '../planner/advisor-plan-builder';
 import type { AnalysisPlan } from '../planner/analysis-plan';
-import type { PlanVerificationResult } from '../planner/analysis-plan';
 import type { SyncReflectionReviewer } from '../output/reflection-reviewer';
 import { runSyncReflectionGate } from '../output/sync-reflection-gate';
 import type { SyncGateResult } from '../output/sync-reflection-gate';
@@ -282,6 +281,7 @@ export async function executeAgent(
     ) {
       const planResult = await buildAnalysisPlanWithRetry(deps.planBuilder, {
         userMessage: request.userMessage ?? '',
+        locale,
         pageContext: request.pageContext,
         basePacket: packet,
         supportedMetrics: getSupportedMetrics(),
@@ -303,18 +303,7 @@ export async function executeAgent(
         return persistChatTurnAndReturn(
           deps,
           request,
-          toClarificationOrSafeResponse(
-            deps.fallbackEngine,
-            request,
-            planResult as {
-              success: false;
-              parseError?: string;
-              verificationResult?: PlanVerificationResult;
-              failureType?: string;
-            },
-            fallbackKey,
-            locale,
-          ),
+          toPlannerFailureResponse(request, locale),
         );
       }
 
@@ -327,7 +316,7 @@ export async function executeAgent(
         return persistChatTurnAndReturn(
           deps,
           request,
-          toClarificationResponse(request, analysisPlan),
+          toClarificationResponse(request, analysisPlan, locale),
         );
       }
 
@@ -1446,10 +1435,21 @@ function toRequiredWebSearchUnavailableResponse(request: AgentRequest): AgentRes
 }
 
 /** 构造 clarification 响应（用户意图不明确时） */
-function toClarificationResponse(request: AgentRequest, plan: AnalysisPlan): AgentResponseEnvelope {
-  const question = plan.userIntent.clarificationQuestion ?? '能否更具体地描述您的问题？';
+function toClarificationResponse(
+  request: AgentRequest,
+  plan: AnalysisPlan,
+  locale: Locale,
+): AgentResponseEnvelope {
+  const question =
+    plan.userIntent.clarificationQuestion ??
+    (locale === 'zh'
+      ? '能否更具体地描述您的问题？'
+      : 'Could you describe your question more specifically?');
   return {
-    summary: `为了更好地帮助您，我需要更多信息：${question}`,
+    summary:
+      locale === 'zh'
+        ? `为了更好地帮助您，我需要更多信息：${question}`
+        : `To help you better, I need a little more information: ${question}`,
     source: 'planner',
     statusColor: 'good',
     chartTokens: [],
@@ -1463,27 +1463,28 @@ function toClarificationResponse(request: AgentRequest, plan: AnalysisPlan): Age
   };
 }
 
-/** Plan 失败时返回安全响应 */
-function toClarificationOrSafeResponse(
-  engine: FallbackEngine,
+/** Planner 失败时返回不携带任何未经本轮分析验证的数据响应。 */
+function toPlannerFailureResponse(
   request: AgentRequest,
-  planResult: {
-    success: false;
-    parseError?: string;
-    verificationResult?: PlanVerificationResult;
-    failureType?: string;
-  },
-  key: FallbackLookupKey,
   locale: Locale,
 ): AgentResponseEnvelope {
-  // 如果有 verification result 但 plan 不合法，返回 fallback
-  const fallback = engine.getFallback(request.taskType, key, locale);
+  // Planner 失败时 fail closed：不得附带与本轮问题无关的 profile fallback 图表，
+  // 否则会造成“无法理解”但同时展示趋势图的矛盾响应。
   return {
-    ...fallback,
-    summary: '抱歉，我暂时无法理解您的问题，请尝试更具体地描述您的健康数据问题。',
+    summary:
+      locale === 'zh'
+        ? '抱歉，我暂时无法理解您的问题，请尝试更具体地描述您的健康数据问题。'
+        : 'Sorry, I could not interpret your request. Please describe your health data question more specifically.',
+    source: 'fallback',
+    statusColor: 'warning',
+    chartTokens: [],
+    microTips: [],
+    actions: [],
     meta: {
-      ...fallback.meta,
+      taskType: request.taskType,
+      pageContext: request.pageContext,
       finishReason: 'fallback',
+      sessionId: request.sessionId,
     },
   };
 }

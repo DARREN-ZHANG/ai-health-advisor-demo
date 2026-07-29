@@ -403,6 +403,7 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
         runtimeDeps,
         undefined,
         { onClarification, onPlanBuilt, onModelOutput },
+        'zh',
       );
 
       // 返回 clarification 响应
@@ -431,6 +432,32 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
       expect(messages[0]).toMatchObject({ role: 'user', text: '我最近的睡眠怎么样？' });
       expect(messages[1]).toMatchObject({ role: 'assistant' });
       expect(messages[1].text).toContain('您是想了解睡眠时长还是睡眠质量？');
+    });
+
+    it('英文 locale 的 clarification 包装文案保持英文', async () => {
+      const plan = makeAnalysisPlan({
+        userIntent: {
+          action: 'general',
+          riskLevel: 'general',
+          needsClarification: true,
+          clarificationQuestion: 'Would you like a daily or weekly activity summary?',
+        },
+        evidenceNeeds: [],
+      });
+      const { deps: planBuilder } = makePlanBuilderDeps({ success: true, plan });
+      const runtimeDeps = makeDeps({}, planBuilder);
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest({ userMessage: 'How about my activity data?' }),
+        runtimeDeps,
+        undefined,
+        undefined,
+        'en',
+      );
+
+      expect(result.summary).toBe(
+        'To help you better, I need a little more information: Would you like a daily or weekly activity summary?',
+      );
     });
   });
 
@@ -466,6 +493,7 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
         runtimeDeps,
         undefined,
         { onPlanFailed, onModelOutput },
+        'zh',
       );
 
       // 返回 fallback 响应
@@ -488,6 +516,33 @@ describe('P1 ADVISOR_CHAT planner 链路集成测试', () => {
       expect(messages[0]).toMatchObject({ role: 'user', text: '我最近的睡眠怎么样？' });
       expect(messages[1]).toMatchObject({ role: 'assistant' });
       expect(messages[1].text).toContain('暂时无法理解');
+    });
+
+    it('英文 locale 的 Planner 失败响应不携带无关 fallback 图表', async () => {
+      const plannerInvoke = vi.fn(async () => ({
+        content: 'invalid planner output',
+      }));
+      const planBuilder: PlanBuilderDeps = {
+        plannerAgent: { invoke: plannerInvoke },
+        plannerPrompt: 'planner',
+      };
+      const runtimeDeps = makeDeps({}, planBuilder);
+
+      const result = await executeAgent(
+        makeAdvisorChatRequest({ userMessage: 'how about my activity data' }),
+        runtimeDeps,
+        undefined,
+        undefined,
+        'en',
+      );
+
+      expect(plannerInvoke).toHaveBeenCalledTimes(2);
+      expect(result.summary).toBe(
+        'Sorry, I could not interpret your request. Please describe your health data question more specifically.',
+      );
+      expect(result.chartTokens).toEqual([]);
+      expect(result.microTips).toEqual([]);
+      expect(result.actions).toEqual([]);
     });
 
     it('planner 调用异常时 onPlanFailed 收到 invocation_error', async () => {

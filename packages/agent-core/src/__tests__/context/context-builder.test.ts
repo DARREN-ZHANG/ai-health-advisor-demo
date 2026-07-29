@@ -83,6 +83,44 @@ describe('buildAgentContext', () => {
     expect(ctx.signals.lowData).toBe(false);
   });
 
+  it('uses the session demo clock as the data-window reference date', () => {
+    const data = makeProfileData([
+      makeRecord('2026-07-01', { activity: { steps: 7100, calories: 2100, activeMinutes: 32, distanceKm: 5.1 } }),
+      makeRecord('2026-07-08', { activity: { steps: 8400, calories: 2250, activeMinutes: 41, distanceKm: 6.2 } }),
+      makeRecord('2026-07-14', { activity: { steps: 9200, calories: 2380, activeMinutes: 48, distanceKm: 6.9 } }),
+    ]);
+    const deps = makeDeps(data);
+    deps.getDemoNow = () => '2026-07-14T07:05';
+
+    const ctx = buildAgentContext(
+      makeRequest({
+        taskType: AgentTaskType.ADVISOR_CHAT,
+        userMessage: 'how about my activity data',
+      }),
+      deps,
+    );
+
+    expect(ctx.demoNow).toBe('2026-07-14T07:05');
+    expect(ctx.dataWindow.end).toBe('2026-07-14');
+    expect(ctx.dataWindow.records.map((record) => record.date)).toEqual([
+      '2026-07-01',
+      '2026-07-08',
+      '2026-07-14',
+    ]);
+    expect(ctx.dataWindow.records.at(-1)?.activity?.steps).toBe(9200);
+  });
+
+  it('keeps an explicit reference date above the session demo clock', () => {
+    const deps = makeDeps();
+    deps.getDemoNow = () => '2026-07-14T07:05';
+
+    const ctx = buildAgentContext(makeRequest(), deps, '2026-04-10');
+
+    expect(ctx.dataWindow.end).toBe('2026-04-10');
+    expect(ctx.dataWindow.records).toHaveLength(7);
+    expect(ctx.demoNow).toBe('2026-07-14T07:05');
+  });
+
   it('applies overrides to records', () => {
     const overrides: OverrideEntry[] = [
       { metric: 'spo2', value: 92 },
